@@ -1,0 +1,23 @@
+{
+  "name": "ruinas-msa",
+  "version": "0.1.0",
+  "description": "Aplicativo de apoio ao RPG Ilhas das Ruínas MSA (Mestre + até 9 jogadores, em rede local ou online)",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js",
+    "modelo": "node server/gerar-modelo.js",
+    "test": "node --test test/*.test.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "exceljs": "^4.4.0",
+    "express": "^4.22.3",
+    "marked": "^14.1.4",
+    "multer": "^2.4.0",
+    "socket.io": "^4.8.4"
+  }
+}

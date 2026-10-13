@@ -1,0 +1,88 @@
+{
+  "_aviso": "TODOS os valores abaixo são EXEMPLOS provisórios. Substitua pelas regras reais do MSA. O app lê este arquivo a cada acesso, então basta salvar e recarregar a página.",
+
+  "padraoMSA": { "atributos": 20, "vantagens": 5, "pericias": 15 },
+  "atributos": [
+    { "nome": "Força", "min": 1, "max": 10 },
+    { "nome": "Destreza", "min": 1, "max": 10 },
+    { "nome": "Vigor", "min": 1, "max": 10 },
+    { "nome": "Inteligência", "min": 1, "max": 10 },
+    { "nome": "Percepção", "min": 1, "max": 10 },
+    { "nome": "Carisma", "min": 1, "max": 10 },
+    { "nome": "Manipulação", "min": 1, "max": 10 }
+  ],
+  "pericias": [
+    { "nome": "Briga", "atributo": "Força", "max": 5 },
+    { "nome": "Armas brancas", "atributo": "Destreza", "max": 5 },
+    { "nome": "Armas de fogo", "atributo": "Destreza", "max": 5 },
+    { "nome": "Furtividade", "atributo": "Destreza", "max": 5 },
+    { "nome": "Atletismo", "atributo": "Vigor", "max": 5 },
+    { "nome": "Investigação", "atributo": "Inteligência", "max": 5 },
+    { "nome": "Medicina", "atributo": "Inteligência", "max": 5 },
+    { "nome": "Prontidão", "atributo": "Percepção", "max": 5 },
+    { "nome": "Persuasão", "atributo": "Carisma", "max": 5 },
+    { "nome": "Intimidação", "atributo": "Carisma", "max": 5 },
+    { "nome": "Lábia", "atributo": "Manipulação", "max": 5 }
+  ],
+  "vantagens": [
+    { "nome": "Sorte", "custo": 2, "descricao": "Exemplo: pode rolar novamente um teste por sessão." },
+    { "nome": "Contatos", "custo": 1, "descricao": "Exemplo: conhece pessoas úteis em uma ilha." },
+    { "nome": "Resistente", "custo": 2, "descricao": "Exemplo: +PV máximos." },
+    { "nome": "Recursos", "custo": 1, "descricao": "Exemplo: começa com mais dinheiro." }
+  ],
+  "classes": [
+    {
+      "nome": "Sem classe",
+      "descricao": "Personagem sem classe definida.",
+      "escolhas": []
+    },
+    {
+      "nome": "Exemplo: Ocultista",
+      "descricao": "Classe de exemplo para mostrar escolhas próprias de classe.",
+      "escolhas": [
+        { "id": "tradicao", "rotulo": "Tradição", "opcoes": ["Sangue", "Ossos", "Névoa"], "quantidade": 1 },
+        { "id": "rituais", "rotulo": "Rituais iniciais", "opcoes": ["Selo", "Visão", "Chamado", "Proteção"], "quantidade": 2 }
+      ]
+    },
+    {
+      "nome": "Exemplo: Caçador",
+      "descricao": "Classe de exemplo com companheiro.",
+      "escolhas": [
+        { "id": "companheiro", "rotulo": "Companheiro animal", "opcoes": ["Cão", "Falcão", "Lobo"], "quantidade": 1 }
+      ]
+    }
+  ],
+
+  "inicio": { "dinheiro": 100, "pvBase": 10, "sanidade": 10, "humanidade": 10, "sanidadeMax": 10, "humanidadeMax": 10 },
+  "teste": { "dado": "1d20", "descricao": "Provisório: rola o dado e soma os valores selecionados." },
+  "relacoes": ["Aliado", "Amigável", "Neutro", "Rival", "Inimigo"],
+
+  "slots": [
+    { "id": "cabeca", "nome": "Cabeça / Capacete", "capacidade": 1 },
+    { "id": "corpo", "nome": "Armadura / Corpo", "capacidade": 1 },
+    { "id": "vestimenta", "nome": "Vestimenta", "capacidade": 1 },
+    { "id": "maos", "nome": "Mãos", "capacidade": 2 },
+    { "id": "joia", "nome": "Joias", "capacidade": 4 },
+    { "id": "costas", "nome": "Costas / Mochila", "capacidade": 1 }
+  ],
+  "itens": [
+    { "id": "faca", "nome": "Faca", "tipo": "arma", "slot": "maos", "ocupa": 1, "preco": 10, "venda": 5, "durabilidade": 20, "peso": 0.5, "dano": "1d4", "bonus": {} },
+    { "id": "machado", "nome": "Machado de duas mãos", "tipo": "arma", "slot": "maos", "ocupa": 2, "preco": 40, "venda": 20, "durabilidade": 30, "peso": 3, "dano": "1d10", "bonus": {} },
+    { "id": "revolver", "nome": "Revólver", "tipo": "arma", "slot": "maos", "ocupa": 1, "preco": 80, "venda": 40, "durabilidade": 25, "peso": 1, "dano": "2d6", "bonus": {} },
+    { "id": "escudo", "nome": "Escudo de madeira", "tipo": "defesa", "slot": "maos", "ocupa": 1, "preco": 25, "venda": 12, "durabilidade": 15, "peso": 2, "defesa": 2, "bonus": {} },
+    { "id": "capacete", "nome": "Capacete de couro", "tipo": "defesa", "slot": "cabeca", "ocupa": 1, "preco": 20, "venda": 10, "durabilidade": 15, "peso": 1, "defesa": 1, "bonus": {} },
+    { "id": "gibao", "nome": "Gibão acolchoado", "tipo": "defesa", "slot": "corpo", "ocupa": 1, "preco": 35, "venda": 17, "durabilidade": 20, "peso": 4, "defesa": 2, "bonus": { "Destreza": -1 } },
+    { "id": "capa", "nome": "Capa de viagem", "tipo": "vestimenta", "slot": "vestimenta", "ocupa": 1, "preco": 8, "venda": 4, "durabilidade": 10, "peso": 1, "bonus": { "Furtividade": 1 } },
+    { "id": "anel", "nome": "Anel de prata", "tipo": "joia", "slot": "joia", "ocupa": 1, "preco": 50, "venda": 30, "durabilidade": 50, "peso": 0, "bonus": { "Carisma": 1 } },
+    { "id": "armadilha_urso", "nome": "Armadilha de urso", "tipo": "armadilha", "slot": null, "ocupa": 0, "preco": 30, "venda": 15, "durabilidade": 5, "peso": 5, "dano": "2d6", "bonus": {} },
+    { "id": "corda", "nome": "Corda (15 m)", "tipo": "geral", "slot": null, "ocupa": 0, "preco": 5, "venda": 2, "durabilidade": 10, "peso": 2, "bonus": {} },
+    { "id": "mochila", "nome": "Mochila", "tipo": "geral", "slot": "costas", "ocupa": 1, "preco": 10, "venda": 5, "durabilidade": 15, "peso": 1, "bonus": {} }
+  ],
+
+  "monstros": [
+    { "nome": "Afogado", "dificuldade": 2, "pv": 12, "defesa": 1, "ataque": "Garras 1d6", "descricao": "Exemplo: cadáver que se arrasta das marés." },
+    { "nome": "Cão das ruínas", "dificuldade": 1, "pv": 8, "defesa": 1, "ataque": "Mordida 1d4", "descricao": "Exemplo: cão selvagem e magro." },
+    { "nome": "Guardião de pedra", "dificuldade": 5, "pv": 30, "defesa": 4, "ataque": "Punho 2d8", "descricao": "Exemplo: estátua animada." },
+    { "nome": "Bruxa da névoa", "dificuldade": 4, "pv": 18, "defesa": 2, "ataque": "Maldição 2d6", "descricao": "Exemplo: conjuradora reclusa." }
+  ]
+}

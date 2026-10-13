@@ -1,0 +1,513 @@
+import { db, save, uid } from './db.js';
+import { sistema } from './sistema.js';
+import { novaFicha, pontosCampanha, pontosGastos, podeEquipar, rolarDado, gerarEncontro, LIMITE_SALA } from '../shared/regras.js';
+
+const GRUPO_ENCONTROS = 'encontros';
+const MAX_LOG = 100;
+const MAX_BACKUPS = 20;
+
+export function erro(msg) {
+  const e = new Error(msg);
+  e.publico = true;
+  return e;
+}
+
+export function novaCampanha(user, dados) {
+  const nome = String(dados.nome || '').trim();
+  if (!nome) throw erro('Dê um nome à campanha.');
+  const maxJogadores = Math.max(1, Math.min(9, parseInt(dados.maxJogadores, 10) || 1));
+  const nivel = dados.nivel === 'Variavel' ? 'Variavel' : Math.max(1, Math.min(20, parseInt(dados.nivel, 10) || 1));
+  const padraoMSA = !!dados.padraoMSA;
+  const pontos = padraoMSA ? null : {
+    atributos: Math.max(0, parseInt(dados.pontos?.atributos, 10) || 0),
+    vantagens: Math.max(0, parseInt(dados.pontos?.vantagens, 10) || 0),
+    pericias: Math.max(0, parseInt(dados.pontos?.pericias, 10) || 0),
+  };
+  const c = {
+    id: uid(), nome, mestreId: user.id, maxJogadores, nivel, padraoMSA, pontos,
+    aberta: false, lojaAberta: false, criadaEm: Date.now(),
+    jogadores: [],
+    lore: { background: '', sessoes: [] },
+    anotacoes: '', anotacoesResumo: '',
+    grupos: [{ id: GRUPO_ENCONTROS, nome: 'Encontros aleatórios' }],
+    personagens: [],
+    relacoes: {},
+    imagens: [],
+    salas: { social: novaSala(), batalha: novaSala() },
+    log: [],
+  };
+  db.campaigns.push(c);
+  save();
+  return c;
+}
+
+function novaSala() {
+  return { participantes: [], ativo: null, log: [] };
+}
+
+export function resumoCampanha(c) {
+  const mestre = db.users.find(u => u.id === c.mestreId);
+  return {
+    id: c.id, nome: c.nome, aberta: c.aberta, nivel: c.nivel, maxJogadores: c.maxJogadores,
+    jogadores: c.jogadores.length, mestre: mestre?.name ?? '?', padraoMSA: c.padraoMSA,
+  };
+}
+
+const nomeUsuario = id => db.users.find(u => u.id === id)?.name ?? null;
+
+function fichaPublica(p) {
+  return { id: p.id, tipo: p.tipo, nome: p.nome, classe: p.classe, nivel: p.nivel, foto: p.foto, donoId: p.donoId, dono: nomeUsuario(p.donoId) };
+}
+
+// O que cada pessoa enxerga da campanha. O mestre vê tudo; o jogador só o que é dele ou público.
+export function visaoPara(c, user, area) {
+  const comDono = p => ({ ...p, dono: nomeUsuario(p.donoId) });
+  if (area === 'mestre') {
+    return { ...c, personagens: c.personagens.map(comDono), jogadoresNomes: c.jogadores.map(nomeUsuario), papel: 'mestre' };
+  }
+  const meus = new Set(c.personagens.filter(p => p.donoId === user.id).map(p => p.id));
+  const emSala = new Set([...c.salas.social.participantes, ...c.salas.batalha.participantes]);
+  const conhecidos = new Set();
+  for (const id of meus) for (const alvo of Object.keys(c.relacoes[id] || {})) conhecidos.add(alvo);
+
+  const personagens = c.personagens
+    .filter(p => meus.has(p.id) || p.tipo === 'pj' || emSala.has(p.id) || conhecidos.has(p.id))
+    .map(p => (meus.has(p.id) ? comDono(p) : fichaPublica(p)));
+
+  return {
+    id: c.id, nome: c.nome, nivel: c.nivel, padraoMSA: c.padraoMSA, pontos: c.pontos, aberta: c.aberta,
+    lojaAberta: c.lojaAberta, maxJogadores: c.maxJogadores, papel: 'jogador',
+    lore: c.lore,
+    personagens,
+    relacoes: Object.fromEntries([...meus].map(id => [id, c.relacoes[id] || {}])),
+    imagens: c.imagens.filter(i => i.mostrando),
+    salas: Object.fromEntries(Object.entries(c.salas).map(([k, s]) => [k, { ...s, log: s.log.filter(e => !e.secreta) }])),
+    log: c.log.filter(e => !e.secreta),
+  };
+}
+
+export function entrarNaCampanha(c, user, area) {
+  if (area === 'mestre') {
+    if (c.mestreId !== user.id) throw erro('Você não é o mestre desta campanha.');
+    return;
+  }
+  if (c.mestreId === user.id) throw erro('Você é o mestre desta campanha — entre pela Área do Mestre.');
+  if (!c.aberta) throw erro('Esta campanha está fechada pelo mestre.');
+  if (!c.jogadores.includes(user.id)) {
+    if (c.jogadores.length >= c.maxJogadores) throw erro('A campanha já atingiu o número máximo de jogadores.');
+    c.jogadores.push(user.id);
+    save();
+  }
+}
+
+// ---------- utilitários ----------
+
+function personagem(c, id) {
+  const p = c.personagens.find(x => x.id === id);
+  if (!p) throw erro('Personagem não encontrado.');
+  return p;
+}
+
+function exigirMestre(ctx) {
+  if (!ctx.mestre) throw erro('Apenas o mestre pode fazer isso.');
+}
+
+function exigirDonoOuMestre(ctx, p) {
+  if (!ctx.mestre && p.donoId !== ctx.user.id) throw erro('Este personagem não é seu.');
+}
+
+function sala(c, nome) {
+  const s = c.salas[nome];
+  if (!s) throw erro('Sala desconhecida.');
+  return s;
+}
+
+function registrar(lista, entrada) {
+  lista.push({ id: uid(), em: Date.now(), ...entrada });
+  if (lista.length > MAX_LOG) lista.splice(0, lista.length - MAX_LOG);
+}
+
+function itemDoCatalogo(itemId) {
+  const it = sistema().itens.find(i => i.id === itemId);
+  if (!it) throw erro('Item não existe no catálogo.');
+  return { ...structuredClone(it), uid: uid(), itemId: it.id, equipado: false, durabilidadeAtual: it.durabilidade };
+}
+
+const ROTULOS_PONTOS = { atributos: 'Atributos', vantagens: 'Vantagens', pericias: 'Perícias' };
+
+// O jogador não pode passar dos limites definidos pelo mestre.
+function validarCriacao(c, p, sis) {
+  if (c.nivel !== 'Variavel') p.nivel = c.nivel;
+  p.nivel = Math.max(1, Math.min(20, parseInt(p.nivel, 10) || 1));
+  const max = pontosCampanha(c, sis);
+  const gastos = pontosGastos(p, sis);
+  for (const k of ['atributos', 'vantagens', 'pericias']) {
+    if (gastos[k] > max[k]) throw erro(`Pontos de ${ROTULOS_PONTOS[k]} acima do permitido (${gastos[k]}/${max[k]}).`);
+  }
+  for (const a of sis.atributos) {
+    const v = p.atributos?.[a.nome] ?? 0;
+    if (v < (a.min ?? 0) || v > (a.max ?? 99)) throw erro(`${a.nome} fora do limite.`);
+  }
+  for (const x of sis.pericias) {
+    const v = p.pericias?.[x.nome] ?? 0;
+    if (v < 0 || v > (x.max ?? 99)) throw erro(`${x.nome} fora do limite.`);
+  }
+  // Itens e dinheiro são recalculados a partir do catálogo, nunca confiando no navegador.
+  const ini = sis.inicio?.dinheiro ?? 0;
+  const itens = (p.itens || []).map(i => itemDoCatalogo(i.itemId || i.id));
+  const custo = itens.reduce((s, i) => s + (i.preco || 0), 0);
+  if (custo > ini) throw erro('Os itens custam mais que o dinheiro inicial.');
+  p.itens = itens;
+  p.dinheiro = ini - custo;
+  p.xp = 0;
+  p.marcadores = [];
+}
+
+function npcDeMonstro(c, m) {
+  return {
+    ...novaFicha(sistema(), c), id: uid(), tipo: 'npc', grupoId: GRUPO_ENCONTROS, donoId: null,
+    nome: m.nome, dificuldade: m.dificuldade, pv: { max: m.pv, atual: m.pv },
+    anotacoes: `Ataque: ${m.ataque}\nDefesa: ${m.defesa}\n${m.descricao}`,
+  };
+}
+
+const nomeStr = v => String(v ?? '').slice(0, 20000);
+
+// Campos que um jogador pode alterar diretamente na própria ficha (o resto passa pelo mestre ou por ações específicas).
+const CAMPOS_JOGADOR = new Set([
+  'nome', 'idade', 'peso', 'altura', 'instinto', 'caracteristicas', 'background', 'anotacoes',
+  'foto', 'pv', 'sanidade', 'humanidade', 'marcadores',
+]);
+const CAMPOS_PROTEGIDOS = new Set(['id', 'tipo', 'donoId', 'backups']);
+
+// ---------- ações ----------
+
+export const acoes = {
+  'campanha.atualizar'(c, d, ctx) {
+    exigirMestre(ctx);
+    for (const k of ['aberta', 'lojaAberta']) if (k in d) c[k] = !!d[k];
+    for (const k of ['anotacoes', 'anotacoesResumo']) if (k in d) c[k] = nomeStr(d[k]);
+    if ('nome' in d && String(d.nome).trim()) c.nome = String(d.nome).trim();
+    if ('maxJogadores' in d) c.maxJogadores = Math.max(c.jogadores.length, Math.min(9, parseInt(d.maxJogadores, 10) || 1));
+  },
+
+  'jogador.remover'(c, { userId }, ctx) {
+    exigirMestre(ctx);
+    c.jogadores = c.jogadores.filter(id => id !== userId);
+    for (const p of c.personagens) if (p.donoId === userId) p.donoId = null;
+  },
+
+  'lore.atualizar'(c, { background }, ctx) {
+    exigirMestre(ctx);
+    c.lore.background = nomeStr(background);
+  },
+
+  'lore.sessao.salvar'(c, d, ctx) {
+    exigirMestre(ctx);
+    const dados = { titulo: nomeStr(d.titulo) || 'Sessão', data: nomeStr(d.data), texto: nomeStr(d.texto) };
+    const s = d.id && c.lore.sessoes.find(x => x.id === d.id);
+    if (s) Object.assign(s, dados);
+    else c.lore.sessoes.push({ id: uid(), ...dados });
+  },
+
+  'lore.sessao.remover'(c, { id }, ctx) {
+    exigirMestre(ctx);
+    c.lore.sessoes = c.lore.sessoes.filter(s => s.id !== id);
+  },
+
+  'grupo.criar'(c, { nome }, ctx) {
+    exigirMestre(ctx);
+    const g = { id: uid(), nome: String(nome || '').trim() || 'Novo grupo' };
+    c.grupos.push(g);
+    return g;
+  },
+
+  'grupo.renomear'(c, { id, nome }, ctx) {
+    exigirMestre(ctx);
+    const g = c.grupos.find(x => x.id === id);
+    if (g && String(nome).trim()) g.nome = String(nome).trim();
+  },
+
+  'grupo.remover'(c, { id }, ctx) {
+    exigirMestre(ctx);
+    if (c.personagens.some(p => p.grupoId === id)) throw erro('Mova ou apague os NPCs do grupo antes.');
+    c.grupos = c.grupos.filter(g => g.id !== id);
+  },
+
+  'personagem.criar'(c, { tipo, grupoId, ficha }, ctx) {
+    const sis = sistema();
+    const base = novaFicha(sis, c);
+    if (!ctx.mestre) tipo = 'pj';
+    if (!['pj', 'npc'].includes(tipo)) throw erro('Tipo inválido.');
+    if (tipo === 'npc' && !c.grupos.some(g => g.id === grupoId)) throw erro('Escolha um grupo para o NPC.');
+    const limpa = Object.fromEntries(Object.entries(ficha || {}).filter(([k]) => !CAMPOS_PROTEGIDOS.has(k)));
+    const p = {
+      ...base, ...limpa,
+      id: uid(), tipo, grupoId: tipo === 'npc' ? grupoId : null,
+      donoId: ctx.mestre ? null : ctx.user.id,
+      backups: [],
+    };
+    p.nome = String(p.nome || '').trim() || (tipo === 'npc' ? 'NPC sem nome' : 'Personagem sem nome');
+    if (!ctx.mestre) validarCriacao(c, p, sis);
+    // Itens vindos do catálogo ganham identificador próprio.
+    p.itens = (p.itens || []).map(i => ({ ...i, uid: i.uid || uid(), equipado: false }));
+    c.personagens.push(p);
+    return { id: p.id };
+  },
+
+  'personagem.atualizar'(c, { id, patch }, ctx) {
+    const p = personagem(c, id);
+    exigirDonoOuMestre(ctx, p);
+    for (const [k, v] of Object.entries(patch || {})) {
+      if (CAMPOS_PROTEGIDOS.has(k)) continue;
+      if (!ctx.mestre && !CAMPOS_JOGADOR.has(k)) continue;
+      p[k] = v;
+    }
+  },
+
+  'personagem.duplicar'(c, { id }, ctx) {
+    exigirMestre(ctx);
+    const p = personagem(c, id);
+    const copia = { ...structuredClone(p), id: uid(), nome: `${p.nome} (cópia)`, donoId: null, backups: [] };
+    c.personagens.push(copia);
+  },
+
+  'personagem.remover'(c, { id }, ctx) {
+    exigirMestre(ctx);
+    c.personagens = c.personagens.filter(p => p.id !== id);
+    delete c.relacoes[id];
+    for (const r of Object.values(c.relacoes)) delete r[id];
+    for (const s of Object.values(c.salas)) {
+      s.participantes = s.participantes.filter(x => x !== id);
+      if (s.ativo === id) s.ativo = null;
+    }
+  },
+
+  'personagem.assumir'(c, { id }, ctx) {
+    const p = personagem(c, id);
+    if (p.tipo !== 'pj') throw erro('Só personagens-jogador podem ser assumidos.');
+    if (p.donoId) throw erro('Este personagem já tem dono.');
+    p.donoId = ctx.user.id;
+  },
+
+  'personagem.liberar'(c, { id }, ctx) {
+    exigirMestre(ctx);
+    personagem(c, id).donoId = null;
+  },
+
+  'xp.dar'(c, { id, qtd }, ctx) {
+    exigirMestre(ctx);
+    const p = personagem(c, id);
+    p.xp = Math.max(0, (p.xp || 0) + (parseInt(qtd, 10) || 0));
+  },
+
+  // Evoluir: salva um backup da ficha antiga e aplica a nova.
+  'personagem.evoluir'(c, { id, patch, xpGasto }, ctx) {
+    const p = personagem(c, id);
+    exigirDonoOuMestre(ctx, p);
+    const gasto = Math.max(0, parseInt(xpGasto, 10) || 0);
+    if (gasto > (p.xp || 0)) throw erro('XP insuficiente.');
+    const { backups, ...semBackups } = p;
+    p.backups = [...(backups || []), { id: uid(), em: Date.now(), ficha: structuredClone(semBackups) }].slice(-MAX_BACKUPS);
+    for (const k of ['nivel', 'classe', 'escolhasClasse', 'atributos', 'pericias', 'vantagens', 'pv', 'sanidade', 'humanidade']) {
+      if (k in (patch || {})) p[k] = patch[k];
+    }
+    p.xp -= gasto;
+  },
+
+  'backup.restaurar'(c, { id, backupId }, ctx) {
+    exigirMestre(ctx);
+    const p = personagem(c, id);
+    const b = p.backups.find(x => x.id === backupId);
+    if (!b) throw erro('Backup não encontrado.');
+    const backups = p.backups;
+    Object.assign(p, structuredClone(b.ficha), { id: p.id, donoId: p.donoId, backups });
+  },
+
+  'item.adicionar'(c, { id, itemId }, ctx) {
+    exigirMestre(ctx);
+    personagem(c, id).itens.push(itemDoCatalogo(itemId));
+  },
+
+  'item.remover'(c, { id, uid: itemUid }, ctx) {
+    const p = personagem(c, id);
+    exigirDonoOuMestre(ctx, p);
+    p.itens = p.itens.filter(i => i.uid !== itemUid);
+  },
+
+  'item.durabilidade'(c, { id, uid: itemUid, valor }, ctx) {
+    exigirMestre(ctx);
+    const it = personagem(c, id).itens.find(i => i.uid === itemUid);
+    if (it) it.durabilidadeAtual = Math.max(0, parseInt(valor, 10) || 0);
+  },
+
+  'item.equipar'(c, { id, uid: itemUid, equipar }, ctx) {
+    const p = personagem(c, id);
+    exigirDonoOuMestre(ctx, p);
+    const it = p.itens.find(i => i.uid === itemUid);
+    if (!it) throw erro('Item não encontrado.');
+    if (!equipar) { it.equipado = false; return; }
+    if (it.equipado) return;
+    const r = podeEquipar(p, it, sistema());
+    if (!r.ok) throw erro(r.motivo);
+    it.equipado = true;
+  },
+
+  'item.comprar'(c, { id, itemId }, ctx) {
+    const p = personagem(c, id);
+    exigirDonoOuMestre(ctx, p);
+    if (!ctx.mestre && !c.lojaAberta) throw erro('A loja está fechada pelo mestre.');
+    const it = itemDoCatalogo(itemId);
+    if ((p.dinheiro || 0) < it.preco) throw erro('Dinheiro insuficiente.');
+    p.dinheiro -= it.preco;
+    p.itens.push(it);
+  },
+
+  'item.vender'(c, { id, uid: itemUid }, ctx) {
+    const p = personagem(c, id);
+    exigirDonoOuMestre(ctx, p);
+    if (!ctx.mestre && !c.lojaAberta) throw erro('A loja está fechada pelo mestre.');
+    const it = p.itens.find(i => i.uid === itemUid);
+    if (!it) throw erro('Item não encontrado.');
+    p.itens = p.itens.filter(i => i !== it);
+    p.dinheiro = (p.dinheiro || 0) + (it.venda || 0);
+  },
+
+  'relacao.definir'(c, { de, para, tipo, nota }, ctx) {
+    const p = personagem(c, de);
+    exigirDonoOuMestre(ctx, p);
+    personagem(c, para);
+    if (de === para) throw erro('Escolha outro personagem.');
+    const atual = (c.relacoes[de] ||= {})[para] || {};
+    const tipos = sistema().relacoes;
+    const novo = { tipo: tipo !== undefined ? tipo : atual.tipo, nota: nota !== undefined ? nomeStr(nota) : atual.nota || '' };
+    if (novo.tipo && !tipos.includes(novo.tipo)) throw erro('Tipo de relação inválido.');
+    c.relacoes[de][para] = novo;
+  },
+
+  'relacao.remover'(c, { de, para }, ctx) {
+    exigirDonoOuMestre(ctx, personagem(c, de));
+    if (c.relacoes[de]) delete c.relacoes[de][para];
+  },
+
+  'imagem.mostrar'(c, { id, mostrando }, ctx) {
+    exigirMestre(ctx);
+    const img = c.imagens.find(i => i.id === id);
+    if (img) img.mostrando = !!mostrando;
+  },
+
+  'imagem.remover'(c, { id }, ctx) {
+    exigirMestre(ctx);
+    c.imagens = c.imagens.filter(i => i.id !== id);
+  },
+
+  'sala.adicionar'(c, { sala: nome, id }, ctx) {
+    const s = sala(c, nome);
+    const p = personagem(c, id);
+    if (!ctx.mestre) exigirDonoOuMestre(ctx, p);
+    if (s.participantes.includes(id)) return;
+    if (s.participantes.length >= LIMITE_SALA) throw erro(`A sala já tem ${LIMITE_SALA} integrantes.`);
+    s.participantes.push(id);
+  },
+
+  'sala.remover'(c, { sala: nome, id }, ctx) {
+    const s = sala(c, nome);
+    if (!ctx.mestre) exigirDonoOuMestre(ctx, personagem(c, id));
+    s.participantes = s.participantes.filter(x => x !== id);
+    if (s.ativo === id) s.ativo = null;
+  },
+
+  'sala.acionar'(c, { sala: nome, id }, ctx) {
+    exigirMestre(ctx);
+    const s = sala(c, nome);
+    s.ativo = s.ativo === id ? null : id;
+  },
+
+  'sala.ordenar'(c, { sala: nome, id, direcao }, ctx) {
+    exigirMestre(ctx);
+    const s = sala(c, nome);
+    const i = s.participantes.indexOf(id);
+    const j = i + (direcao < 0 ? -1 : 1);
+    if (i < 0 || j < 0 || j >= s.participantes.length) return;
+    [s.participantes[i], s.participantes[j]] = [s.participantes[j], s.participantes[i]];
+  },
+
+  'sala.limpar'(c, { sala: nome }, ctx) {
+    exigirMestre(ctx);
+    c.salas[nome] = novaSala();
+  },
+
+  'pv.alterar'(c, { id, delta }, ctx) {
+    const p = personagem(c, id);
+    exigirDonoOuMestre(ctx, p);
+    p.pv.atual = Math.min(p.pv.max, Math.max(-p.pv.max, p.pv.atual + (parseInt(delta, 10) || 0)));
+  },
+
+  // Rolagens acontecem no servidor para todos verem o mesmo resultado.
+  'rolar'(c, { sala: nome, id, rotulo, componentes, dado, secreta }, ctx) {
+    let autor = ctx.mestre ? 'Mestre' : ctx.user.name;
+    if (id) {
+      const p = personagem(c, id);
+      exigirDonoOuMestre(ctx, p);
+      autor = p.nome;
+    }
+    const comps = (componentes || []).slice(0, 10).map(x => ({ nome: String(x.nome).slice(0, 40), valor: parseInt(x.valor, 10) || 0 }));
+    const r = rolarDado(dado || sistema().teste.dado);
+    const total = r.total + comps.reduce((s, x) => s + x.valor, 0);
+    const entrada = { autor, rotulo: String(rotulo || 'Teste').slice(0, 80), dado: r.expr, dados: r.dados, mod: r.mod, componentes: comps, total, secreta: !!(ctx.mestre && secreta) };
+    if (nome && c.salas[nome]) registrar(c.salas[nome].log, entrada);
+    else registrar(c.log, entrada);
+    return entrada;
+  },
+
+  'monstro.adicionar'(c, { nome }, ctx) {
+    exigirMestre(ctx);
+    const m = sistema().monstros.find(x => x.nome === nome);
+    if (!m) throw erro('Criatura não encontrada.');
+    const s = c.salas.batalha;
+    if (s.participantes.length >= LIMITE_SALA) throw erro('O Campo de Batalha está cheio.');
+    const p = npcDeMonstro(c, m);
+    c.personagens.push(p);
+    s.participantes.push(p.id);
+  },
+
+  'encontro.gerar'(c, { limite, usarMonstros, grupos }, ctx) {
+    exigirMestre(ctx);
+    limite = Math.max(1, parseInt(limite, 10) || 1);
+    const candidatos = [];
+    if (usarMonstros) for (const m of sistema().monstros) candidatos.push({ origem: 'monstro', dificuldade: m.dificuldade, m });
+    for (const p of c.personagens) {
+      if (p.tipo === 'npc' && p.grupoId !== GRUPO_ENCONTROS && (grupos || []).includes(p.grupoId)) {
+        candidatos.push({ origem: 'npc', dificuldade: p.dificuldade || p.nivel || 1, p });
+      }
+    }
+    if (!candidatos.length) throw erro('Escolha o Livro dos Monstros e/ou algum grupo de NPCs.');
+    const s = c.salas.batalha;
+    const vagas = LIMITE_SALA - s.participantes.length;
+    if (vagas <= 0) throw erro('O Campo de Batalha está cheio.');
+    const { escolhidos, soma } = gerarEncontro(candidatos, limite, Math.random, vagas);
+    if (!escolhidos.length) throw erro('Nenhuma criatura cabe nesse limite de dificuldade.');
+    const nomes = [];
+    for (const e of escolhidos) {
+      let p;
+      if (e.origem === 'npc') {
+        p = { ...structuredClone(e.p), id: uid(), grupoId: GRUPO_ENCONTROS, backups: [] };
+      } else {
+        p = npcDeMonstro(c, e.m);
+      }
+      c.personagens.push(p);
+      s.participantes.push(p.id);
+      nomes.push(p.nome);
+    }
+    registrar(s.log, { autor: 'Mestre', rotulo: `Encontro aleatório (dificuldade ${soma}/${limite})`, texto: nomes.join(', ') });
+    return { nomes, soma };
+  },
+};
+
+export function executar(c, tipo, dados, ctx) {
+  const fn = acoes[tipo];
+  if (!fn) throw erro(`Ação desconhecida: ${tipo}`);
+  const r = fn(c, dados || {}, ctx);
+  save();
+  return r;
+}
