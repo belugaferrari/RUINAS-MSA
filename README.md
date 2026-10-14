@@ -43,6 +43,12 @@ Para jogar pela internet (sem estar na mesma Wi‑Fi), o mesmo app pode ser publ
 - **Confronto** (aba própria, fora do combate): o mestre cria Ação × Ação passiva (regra do livro) ou disputa (provisória); cada jogador rola o lado do próprio personagem; resultado em tempo real.
 - **Livro de Regras**: gerado do .docx com índice, busca, imagens e grifos destacados. Combate e regras sociais do MSS ficam de fora.
 
+## Combate e social automáticos (campanhas no MSS)
+
+- **Campo de Batalha**: o mestre inicia o combate e o app rola a iniciativa de todos (AGI + 1d10; humores Corajoso, Amedrontado e Enojado rolam com vantagem). Mostra rodada e de quem é a vez; quem entra no meio rola na hora. Cada um ataca com a arma equipada (ou desarmado): acerto contra a defesa do alvo, vantagem/desvantagem automáticas (surpresa, alvo caído, terreno elevado…), ataque localizado, duas armas, Sacrifício, crítico (+1 dado), dano − IP aplicado direto nos PV, efeito de dano pelo DS e sobrevida abaixo de 0 PV.
+- **Sala Social**: humor de cada personagem (Roda do Humor) com os efeitos, e manipulação: escolha a subperícia e o humor desejado; o teste é contra a Resistência à Manipulação do alvo.
+- No MSA essas partes ficam desligadas até as regras do MSA chegarem. Escolhas provisórias em `PENDENCIAS.md`.
+
 ## Visual e celular
 
 - Ícones [Lucide](https://lucide.dev) (licença ISC), servidos pelo próprio app em `/icones.svg` — funcionam sem internet. Para usar um ícone novo, adicione o nome em `public/js/icones.js` (o teste `npm test` avisa se faltar).
@@ -57,6 +63,7 @@ Cada campanha usa um sistema — **MSA** (Modern Survival Auto) ou **MSS** (Mode
 | `conteudo/sistemas/base.json` | Regras comuns: atributos, pontos, fórmulas, teste D-MIL, sanidade, origens, progressão por nível, estados, slots, itens e monstros (exemplos). |
 | `conteudo/sistemas/msa.json` · `mss.json` | Só o que muda em cada sistema (Humanidade, Sacrifício, rolagem de atributos, iniciativa…). |
 | `conteudo/sistemas/msa/` · `mss/` | Perícias, profissões, classes (com tabela de progressão), vantagens, defeitos e capacidades — **gerados do livro de cada sistema**. |
+| `shared/combate.js` | Combate (iniciativa, ataque × defesa, dano − IP, efeitos pelo DS, sobrevida) e Roda do Humor / manipulação — ligados só nos sistemas com `modulos.combate` / `modulos.social` (hoje, o MSS). |
 | `conteudo/sistemas/PENDENCIAS.md` | Inconsistências dos livros, diferenças MSA × MSS e escolhas provisórias. |
 | `conteudo/livros/regras-msa.md` · `regras-mss.md` | Livro de Regras de cada sistema (o do MSS é completo; o do MSA deixa combate e social de fora). |
 | `shared/regras.js` | Toda a matemática (vale para os dois sistemas, guiada pelos dados de cada um). |

@@ -351,7 +351,11 @@
    "durabilidade": 20,
    "peso": 0.5,
    "dano": "1d4",
-   "bonus": {}
+   "bonus": {},
+   "pericia": "arma-branca.laminas-curtas",
+   "tipoDano": "Corte",
+   "efeitoDano": 3,
+   "alcance": "corpo"
   },
   {
    "id": "machado",
@@ -364,7 +368,11 @@
    "durabilidade": 30,
    "peso": 3,
    "dano": "1d10",
-   "bonus": {}
+   "bonus": {},
+   "pericia": "arma-branca.machado",
+   "tipoDano": "Corte",
+   "efeitoDano": 4,
+   "alcance": "corpo"
   },
   {
    "id": "revolver",
@@ -377,7 +385,11 @@
    "durabilidade": 25,
    "peso": 1,
    "dano": "2d6",
-   "bonus": {}
+   "bonus": {},
+   "pericia": "armas-de-fogo.pistolas",
+   "tipoDano": "Perfuração",
+   "efeitoDano": 3,
+   "alcance": "distancia"
   },
   {
    "id": "escudo",

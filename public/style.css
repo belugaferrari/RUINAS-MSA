@@ -514,3 +514,17 @@ mark.revisao { background: #5a4510; color: #ffe7a8; border-bottom: 1px dashed va
 .selo.sistema { color: var(--ouro-claro); border-color: var(--ouro-esc); background: #2f2616; font-weight: 600; letter-spacing: .04em; }
 .cartoes.sistemas { grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr)); }
 @media (max-width: 860px) { .topo .selo.sistema { padding: .1em .45em; } }
+
+/* Combate e Roda do Humor (MSS) */
+.combate .ordem-iniciativa { list-style: none; padding: 0; margin: .5em 0; display: flex; flex-wrap: wrap; gap: .4em; }
+.combate .ordem-iniciativa li { display: inline-flex; align-items: center; gap: .3em; background: var(--painel); border: 1px solid var(--borda); border-radius: 999px; padding: .15em .3em .15em .6em; }
+.combate .ordem-iniciativa li.vez { border-color: var(--ouro); box-shadow: 0 0 0 2px var(--ouro); }
+.combate .ordem-iniciativa .ini { font-weight: 700; color: var(--ouro); }
+.combate .ataque { margin-top: .6em; }
+.combate .ataque summary { cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: .4em; min-height: 40px; }
+.opcoes-ataque { font-size: .92em; }
+.humor { display: flex; flex-wrap: wrap; align-items: center; gap: .3em; margin-top: .3em; }
+.humor .dica { margin: 0; }
+.lista-humores { margin: .4em 0 0; padding-left: 1.1em; display: flex; flex-direction: column; gap: .25em; }
+.log .detalhe { display: block; opacity: .8; }
+.participante .marcadores { display: flex; flex-wrap: wrap; gap: .25em; margin-top: .2em; }

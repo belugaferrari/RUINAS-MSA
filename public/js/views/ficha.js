@@ -212,6 +212,13 @@ function painelTeste(p, d) {
 }
 
 export function linhaRolagem(e) {
+  if (e.tipo === 'ataque' || e.tipo === 'manipulacao') {
+    const res = e.sucesso ? 'sucesso' : 'falha';
+    return h('span', { class: `rolagem ${res}` },
+      h('strong', {}, `${e.autor} ${e.rotulo}: `),
+      h('span', { class: `selo ${e.sucesso ? 'ok' : 'perigo'}` }, icone(e.tipo === 'ataque' ? 'swords' : 'drama'), e.texto),
+      e.detalhe ? h('small', { class: 'detalhe' }, ` ${e.detalhe}`) : null);
+  }
   if (e.texto) return h('span', {}, h('strong', {}, e.rotulo), ': ', e.texto);
   if (e.tipo === 'atributos') {
     return h('span', {}, h('strong', {}, `${e.autor} — ${e.rotulo}: `), h('span', { class: 'total' }, e.valores.map(v => v.total).join(' · ')),

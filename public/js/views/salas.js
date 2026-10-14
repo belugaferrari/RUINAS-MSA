@@ -1,8 +1,9 @@
 import { h, botao, selecao, aviso, confirmar, vazio, formatarData, icone, titulo } from '../ui.js';
-import { estado, personagemPorId, meusPersonagens } from '../estado.js';
+import { estado, personagemPorId, meusPersonagens, render } from '../estado.js';
 import { acao } from '../api.js';
 import { derivados, LIMITE_SALA } from '/shared/regras.js';
 import { linhaRolagem } from './ficha.js';
+import { combateView, humorCartao, manipulacaoView, rodaDoHumor } from './combate.js';
 
 const TITULOS = { social: 'Sala Social', batalha: 'Campo de Batalha' };
 const ICONES_SALA = { social: 'drama', batalha: 'swords' };
@@ -28,11 +29,14 @@ export function salaView(nome) {
         if (await confirmar(`Remover todos de ${TITULOS[nome]} e limpar o registro?`)) await acao('sala.limpar', { sala: nome });
       }, { class: 'perigo', icone: 'trash-2' }) : null),
     mestre && nome === 'batalha' ? encontroAleatorio() : null,
+    nome === 'batalha' ? combateView(participantes, mestre) : null,
+    nome === 'social' ? rodaDoHumor() : null,
     h('div', { class: 'sala-grade' },
       h('div', { class: 'participantes' },
         participantes.length ? participantes.map((p, i) => cartaoParticipante(nome, s, p, i, participantes.length, mestre)) : vazio('Ninguém na sala ainda.', ICONES_SALA[nome])),
       h('div', { class: 'registro' },
-        rolagemRapida(nome, participantes, mestre),
+        nome === 'social' ? manipulacaoView(participantes, mestre) : null,
+      rolagemRapida(nome, participantes, mestre),
         titulo('Registro', 'scroll'),
         h('ol', { class: 'log', 'data-rolagem': `log-${nome}` }, [...s.log].reverse().map(e => h('li', {}, h('small', {}, formatarData(e.em)), ' ', linhaRolagem(e)))))));
 }
@@ -60,10 +64,13 @@ function cartaoParticipante(nome, s, p, i, total, mestre) {
       veStats && p.pv ? h('div', { class: 'meta icones-meta' },
         h('span', {}, icone('heart'), `${p.pv.atual}/${p.pv.max}`),
         h('span', {}, icone('brain'), p.sanidade?.atual ?? '-'),
-        h('span', {}, icone('hand-heart'), p.humanidade?.atual ?? '-')) : null),
+        h('span', {}, icone('hand-heart'), p.humanidade?.atual ?? '-')) : null,
+      veStats && p.marcadores?.length ? h('div', { class: 'marcadores' }, p.marcadores.map(m => h('span', { class: 'etiqueta' }, m))) : null,
+      nome === 'social' ? humorCartao(p, mestre || meu, mestre) : null),
     h('div', { class: 'acoes' },
       veStats && p.pv ? botao('PV', () => acao('pv.alterar', { id: p.id, delta: -1 }), { class: 'pequeno', icone: 'minus', title: `Tirar 1 PV de ${p.nome}`, 'aria-label': `Tirar 1 PV de ${p.nome}` }) : null,
       veStats && p.pv ? botao('PV', () => acao('pv.alterar', { id: p.id, delta: 1 }), { class: 'pequeno', icone: 'plus', title: `Dar 1 PV a ${p.nome}`, 'aria-label': `Dar 1 PV a ${p.nome}` }) : null,
+      nome === 'batalha' && veStats ? botao(caido(p) ? 'Levantar' : 'Caído', () => alternarCaido(p), { class: 'pequeno', icone: 'arrow-left-right', title: caido(p) ? `${p.nome} se levanta` : `${p.nome} fica caído` }) : null,
       mestre ? botao(s.ativo === p.id ? 'Desacionar' : 'Acionar', () => acao('sala.acionar', { sala: nome, id: p.id }), { class: 'pequeno primario', icone: 'zap' }) : null,
       mestre ? botao('', () => acao('sala.ordenar', { sala: nome, id: p.id, direcao: -1 }), { class: 'pequeno', icone: 'chevron-up', disabled: i === 0, title: `Subir ${p.nome} na ordem` }) : null,
       mestre ? botao('', () => acao('sala.ordenar', { sala: nome, id: p.id, direcao: 1 }), { class: 'pequeno', icone: 'chevron-down', disabled: i === total - 1, title: `Descer ${p.nome} na ordem` }) : null,
@@ -131,4 +138,10 @@ function encontroAleatorio() {
         const r = await acao('encontro.gerar', { limite: limite.value, usarMonstros: monstros.checked, grupos: grupos.filter(x => x.cb.checked).map(x => x.g.id) });
         aviso(`Encontro: ${r.nomes.join(', ')} (dificuldade ${r.soma})`);
       }, { class: 'primario', icone: 'dices' })));
+}
+
+const caido = p => (p.marcadores || []).includes('Caído');
+function alternarCaido(p) {
+  const marcadores = caido(p) ? p.marcadores.filter(m => m !== 'Caído') : [...(p.marcadores || []), 'Caído'];
+  return acao('personagem.atualizar', { id: p.id, patch: { marcadores } });
 }

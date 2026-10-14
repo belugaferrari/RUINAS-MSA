@@ -1,5 +1,6 @@
 import { db, save, uid } from './db.js';
 import { sistema, idSistema } from './sistema.js';
+import { resolverAtaque, aplicarAtaque, sobrevida, rolarIniciativa, resolverManipulacao, modHumorTestes, humorDe } from '../shared/combate.js';
 import { novaFicha, podeEquipar, rolarDado, rolarAtributosCriacao, testeDMil, gerarEncontro, derivados, problemasFicha, LIMITE_SALA } from '../shared/regras.js';
 
 const GRUPO_ENCONTROS = 'encontros';
@@ -57,7 +58,7 @@ export function resumoCampanha(c) {
 const nomeUsuario = id => db.users.find(u => u.id === id)?.name ?? null;
 
 function fichaPublica(p) {
-  return { id: p.id, tipo: p.tipo, nome: p.nome, classe: p.classe, especializacao: p.especializacao, profissao: p.profissao, nivel: p.nivel, foto: p.foto, donoId: p.donoId, dono: nomeUsuario(p.donoId) };
+  return { id: p.id, tipo: p.tipo, nome: p.nome, classe: p.classe, especializacao: p.especializacao, profissao: p.profissao, nivel: p.nivel, foto: p.foto, humor: p.humor || null, donoId: p.donoId, dono: nomeUsuario(p.donoId) };
 }
 
 // O que cada pessoa enxerga da campanha. O mestre vê tudo; o jogador só o que é dele ou público.
@@ -186,6 +187,42 @@ const CAMPOS_JOGADOR = new Set([
 ]);
 const CAMPOS_PROTEGIDOS = new Set(['id', 'tipo', 'donoId', 'backups']);
 
+// ---------- combate (MSS) ----------
+
+function exigirModulo(sis, modulo) {
+  if (!sis.modulos?.[modulo]) {
+    throw erro(`As regras ${modulo === 'combate' ? 'de combate' : 'sociais'} automáticas ainda não existem no ${sis.nome}. Use os testes livres.`);
+  }
+}
+
+function ordenarIniciativa(cb) {
+  cb.ordem.sort((a, b) => b.ini - a.ini || b.agi - a.agi);
+}
+
+function entrarNoCombate(c, s, p) {
+  if (s.combate.ordem.some(o => o.id === p.id)) return;
+  const sis = sistema(c.sistema);
+  const atual = s.combate.ordem[s.combate.vez]?.id;
+  const r = rolarIniciativa(p, sis);
+  s.combate.ordem.push({ id: p.id, ini: r.total, agi: r.agi });
+  ordenarIniciativa(s.combate);
+  s.combate.vez = Math.max(0, s.combate.ordem.findIndex(o => o.id === atual));
+  registrar(s.log, { autor: p.nome, rotulo: `${p.nome} entrou no combate`, texto: `iniciativa ${r.total}` });
+}
+
+function sairDoCombate(s, id) {
+  const cb = s.combate;
+  if (!cb) return;
+  const i = cb.ordem.findIndex(o => o.id === id);
+  if (i < 0) return;
+  cb.ordem.splice(i, 1);
+  if (i < cb.vez) cb.vez--;
+  if (cb.vez >= cb.ordem.length) cb.vez = 0;
+  if (!cb.ordem.length) s.combate = null;
+}
+
+const fmtMod = v => (v > 0 ? `+${v}` : `${v}`);
+
 // ---------- ações ----------
 
 export const acoes = {
@@ -291,6 +328,7 @@ export const acoes = {
     for (const s of Object.values(c.salas)) {
       s.participantes = s.participantes.filter(x => x !== id);
       if (s.ativo === id) s.ativo = null;
+      sairDoCombate(s, id);
     }
   },
 
@@ -426,6 +464,7 @@ export const acoes = {
     if (s.participantes.includes(id)) return;
     if (s.participantes.length >= LIMITE_SALA) throw erro(`A sala já tem ${LIMITE_SALA} integrantes.`);
     s.participantes.push(id);
+    if (s.combate) entrarNoCombate(c, s, p);
   },
 
   'sala.remover'(c, { sala: nome, id }, ctx) {
@@ -433,6 +472,7 @@ export const acoes = {
     if (!ctx.mestre) exigirDonoOuMestre(ctx, personagem(c, id));
     s.participantes = s.participantes.filter(x => x !== id);
     if (s.ativo === id) s.ativo = null;
+    sairDoCombate(s, id);
   },
 
   'sala.acionar'(c, { sala: nome, id }, ctx) {
@@ -476,9 +516,9 @@ export const acoes = {
     const base = { autor, secreta: !!(ctx.mestre && secreta) };
     let entrada;
     if (tipo === 'iniciativa') {
-      const r = rolarDado('1d10');
-      const agi = p ? derivados(p, sis).iniciativa : 0;
-      entrada = { ...base, tipo: 'iniciativa', rotulo: 'Iniciativa', dado: '1d10', dados: r.dados, mod: 0, componentes: [{ nome: 'AGI', valor: agi }], total: r.total + agi };
+      const r = p ? rolarIniciativa(p, sis) : { dados: rolarDado('1d10').dados, agi: 0, vantagem: false };
+      entrada = { ...base, tipo: 'iniciativa', rotulo: r.vantagem ? 'Iniciativa (vantagem)' : 'Iniciativa', dado: r.vantagem ? '2d10, maior' : '1d10', dados: r.dados, mod: 0,
+        componentes: [{ nome: 'AGI', valor: r.agi }], total: r.agi + Math.max(...r.dados) };
     } else if (tipo === 'atributos') {
       if (!sis.regras.rolagemAtributos) throw erro(`O ${sis.nome} não tem rolagem de atributos.`);
       const r = rolarAtributosCriacao(sis);
@@ -488,13 +528,166 @@ export const acoes = {
       entrada = { ...base, rotulo: String(rotulo || dado).slice(0, 80), dado: r.expr, dados: r.dados, mod: r.mod, componentes: [], total: r.total };
     } else {
       const a = acaoRef && p ? valorAcao(p, acaoRef, sis) : { valor: parseInt(acao, 10) || 0, nome: String(rotulo || 'Teste').slice(0, 80) };
-      const modificador = Math.max(-100, Math.min(100, parseInt(mod, 10) || 0));
+      // No sistema com módulo social, o humor do personagem entra no modificador (ex.: Apático −5%).
+      const modificador = Math.max(-100, Math.min(100, parseInt(mod, 10) || 0)) + (p ? modHumorTestes(p, sis) : 0);
       const ndNum = nd === '' || nd == null ? null : Math.max(0, parseInt(nd, 10) || 0);
       const r = testeDMil(a.valor + modificador, ndNum, sis, { metade: !!metade });
       entrada = { ...base, tipo: 'dmil', rotulo: String(rotulo || a.nome).slice(0, 80), acaoNome: a.nome, mod: modificador, metade: !!metade, ...r };
     }
     if (nome && c.salas[nome]) registrar(c.salas[nome].log, entrada);
     else registrar(c.log, entrada);
+    return entrada;
+  },
+
+  // ---------- Combate automático (MSS) ----------
+  'combate.iniciar'(c, d, ctx) {
+    exigirMestre(ctx);
+    const sis = sistema(c.sistema);
+    exigirModulo(sis, 'combate');
+    const s = c.salas.batalha;
+    const vivos = s.participantes.map(id => c.personagens.find(p => p.id === id)).filter(Boolean);
+    if (vivos.length < 2) throw erro('Coloque ao menos dois participantes no Campo de Batalha.');
+    const ordem = vivos.map(p => {
+      const r = rolarIniciativa(p, sis);
+      return { id: p.id, ini: r.total, agi: r.agi, dados: r.dados };
+    });
+    s.combate = { rodada: 1, vez: 0, ordem };
+    ordenarIniciativa(s.combate);
+    s.ativo = s.combate.ordem[0].id;
+    const nomes = s.combate.ordem.map(o => `${c.personagens.find(p => p.id === o.id).nome} ${o.ini}`);
+    registrar(s.log, { autor: 'Mestre', rotulo: 'Combate iniciado — iniciativa', texto: nomes.join(' · ') });
+  },
+
+  'combate.proximo'(c, d, ctx) {
+    const s = c.salas.batalha;
+    const cb = s.combate;
+    if (!cb) throw erro('Não há combate em andamento.');
+    const atual = c.personagens.find(p => p.id === cb.ordem[cb.vez]?.id);
+    if (!ctx.mestre && atual?.donoId !== ctx.user.id) throw erro('Só quem está no turno (ou o mestre) passa a vez.');
+    const sis = sistema(c.sistema);
+    cb.vez++;
+    if (cb.vez >= cb.ordem.length) {
+      cb.vez = 0;
+      cb.rodada++;
+      registrar(s.log, { autor: 'Mestre', rotulo: `Rodada ${cb.rodada}`, texto: 'nova rodada' });
+    }
+    const p = c.personagens.find(x => x.id === cb.ordem[cb.vez].id);
+    s.ativo = p.id;
+    const nota = sobrevida(p, sis);
+    if (nota) registrar(s.log, { autor: p.nome, rotulo: 'Sobrevida', texto: nota });
+  },
+
+  'combate.ordenar'(c, { id, direcao }, ctx) {
+    exigirMestre(ctx);
+    const cb = c.salas.batalha.combate;
+    if (!cb) return;
+    const atual = cb.ordem[cb.vez]?.id;
+    const i = cb.ordem.findIndex(o => o.id === id);
+    const j = i + (direcao < 0 ? -1 : 1);
+    if (i < 0 || j < 0 || j >= cb.ordem.length) return;
+    [cb.ordem[i], cb.ordem[j]] = [cb.ordem[j], cb.ordem[i]];
+    cb.vez = cb.ordem.findIndex(o => o.id === atual);
+  },
+
+  'combate.encerrar'(c, d, ctx) {
+    exigirMestre(ctx);
+    const s = c.salas.batalha;
+    if (!s.combate) return;
+    registrar(s.log, { autor: 'Mestre', rotulo: 'Combate encerrado', texto: `após ${s.combate.rodada} rodada(s)` });
+    s.combate = null;
+    s.ativo = null;
+  },
+
+  'combate.atacar'(c, { atacante, alvo, opcoes }, ctx) {
+    const sis = sistema(c.sistema);
+    exigirModulo(sis, 'combate');
+    const s = c.salas.batalha;
+    const a = personagem(c, atacante);
+    const b = personagem(c, alvo);
+    exigirDonoOuMestre(ctx, a);
+    if (a.id === b.id) throw erro('Escolha outro alvo.');
+    if (!s.participantes.includes(a.id) || !s.participantes.includes(b.id)) throw erro('Atacante e alvo precisam estar no Campo de Batalha.');
+    if (!a.pv || !b.pv) throw erro('Os dois precisam ter PV na ficha.');
+    const op = { ...(opcoes || {}) };
+    if (!ctx.mestre) { delete op.vantagem; delete op.desvantagem; delete op.danoLivre; }
+    let r;
+    try {
+      r = resolverAtaque(a, b, sis, op);
+    } catch (e) {
+      throw erro(e.message);
+    }
+    const notas = aplicarAtaque(a, b, r);
+    const mods = r.mods.map(m => `${m.nome} ${fmtMod(m.valor)}`).join(', ');
+    const modo = r.modo ? ` · ${r.modo} (${(r.modo === 'vantagem' ? r.motivosVantagem : r.motivosDesvantagem).join(', ')}) d100 [${r.dados.join(', ')}]` : '';
+    const def = r.defesa.partes.map(x => `${x.nome} ${x.valor}`).join(' + ');
+    const danoTxt = r.sucesso
+      ? ` — dano ${r.dano} (${r.danoPartes.map(x => `${x.nome} ${x.dados ? `[${x.dados.join(', ')}]` : ''}${x.total}`).join(' + ')}${r.ip ? ` − IP ${r.ip}` : ''}${r.queimadura ? ' +1 queimadura' : ''}) · ${b.nome} ${b.pv.atual}/${b.pv.max} PV`
+      : '';
+    const entrada = {
+      tipo: 'ataque', autor: a.nome, rotulo: `ataca ${b.nome} com ${r.arma}`, sucesso: r.sucesso, critico: r.critico,
+      texto: `${r.sucesso ? 'ACERTOU' : 'ERROU'}${r.critico ? ` (crítico de ${r.critico})` : ''}${danoTxt}${notas.length ? ` · ${notas.join(', ')}` : ''}`
+        + `${r.perdaSacrificio ? ` · Sacrifício: ${a.nome} perde ${r.perdaSacrificio} PV` : ''}`,
+      detalhe: `d100 ${r.dp} + ação ${r.acao}${mods ? ` (${mods})` : ''} = ${r.total} contra defesa ${r.nd} (${def})${modo} · DS ${r.ds}`,
+    };
+    registrar(s.log, entrada);
+    return entrada;
+  },
+
+  // ---------- Humor (Roda do Humor, MSS) ----------
+  'humor.definir'(c, { id, humor }, ctx) {
+    const sis = sistema(c.sistema);
+    exigirModulo(sis, 'social');
+    const p = personagem(c, id);
+    exigirDonoOuMestre(ctx, p);
+    const h = sis.social.humores.find(x => x.id === humor);
+    if (!h) throw erro('Humor desconhecido.');
+    if (!ctx.mestre && !h.escolha && !(p.humorOpcoes || []).includes(h.id)) {
+      throw erro('Você só escolhe Neutro, Amigável, Indisposto ou Apático; os outros humores vêm de manipulação ou do mestre.');
+    }
+    if ((p.humor || 'neutro') === h.id) return;
+    p.humor = h.id;
+    p.humorOpcoes = [];
+    let texto = h.nome;
+    if (h.danoHumanidade && p.humanidade) {
+      const r = rolarDado(h.danoHumanidade);
+      p.humanidade.atual = Math.max(0, p.humanidade.atual - r.total);
+      texto += ` — perde ${r.total} de Humanidade (${p.humanidade.atual})`;
+    }
+    registrar(c.salas.social.log, { autor: p.nome, rotulo: `Humor de ${p.nome}`, texto });
+  },
+
+  'social.manipular'(c, { autor, alvo, sub, humor, mod }, ctx) {
+    const sis = sistema(c.sistema);
+    exigirModulo(sis, 'social');
+    const a = personagem(c, autor);
+    const b = personagem(c, alvo);
+    exigirDonoOuMestre(ctx, a);
+    if (a.id === b.id) throw erro('Escolha outro alvo.');
+    let r;
+    try {
+      r = resolverManipulacao(a, b, sub, humor, sis, { mod: ctx.mestre ? mod : 0 });
+    } catch (e) {
+      throw erro(e.message);
+    }
+    const nomeH = id => humorDe({ humor: id }, sis)?.nome || id;
+    const per = sis.pericias.find(x => x.id === 'manipulacao');
+    const nomeSub = per?.subpericias.find(x => x.id === sub)?.nome || sub;
+    let resultado;
+    if (r.sucesso) {
+      b.humor = humor;
+      b.humorOpcoes = [];
+      resultado = `SUCESSO — ${b.nome} fica ${nomeH(humor)}`;
+    } else {
+      b.humorOpcoes = r.opcoesFalha;
+      resultado = `FALHOU${r.opcoesFalha.length ? ` — ${b.nome} pode escolher ficar ${r.opcoesFalha.map(nomeH).join(' ou ')}` : ''}`;
+    }
+    const mods = r.mods.map(m => `${m.nome} ${fmtMod(m.valor)}`).join(', ');
+    const entrada = {
+      tipo: 'manipulacao', autor: a.nome, rotulo: `${nomeSub} em ${b.nome} (quer ${nomeH(humor)})`, sucesso: r.sucesso, critico: r.critico,
+      texto: `${resultado}${r.critico ? ` (crítico de ${r.critico})` : ''}`,
+      detalhe: `d100 ${r.dp}${r.modo ? ` (vantagem [${r.dados.join(', ')}])` : ''} + ${r.acao}${mods ? ` (${mods})` : ''} = ${r.total} contra R.MNP ${r.nd} · DS ${r.ds}`,
+    };
+    registrar(c.salas.social.log, entrada);
     return entrada;
   },
 
