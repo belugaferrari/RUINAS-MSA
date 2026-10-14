@@ -101,3 +101,22 @@ test('slots e bônus de itens', () => {
 test('encontro aleatório não passa do limite', () => {
   for (let i = 0; i < 50; i++) assert.ok(R.gerarEncontro(sis.monstros, 7).soma <= 7);
 });
+
+test('humanidade: 50 + 2×CAR + 2×PER e estágio', () => {
+  const f = R.novaFicha(sis, { nivel: 1 });
+  assert.equal(f.humanidade.max, 90);
+  assert.equal(R.derivados(f, sis).estagioHumanidade.nome, 'Compassivo');
+  f.humanidade.atual = 45;
+  assert.match(R.derivados(f, sis).estagioHumanidade.nome, /Calculista/);
+  f.atributos.CAR = 20; f.atributos.PER = 20;
+  assert.equal(R.derivados(f, sis).humanidadeMax, 100, 'máximo natural 100');
+});
+
+test('rolagem de atributos da criação respeita a soma 70–102', () => {
+  for (let i = 0; i < 30; i++) {
+    const r = R.rolarAtributosCriacao(sis);
+    assert.equal(r.valores.length, 8);
+    assert.ok(r.soma >= 70 && r.soma <= 102);
+  }
+  assert.deepEqual(R.ndPorNivel(3, sis).map(x => x.nd), [65, 91, 120]);
+});

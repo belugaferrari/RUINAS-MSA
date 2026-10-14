@@ -6,10 +6,12 @@ import { fichaView } from './ficha.js';
 import { salaView } from './salas.js';
 import { livroView, monstrosView, lojaView, markdown, referenciaView } from './livros.js';
 import { mapaRelacoesView } from './relacoes.js';
+import { painelDados, dadosAberto } from './dados.js';
+import { confrontoView } from './confronto.js';
 
 const ABAS = [
   ['jogadores', 'Jogadores', 'users'], ['npcs', 'NPCs', 'ghost'], ['imagens', 'Imagens', 'image'], ['social', 'Sala Social', 'drama'],
-  ['batalha', 'Campo de Batalha', 'swords'], ['resumo', 'Resumo', 'heart-pulse'], ['regras', 'Livro de Regras', 'book-open'],
+  ['batalha', 'Campo de Batalha', 'swords'], ['confronto', 'Confronto', 'scale'], ['resumo', 'Resumo', 'heart-pulse'], ['regras', 'Livro de Regras', 'book-open'],
   ['monstros', 'Livro dos Monstros', 'skull'], ['mestre', 'Livro do Mestre', 'library'], ['loja', 'Loja', 'store'],
   ['classes', 'Classes', 'shield'], ['lore', 'Lore', 'scroll'], ['campanha', 'Campanha', 'notebook-pen'],
 ];
@@ -29,7 +31,9 @@ export function telaMestre() {
         h('input', { type: 'checkbox', checked: c.aberta, onchange: e => acao('campanha.atualizar', { aberta: e.target.checked }).catch(err => aviso(err.message, 'erro')) }),
         icone(c.aberta ? 'lock-open' : 'lock'), h('span', {}, c.aberta ? 'Aberta' : 'Fechada'))),
     abas(ABAS, aba, id => mudar({ aba: id })),
-    h('main', { class: 'conteudo' }, conteudoAba(aba)));
+    h('div', { class: `area-campanha ${dadosAberto() ? 'com-dados' : ''}` },
+      h('main', { class: 'conteudo' }, conteudoAba(aba)),
+      painelDados()));
 }
 
 function conteudoAba(aba) {
@@ -39,6 +43,7 @@ function conteudoAba(aba) {
     case 'imagens': return abaImagens();
     case 'social': return salaView('social');
     case 'batalha': return salaView('batalha');
+    case 'confronto': return confrontoView();
     case 'resumo': return abaResumo();
     case 'regras': return livroView('regras', 'Livro de Regras');
     case 'monstros': return monstrosView();

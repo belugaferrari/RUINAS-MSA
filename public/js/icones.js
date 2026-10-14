@@ -1,12 +1,12 @@
 // Ícones (Lucide, licença ISC). O servidor monta /icones.svg só com os nomes desta lista,
 // então todo ícone novo precisa ser adicionado aqui.
 export const ICONES = [
-  'anchor', 'arrow-left', 'axe', 'backpack', 'book', 'book-open', 'bookmark', 'brain', 'camera', 'castle', 'check',
+  'anchor', 'arrow-left', 'arrow-left-right', 'flag', 'axe', 'backpack', 'book', 'book-open', 'bookmark', 'brain', 'camera', 'castle', 'check',
   'chevron-down', 'chevron-up', 'circle-alert', 'coins', 'compass', 'copy', 'crosshair', 'crown', 'dice-5', 'dices',
   'door-closed', 'door-open', 'download', 'drama', 'eye', 'eye-off', 'feather', 'file-spreadsheet', 'flame', 'gem',
   'ghost', 'hand-heart', 'heart', 'heart-pulse', 'hourglass', 'image', 'info', 'landmark', 'library', 'lock',
   'lock-open', 'log-out', 'map', 'menu', 'minus', 'network', 'notebook-pen', 'pencil', 'plus', 'refresh-cw', 'save',
-  'scroll', 'search', 'settings', 'shield', 'shirt', 'ship', 'skull', 'sparkles', 'store', 'sword', 'swords', 'tag',
+  'scale', 'scroll', 'search', 'settings', 'shield', 'shirt', 'ship', 'skull', 'sparkles', 'store', 'sword', 'swords', 'tag',
   'target', 'trash-2', 'trending-up', 'upload', 'user', 'user-plus', 'user-round-x', 'users', 'wand-sparkles', 'wifi-off', 'x', 'zap',
 ];
 

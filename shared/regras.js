@@ -4,6 +4,7 @@
 export const LIMITE_SALA = 20;
 
 export function rolarDado(expr, rng = Math.random) {
+  if (/^\s*\d+\s*$/.test(expr || '')) return { expr: String(expr).trim(), dados: [], mod: parseInt(expr, 10), total: parseInt(expr, 10) };
   const m = /^\s*(\d*)d(\d+)\s*([+-]\s*\d+)?\s*$/i.exec(expr || '');
   if (!m) throw new Error(`Dado inválido: ${expr}`);
   const qtd = Math.min(parseInt(m[1] || '1', 10), 100);
@@ -27,6 +28,23 @@ export function testeDMil(acao, nd, sistema, { metade = false, rng = Math.random
 
 const regras = s => s.regras || {};
 
+// Rolagem alternativa de atributos da criação (rerola o conjunto até a soma ficar dentro do limite).
+export function rolarAtributosCriacao(sistema, rng = Math.random) {
+  const cfg = regras(sistema).rolagemAtributos;
+  let tentativas = 0;
+  let valores;
+  let soma;
+  do {
+    valores = cfg.dados.map(expr => ({ expr, ...rolarDado(expr, rng) }));
+    soma = valores.reduce((s, v) => s + v.total, 0);
+    tentativas++;
+  } while ((soma < cfg.somaMin || soma > cfg.somaMax) && tentativas < 50);
+  return { valores: valores.map(v => ({ expr: v.expr, dados: v.dados, total: v.total })), soma, rerolagens: tentativas - 1 };
+}
+
+export const ndPorNivel = (nivel, sistema) =>
+  (sistema.teste?.ndPorNivel || []).map(x => ({ nome: x.nome, nd: x.base + x.porNivel * (nivel || 1) }));
+
 export function novaFicha(sistema, campanha) {
   const r = regras(sistema);
   const nivel = typeof campanha?.nivel === 'number' ? campanha.nivel : 1;
@@ -40,7 +58,6 @@ export function novaFicha(sistema, campanha) {
     pericias: {}, subpericias: {},
     itens: [],
     dinheiro: r.creditosIniciais ?? 0,
-    humanidade: { max: 10, atual: 10 },
     marcadores: [],
     background: '', anotacoes: '', foto: null,
     xp: 0, backups: [],
@@ -48,6 +65,7 @@ export function novaFicha(sistema, campanha) {
   const d = derivados(ficha, sistema);
   ficha.pv = { max: d.pvMax, atual: d.pvMax };
   ficha.sanidade = { max: d.sanidadeMax, atual: d.sanidadeMax };
+  ficha.humanidade = { max: d.humanidadeMax, atual: d.humanidadeMax };
   return ficha;
 }
 
@@ -156,10 +174,13 @@ export function derivados(ficha, sistema) {
   const sanidadeMax = (ficha.atributos?.INT ?? 0) + (ficha.atributos?.WILL ?? 0) + 10;
   const san = ficha.sanidade?.atual ?? sanidadeMax;
   const estadoSanidade = [...(sistema.sanidade?.estados || [])].reverse().find(e => san < e.abaixoDe)?.nome || 'Lúcido';
+  const humanidadeMax = Math.min(100, 50 + 2 * (ficha.atributos?.CAR ?? 0) + 2 * (ficha.atributos?.PER ?? 0));
+  const hum = ficha.humanidade?.atual ?? humanidadeMax;
+  const estagioHumanidade = (sistema.humanidade?.estagios || []).find(e => hum >= e.min && hum <= e.max) || null;
   const equipados = (ficha.itens || []).filter(i => i.equipado);
   return {
     bonus, atributos, percentual, bonusPericial, mod, pericias, subpericias, bonusProfissao,
-    pvMax, sanidadeMax, estadoSanidade,
+    pvMax, sanidadeMax, estadoSanidade, humanidadeMax, estagioHumanidade,
     iniciativa: atributos.AGI ?? 0,
     linguasExtras: Math.max(0, mod.INT ?? 0),
     defesa: equipados.reduce((s, i) => s + (i.defesa || 0), 0) + (bonus.Defesa || 0),

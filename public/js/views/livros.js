@@ -9,6 +9,22 @@ const cacheLivros = {};
 // HTML cru escrito no texto aparece como texto (evita scripts injetados no Lore).
 const escapar = t => t.replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch]);
 marked.use({ renderer: { html: token => escapar(typeof token === 'string' ? token : token.text) } });
+// ==texto== = trecho grifado no livro (ainda em revisão).
+marked.use({
+  extensions: [{
+    name: 'grifo', level: 'inline',
+    start: src => src.indexOf('=='),
+    tokenizer(src) {
+      const m = /^==([^=\n]+?)==/.exec(src);
+      if (m) return { type: 'grifo', raw: m[0], tokens: this.lexer.inlineTokens(m[1]) };
+      return undefined;
+    },
+    renderer(token) { return `<mark class="revisao" title="Grifado no livro: ainda pode mudar">${this.parser.parseInline(token.tokens)}</mark>`; },
+  }],
+});
+
+// Livros grandes: o HTML convertido fica em cache por texto.
+const cacheHtml = new Map();
 
 function filtroBusca(chave, placeholder) {
   return h('input', {
@@ -21,7 +37,12 @@ const busca = chave => (estado.sel[`busca:${chave}`] || '').toLowerCase().trim()
 
 export function markdown(texto) {
   const div = h('div', { class: 'texto-livro' });
-  div.innerHTML = marked.parse(texto || '');
+  let html = cacheHtml.get(texto);
+  if (html == null) {
+    html = marked.parse(texto || '');
+    if ((texto || '').length > 5000) cacheHtml.set(texto, html);
+  }
+  div.innerHTML = html;
   for (const a of div.querySelectorAll('a[href]')) {
     if (!/^(https?:|#|\/)/i.test(a.getAttribute('href'))) a.removeAttribute('href');
     else if (/^https?:/i.test(a.getAttribute('href'))) a.target = '_blank';

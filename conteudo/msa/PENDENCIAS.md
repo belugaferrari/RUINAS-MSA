@@ -1,4 +1,4 @@
-# Pendências encontradas no Livro do Jogador (rev. 14/10/2026)
+# Pendências encontradas no Livro do Jogador (rev. 14/10/2026, atualizada às 15:29)
 
 Pontos em que o app precisou escolher um caminho. Confira e me diga se a escolha está certa para o **MSA**.
 
@@ -10,12 +10,14 @@ Pontos em que o app precisou escolher um caminho. Confira e me diga se a escolha
 | 3 | Profissão Protetor | Bônus em "Defesa Desarmada" | Essa subperícia não existe na lista — o bônus fica sem efeito até definir |
 | 4 | Profissão Protetor | "Salvaguarda" | Entendido como Briga › Salvaguardar |
 | 5 | Nomes nas profissões | "Encontrar armadilhas", "Engenharia Mecânica", "Manutenção de Computadores", "Identificação de objetos" | Armadilhas › Encontrar, Engenharia › Mecânica, Computação › Manutenção, Avaliação de Objetos › Identificação |
-| 6 | Grafia texto × tabelas de classe | Gerigonça/Geringonça, Artificie/Artífice, Ultimo/Último, Autopsia/Autópsia | O app usa a grafia das tabelas |
+| 6 | Humanidade (Passo 6) | "HUM = 50 + 2×CAR + 2×PER, mas você pode escolher valores melhores que esse até o limite de 51 no primeiro nível" | O app usa a fórmula (máx. 100). Não ficou claro o que é o "limite de 51" |
+| 7 | Grafia texto × tabelas de classe | Gerigonça/Geringonça, Artificie/Artífice, Ultimo/Último, Autopsia/Autópsia | O app usa a grafia das tabelas |
 
 ## Regras que ainda não existem no livro
 - **Custo de cada vantagem**: o app considera 1 ponto por vantagem.
 - **Pontos de atributo ao subir de nível** e **custo em XP** da evolução: lançados à mão no Evoluir.
-- **Humanidade**: seção marcada como "Desenvolver" — valor manual.
+- **Humanidade**: fórmula e estágios entraram (grifados). Os efeitos de Combate e Social de cada estágio aparecem só como texto, já que essas regras serão diferentes no MSA.
+- **Disputa** no Confronto (os dois lados rolam): o livro só descreve Ação × Ação passiva. A disputa é provisória — maior total vence, empate pela maior ação, acerto crítico vence quem não tirou crítico.
 - **Tabela de itens** (capítulo 5): o app ainda usa itens de exemplo.
 - **Capacidades dos atributos**: grifadas ("rever regras dentro do MSA") — aparecem com o selo "em revisão".
 - **Penalidade de idade** (abaixo de 15 / acima de 60): o app só avisa, não aplica sozinho.

@@ -9,10 +9,12 @@ import { salaView } from './salas.js';
 import { lojaView, markdown, referenciaView } from './livros.js';
 import { redesSociaisView } from './relacoes.js';
 import { criacaoView, iniciarCriacao } from './criacao.js';
+import { painelDados, dadosAberto } from './dados.js';
+import { confrontoView } from './confronto.js';
 
 const ABAS = [
   ['ficha', 'Ficha', 'user'], ['lore', 'Lore', 'scroll'], ['redes', 'Redes Sociais', 'network'], ['itens', 'Itens', 'backpack'],
-  ['armas', 'Armas e Armadilhas', 'axe'], ['social', 'Sala Social', 'drama'], ['batalha', 'Campo de Batalha', 'swords'],
+  ['armas', 'Armas e Armadilhas', 'axe'], ['social', 'Sala Social', 'drama'], ['batalha', 'Campo de Batalha', 'swords'], ['confronto', 'Confronto', 'scale'],
   ['evoluir', 'Evoluir', 'trending-up'], ['regras', 'Livro de Regras', 'book-open'], ['loja', 'Loja', 'store'],
 ];
 
@@ -40,7 +42,9 @@ export function telaJogador() {
         : h('span', { class: 'personagem-atual' }, atual.foto ? h('img', { class: 'mini-foto', src: atual.foto, alt: '' }) : icone('user'), atual.nome),
       botao('Trocar personagem', () => { estado.sel.personagem = null; render(); }, { class: 'pequeno compacto', icone: 'users', title: 'Trocar personagem', 'aria-label': 'Trocar personagem' })),
     abas(ABAS, aba, id => mudar({ aba: id })),
-    h('main', { class: 'conteudo' }, conteudoAba(aba, atual)),
+    h('div', { class: `area-campanha ${dadosAberto() ? 'com-dados' : ''}` },
+      h('main', { class: 'conteudo' }, conteudoAba(aba, atual)),
+      painelDados()),
     imagensMostradas());
 }
 
@@ -78,6 +82,7 @@ function conteudoAba(aba, p) {
       lojaView({ titulo: 'Catálogo de armas, defesas e armadilhas', tipos: ['arma', 'armadilha', 'defesa'] }));
     case 'social': return salaView('social');
     case 'batalha': return salaView('batalha');
+    case 'confronto': return confrontoView();
     case 'evoluir': return evoluirView(p);
     case 'regras': return referenciaView('livro', true);
     case 'loja': return lojaView();
@@ -132,7 +137,7 @@ function evoluirView(p) {
           : selecao([{ valor: '', rotulo: '— escolher —' }, ...classe.especializacoes.map(e => ({ valor: e.id, rotulo: e.nome }))], f.especializacao, v => muda(x => { x.especializacao = v; }))) : null,
         novosGanhos.length ? h('div', {}, titulo('Você ganha', 'sparkles', 'h4'),
           h('ul', { class: 'ganhos' }, novosGanhos.map(g => h('li', { title: g.descricao }, h('span', { class: 'selo' }, `nv ${g.nivel}`), ' ', g.nome)))) : null,
-        h('p', { class: 'meta' }, `PV máx. ${p.pv.max} → ${d.pvMax} · Sanidade máx. ${p.sanidade.max} → ${d.sanidadeMax}`)),
+        h('p', { class: 'meta' }, `PV máx. ${p.pv.max} → ${d.pvMax} · Sanidade máx. ${p.sanidade.max} → ${d.sanidadeMax} · Humanidade máx. ${p.humanidade?.max ?? '—'} → ${d.humanidadeMax}`)),
       h('section', { class: 'bloco' }, titulo(`Atributos (máx. ${d.atributoMax} no nível ${f.nivel})`, 'zap'),
         h('div', { class: 'valores' }, sis.atributos.map(a => h('div', { class: `valor-linha ${f.atributos[a.sigla] !== p.atributos[a.sigla] ? 'marcado' : ''}` },
           h('span', {}, h('strong', {}, a.sigla), ' ', a.nome), h('small', {}, `atual ${p.atributos[a.sigla]}`),
@@ -162,7 +167,7 @@ function evoluirView(p) {
       botao('Confirmar evolução', async () => {
         if (ppGasto > ppTotal) throw new Error('Pontos de perícia acima do total.');
         // PV e Sanidade máximos seguem as fórmulas; o atual acompanha o ganho.
-        for (const [k, novo] of [['pv', d.pvMax], ['sanidade', d.sanidadeMax]]) f[k] = { max: novo, atual: p[k].atual + (novo - p[k].max) };
+        for (const [k, novo] of [['pv', d.pvMax], ['sanidade', d.sanidadeMax], ['humanidade', d.humanidadeMax]]) f[k] = { max: novo, atual: p[k].atual + (novo - p[k].max) };
         const patch = Object.fromEntries(CAMPOS_EVOLUCAO.filter(mudou).map(k => [k, f[k]]));
         if (!Object.keys(patch).length) throw new Error('Nada foi alterado.');
         if (!(await confirmar(`Confirmar evolução gastando ${ev.xpGasto} XP? Um backup da ficha atual será salvo.`))) return;

@@ -53,7 +53,7 @@
      "id": "arma-branca.chicote",
      "nome": "Chicote",
      "descricao": "Armas flexíveis e de difícil manuseio, usadas para desarmar ou causar dor. Inclui chicotes, laços e similares. Seu dano é não letal. Permite fazer manobras de agarrar a distância. Não pode ser usada para ‘Defesa Armada’.",
-     "revisao": true
+     "revisao": false
     },
     {
      "id": "arma-branca.exoticas",

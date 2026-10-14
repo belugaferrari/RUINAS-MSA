@@ -106,7 +106,10 @@ function trilha(p, chave, rotulo) {
       botao('', () => atualizar(p, { [chave]: { ...t, atual: t.atual - 1 } }), { class: 'pequeno', icone: 'minus', title: `Diminuir ${rotulo}` }),
       h('span', { class: `valor ${t.atual <= 0 ? 'perigo' : ''}` }, `${t.atual} / ${t.max}`),
       botao('', () => atualizar(p, { [chave]: { ...t, atual: Math.min(t.max, t.atual + 1) } }), { class: 'pequeno', icone: 'plus', title: `Aumentar ${rotulo}` })),
-    h('div', { class: 'caixas' }, caixas));
+    t.max > 40
+      ? h('div', { class: 'barra-trilha', role: 'meter', 'aria-valuemin': 0, 'aria-valuemax': t.max, 'aria-valuenow': t.atual, 'aria-label': rotulo },
+        h('i', { style: { width: `${Math.max(0, Math.min(100, (100 * t.atual) / (t.max || 1)))}%` } }))
+      : h('div', { class: 'caixas' }, caixas));
 }
 
 function trilhas(p, mestre) {
@@ -118,7 +121,8 @@ function trilhas(p, mestre) {
     trilha(p, 'pv', 'PV'),
     trilha(p, 'sanidade', 'Sanidade'),
     h('p', { class: 'meta' }, icone('brain'), ` Estado mental: ${derivados(p, estado.sistema).estadoSanidade}`),
-    trilha(p, 'humanidade', 'Humanidade'), seloRevisao(true, 'regras de Humanidade em desenvolvimento'),
+    trilha(p, 'humanidade', 'Humanidade'),
+    estagioHumanidade(p),
     mestre ? h('div', { class: 'grade3 mini' },
       ...['pv', 'sanidade', 'humanidade'].map(k => h('label', {}, `${k === 'pv' ? 'PV' : k[0].toUpperCase() + k.slice(1)} máx.`,
         campo(`${p.id}:${k}:max`, p[k]?.max, v => atualizar(p, { [k]: { ...p[k], max: v } }), { tipo: 'number', min: 0 })))) : null,
@@ -127,6 +131,18 @@ function trilhas(p, mestre) {
       (p.marcadores || []).map((m, i) => h('span', { class: 'etiqueta' }, m,
         botao('', () => atualizar(p, { marcadores: p.marcadores.filter((_, j) => j !== i) }), { class: 'x', icone: 'x', title: `Remover marcador ${m}` }))),
       botao('Marcador', novoMarcador, { class: 'pequeno', icone: 'tag' })));
+}
+
+function estagioHumanidade(p) {
+  const sis = estado.sistema;
+  const e = derivados(p, sis).estagioHumanidade;
+  if (!e) return null;
+  return h('details', { class: 'estagio-hum' },
+    h('summary', {}, icone('hand-heart'), ` Humanidade: ${e.nome} (${e.min}–${e.max})`, seloRevisao(true)),
+    h('p', {}, e.descricao),
+    e.efeitos.length ? h('ul', {}, e.efeitos.map(x => h('li', {}, x))) : null,
+    h('p', { class: 'dica' }, sis.humanidade.notaEfeitos),
+    e.gatilhoPerda ? h('p', {}, h('strong', {}, 'Gatilho de perda: '), e.gatilhoPerda) : null);
 }
 
 function atributosView(p, d, mestre, rolar) {
@@ -197,6 +213,10 @@ function painelTeste(p, d) {
 
 export function linhaRolagem(e) {
   if (e.texto) return h('span', {}, h('strong', {}, e.rotulo), ': ', e.texto);
+  if (e.tipo === 'atributos') {
+    return h('span', {}, h('strong', {}, `${e.autor} — ${e.rotulo}: `), h('span', { class: 'total' }, e.valores.map(v => v.total).join(' · ')),
+      h('small', {}, ` (soma ${e.total}${e.rerolagens ? `, rerolado ${e.rerolagens}×` : ''})`), e.secreta ? h('span', { class: 'selo' }, 'secreta') : null);
+  }
   if (e.tipo === 'dmil') {
     const res = e.nd == null ? '' : e.sucesso ? 'sucesso' : 'falha';
     return h('span', { class: `rolagem ${res}` },

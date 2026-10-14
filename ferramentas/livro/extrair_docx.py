@@ -4,6 +4,18 @@ from lxml import etree
 W = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'
 ns = {'w': W}
 z = zipfile.ZipFile(sys.argv[1])
+# Com "--imagens", cada imagem sai como [IMAGEM:arquivo] (usado pelo Livro de Regras do app).
+COM_IMAGENS = '--imagens' in sys.argv
+REL = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships'
+rels = {r.get('Id'): r.get('Target').split('/')[-1]
+        for r in etree.fromstring(z.read('word/_rels/document.xml.rels'))}
+
+def imagem(el):
+    if not COM_IMAGENS: return '[IMAGEM]'
+    for b in el.iter('{http://schemas.openxmlformats.org/drawingml/2006/main}blip'):
+        alvo = rels.get(b.get(f'{{{REL}}}embed'))
+        if alvo: return f'[IMAGEM:{alvo}]'
+    return '[IMAGEM]'
 doc = etree.fromstring(z.read('word/document.xml'))
 body = doc.find('w:body', ns)
 stats = {'page_br': 0, 'last_rendered': 0, 'sect': 0, 'hl': {}, 'shd': {}, 'imgs': 0, 'tables': 0, 'paras': 0}
@@ -43,7 +55,7 @@ def paragrafo(p):
                     stats['page_br'] += 1; pagina += 1; t = f'\n=== [PÁGINA {pagina}] ===\n'
                 else: t = '\n'
             elif tag == 'lastRenderedPageBreak': stats['last_rendered'] += 1
-            elif tag == 'drawing' or tag == 'pict': stats['imgs'] += 1; t = '[IMAGEM]'
+            elif tag == 'drawing' or tag == 'pict': stats['imgs'] += 1; t = imagem(ch)
             if not t: continue
             if y != atual:
                 if atual: buf += '⟧'

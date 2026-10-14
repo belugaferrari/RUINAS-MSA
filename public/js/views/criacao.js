@@ -216,9 +216,10 @@ function passoMental() {
     h('div', { class: 'cartao' }, titulo(`Sanidade: ${d.sanidadeMax}`, 'brain'), h('p', {}, `Calculada por ${sis.regras.formulas.sanidade} (INT ${f.atributos.INT} + WILL ${f.atributos.WILL} + 10).`),
       h('p', { class: 'dica' }, sis.sanidade.estados.map(e => `${e.nome} abaixo de ${e.abaixoDe}`).join(' · '))),
     h('div', { class: 'cartao' }, titulo(`PV: ${d.pvMax}`, 'heart'), h('p', {}, sis.regras.formulas.pv), seloRevisao(true, 'fórmula em revisão')),
-    h('div', { class: 'cartao' }, titulo('Humanidade', 'hand-heart'), seloRevisao(true, 'regras em desenvolvimento no livro'),
-      h('label', {}, 'Valor inicial (provisório, combine com o mestre)',
-        h('input', { type: 'number', min: 0, value: f.humanidade.max, onchange: e => alterar(x => { const n = Math.max(0, parseInt(e.target.value, 10) || 0); x.humanidade = { max: n, atual: n }; }) }))));
+    h('div', { class: 'cartao' }, titulo(`Humanidade: ${d.humanidadeMax} — ${d.estagioHumanidade?.nome || ''}`, 'hand-heart'), seloRevisao(true),
+      h('p', {}, `Calculada por ${sis.humanidade.formula} (CAR ${f.atributos.CAR}, PER ${f.atributos.PER}).`),
+      h('p', {}, d.estagioHumanidade?.descricao || ''),
+      h('p', { class: 'dica' }, 'O livro também diz que é possível escolher valores melhores até um limite no 1º nível — regra ainda em revisão.')));
 }
 
 function passoBackground() {
@@ -249,7 +250,7 @@ function passoRevisao() {
       h('section', { class: 'bloco' }, titulo(f.nome || '(sem nome)', 'user'),
         h('p', {}, `Nível ${f.nivel} · ${nome(sis.profissoes, f.profissao) || 'sem profissão'}${f.classe ? ` · ${nome(sis.classes, f.classe)}` : ''}`),
         h('p', {}, `${f.origem || 'Origem não definida'} · ${f.motivacao || 'Motivação não definida'}`),
-        h('p', {}, `PV ${d.pvMax} · Sanidade ${d.sanidadeMax} · Humanidade ${f.humanidade.max} · Iniciativa AGI ${d.iniciativa} + 1d10`)),
+        h('p', {}, `PV ${d.pvMax} · Sanidade ${d.sanidadeMax} · Humanidade ${d.humanidadeMax} · Iniciativa AGI ${d.iniciativa} + 1d10`)),
       h('section', { class: 'bloco' }, titulo('Atributos', 'zap'), h('p', {}, sis.atributos.map(a => `${a.sigla} ${f.atributos[a.sigla]}`).join(' · '))),
       h('section', { class: 'bloco' }, titulo('Perícias treinadas', 'target'), h('p', {}, treinadas.join(' · ') || 'Nenhuma')),
       h('section', { class: 'bloco' }, titulo('Vantagens, defeitos e itens', 'sparkles'),

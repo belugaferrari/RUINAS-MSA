@@ -463,3 +463,51 @@ details.bloco summary { display: flex; align-items: center; gap: .4em; }
 .tabela-atributos td, .tabela-atributos th { padding: .25em .4em; }
 select { max-width: 100%; text-overflow: ellipsis; }
 .ficha details > summary { cursor: pointer; color: var(--ouro); display: flex; align-items: center; gap: .3em; margin: .6em 0 .3em; }
+.barra-trilha { height: 10px; border-radius: 5px; background: var(--fundo); border: 1px solid var(--borda); overflow: hidden; margin-top: .35em; }
+.barra-trilha i { display: block; height: 100%; background: linear-gradient(90deg, var(--ouro-esc), var(--ouro-claro)); transition: width .3s; }
+.estagio-hum summary { cursor: pointer; color: var(--ouro); display: flex; align-items: center; gap: .3em; flex-wrap: wrap; }
+mark.revisao { background: #5a4510; color: #ffe7a8; border-bottom: 1px dashed var(--ouro); padding: 0 .15em; border-radius: 2px; }
+.texto-livro img { display: block; max-width: min(100%, 520px); margin: .6em auto; border-radius: 6px; }
+
+/* ===================== Rolador de dados (lateral direita) ===================== */
+.area-campanha { display: block; }
+@media (min-width: 1100px) {
+  .area-campanha.com-dados { display: grid; grid-template-columns: minmax(0, 1fr) 340px; align-items: start; }
+  .area-campanha.com-dados .painel-dados { position: sticky; top: 3.6em; max-height: calc(100vh - 3.8em); }
+}
+.painel-dados { background: var(--painel); border-left: 1px solid var(--borda); padding: .8em; overflow-y: auto; display: flex; flex-direction: column; gap: .6em; box-shadow: -4px 0 18px #0006; }
+.painel-dados-topo { display: flex; align-items: center; }
+.painel-dados-topo h3 { margin: 0; }
+.secoes-dados { display: flex; flex-wrap: wrap; gap: .25em; }
+.secoes-dados button { font-size: .8rem; padding: .3em .5em; }
+.secoes-dados button.ativa, .dados-faces button.ativa { border-color: var(--ouro); color: var(--ouro); background: #3a2c1a; }
+.grade-botoes { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: .35em; }
+.dados-faces { grid-template-columns: repeat(auto-fill, minmax(52px, 1fr)); }
+.grade-botoes button { justify-content: center; text-align: center; }
+.painel-dados .log { max-height: 34vh; }
+.painel-dados .log li { font-size: .82rem; }
+.historico-dados summary { cursor: pointer; color: var(--ouro); display: flex; align-items: center; gap: .3em; }
+.ultimo-resultado { font-size: .9rem; }
+.botao-dados { position: fixed; right: 18px; bottom: 18px; z-index: 9; width: 56px; height: 56px; border-radius: 50%; justify-content: center; background: linear-gradient(180deg, #a7782a, var(--ouro-esc)); border: 1px solid var(--ouro); box-shadow: 0 6px 20px #000a; color: #fff8ec; }
+.botao-dados .ic { width: 26px; height: 26px; }
+@media (max-width: 1099px) {
+  .painel-dados { position: fixed; top: 0; right: 0; bottom: 0; width: min(380px, 100vw); z-index: 15; padding-bottom: calc(1em + env(safe-area-inset-bottom)); }
+}
+@media (max-width: 860px) { .vitrine { bottom: calc(84px + env(safe-area-inset-bottom)); } }
+
+/* ===================== Confronto ===================== */
+.confrontos .cartao.confronto { margin-bottom: .7em; }
+.confronto.resolvido { opacity: .92; }
+.lados-confronto { display: grid; grid-template-columns: 1fr auto 1fr; gap: .6em; align-items: stretch; }
+.lados-confronto .lado, .lado-confronto { background: var(--painel2); border: 1px solid var(--borda); border-radius: var(--raio); padding: .6em .7em; display: flex; flex-direction: column; gap: .35em; min-width: 0; }
+.lado.vencedor { border-color: var(--ok); box-shadow: 0 0 0 1px var(--ok) inset; }
+.versus { display: grid; place-items: center; color: var(--ouro); font-family: var(--fonte-titulo); }
+.rolagem-lado .total { font-size: 1.4rem; }
+.resultado-confronto { margin: .6em 0 0; padding: .4em .7em; border-radius: 6px; background: #24361f; border: 1px solid var(--ok); display: flex; align-items: center; gap: .3em; }
+.resultado-confronto.empate { background: var(--painel2); border-color: var(--borda); }
+@media (max-width: 860px) {
+  .lados-confronto { grid-template-columns: 1fr; }
+  .versus { padding: .1em 0; }
+}
+.texto-livro { overflow-wrap: anywhere; min-width: 0; }
+.texto-livro table { display: block; max-width: 100%; overflow-x: auto; }

@@ -64,3 +64,37 @@ test('fluxo básico de campanha e permissões', () => {
   assert.ok(faca.equipado);
   assert.throws(() => executar(c, 'item.equipar', { id, uid: faca.uid, equipar: true }, { user: beto, mestre: false }), /não é seu/);
 });
+
+test('confronto: ação × passiva e disputa', () => {
+  const m = { id: 'm2', name: 'Mestre 2' };
+  const j = { id: 'j2', name: 'Jo' };
+  const c = novaCampanha(m, { nome: 'Confrontos', maxJogadores: 2, nivel: 1, padraoMSA: true });
+  executar(c, 'campanha.atualizar', { aberta: true }, { user: m, mestre: true });
+  entrarNaCampanha(c, j, 'jogador');
+  const { id: pj } = executar(c, 'personagem.criar', { ficha: fichaValida({ nome: 'Ninja' }) }, { user: j, mestre: false });
+  const g = executar(c, 'grupo.criar', { nome: 'Guardas' }, { user: m, mestre: true });
+  const { id: npc } = executar(c, 'personagem.criar', { tipo: 'npc', grupoId: g.id, ficha: { nome: 'Guarda' } }, { user: m, mestre: true });
+
+  // Só o mestre cria.
+  assert.throws(() => executar(c, 'confronto.criar', { modo: 'passiva', a: { personagemId: pj, acaoRef: 'sub:espionagem.furtividade' }, b: { personagemId: npc, acaoRef: 'sub:sentidos.visao' } }, { user: j, mestre: false }), /mestre/);
+  const { id } = executar(c, 'confronto.criar', { titulo: 'Passar pelo guarda', modo: 'passiva', a: { personagemId: pj, acaoRef: 'sub:espionagem.furtividade' }, b: { personagemId: npc, acaoRef: 'sub:sentidos.visao' } }, { user: m, mestre: true });
+  assert.throws(() => executar(c, 'confronto.rolar', { id, lado: 'b' }, { user: m, mestre: true }), /só o lado A/);
+  const conf = executar(c, 'confronto.rolar', { id, lado: 'a' }, { user: j, mestre: false });
+  // Passiva do guarda: Visão 10 (bônus de PER 10) + 50 = 60.
+  assert.equal(conf.rolagens.a.nd, 60);
+  assert.equal(conf.estado, 'resolvido');
+  assert.ok(['a', 'b'].includes(conf.resultado.vencedor));
+  assert.ok(c.log.at(-1).texto.includes(conf.lados.a.nome));
+
+  // Disputa: o jogador não rola o lado do NPC; resolve quando os dois rolam.
+  const d = executar(c, 'confronto.criar', { modo: 'disputa', a: { personagemId: pj, acaoRef: 'atr:FOR' }, b: { nome: 'Estivador', valor: 40 } }, { user: m, mestre: true });
+  assert.throws(() => executar(c, 'confronto.rolar', { id: d.id, lado: 'b' }, { user: j, mestre: false }), /dono/);
+  executar(c, 'confronto.rolar', { id: d.id, lado: 'a' }, { user: j, mestre: false });
+  const fim = executar(c, 'confronto.rolar', { id: d.id, lado: 'b' }, { user: m, mestre: true });
+  assert.equal(fim.estado, 'resolvido');
+  assert.equal(fim.rolagens.b.acao, 40);
+
+  // Confronto secreto não aparece para o jogador.
+  executar(c, 'confronto.criar', { modo: 'disputa', secreto: true, a: { nome: 'X', valor: 1 }, b: { nome: 'Y', valor: 1 } }, { user: m, mestre: true });
+  assert.equal(visaoPara(c, j, 'jogador').confrontos.length, 2);
+});

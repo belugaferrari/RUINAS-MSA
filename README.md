@@ -37,6 +37,12 @@ Para jogar pela internet (sem estar na mesma Wi‑Fi), o mesmo app pode ser publ
 
 **Planilha de NPCs**: `modelos/modelo_npcs.xlsx` (ou o botão "Planilha modelo" na aba NPCs). As colunas acompanham os atributos e perícias de `sistema.json`; rode `npm run modelo` para regenerar depois de mudar as regras.
 
+## Rolador de dados, Confronto e Livro de Regras
+
+- **Rolador na lateral direita** (botão de dado no celular): teste D-MIL com ND fixo, ND por nível, contra ação passiva ou livre; intuição (−20%); iniciativa, d100, DS; perda e recuperação de Sanidade (aplica direto na ficha); rolagem de atributos da criação; dados livres; histórico das últimas rolagens.
+- **Confronto** (aba própria, fora do combate): o mestre cria Ação × Ação passiva (regra do livro) ou disputa (provisória); cada jogador rola o lado do próprio personagem; resultado em tempo real.
+- **Livro de Regras**: gerado do .docx com índice, busca, imagens e grifos destacados. Combate e regras sociais do MSS ficam de fora.
+
 ## Visual e celular
 
 - Ícones [Lucide](https://lucide.dev) (licença ISC), servidos pelo próprio app em `/icones.svg` — funcionam sem internet. Para usar um ícone novo, adicione o nome em `public/js/icones.js` (o teste `npm test` avisa se faltar).
@@ -59,6 +65,8 @@ As regras vêm do **Livro do Jogador MSS** (base para o MSA). Trechos grifados d
 ```bash
 python3 -I ferramentas/livro/extrair_docx.py "Livro do Jogador.docx" /tmp/texto.md
 python3 -I ferramentas/livro/gerar_conteudo.py /tmp/texto.md conteudo/msa
+python3 -I ferramentas/livro/extrair_docx.py "Livro do Jogador.docx" /tmp/texto_img.md --imagens
+python3 -I ferramentas/livro/gerar_livro.py /tmp/texto_img.md "Livro do Jogador.docx" conteudo/livros/regras.md public/livro-img
 npm run modelo   # atualiza a planilha de NPCs
 npm test
 ```

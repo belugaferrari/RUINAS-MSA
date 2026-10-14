@@ -1,6 +1,6 @@
 import { db, save, uid } from './db.js';
 import { sistema } from './sistema.js';
-import { novaFicha, podeEquipar, rolarDado, testeDMil, gerarEncontro, derivados, problemasFicha, LIMITE_SALA } from '../shared/regras.js';
+import { novaFicha, podeEquipar, rolarDado, rolarAtributosCriacao, testeDMil, gerarEncontro, derivados, problemasFicha, LIMITE_SALA } from '../shared/regras.js';
 
 const GRUPO_ENCONTROS = 'encontros';
 const MAX_LOG = 100;
@@ -34,6 +34,7 @@ export function novaCampanha(user, dados) {
     relacoes: {},
     imagens: [],
     salas: { social: novaSala(), batalha: novaSala() },
+    confrontos: [],
     log: [],
   };
   db.campaigns.push(c);
@@ -83,6 +84,7 @@ export function visaoPara(c, user, area) {
     imagens: c.imagens.filter(i => i.mostrando),
     salas: Object.fromEntries(Object.entries(c.salas).map(([k, s]) => [k, { ...s, log: s.log.filter(e => !e.secreta) }])),
     log: c.log.filter(e => !e.secreta),
+    confrontos: (c.confrontos || []).filter(x => !x.secreto),
   };
 }
 
@@ -149,6 +151,7 @@ function validarCriacao(c, p, sis) {
   const d = derivados(p, sis);
   p.pv = { max: d.pvMax, atual: d.pvMax };
   p.sanidade = { max: d.sanidadeMax, atual: d.sanidadeMax };
+  p.humanidade = { max: d.humanidadeMax, atual: d.humanidadeMax };
   p.xp = 0;
   p.marcadores = [];
 }
@@ -464,6 +467,9 @@ export const acoes = {
       const r = rolarDado('1d10');
       const agi = p ? derivados(p, sis).iniciativa : 0;
       entrada = { ...base, tipo: 'iniciativa', rotulo: 'Iniciativa', dado: '1d10', dados: r.dados, mod: 0, componentes: [{ nome: 'AGI', valor: agi }], total: r.total + agi };
+    } else if (tipo === 'atributos') {
+      const r = rolarAtributosCriacao(sis);
+      entrada = { ...base, tipo: 'atributos', rotulo: 'Atributos (rolagem da criação)', valores: r.valores, total: r.soma, rerolagens: r.rerolagens };
     } else if (dado) {
       const r = rolarDado(dado);
       entrada = { ...base, rotulo: String(rotulo || dado).slice(0, 80), dado: r.expr, dados: r.dados, mod: r.mod, componentes: [], total: r.total };
@@ -477,6 +483,79 @@ export const acoes = {
     if (nome && c.salas[nome]) registrar(c.salas[nome].log, entrada);
     else registrar(c.log, entrada);
     return entrada;
+  },
+
+  // ---------- Confronto (Ação × Ação, fora do combate) ----------
+  'confronto.criar'(c, { titulo, modo, a, b, secreto }, ctx) {
+    exigirMestre(ctx);
+    const sis = sistema();
+    if (!['passiva', 'disputa'].includes(modo)) throw erro('Escolha o tipo de confronto.');
+    const lado = (l, rotulo) => {
+      const id = l?.personagemId || null;
+      const p = id ? personagem(c, id) : null;
+      if (p && !l.acaoRef) throw erro(`Escolha a ação do ${rotulo}.`);
+      const acaoNome = p ? valorAcao(p, l.acaoRef, sis).nome : String(l?.acaoNome || 'Ação').slice(0, 60);
+      return {
+        personagemId: id, nome: p ? p.nome : String(l?.nome || rotulo).slice(0, 60), acaoRef: p ? l.acaoRef : null, acaoNome,
+        valor: p ? null : Math.max(0, parseInt(l?.valor, 10) || 0), mod: Math.max(-100, Math.min(100, parseInt(l?.mod, 10) || 0)),
+      };
+    };
+    const conf = {
+      id: uid(), titulo: String(titulo || '').trim().slice(0, 80) || 'Confronto', modo, secreto: !!secreto,
+      criadoEm: Date.now(), estado: 'aberto', lados: { a: lado(a, 'lado A'), b: lado(b, 'lado B') }, rolagens: { a: null, b: null }, resultado: null,
+    };
+    (c.confrontos ||= []).unshift(conf);
+    if (c.confrontos.length > 50) c.confrontos.length = 50;
+    return { id: conf.id };
+  },
+
+  'confronto.rolar'(c, { id, lado }, ctx) {
+    const sis = sistema();
+    const conf = (c.confrontos || []).find(x => x.id === id);
+    if (!conf) throw erro('Confronto não encontrado.');
+    if (conf.estado !== 'aberto') throw erro('Este confronto já foi resolvido.');
+    if (!['a', 'b'].includes(lado)) throw erro('Lado inválido.');
+    if (conf.modo === 'passiva' && lado === 'b') throw erro('No confronto contra ação passiva só o lado A rola.');
+    if (conf.rolagens[lado]) throw erro('Esse lado já rolou.');
+    const L = conf.lados[lado];
+    const p = L.personagemId ? c.personagens.find(x => x.id === L.personagemId) : null;
+    if (!ctx.mestre && (!p || p.donoId !== ctx.user.id)) throw erro('Só o dono do personagem (ou o mestre) rola este lado.');
+    const valorDe = (Lx) => {
+      const px = Lx.personagemId ? c.personagens.find(x => x.id === Lx.personagemId) : null;
+      return (px ? valorAcao(px, Lx.acaoRef, sis).valor : Lx.valor) + (Lx.mod || 0);
+    };
+    let nd = null;
+    if (conf.modo === 'passiva') nd = valorDe(conf.lados.b) + (sis.teste.passiva?.soma ?? 50);
+    const r = testeDMil(valorDe(L), nd, sis);
+    conf.rolagens[lado] = { ...r, em: Date.now() };
+    // Resolve quando possível.
+    const ra = conf.rolagens.a;
+    const rb = conf.rolagens.b;
+    if (conf.modo === 'passiva') {
+      conf.resultado = { vencedor: ra.sucesso ? 'a' : 'b', texto: `${conf.lados.a.nome} ${ra.sucesso ? 'vence' : 'perde'} (${ra.total} contra passiva ${nd})${ra.critico ? ` — crítico de ${ra.critico}` : ''}` };
+    } else if (ra && rb) {
+      // Provisório: maior total vence; empate decide pela maior ação; persistindo, empate.
+      let vencedor = ra.total > rb.total ? 'a' : rb.total > ra.total ? 'b' : ra.acao > rb.acao ? 'a' : rb.acao > ra.acao ? 'b' : 'empate';
+      if (ra.critico === 'acerto' && rb.critico !== 'acerto') vencedor = 'a';
+      else if (rb.critico === 'acerto' && ra.critico !== 'acerto') vencedor = 'b';
+      conf.resultado = { vencedor, texto: vencedor === 'empate' ? `Empate (${ra.total} × ${rb.total})` : `${conf.lados[vencedor].nome} vence (${ra.total} × ${rb.total})` };
+    }
+    if (conf.resultado) {
+      conf.estado = 'resolvido';
+      registrar(c.log, { autor: 'Confronto', rotulo: conf.titulo, texto: conf.resultado.texto, secreta: conf.secreto });
+    }
+    return conf;
+  },
+
+  'confronto.reabrir'(c, { id }, ctx) {
+    exigirMestre(ctx);
+    const conf = (c.confrontos || []).find(x => x.id === id);
+    if (conf) Object.assign(conf, { estado: 'aberto', rolagens: { a: null, b: null }, resultado: null });
+  },
+
+  'confronto.remover'(c, { id }, ctx) {
+    exigirMestre(ctx);
+    c.confrontos = (c.confrontos || []).filter(x => x.id !== id);
   },
 
   'monstro.adicionar'(c, { nome }, ctx) {
