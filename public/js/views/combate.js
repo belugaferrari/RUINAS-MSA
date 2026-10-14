@@ -200,7 +200,7 @@ export function manipulacaoView(participantes, mestre) {
         const r = await acao('social.manipular', { autor: sel.autor, alvo: sel.alvo, sub: sel.sub, humor: sel.humor, mod: sel.mod });
         aviso(`${r.autor}: ${r.texto}`, r.sucesso ? 'ok' : 'erro');
       }, { class: 'primario', icone: 'drama', disabled: !alvos.length })),
-    h('p', { class: 'dica' }, `Teste contra a Resistência à Manipulação do alvo (CAR% + 50 + modificadores)${rmnp != null ? ` — R.MNP de ${b.nome}: ${rmnp}` : ''}.`,
+    h('p', { class: 'dica' }, `Teste contra a Resistência à Manipulação do alvo (perícia Manipulação + 50 + modificadores)${rmnp != null ? ` — R.MNP de ${b.nome}: ${rmnp}` : ''}.`,
       regra.falha.length ? ` Se falhar, o alvo pode escolher ficar ${regra.falha.map(nomeHumor).join(' ou ')}.` : ''));
 }
 

@@ -64,8 +64,8 @@
   ]
  },
  "social": {
-  "_aviso": "Roda do Humor do Livro MSS. Resistência à Manipulação (R.MNP) = CAR% + 50 + modificadores.",
-  "resistenciaBase": "CAR",
+  "_aviso": "Roda do Humor do Livro MSS. Resistência à Manipulação (R.MNP) = perícia base Manipulação + 50 + modificadores.",
+  "resistenciaBase": "manipulacao",
   "humores": [
    {
     "id": "neutro",

@@ -46,7 +46,7 @@ Para jogar pela internet (sem estar na mesma Wi‑Fi), o mesmo app pode ser publ
 ## Combate e social automáticos (campanhas no MSS)
 
 - **Campo de Batalha**: o mestre inicia o combate e o app rola a iniciativa de todos (AGI + 1d10; humores Corajoso, Amedrontado e Enojado rolam com vantagem). Mostra rodada e de quem é a vez; quem entra no meio rola na hora. Cada um declara o ataque com a arma equipada (ou desarmado) e quem controla o alvo escolhe a defesa (Esquiva, Defesa desarmada, Defesa armada ou Evasão em área): vantagem/desvantagem automáticas (surpresa, alvo caído, terreno elevado…), ataque localizado, duas armas, Sacrifício, crítico (+1 dado), dano − IP aplicado direto nos PV, efeito de dano pelo DS e sobrevida abaixo de 0 PV.
-- **Sala Social**: humor de cada personagem (Roda do Humor) com os efeitos, e manipulação: escolha a subperícia e o humor desejado; o teste é contra a Resistência à Manipulação do alvo (CAR% + 50 + modificadores).
+- **Sala Social**: humor de cada personagem (Roda do Humor) com os efeitos, e manipulação: escolha a subperícia e o humor desejado; o teste é contra a Resistência à Manipulação do alvo (perícia base Manipulação + 50 + modificadores).
 - No MSA essas partes ficam desligadas até as regras do MSA chegarem. Escolhas provisórias em `PENDENCIAS.md`.
 
 ## Visual e celular

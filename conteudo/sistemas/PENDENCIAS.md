@@ -44,14 +44,13 @@ Ligados por `modulos.combate` / `modulos.social` em `mss.json`; no MSA ficam só
 
 **Confirmado pelo autor**
 - **Defesa**: quem escolhe é o defensor (o jogador do alvo; o mestre nos NPCs). O atacante declara o ataque e ele fica "aguardando defesa". Esquiva vale contra Briga e Armas Brancas e, se o defensor não for acertado, permite deslocar até 1,5 m. Defesa desarmada só contra Briga. Evasão só contra ataque em área e exige deslocamento. Cobertura (+30) só contra ataques a distância.
-- **R.MNP** = CAR + 50 + outros modificadores (humor e o campo "Mod. R.MNP" que o mestre ajusta no cartão).
+- **R.MNP** = perícia base Manipulação + 50 + outros modificadores (humor e o campo "Mod. R.MNP" que o mestre ajusta no cartão). Usa o valor final da perícia base (pontos + bônus pericial de CAR + itens), para escalar com o personagem.
 - **IP** subtrai do dano recebido. Vem dos itens equipados (campo "defesa") e de habilidades (campo "IP de habilidades" que o mestre ajusta no cartão).
 - **Vantagem / Desvantagem**: rola 2d100 e fica com o maior / menor; uma anula a outra.
 
 **Ainda provisório — conferir**
 - **Defesa contra armas de fogo (sem ser em área)**: nenhuma defesa ativa vale; sobra "Sem defesa" (base 50, +30 com cobertura).
 - **Defesa armada** (subperícia da arma branca empunhada; Toque e Chicote não servem) continua valendo contra corpo a corpo, como no livro.
-- **"CAR + 50"**: o app usa CAR% (CAR × 4), como nas outras ações passivas de atributo.
 - **Valor da defesa** = subperícia escolhida + 50 (a defesa não rola dado; o atacante rola contra esse valor).
 - **Evasão bem-sucedida** contra ataque em área: metade do dano (texto do livro).
 - **Dano mínimo 1** depois do IP.

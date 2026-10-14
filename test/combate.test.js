@@ -127,7 +127,10 @@ test('manipulação: R.MNP pelo humor, sucesso muda humor, falha dá opções', 
   const a = lutador('A', { subpericias: { 'manipulacao.intimidacao': 20 } });
   const b = lutador('B');
   const base = resistenciaManipulacao(b, mss);
-  assert.equal(base, 4 * 10 + 50, 'R.MNP = CAR% + 50');
+  assert.equal(base, 2 * (10 - 5) + 50, 'R.MNP = perícia base Manipulação (só o bônus de CAR 10) + 50');
+  b.pericias = { manipulacao: 6 };
+  assert.equal(resistenciaManipulacao(b, mss), base + 6, 'cresce com os pontos na perícia');
+  b.pericias = {};
   b.rmnpExtra = 5;
   assert.equal(resistenciaManipulacao(b, mss), base + 5);
   b.rmnpExtra = 0;

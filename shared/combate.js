@@ -201,10 +201,11 @@ export function rolarIniciativa(p, sistema, rng = Math.random) {
 
 // ---------- Social ----------
 
-// Resistência à Manipulação (R.MNP) = CAR% + 50 + modificadores (humor e o campo rmnpExtra da ficha).
+// Resistência à Manipulação (R.MNP) = perícia base Manipulação + 50 + modificadores (humor e o campo rmnpExtra da ficha).
+// Usa o valor final da perícia base (pontos + bônus pericial de CAR + itens), então cresce com o personagem.
 export function resistenciaManipulacao(p, sistema) {
   const d = derivados(p, sistema);
-  const base = d.percentual[sistema.social?.resistenciaBase || 'CAR'] ?? 0;
+  const base = d.pericias[sistema.social?.resistenciaBase || 'manipulacao'] ?? 0;
   const h = humorDe(p, sistema);
   return base + (sistema.teste.passiva?.soma ?? 50) + (h?.rmnp || 0) + (parseInt(p.rmnpExtra, 10) || 0);
 }
