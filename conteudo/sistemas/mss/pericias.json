@@ -1,5 +1,5 @@
 {
- "_fonte": "Livro do Jogador MSS — base provisória para o MSA",
+ "_fonte": "Livro do Jogador (gerado pelo app; trechos grifados = em revisão)",
  "dados": [
   {
    "id": "arma-branca",
@@ -28,7 +28,7 @@
     {
      "id": "arma-branca.machado",
      "nome": "Machado",
-     "descricao": "Ferramentas de corte com peso na ponta. Machados são próprios para causar dano a objetos. Em batalha, eles tem -10% de chance de acerto. Eles causam 1D6 a mais de dano a objetos e ataques localizados com Machado diminuem o IP dos itens em +1 a partir do segundo ataque. Você também recebe VANTAGEM em testes de DESARMAR usando um machado de uma mão.",
+     "descricao": "Ferramentas de corte com peso na ponta. Machados são próprios para causar dano a objetos. Em batalha, eles tem -10% de chance de acerto. Eles causam 1D6 a mais de dano a objetos e ataques localizados com Machado diminuem o IP dos itens em 1 a partir do segundo ataque. Você também recebe VANTAGEM em testes de DESARMAR usando um machado.",
      "revisao": false
     },
     {
@@ -64,7 +64,7 @@
     {
      "id": "arma-branca.improvisada",
      "nome": "Improvisada",
-     "descricao": "A habilidade de transformar qualquer objeto do cenário (uma cadeira, um pedaço de vidro, um osso) em uma arma letal. ‘Armas improvisadas’ tem dano 1D4, -10% de acerto. [IMAGEM]",
+     "descricao": "A habilidade de transformar qualquer objeto do cenário (uma cadeira, um pedaço de vidro, um osso) em uma arma letal. ‘Armas improvisadas’ tem dano 1D4, -10% de acerto e -10% de defesa armada. [IMAGEM]",
      "revisao": false
     }
    ],
@@ -143,6 +143,12 @@
      "id": "briga.ataque-desarmado",
      "nome": "Ataque desarmado",
      "descricao": "A capacidade de acertar socos, chutes e cabeçadas de forma efetiva. O dano padrão de um ataque desarmado é 1D2 + Mod. FOR. O dano é considerado ‘Não Letal’ até o limiar de 30 pontos nessa perícia – após esse valor, o personagem escolhe se o dano é ‘Não letal’ ou ‘letal’.",
+     "revisao": false
+    },
+    {
+     "id": "briga.defesa-desarmada",
+     "nome": "Defesa desarmada",
+     "descricao": "A técnica de bloquear golpes aparando-os com o corpo ou membros. Você não pode usar sua ‘Defesa desarmada’ para bloquear ataques armados (armas brancas).",
      "revisao": false
     },
     {
@@ -274,13 +280,13 @@
     {
      "id": "esportes.corrida",
      "nome": "Corrida",
-     "descricao": "Explosão de velocidade e resistência para maratonas. No geral, testes de Corrida são comparativos – Testes bem sucedidos concedem o avanço de uma zona, iniciativa contra o adversário ou outra vantagem narrativa.",
+     "descricao": "Explosão de velocidade e resistência para maratonas. No geral testes de Corrida são comparativos – Testes bem sucedidos concedem 1,5m adicionais ao seu deslocamento base. Corrida é uma ‘Ação Principal’ que exige que o personagem use seu deslocamento completo (no geral 9m de ação principal, semelhante a ‘Disparada’ e 9m de mobilidade do personagem).",
      "revisao": false
     },
     {
      "id": "esportes.natacao",
      "nome": "Natação",
-     "descricao": "Capacidade de se mover na água e sobreviver na água sem se afogar. O deslocamento humano é 3 vezes inferior na agua do que em solo.",
+     "descricao": "Capacidade de se mover na água e sobreviver na água – Testes bem sucedidos concedem 1,5m adicionais ao seu deslocamento base. O deslocamento base de natação (superfície) de um humano é 3m.",
      "revisao": false
     },
     {

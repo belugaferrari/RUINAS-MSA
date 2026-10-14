@@ -1,0 +1,179 @@
+{
+ "id": "msa",
+ "nome": "MSA",
+ "nomeCompleto": "Modern Survival Auto",
+ "descricao": "Versão nova, feita para jogar com o aplicativo. Regras de combate e sociais ainda em definição.",
+ "livro": "regras-msa",
+ "raca": {
+  "habilidadeUnica": {
+   "nome": "Sacrifício",
+   "descricao": "Você age abandonando a autopreservação e o instinto. O humano recebe um sucesso automático em um ataque físico. Porém, ao final do turno ele receberá 1D6 de dano puro adicional.",
+   "revisao": true
+  }
+ },
+ "humanidade": {
+  "revisao": true,
+  "formula": "50 + 2 × CAR + 2 × PER (máximo natural 100)",
+  "descricao": "Mede a conexão do personagem com sua própria essência, sua empatia e seu valor pela vida. Varia de 0 a 100. Cai com implantes e mutações (−5 a −25 cada) e com atos que quebram a bússola moral da faixa atual ou de faixas inferiores.",
+  "notaEfeitos": "Os efeitos de Combate e Social de cada estágio são do sistema MSS e ainda serão redefinidos para o MSA: o app só mostra o texto.",
+  "estagios": [
+   {
+    "min": 91,
+    "max": 100,
+    "nome": "Altruísta",
+    "descricao": "A vida é sagrada. O personagem hesita diante da violência e repudia táticas covardes.",
+    "efeitos": [
+     "Combate: Sofre -2 em Iniciativa e Desvantagem (ou penalidade de -2) em Ataques Surpresa.",
+     "Social: Recebe +2 em testes de interações sociais amigáveis (Empatia, Lábia, Diplomacia)."
+    ],
+    "gatilhoPerda": "Roubar por sobrevivência, negar ajuda a alguém em perigo claro, ferir gravemente (mesmo em autodefesa)."
+   },
+   {
+    "min": 81,
+    "max": 90,
+    "nome": "Compassivo",
+    "descricao": "Evita a morte, mas entende os perigos do mundo.",
+    "efeitos": [
+     "Combate: Sofre -1 em Iniciativa e -1 em Ataques Surpresa.",
+     "Social: Recebe +1 em testes de interações amigáveis."
+    ],
+    "gatilhoPerda": "Matar um inimigo (mesmo em combate justo), deixar um inocente morrer por omissão, extorquir pessoas vulneráveis."
+   },
+   {
+    "min": 71,
+    "max": 80,
+    "nome": "Protetor",
+    "descricao": "Defende os seus acima de tudo. Luta quando necessário, de frente.",
+    "efeitos": [
+     "Mecânica: Sem bônus ou penalidades de combate ou sociais. Ponto de equilíbrio moral positivo."
+    ],
+    "gatilhoPerda": "Torturar fisicamente, matar alguém desarmado ou rendido."
+   },
+   {
+    "min": 61,
+    "max": 70,
+    "nome": "Pragmático",
+    "descricao": "A bússola moral está no \"olho por olho\". O sobrevivente padrão de Gablue.",
+    "efeitos": [
+     "Mecânica: Sem bônus ou penalidades de combate ou sociais. Ponto de equilíbrio neutro."
+    ],
+    "gatilhoPerda": "Trair um aliado por benefício próprio, matar inocentes deliberadamente."
+   },
+   {
+    "min": 51,
+    "max": 60,
+    "nome": "Insensível",
+    "descricao": "As pessoas começam a ser vistas como recursos ou obstáculos. A empatia falha, o instinto aguça.",
+    "efeitos": [
+     "Combate: Recebe +1 em Iniciativa.",
+     "Social: Sofre -1 em testes sociais amigáveis."
+    ],
+    "gatilhoPerda": "Torturar por puro prazer, matar aliados de confiança por conveniência."
+   },
+   {
+    "min": 41,
+    "max": 50,
+    "nome": "Calculista / Frio",
+    "descricao": "A moralidade é um peso morto. Golpear pelas costas é apenas tática.",
+    "efeitos": [
+     "Combate: Recebe +2 em Iniciativa e +1 nas rolagens de dano de Ataques Surpresa.",
+     "Social: Sofre -2 em testes sociais amigáveis. Imune a testes de medo mundano ou hesitação moral."
+    ],
+    "gatilhoPerda": "Mutilar corpos sem motivo prático, atos de crueldade extrema e desnecessária."
+   },
+   {
+    "min": 31,
+    "max": 40,
+    "nome": "Predador",
+    "descricao": "A mente opera na lógica de caça e abate. Sempre alerta, sempre letal.",
+    "efeitos": [
+     "Combate: Recebe +3 em Iniciativa e Vantagem (ou bônus de +2) para realizar Ataques Surpresa.",
+     "Social: Sofre -3 em testes sociais amigáveis. NPCs comuns sentem desconforto em sua presença."
+    ],
+    "gatilhoPerda": "Atos de depravação aberrante (ex: canibalismo), sacrificar a própria integridade física irracionalmente."
+   },
+   {
+    "min": 21,
+    "max": 30,
+    "nome": "Máquina / Alienado",
+    "descricao": "A lógica da sobrevivência e as modificações corporais apagaram a humanidade.",
+    "efeitos": [
+     "Combate: Recebe +4 em Iniciativa. O personagem não pode ser Surpreendido em combate regular.",
+     "Social: Sofre -4 em testes sociais amigáveis. Testes extras são exigidos para que NPCs não-hostis aceitem interagir pacificamente."
+    ],
+    "gatilhoPerda": "Apenas a recusa voluntária em resistir aos instintos do vírus, mutação ou falha cibernética."
+   },
+   {
+    "min": 11,
+    "max": 20,
+    "nome": "Monstruoso",
+    "descricao": "Totalmente desconectado da espécie. Apenas o abate importa.",
+    "efeitos": [
+     "Combate: Recebe +5 em Iniciativa e +1d6 de dano extra em qualquer Ataque Surpresa.",
+     "Social: Sofre -5 em testes sociais. Falha automática em Empatia. Aliados precisam testar Vontade para não temê-lo."
+    ],
+    "gatilhoPerda": "Qualquer falha em testes de controle instintivo."
+   },
+   {
+    "min": 1,
+    "max": 10,
+    "nome": "Casca Vazia",
+    "descricao": "Instinto puro de destruição ou preservação absoluta. Reações elétricas de um nervo exposto.",
+    "efeitos": [
+     "Combate: Recebe +6 em Iniciativa.",
+     "Social: Falha automática em qualquer teste que não seja focado na própria sobrevivência imediata (como Intimidação instintiva). Não consegue formular táticas em grupo, apenas ataca ou foge."
+    ],
+    "gatilhoPerda": ""
+   },
+   {
+    "min": 0,
+    "max": 0,
+    "nome": "A Perda",
+    "descricao": "A mente colapsa. O personagem se torna um Cyberpsycho, Aberração ou Monstro irremediável e passa a ser controlado pelo Mestre.",
+    "efeitos": [],
+    "gatilhoPerda": ""
+   }
+  ],
+  "recuperacao": [
+   {
+    "nome": "Altruísmo Genuíno",
+    "descricao": "Arriscar a própria vida ou gastar recursos vitais (sem chance de recompensa) para salvar inocentes."
+   },
+   {
+    "nome": "Conexão Genuína",
+    "descricao": "Dedicar tempo e vulnerabilidade para se reconectar com artefatos do Velho Mundo ou criar laços profundos com outros sobreviventes, abdicando de vantagens táticas."
+   },
+   {
+    "nome": "Purificação Física",
+    "descricao": "Remover implantes cibernéticos (um processo doloroso e mecanicamente punitivo) para recuperar a porção da alma que a máquina havia tomado."
+   }
+  ],
+  "recuperacaoIntro": "A Humanidade só pode ser restaurada através de grandes gestos em jogo (a critério do Mestre).",
+  "calculo": "padrao"
+ },
+ "regras": {
+  "rolagemAtributos": {
+   "dados": [
+    "4d4",
+    "4d4",
+    "2d6+3",
+    "2d6+3",
+    "2d4+6",
+    "2d4+6",
+    "2d6+5",
+    "2d6+5"
+   ],
+   "somaMin": 70,
+   "somaMax": 102,
+   "descricao": "2× 4D4, 2× 3+2D6, 2× 6+2D4, 2× 5+2D6. Rerole se a soma for menor que 70 ou maior que 102. Use os resultados na ordem que preferir."
+  },
+  "formulas": {
+   "humanidade": "50 + 2 × CAR + 2 × PER (máx. 100)",
+   "iniciativa": "AGI + 1d10 (define a preferência na contagem de dano quando um lado chega a 0 PV)"
+  }
+ },
+ "modulos": {
+  "combate": false,
+  "social": false
+ }
+}

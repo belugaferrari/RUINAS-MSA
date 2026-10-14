@@ -1,6 +1,6 @@
 import { h, botao, aviso, janela, confirmar, vazio, icone } from '../ui.js';
-import { estado, mudar, render } from '../estado.js';
-import { emitir } from '../api.js';
+import { estado, mudar, render, sincronizarSistema } from '../estado.js';
+import { emitir, get } from '../api.js';
 import { sairDaConta } from '../app.js';
 
 export async function carregarSaguao() {
@@ -13,8 +13,15 @@ export async function carregarSaguao() {
   render();
 }
 
+let cacheSistemas = null;
+export async function listaSistemas() {
+  cacheSistemas ||= await get('/api/sistemas');
+  return cacheSistemas;
+}
+
 export async function abrirCampanha(id) {
   const c = await emitir('campanha:entrar', { id, area: estado.area });
+  await sincronizarSistema(c);
   mudar({ tela: 'campanha', campanha: c, aba: null, sel: {} });
 }
 
@@ -22,6 +29,7 @@ export function topo(...extra) {
   return h('header', { class: 'topo' },
     h('strong', { class: 'logo', title: 'Ilhas das Ruínas MSA' }, icone('anchor'), h('span', {}, 'Ilhas das Ruínas')),
     ...extra,
+    estado.tela === 'campanha' && estado.sistema ? h('span', { class: 'selo sistema', title: `Sistema de regras: ${estado.sistema.nomeCompleto}` }, icone('book'), estado.sistema.nome) : null,
     h('span', { class: 'espaco' }),
     estado.conectado ? null : h('span', { class: 'selo perigo', role: 'status' }, icone('wifi-off'), 'Reconectando…'),
     h('span', { class: 'usuario', title: estado.usuario?.name }, icone('user'), h('span', {}, estado.usuario?.name)),
@@ -63,7 +71,8 @@ function cartaoCampanha(c, mestre) {
         h('span', {}, icone('crown'), c.mestre),
         h('span', {}, icone('trending-up'), `Nível ${c.nivel === 'Variavel' ? 'variável' : c.nivel}`),
         h('span', {}, icone('users'), `${c.jogadores}/${c.maxJogadores}`),
-        h('span', {}, icone('sparkles'), c.padraoMSA ? 'Padrão MSA' : 'Pontos próprios')),
+        h('span', {}, icone('book'), (c.sistema || 'msa').toUpperCase()),
+        h('span', {}, icone('sparkles'), c.padraoMSA ? 'Início padrão' : 'Pontos próprios')),
       h('span', { class: `selo ${c.aberta ? 'ok' : 'perigo'}` }, icone(c.aberta ? 'lock-open' : 'lock'), c.aberta ? 'Aberta' : 'Fechada'),
       !mestre && c.participando ? h('span', { class: 'selo' }, icone('check'), 'Você participa') : null),
     h('div', { class: 'acoes' },
@@ -85,6 +94,13 @@ function novaCampanha() {
   const nivelVar = h('input', { type: 'checkbox' });
   const nivel = h('input', { type: 'number', min: 1, max: 20, value: 1 });
   const padrao = h('input', { type: 'checkbox', checked: true });
+  let sistemaEscolhido = 'msa';
+  const cartoesSistema = h('div', { class: 'cartoes sistemas' });
+  const desenharSistemas = lista => cartoesSistema.replaceChildren(...lista.map(x => h('button', {
+    type: 'button', class: `cartao escolha ${x.id === sistemaEscolhido ? 'escolhido' : ''}`, 'aria-pressed': x.id === sistemaEscolhido,
+    onclick: () => { sistemaEscolhido = x.id; desenharSistemas(lista); },
+  }, h('strong', {}, `${x.nome} · ${x.nomeCompleto}`), h('p', {}, x.descricao))));
+  listaSistemas().then(desenharSistemas).catch(e => aviso(e.message, 'erro'));
   const r = estado.sistema.regras;
   const pts = { atributos: h('input', { type: 'number', min: 0, value: r.pontosAtributos }), vantagens: h('input', { type: 'number', min: 0, value: r.pontosVantagem }), pericias: h('input', { type: 'number', min: 0, value: 0 }) };
   const blocoPts = h('fieldset', { hidden: true }, h('legend', {}, 'Pontos para a criação de personagem'),
@@ -99,12 +115,13 @@ function novaCampanha() {
     h('div', { class: 'grade2' },
       h('label', {}, 'Nível inicial (1 a 20)', nivel),
       h('label', { class: 'linha' }, nivelVar, 'Nível variável')),
-    h('label', { class: 'linha' }, padrao, 'Usar início padrão MSA'),
+    h('div', {}, h('strong', {}, 'Sistema de regras'), h('p', { class: 'dica' }, 'Dá para trocar depois, no meio da campanha, pela aba Campanha.'), cartoesSistema),
+    h('label', { class: 'linha' }, padrao, 'Usar início padrão do livro'),
     blocoPts),
   [['Cancelar', () => {}], ['Criar campanha', async () => {
     try {
       await emitir('campanha:criar', {
-        nome: nome.value, maxJogadores: max.value, nivel: nivelVar.checked ? 'Variavel' : nivel.value, padraoMSA: padrao.checked,
+        nome: nome.value, maxJogadores: max.value, nivel: nivelVar.checked ? 'Variavel' : nivel.value, padraoMSA: padrao.checked, sistema: sistemaEscolhido,
         pontos: { atributos: pts.atributos.value, vantagens: pts.vantagens.value, pericias: pts.pericias.value },
       });
     } catch (e) {

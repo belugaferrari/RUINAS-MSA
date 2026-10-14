@@ -60,7 +60,7 @@ function passoNivel() {
       ? h('label', {}, 'Nível inicial do personagem (1 a 20)',
         h('input', { type: 'number', min: 1, max: 20, value: f.nivel, onchange: e => alterar(x => { x.nivel = Math.max(1, Math.min(20, parseInt(e.target.value, 10) || 1)); }) }))
       : h('p', {}, h('strong', {}, `Nível: ${c.nivel}`), ' (definido pelo mestre)'),
-    h('p', {}, c.padraoMSA ? 'Início padrão MSA: ' : 'Pontos definidos pelo mestre: ',
+    h('p', {}, c.padraoMSA ? `Início padrão do ${estado.sistema.nome}: ` : 'Pontos definidos pelo mestre: ',
       `${pts.atributos} pontos de atributo, ${pts.vantagens} pontos de vantagem e `,
       pts.pericias ? `${pts.pericias} pontos de perícia.` : 'pontos de perícia pela fórmula 70 + 5×INT + 20×nível.'),
     h('div', { class: 'cartao' },
@@ -216,10 +216,15 @@ function passoMental() {
     h('div', { class: 'cartao' }, titulo(`Sanidade: ${d.sanidadeMax}`, 'brain'), h('p', {}, `Calculada por ${sis.regras.formulas.sanidade} (INT ${f.atributos.INT} + WILL ${f.atributos.WILL} + 10).`),
       h('p', { class: 'dica' }, sis.sanidade.estados.map(e => `${e.nome} abaixo de ${e.abaixoDe}`).join(' · '))),
     h('div', { class: 'cartao' }, titulo(`PV: ${d.pvMax}`, 'heart'), h('p', {}, sis.regras.formulas.pv), seloRevisao(true, 'fórmula em revisão')),
-    h('div', { class: 'cartao' }, titulo(`Humanidade: ${d.humanidadeMax} — ${d.estagioHumanidade?.nome || ''}`, 'hand-heart'), seloRevisao(true),
-      h('p', {}, `Calculada por ${sis.humanidade.formula} (CAR ${f.atributos.CAR}, PER ${f.atributos.PER}).`),
-      h('p', {}, d.estagioHumanidade?.descricao || ''),
-      h('p', { class: 'dica' }, 'O livro também diz que é possível escolher valores melhores até um limite no 1º nível — regra ainda em revisão.')));
+    sis.humanidade.calculo
+      ? h('div', { class: 'cartao' }, titulo(`Humanidade: ${d.humanidadeMax} — ${d.estagioHumanidade?.nome || ''}`, 'hand-heart'), seloRevisao(true),
+        h('p', {}, `Calculada por ${sis.humanidade.formula} (CAR ${f.atributos.CAR}, PER ${f.atributos.PER}).`),
+        h('p', {}, d.estagioHumanidade?.descricao || ''),
+        h('p', { class: 'dica' }, 'O livro também diz que é possível escolher valores melhores até um limite no 1º nível — regra ainda em revisão.'))
+      : h('div', { class: 'cartao' }, titulo('Humanidade', 'hand-heart'), seloRevisao(true),
+        h('p', {}, sis.humanidade.descricao),
+        h('label', {}, 'Valor inicial (combine com o mestre)',
+          h('input', { type: 'number', min: 0, max: 100, value: f.humanidade.max, onchange: e => alterar(x => { const n = Math.max(0, Math.min(100, parseInt(e.target.value, 10) || 0)); x.humanidade = { max: n, atual: n }; }) }))));
 }
 
 function passoBackground() {

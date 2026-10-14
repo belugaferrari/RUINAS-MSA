@@ -120,3 +120,23 @@ test('rolagem de atributos da criação respeita a soma 70–102', () => {
   }
   assert.deepEqual(R.ndPorNivel(3, sis).map(x => x.nd), [65, 91, 120]);
 });
+
+test('MSS: carrega o próprio conteúdo e as diferenças para o MSA', () => {
+  const mss = sistema('mss');
+  assert.equal(mss.id, 'mss');
+  assert.equal(sis.id, 'msa');
+  const subs = s => new Set(s.pericias.flatMap(p => p.subpericias.map(x => x.id)));
+  assert.ok(subs(mss).has('briga.defesa-desarmada'), 'MSS tem Defesa Desarmada');
+  assert.ok(!subs(sis).has('briga.defesa-desarmada'));
+  assert.equal(mss.regras.rolagemAtributos, null, 'MSS não tem rolagem de atributos');
+  assert.ok(sis.regras.rolagemAtributos);
+  assert.equal(mss.atributos.length, 8, 'base comum');
+  for (const c of mss.classes) for (const e of c.especializacoes) assert.equal(e.progressao?.length, 18, `${c.nome} › ${e.nome}`);
+  // Humanidade: calculada no MSA, manual no MSS.
+  const f = R.novaFicha(mss, { nivel: 1 });
+  assert.equal(f.humanidade.max, mss.humanidade.inicial);
+  f.humanidade = { max: 63, atual: 63 };
+  assert.equal(R.derivados(f, mss).humanidadeMax, 63);
+  assert.equal(R.derivados(f, sis).humanidadeMax, 90);
+  assert.ok(sistema('xyz').id === 'msa', 'id desconhecido cai no padrão');
+});

@@ -174,7 +174,10 @@ export function derivados(ficha, sistema) {
   const sanidadeMax = (ficha.atributos?.INT ?? 0) + (ficha.atributos?.WILL ?? 0) + 10;
   const san = ficha.sanidade?.atual ?? sanidadeMax;
   const estadoSanidade = [...(sistema.sanidade?.estados || [])].reverse().find(e => san < e.abaixoDe)?.nome || 'Lúcido';
-  const humanidadeMax = Math.min(100, 50 + 2 * (ficha.atributos?.CAR ?? 0) + 2 * (ficha.atributos?.PER ?? 0));
+  // MSA: Humanidade calculada. MSS: valor anotado à mão (o livro ainda não define).
+  const humanidadeMax = sistema.humanidade?.calculo
+    ? Math.min(100, 50 + 2 * (ficha.atributos?.CAR ?? 0) + 2 * (ficha.atributos?.PER ?? 0))
+    : Math.max(0, Math.min(100, ficha.humanidade?.max ?? sistema.humanidade?.inicial ?? 50));
   const hum = ficha.humanidade?.atual ?? humanidadeMax;
   const estagioHumanidade = (sistema.humanidade?.estagios || []).find(e => hum >= e.min && hum <= e.max) || null;
   const equipados = (ficha.itens || []).filter(i => i.equipado);

@@ -1,5 +1,5 @@
 {
- "_fonte": "Livro do Jogador MSS — base provisória para o MSA",
+ "_fonte": "Livro do Jogador (gerado pelo app; trechos grifados = em revisão)",
  "dados": [
   {
    "id": "sobrevivente",
@@ -71,6 +71,7 @@
    "bonus": 5,
    "subpericias": [
     "briga.escudo",
+    "briga.defesa-desarmada",
     "briga.salvaguardar",
     "trato-de-animais.doma"
    ],

@@ -1,5 +1,5 @@
 import { db, save, uid } from './db.js';
-import { sistema } from './sistema.js';
+import { sistema, idSistema } from './sistema.js';
 import { novaFicha, podeEquipar, rolarDado, rolarAtributosCriacao, testeDMil, gerarEncontro, derivados, problemasFicha, LIMITE_SALA } from '../shared/regras.js';
 
 const GRUPO_ENCONTROS = 'encontros';
@@ -24,7 +24,7 @@ export function novaCampanha(user, dados) {
     pericias: Math.max(0, parseInt(dados.pontos?.pericias, 10) || 0),
   };
   const c = {
-    id: uid(), nome, mestreId: user.id, maxJogadores, nivel, padraoMSA, pontos,
+    id: uid(), nome, mestreId: user.id, maxJogadores, nivel, padraoMSA, pontos, sistema: idSistema(dados.sistema),
     aberta: false, lojaAberta: false, criadaEm: Date.now(),
     jogadores: [],
     lore: { background: '', sessoes: [] },
@@ -49,7 +49,7 @@ function novaSala() {
 export function resumoCampanha(c) {
   const mestre = db.users.find(u => u.id === c.mestreId);
   return {
-    id: c.id, nome: c.nome, aberta: c.aberta, nivel: c.nivel, maxJogadores: c.maxJogadores,
+    id: c.id, nome: c.nome, aberta: c.aberta, nivel: c.nivel, maxJogadores: c.maxJogadores, sistema: idSistema(c.sistema),
     jogadores: c.jogadores.length, mestre: mestre?.name ?? '?', padraoMSA: c.padraoMSA,
   };
 }
@@ -64,7 +64,7 @@ function fichaPublica(p) {
 export function visaoPara(c, user, area) {
   const comDono = p => ({ ...p, dono: nomeUsuario(p.donoId) });
   if (area === 'mestre') {
-    return { ...c, personagens: c.personagens.map(comDono), jogadoresNomes: c.jogadores.map(nomeUsuario), papel: 'mestre' };
+    return { ...c, sistema: idSistema(c.sistema), personagens: c.personagens.map(comDono), jogadoresNomes: c.jogadores.map(nomeUsuario), papel: 'mestre' };
   }
   const meus = new Set(c.personagens.filter(p => p.donoId === user.id).map(p => p.id));
   const emSala = new Set([...c.salas.social.participantes, ...c.salas.batalha.participantes]);
@@ -76,7 +76,7 @@ export function visaoPara(c, user, area) {
     .map(p => (meus.has(p.id) ? comDono(p) : fichaPublica(p)));
 
   return {
-    id: c.id, nome: c.nome, nivel: c.nivel, padraoMSA: c.padraoMSA, pontos: c.pontos, aberta: c.aberta,
+    id: c.id, nome: c.nome, nivel: c.nivel, padraoMSA: c.padraoMSA, pontos: c.pontos, aberta: c.aberta, sistema: idSistema(c.sistema),
     lojaAberta: c.lojaAberta, maxJogadores: c.maxJogadores, papel: 'jogador',
     lore: c.lore,
     personagens,
@@ -129,8 +129,8 @@ function registrar(lista, entrada) {
   if (lista.length > MAX_LOG) lista.splice(0, lista.length - MAX_LOG);
 }
 
-function itemDoCatalogo(itemId) {
-  const it = sistema().itens.find(i => i.id === itemId);
+function itemDoCatalogo(itemId, sis) {
+  const it = sis.itens.find(i => i.id === itemId);
   if (!it) throw erro('Item não existe no catálogo.');
   return { ...structuredClone(it), uid: uid(), itemId: it.id, equipado: false, durabilidadeAtual: it.durabilidade };
 }
@@ -143,7 +143,7 @@ function validarCriacao(c, p, sis) {
   if (problemas.length) throw erro(problemas[0]);
   // Itens, dinheiro, PV e Sanidade são recalculados aqui, nunca confiando no navegador.
   const ini = sis.regras?.creditosIniciais ?? 0;
-  const itens = (p.itens || []).map(i => itemDoCatalogo(i.itemId || i.id));
+  const itens = (p.itens || []).map(i => itemDoCatalogo(i.itemId || i.id, sis));
   const custo = itens.reduce((s, i) => s + (i.preco || 0), 0);
   if (custo > ini) throw erro(`Os itens custam mais que os ${ini} ${sis.moeda || 'créditos'} iniciais.`);
   p.itens = itens;
@@ -171,7 +171,7 @@ function valorAcao(p, ref, sis) {
 
 function npcDeMonstro(c, m) {
   return {
-    ...novaFicha(sistema(), c), id: uid(), tipo: 'npc', grupoId: GRUPO_ENCONTROS, donoId: null,
+    ...novaFicha(sistema(c.sistema), c), id: uid(), tipo: 'npc', grupoId: GRUPO_ENCONTROS, donoId: null,
     nome: m.nome, dificuldade: m.dificuldade, pv: { max: m.pv, atual: m.pv },
     anotacoes: `Ataque: ${m.ataque}\nDefesa: ${m.defesa}\n${m.descricao}`,
   };
@@ -194,6 +194,11 @@ export const acoes = {
     for (const k of ['aberta', 'lojaAberta']) if (k in d) c[k] = !!d[k];
     for (const k of ['anotacoes', 'anotacoesResumo']) if (k in d) c[k] = nomeStr(d[k]);
     if ('nome' in d && String(d.nome).trim()) c.nome = String(d.nome).trim();
+    // Trocar o sistema no meio da campanha: as fichas continuam; cálculos e regras passam a seguir o novo sistema.
+    if ('sistema' in d && idSistema(d.sistema) !== idSistema(c.sistema)) {
+      c.sistema = idSistema(d.sistema);
+      registrar(c.log, { autor: 'Mestre', rotulo: 'Sistema de regras', texto: `A campanha agora usa o ${sistema(c.sistema).nome} (${sistema(c.sistema).nomeCompleto}).` });
+    }
     if ('maxJogadores' in d) c.maxJogadores = Math.max(c.jogadores.length, Math.min(9, parseInt(d.maxJogadores, 10) || 1));
   },
 
@@ -241,7 +246,7 @@ export const acoes = {
   },
 
   'personagem.criar'(c, { tipo, grupoId, ficha }, ctx) {
-    const sis = sistema();
+    const sis = sistema(c.sistema);
     const base = novaFicha(sis, c);
     if (!ctx.mestre) tipo = 'pj';
     if (!['pj', 'npc'].includes(tipo)) throw erro('Tipo inválido.');
@@ -332,7 +337,7 @@ export const acoes = {
 
   'item.adicionar'(c, { id, itemId }, ctx) {
     exigirMestre(ctx);
-    personagem(c, id).itens.push(itemDoCatalogo(itemId));
+    personagem(c, id).itens.push(itemDoCatalogo(itemId, sistema(c.sistema)));
   },
 
   'item.remover'(c, { id, uid: itemUid }, ctx) {
@@ -354,7 +359,7 @@ export const acoes = {
     if (!it) throw erro('Item não encontrado.');
     if (!equipar) { it.equipado = false; return; }
     if (it.equipado) return;
-    const r = podeEquipar(p, it, sistema());
+    const r = podeEquipar(p, it, sistema(c.sistema));
     if (!r.ok) throw erro(r.motivo);
     it.equipado = true;
   },
@@ -363,7 +368,7 @@ export const acoes = {
     const p = personagem(c, id);
     exigirDonoOuMestre(ctx, p);
     if (!ctx.mestre && !c.lojaAberta) throw erro('A loja está fechada pelo mestre.');
-    const it = itemDoCatalogo(itemId);
+    const it = itemDoCatalogo(itemId, sistema(c.sistema));
     if ((p.dinheiro || 0) < it.preco) throw erro('Dinheiro insuficiente.');
     p.dinheiro -= it.preco;
     p.itens.push(it);
@@ -385,7 +390,7 @@ export const acoes = {
     personagem(c, para);
     if (de === para) throw erro('Escolha outro personagem.');
     const atual = (c.relacoes[de] ||= {})[para] || {};
-    const tipos = sistema().relacoes;
+    const tipos = sistema(c.sistema).relacoes;
     const novo = { tipo: tipo !== undefined ? tipo : atual.tipo, nota: nota !== undefined ? nomeStr(nota) : atual.nota || '' };
     if (novo.tipo && !tipos.includes(novo.tipo)) throw erro('Tipo de relação inválido.');
     c.relacoes[de][para] = novo;
@@ -453,7 +458,7 @@ export const acoes = {
   // Rolagens acontecem no servidor para todos verem o mesmo resultado.
   // Teste D-MIL: { acaoRef | acao, mod, nd, metade }. Iniciativa: { tipo: 'iniciativa' }. Livre: { dado: '2d6' }.
   'rolar'(c, { sala: nome, id, rotulo, tipo, acaoRef, acao, mod, nd, metade, dado, secreta }, ctx) {
-    const sis = sistema();
+    const sis = sistema(c.sistema);
     let autor = ctx.mestre ? 'Mestre' : ctx.user.name;
     let p = null;
     if (id) {
@@ -468,6 +473,7 @@ export const acoes = {
       const agi = p ? derivados(p, sis).iniciativa : 0;
       entrada = { ...base, tipo: 'iniciativa', rotulo: 'Iniciativa', dado: '1d10', dados: r.dados, mod: 0, componentes: [{ nome: 'AGI', valor: agi }], total: r.total + agi };
     } else if (tipo === 'atributos') {
+      if (!sis.regras.rolagemAtributos) throw erro(`O ${sis.nome} não tem rolagem de atributos.`);
       const r = rolarAtributosCriacao(sis);
       entrada = { ...base, tipo: 'atributos', rotulo: 'Atributos (rolagem da criação)', valores: r.valores, total: r.soma, rerolagens: r.rerolagens };
     } else if (dado) {
@@ -488,7 +494,7 @@ export const acoes = {
   // ---------- Confronto (Ação × Ação, fora do combate) ----------
   'confronto.criar'(c, { titulo, modo, a, b, secreto }, ctx) {
     exigirMestre(ctx);
-    const sis = sistema();
+    const sis = sistema(c.sistema);
     if (!['passiva', 'disputa'].includes(modo)) throw erro('Escolha o tipo de confronto.');
     const lado = (l, rotulo) => {
       const id = l?.personagemId || null;
@@ -510,7 +516,7 @@ export const acoes = {
   },
 
   'confronto.rolar'(c, { id, lado }, ctx) {
-    const sis = sistema();
+    const sis = sistema(c.sistema);
     const conf = (c.confrontos || []).find(x => x.id === id);
     if (!conf) throw erro('Confronto não encontrado.');
     if (conf.estado !== 'aberto') throw erro('Este confronto já foi resolvido.');
@@ -560,7 +566,7 @@ export const acoes = {
 
   'monstro.adicionar'(c, { nome }, ctx) {
     exigirMestre(ctx);
-    const m = sistema().monstros.find(x => x.nome === nome);
+    const m = sistema(c.sistema).monstros.find(x => x.nome === nome);
     if (!m) throw erro('Criatura não encontrada.');
     const s = c.salas.batalha;
     if (s.participantes.length >= LIMITE_SALA) throw erro('O Campo de Batalha está cheio.');
@@ -573,7 +579,7 @@ export const acoes = {
     exigirMestre(ctx);
     limite = Math.max(1, parseInt(limite, 10) || 1);
     const candidatos = [];
-    if (usarMonstros) for (const m of sistema().monstros) candidatos.push({ origem: 'monstro', dificuldade: m.dificuldade, m });
+    if (usarMonstros) for (const m of sistema(c.sistema).monstros) candidatos.push({ origem: 'monstro', dificuldade: m.dificuldade, m });
     for (const p of c.personagens) {
       if (p.tipo === 'npc' && p.grupoId !== GRUPO_ENCONTROS && (grupos || []).includes(p.grupoId)) {
         candidatos.push({ origem: 'npc', dificuldade: p.dificuldade || p.nivel || 1, p });

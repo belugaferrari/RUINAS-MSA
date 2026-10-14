@@ -39,7 +39,8 @@ export function painelDados() {
   const p = s.quem && personagemPorId(s.quem);
   const d = p?.atributos ? derivados(p, sis) : null;
   const secoes = [['teste', 'Teste', 'dices'], ['rapidos', 'Rápidos', 'zap'], ['sanidade', 'Sanidade', 'brain'], ['livres', 'Livres', 'target']];
-  if (mestre || !p || p.nivel <= 1) secoes.push(['atributos', 'Atributos', 'sparkles']);
+  if (sis.regras.rolagemAtributos && (mestre || !p || p.nivel <= 1)) secoes.push(['atributos', 'Atributos', 'sparkles']);
+  if (!secoes.some(([id]) => id === s.secao)) s.secao = 'teste';
 
   return h('aside', { class: 'painel-dados', 'aria-label': 'Rolador de dados' },
     h('div', { class: 'painel-dados-topo' },

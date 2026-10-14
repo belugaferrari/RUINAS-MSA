@@ -1,8 +1,8 @@
-"""Gera conteudo/msa/*.json a partir do Livro do Jogador (.docx).
+"""Gera conteudo/sistemas/<msa|mss>/*.json a partir do Livro do Jogador (.docx).
 
 Uso:
     python3 -I ferramentas/livro/extrair_docx.py LIVRO.docx /tmp/texto.md
-    python3 -I ferramentas/livro/gerar_conteudo.py /tmp/texto.md conteudo/msa
+    python3 -I ferramentas/livro/gerar_conteudo.py /tmp/texto.md conteudo/sistemas/msa
 
 Trechos grifados de amarelo no livro saem com "revisao": true.
 O livro descreve o sistema MSS: tudo aqui é base para o MSA e precisa ser conferido.
@@ -18,7 +18,7 @@ from classes import extrair_classes  # noqa: E402
 from progressao import P as PROGRESSAO  # noqa: E402
 
 AMARELO = re.compile(r'⟦AMARELO:|⟧')
-FONTE = 'Livro do Jogador MSS — base provisória para o MSA'
+FONTE = 'Livro do Jogador (gerado pelo app; trechos grifados = em revisão)'
 
 SIGLAS = {
     'Força': 'FOR', 'Constituição': 'CONS', 'Agilidade': 'AGI', 'Destreza': 'DES',
@@ -122,6 +122,9 @@ def itens_lista(linhas, pular=()):
     out = []
     for l in linhas:
         am, s = '⟦AMARELO' in l, limpa(l)
+        # Títulos colados a imagens no começo da linha (ex.: "DEFEITOS LEVES[IMAGEM]Fotofobia: ...").
+        s = re.sub(r'\[IMAGEM[^\]]*\]', '', s).strip()
+        s = re.sub(r'^[A-ZÇÃÕÁÉÍÓÚÂÊÔ ]{6,}(?=[A-ZÁÉÍÓÚ][a-zçãõáéíóúâêô])', '', s)
         if not s or s.startswith('[') or s.isupper() or s.startswith('#'):
             continue
         m = re.match(r'([^:]{3,70}?)(?:\s*\[([^\]]+)\])?:\s*(.+)', s)

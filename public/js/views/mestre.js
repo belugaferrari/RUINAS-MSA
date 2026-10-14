@@ -1,7 +1,7 @@
 import { h, abas, botao, campo, selecao, aviso, confirmar, pedirTexto, janela, vazio, icone, titulo } from '../ui.js';
 import { estado, mudar, render, personagemPorId } from '../estado.js';
 import { acao, emitir, enviarArquivo } from '../api.js';
-import { topo, carregarSaguao } from './saguao.js';
+import { topo, carregarSaguao, listaSistemas } from './saguao.js';
 import { fichaView } from './ficha.js';
 import { salaView } from './salas.js';
 import { livroView, monstrosView, lojaView, markdown, referenciaView } from './livros.js';
@@ -45,7 +45,7 @@ function conteudoAba(aba) {
     case 'batalha': return salaView('batalha');
     case 'confronto': return confrontoView();
     case 'resumo': return abaResumo();
-    case 'regras': return livroView('regras', 'Livro de Regras');
+    case 'regras': return livroView(estado.sistema.livro || 'regras-msa', `Livro de Regras · ${estado.sistema.nome}`);
     case 'monstros': return monstrosView();
     case 'mestre': return livroView('mestre', 'Livro do Mestre');
     case 'loja': return lojaView();
@@ -133,7 +133,7 @@ function abaNpcFichas() {
       const nome = await pedirTexto('Novo grupo', 'Nome do grupo (ex.: Piratas, Vila do Farol)');
       if (nome) await acao('grupo.criar', { nome });
     }, { class: 'primario pequeno', icone: 'plus' }),
-    h('a', { class: 'botao pequeno', href: '/api/modelo-npcs.xlsx', download: 'modelo_npcs.xlsx' }, icone('download'), 'Planilha modelo (Excel)'),
+    h('a', { class: 'botao pequeno', href: `/api/modelo-npcs.xlsx?sistema=${c.sistema || 'msa'}`, download: 'modelo_npcs.xlsx' }, icone('download'), 'Planilha modelo (Excel)'),
     botao('Importar Excel', () => arquivo.click(), { class: 'pequeno', icone: 'file-spreadsheet' }), arquivo);
 
   const agrupar = item => h('div', {}, c.grupos.map(g => {
@@ -240,6 +240,22 @@ function abaLore() {
             botao('Editar', () => { estado.sel.sessaoEditando = s.id; render(); }, { class: 'pequeno', icone: 'pencil' })), markdown(s.texto)))) : vazio('Nenhuma sessão registrada.', 'bookmark')));
 }
 
+// Troca do sistema de regras no meio da campanha (as fichas continuam; os cálculos passam a seguir o novo sistema).
+function seletorSistema(c) {
+  const lista = estado.sel.listaSistemas;
+  if (!lista) listaSistemas().then(l => { estado.sel.listaSistemas = l; render(); }).catch(() => {});
+  return h('div', { class: 'cartao-mini' },
+    titulo('Sistema de regras', 'book', 'h4'),
+    h('div', { class: 'cartoes sistemas' }, (lista || []).map(x => h('button', {
+      type: 'button', class: `cartao escolha ${x.id === c.sistema ? 'escolhido' : ''}`, 'aria-pressed': x.id === c.sistema,
+      onclick: async () => {
+        if (x.id === c.sistema) return;
+        const ok = await confirmar(`Trocar a campanha para o ${x.nome} (${x.nomeCompleto})? As fichas continuam como estão; atributos, perícias e cálculos passam a seguir o ${x.nome}. Os jogadores veem a troca na hora.`);
+        if (ok) await acao('campanha.atualizar', { sistema: x.id });
+      },
+    }, h('strong', {}, `${x.nome} · ${x.nomeCompleto}`), h('p', {}, x.descricao)))));
+}
+
 function abaCampanha() {
   const c = estado.campanha;
   return h('div', { class: 'dividido largo-dir' },
@@ -248,8 +264,9 @@ function abaCampanha() {
       h('div', { class: 'form' },
         h('label', {}, 'Nome', campo('c:nome', c.nome, v => acao('campanha.atualizar', { nome: v }))),
         h('label', {}, 'Máximo de jogadores (até 9)', campo('c:max', c.maxJogadores, v => acao('campanha.atualizar', { maxJogadores: v }), { tipo: 'number', min: 1, max: 9 })),
+        seletorSistema(c),
         h('p', {}, `Nível inicial: ${c.nivel === 'Variavel' ? 'Variável' : c.nivel}`),
-        h('p', {}, c.padraoMSA ? 'Início padrão MSA' : `Pontos: atributos ${c.pontos.atributos}, vantagens ${c.pontos.vantagens}, perícias ${c.pontos.pericias}`),
+        h('p', {}, c.padraoMSA ? 'Início padrão do livro' : `Pontos: atributos ${c.pontos.atributos}, vantagens ${c.pontos.vantagens}, perícias ${c.pontos.pericias}`),
         h('label', { class: 'linha' }, h('input', { type: 'checkbox', checked: c.aberta, onchange: e => acao('campanha.atualizar', { aberta: e.target.checked }) }), 'Campanha aberta para jogadores'),
         h('label', { class: 'linha' }, h('input', { type: 'checkbox', checked: c.lojaAberta, onchange: e => acao('campanha.atualizar', { lojaAberta: e.target.checked }) }), 'Loja liberada'))),
     h('section', { class: 'bloco' },

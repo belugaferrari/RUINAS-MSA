@@ -1,0 +1,32 @@
+{
+ "id": "mss",
+ "nome": "MSS",
+ "nomeCompleto": "Modern Survival Simplificado",
+ "descricao": "Segunda versão do sistema, pensada para mesa com ficha de preenchimento acelerado. O livro traz combate e regras sociais completos.",
+ "livro": "regras-mss",
+ "raca": {
+  "habilidadeUnica": {
+   "nome": "Sacrifício",
+   "descricao": "Recebe +10% de chance de acerto e perde seu D6 atual de vida (descrição detalhada no capítulo 4).",
+   "revisao": false
+  }
+ },
+ "humanidade": {
+  "calculo": null,
+  "inicial": 50,
+  "revisao": true,
+  "descricao": "No livro MSS as regras de Humanidade ainda estão como \"Desenvolver\": o valor é anotado à mão.",
+  "estagios": []
+ },
+ "regras": {
+  "rolagemAtributos": null,
+  "formulas": {
+   "humanidade": "manual (livro MSS: \"Desenvolver\")",
+   "iniciativa": "AGI + 1d10 (define quem começa atacando)"
+  }
+ },
+ "modulos": {
+  "combate": true,
+  "social": true
+ }
+}

@@ -242,6 +242,6 @@ export function referenciaView(inicial, comLivro) {
   ];
   const chave = `ref:${comLivro ? 'livro' : 'classes'}`;
   const atual = estado.sel[chave] || inicial;
-  const conteudo = { livro: () => livroView('regras', 'Livro de Regras'), classes: classesView, pericias: periciasView, vantagens: vantagensView }[atual];
+  const conteudo = { livro: () => livroView(estado.sistema.livro || 'regras-msa', `Livro de Regras · ${estado.sistema.nome}`), classes: classesView, pericias: periciasView, vantagens: vantagensView }[atual];
   return h('div', {}, abas(opcoes, atual, id => { estado.sel[chave] = id; render(); }), conteudo());
 }

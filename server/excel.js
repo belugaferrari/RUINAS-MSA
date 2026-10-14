@@ -19,8 +19,8 @@ function colunas(sis) {
   ];
 }
 
-export async function modeloNpcs() {
-  const sis = sistema();
+export async function modeloNpcs(idSistema) {
+  const sis = sistema(idSistema);
   const wb = new ExcelJS.Workbook();
   const ws = wb.addWorksheet('NPCs');
   const cols = colunas(sis);
@@ -70,7 +70,7 @@ const numero = (v, padrao) => {
 
 // Lê uma planilha e devolve [{ grupo, ficha }] — a campanha decide onde salvar.
 export async function lerNpcs(buffer, campanha) {
-  const sis = sistema();
+  const sis = sistema(campanha?.sistema);
   const wb = new ExcelJS.Workbook();
   await wb.xlsx.load(buffer);
   const ws = wb.getWorksheet('NPCs') || wb.worksheets[0];

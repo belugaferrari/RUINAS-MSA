@@ -48,37 +48,45 @@ Para jogar pela internet (sem estar na mesma Wi‑Fi), o mesmo app pode ser publ
 - Ícones [Lucide](https://lucide.dev) (licença ISC), servidos pelo próprio app em `/icones.svg` — funcionam sem internet. Para usar um ícone novo, adicione o nome em `public/js/icones.js` (o teste `npm test` avisa se faltar).
 - No celular: abas com ícone, tabelas viram cartões, listas e fichas aparecem uma de cada vez, e os botões têm área de toque de pelo menos 40px.
 
-## Onde ficam as regras
+## Sistemas de regras: MSA e MSS
 
-As regras vêm do **Livro do Jogador MSS** (base para o MSA). Trechos grifados de amarelo no livro aparecem no app com o selo **"em revisão"**.
+Cada campanha usa um sistema — **MSA** (Modern Survival Auto) ou **MSS** (Modern Survival Simplificado) — escolhido ao criar a campanha. O mestre pode **trocar no meio** (aba Campanha): as fichas continuam, e cálculos, criação, rolador e Livro de Regras passam a seguir o novo sistema na hora, para todos.
 
 | Arquivo | O que tem |
 |---|---|
-| `conteudo/sistema.json` | Regras centrais: atributos, pontos iniciais, fórmulas, teste D-MIL, sanidade, origens, tipos de dano, estados, slots, itens e monstros (exemplos). |
-| `conteudo/msa/*.json` | Perícias e subperícias, profissões, classes (com especializações e tabela de progressão), vantagens, defeitos e capacidades. **Gerados a partir do livro.** |
-| `conteudo/msa/PENDENCIAS.md` | Inconsistências do livro e escolhas provisórias do app. |
-| `conteudo/livros/*.md` | Livro de Regras e Livro do Mestre (texto livre). |
-| `shared/regras.js` | Toda a matemática: %, bônus pericial, MOD, PV, sanidade, pontos e limites de perícia, teste D-MIL, validação da ficha. |
+| `conteudo/sistemas/base.json` | Regras comuns: atributos, pontos, fórmulas, teste D-MIL, sanidade, origens, progressão por nível, estados, slots, itens e monstros (exemplos). |
+| `conteudo/sistemas/msa.json` · `mss.json` | Só o que muda em cada sistema (Humanidade, Sacrifício, rolagem de atributos, iniciativa…). |
+| `conteudo/sistemas/msa/` · `mss/` | Perícias, profissões, classes (com tabela de progressão), vantagens, defeitos e capacidades — **gerados do livro de cada sistema**. |
+| `conteudo/sistemas/PENDENCIAS.md` | Inconsistências dos livros, diferenças MSA × MSS e escolhas provisórias. |
+| `conteudo/livros/regras-msa.md` · `regras-mss.md` | Livro de Regras de cada sistema (o do MSS é completo; o do MSA deixa combate e social de fora). |
+| `shared/regras.js` | Toda a matemática (vale para os dois sistemas, guiada pelos dados de cada um). |
 
-### Atualizar a partir de uma nova versão do livro
+Trechos grifados de amarelo nos livros aparecem no app com o selo **"em revisão"**.
+
+### Atualizar a partir de uma nova versão de um livro
 
 ```bash
-python3 -I ferramentas/livro/extrair_docx.py "Livro do Jogador.docx" /tmp/texto.md
-python3 -I ferramentas/livro/gerar_conteudo.py /tmp/texto.md conteudo/msa
-python3 -I ferramentas/livro/extrair_docx.py "Livro do Jogador.docx" /tmp/texto_img.md --imagens
-python3 -I ferramentas/livro/gerar_livro.py /tmp/texto_img.md "Livro do Jogador.docx" conteudo/livros/regras.md public/livro-img
-npm run modelo   # atualiza a planilha de NPCs
-npm test
+# MSA
+python3 -I ferramentas/livro/extrair_docx.py "livro MSA.docx" /tmp/msa.md
+python3 -I ferramentas/livro/gerar_conteudo.py /tmp/msa.md conteudo/sistemas/msa
+python3 -I ferramentas/livro/extrair_docx.py "livro MSA.docx" /tmp/msa_img.md --imagens
+python3 -I ferramentas/livro/gerar_livro.py /tmp/msa_img.md "livro MSA.docx" conteudo/livros/regras-msa.md public/livro-img/msa conteudo/sistemas/msa
+# MSS (livro completo; imagens .emf viram .png com o LibreOffice)
+python3 -I ferramentas/livro/extrair_docx.py "livro MSS.docx" /tmp/mss.md
+python3 -I ferramentas/livro/gerar_conteudo.py /tmp/mss.md conteudo/sistemas/mss
+python3 -I ferramentas/livro/extrair_docx.py "livro MSS.docx" /tmp/mss_img.md --imagens
+python3 -I ferramentas/livro/gerar_livro.py /tmp/mss_img.md "livro MSS.docx" conteudo/livros/regras-mss.md public/livro-img/mss conteudo/sistemas/mss --completo
+npm run modelo && npm test
 ```
 
-As tabelas de progressão das classes estão em imagens no livro, então ficam transcritas em `ferramentas/livro/progressao.py`. Se uma tabela mudar, ela precisa ser corrigida ali à mão.
+As tabelas de progressão das classes estão em imagens nos livros (iguais nos dois), então ficam transcritas em `ferramentas/livro/progressao.py`.
 
 ## Estrutura
 
 ```
 server/      servidor (Express + Socket.IO), contas, ações da campanha, Excel
 shared/      regras usadas pelo servidor e pelo navegador
-ferramentas/ scripts que leem o livro (.docx) e geram conteudo/msa
+ferramentas/ scripts que leem os livros (.docx) e geram conteudo/sistemas
 public/      interface (HTML/CSS/JS sem etapa de build)
 conteudo/    regras e livros editáveis
 modelos/     planilha modelo de NPCs

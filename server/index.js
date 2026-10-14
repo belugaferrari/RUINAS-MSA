@@ -7,13 +7,13 @@ import multer from 'multer';
 import { Server } from 'socket.io';
 import { db, save, uid, RAIZ, UPLOADS } from './db.js';
 import { registrar, entrar, usuarioDoToken, sair } from './auth.js';
-import { sistema, CONTEUDO } from './sistema.js';
+import { sistema, listaSistemas, CONTEUDO } from './sistema.js';
 import { novaCampanha, resumoCampanha, visaoPara, entrarNaCampanha, executar, acoes } from './actions.js';
 import { modeloNpcs, lerNpcs } from './excel.js';
 import { montarSprite } from './icones.js';
 
 const PORTA = parseInt(process.env.PORT, 10) || 3000;
-const LIVROS = new Set(['regras', 'mestre']);
+const LIVROS = new Set(['regras-msa', 'regras-mss', 'mestre']);
 
 const app = express();
 const server = http.createServer(app);
@@ -53,16 +53,18 @@ app.post('/api/registrar', rota(req => registrar(req.body.nome, req.body.senha))
 app.post('/api/entrar', rota(req => entrar(req.body.nome, req.body.senha)));
 app.post('/api/sair', rota(req => { sair((req.get('authorization') || '').replace(/^Bearer /, '')); return {}; }));
 app.get('/api/eu', rota(req => { const u = autenticado(req); return { id: u.id, name: u.name }; }));
-app.get('/api/sistema', rota(() => sistema()));
+app.get('/api/sistema', rota(req => sistema(req.query.id)));
+app.get('/api/sistemas', rota(() => listaSistemas()));
 
 app.get('/api/livro/:nome', (req, res) => {
-  if (!LIVROS.has(req.params.nome)) return res.status(404).send('Livro não encontrado');
-  res.type('text/markdown').sendFile(path.join(CONTEUDO, 'livros', `${req.params.nome}.md`));
+  const nome = req.params.nome === 'regras' ? 'regras-msa' : req.params.nome;
+  if (!LIVROS.has(nome)) return res.status(404).send('Livro não encontrado');
+  res.type('text/markdown').sendFile(path.join(CONTEUDO, 'livros', `${nome}.md`));
 });
 
-app.get('/api/modelo-npcs.xlsx', async (_req, res) => {
+app.get('/api/modelo-npcs.xlsx', async (req, res) => {
   res.attachment('modelo_npcs.xlsx');
-  res.send(Buffer.from(await modeloNpcs()));
+  res.send(Buffer.from(await modeloNpcs(req.query.sistema)));
 });
 
 const upload = multer({ limits: { fileSize: 10 * 1024 * 1024 }, storage: multer.memoryStorage() });

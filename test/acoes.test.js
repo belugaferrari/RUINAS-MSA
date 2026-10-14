@@ -98,3 +98,29 @@ test('confronto: ação × passiva e disputa', () => {
   executar(c, 'confronto.criar', { modo: 'disputa', secreto: true, a: { nome: 'X', valor: 1 }, b: { nome: 'Y', valor: 1 } }, { user: m, mestre: true });
   assert.equal(visaoPara(c, j, 'jogador').confrontos.length, 2);
 });
+
+test('trocar o sistema no meio da campanha mantém as fichas', () => {
+  const m = { id: 'm3', name: 'Mestre 3' };
+  const j = { id: 'j3', name: 'Ju' };
+  const c = novaCampanha(m, { nome: 'Troca', maxJogadores: 2, nivel: 1, padraoMSA: true, sistema: 'msa' });
+  assert.equal(c.sistema, 'msa');
+  executar(c, 'campanha.atualizar', { aberta: true }, { user: m, mestre: true });
+  entrarNaCampanha(c, j, 'jogador');
+  const { id } = executar(c, 'personagem.criar', { ficha: fichaValida({ nome: 'Rui' }) }, { user: j, mestre: false });
+  assert.throws(() => executar(c, 'rolar', { id, acaoRef: 'sub:briga.defesa-desarmada', nd: 70 }, { user: j, mestre: false }), /testar/);
+  assert.throws(() => executar(c, 'campanha.atualizar', { sistema: 'mss' }, { user: j, mestre: false }), /mestre/);
+  executar(c, 'campanha.atualizar', { sistema: 'mss' }, { user: m, mestre: true });
+  assert.equal(c.sistema, 'mss');
+  assert.match(c.log.at(-1).texto, /MSS/);
+  assert.equal(visaoPara(c, j, 'jogador').sistema, 'mss');
+  // A ficha continua e passa a usar as regras do MSS.
+  const lia = c.personagens.find(p => p.id === id);
+  assert.equal(lia.nome, 'Rui');
+  const r = executar(c, 'rolar', { id, acaoRef: 'sub:briga.defesa-desarmada', nd: 70 }, { user: j, mestre: false });
+  assert.equal(r.acao, 10, 'Defesa Desarmada só existe no MSS (bônus de AGI 10)');
+  assert.throws(() => executar(c, 'rolar', { id, tipo: 'atributos' }, { user: j, mestre: false }), /não tem rolagem/);
+  // Campanha antiga (sem o campo) é tratada como MSA.
+  const antiga = novaCampanha(m, { nome: 'Antiga', maxJogadores: 1, nivel: 1, padraoMSA: true });
+  delete antiga.sistema;
+  assert.equal(visaoPara(antiga, m, 'mestre').sistema, 'msa');
+});

@@ -1,7 +1,7 @@
 # Livro do Jogador — Ilhas das Ruínas
 
 > Gerado do documento de revisão em 14/10/2026. ==Trechos destacados assim== estão grifados no livro e ainda podem mudar.
-> As regras de **combate** e **sociais** do sistema MSS foram deixadas de fora: no MSA elas serão diferentes.
+> Livro completo do sistema MSS.
 
 # CAPÍTULO 1
 
@@ -81,97 +81,87 @@ Vingança: Alguém lhe fez um mal irremediável e agora você precisa retribuir,
 
 ## MONTANDO SUA FICHA
 
-Agora que você sabe quem é seu personagem, precisamos traduzi-lo para a linguagem do sistema. O sistema desse RPG é único (foi desenvolvido para ele) e está é a versão chamada Modern Survival Auto (MSA), projetada para funcionar nativamente com o auxílio do aplicativo/software companheiro de mesa.
+Agora que você sabe quem é seu personagem, precisamos traduzi-lo para a linguagem do sistema. O sistema desse RPG é único (foi desenvolvido para ele) e está na sua segunda versão. Chama “Modern Survival  - Simplificado” (MSS).
 
-Se você é um jogador experiente, acredito que fará essa ficha rapidamente. Se você for um jogador novato, o preenchimento no aplicativo MSA vai fazer desse um trabalho simples e automatizado. Preencher é fácil, mas aqui vamos abordar todo conceito detalhado de como as regras de background operam.
+Se você é um jogador experiente, acredito que fará essa ficha rapidamente. Se você for um jogador novato, nossa ficha com preenchimento acelerado vai fazer esse ser um trabalho simples. Preencher é simples, mas aqui vamos abordar todo conceito detalhado da ficha.
 
-## Passo 0.
+## Passo 0. Raça
 
-Raça: O cenário da Maré Morta foi desenvolvido para ser jogado nativamente com ‘Humanos’, apesar de que o mestre pode liberar outras raças se desejar. Humanos possuem as seguintes características:
+O cenário da Maré Morta foi desenvolvido para ser jogado com ‘Humanos’. Humanos possuem as seguintes características:
 
 Tamanho: Médio (de 1,6m a 2,1m)
 
-Deslocamento: Humanos têm mobilidade padrão e podem transitar entre Zonas Narrativas (Corpo-a-corpo, Curto/No Cômodo, Médio, Longo) utilizando suas Ações de Movimento. Penalidades de Carga ou efeitos de Mobilidade reduzem quantas zonas o humano pode cruzar por turno. Para questões de parâmetros, caso queira correr um turno inteiro (sem fazer nada além disso) ele consegue percorrer aproximadamente 100m.
+Deslocamento base: 9m.
 
-Pontos de Vida (PVs Base): Os humanos (nível 0) começam com 5 PVs mais a média entre a FORÇA e CONSTITUIÇÃO (arredondada para baixo) e recebem mais 5 PVs para cada nível subsequente. O aplicativo permite que você faça todo o gerenciamento dos PVs por lá.
+PVs base: Os humanos (nível 0) começam com 5 PVs mais a média entre a FORÇA e CONSTITUIÇÃO (arredondada para baixo) e recebem mais 5 PVs para cada nível subsequente.
 
-5+ 5*nível+ (FOR+CONS)/2
+5+ 5*nível+ (FOR+CONS):2
 
-Vantagens: Humanos recebem +1 nos Modificadores de Atributos dos seguintes atributos: Constituição; Inteligência; Força de Vontade; Carisma.
+Vantagens:
 
-Habilidade Única - Sacrifício: Você age abandonando a autopreservação e o instinto. O humano recebe um sucesso automático em um ataque físico. Porém, ao final do turno ele receberá 1D6 de dano puro adicional.
+Humanos recebem +1 nos Modificadores de Atributos dos seguintes atributos: Constituição; Inteligência; Força de Vontade; Carisma.
 
-## Passo 1.
+Habilidade Única: Sacrifício - Recebe +10% de chance de acerto e perde seu D6 atual de vida (leia a descrição detalhada da vantagem no capitulo 4).
 
-Atributos: Os Atributos definem e expressam seu personagem, física e mentalmente. São suas capacidades inatas.
+## Passo 1. Atributos
 
-No primeiro nível, o aplicativo disponibilizará 86 Pontos de Atributos (PAs) para você distribuir entre os 8 atributos do seu personagem (ou outro valor que o mestre estipular). Essas são as regras gerais do MSA para gastos:
+Os Atributos definem e expressam seu personagem, física e mentalmente. São suas capacidades inatas.
+
+No primeiro nível você tem 86 Pontos de Atributos (PAs) para distribuir livremente entre os 8 atributos do seu personagem. Essas são as regras gerais:
 
 Mínimo por atributo para humanos: 4
 
-Média humana: 10 (isso significa que um humano normal - na média – tem 10 em todos os atributos, o equivalente a 80 pontos).
+Média humana: 10 (isso significa que um humano normal - na média – tem 10 em todos os atributos, o equivalente a 80 pontos)
 
-Máximo inicial (1° nível): 14 (O limite dos atributos sobe +1 por nível até o limite máximo de 22. Esse limite é o limite de gastos, mas seu personagem pode ultrapassá-lo com outras vantagens descritas).
+Máximo inicial (1° nível): 14 (O limite dos atributos sobe +1 por nível até o limite máximo de 22. Esse limite é o limite de gastos, mas seu personagem pode ultrapassa-lo com outras vantagens).
 
-Alternativamente você pode escolher fazer a jogada de dados de atributos.  Se escolher essa opção, jogue:
+Entende-se de modo geral que a cada 6 pontos você dobra a representação do Atributo. Isso significa dizer que alguém com 16 pontos de FORÇA é 2 vezes mais forte que alguém com 10 pontos de força e alguém com 22 pontos de FORÇA é 2 vezes mais forte que alguém com 16 pontos (4 vezes mais forte do que alguém com 10 pontos). Essa compreensão vale para todos os atributos.
 
-2 vezes:  4D4 (de 4 a 16, média 10)
+### Lista de Atributos
 
-2 vezes: 3+2D6 (de 5 a 15, média 10)
+Força (FOR): Equivale a sua potência muscular. Usada para dano corpo-a-corpo, calculo dos pontos de vida (PVs) carregar e levantar peso e testes de relacionados a(s) seguinte(s) perícia(s) base(s): Extração.
 
-2 vezes: 6+2D4 (de 8 a 14, média 11)
+Constituição (CONS): Expressa a saúde, imunidade e resistência física. Define seus Pontos de Vida (PVs) e resistência a venenos/doenças, capacidade de superar o cansaço. Influencia testes de relacionados a(s) seguinte(s) perícia(s) base(s):Sobrevivência.
 
-2 vezes: 5+2D6 (de 7 a 17, média 12)
+Agilidade (AGI): Faz referência a sua coordenação motora grossa, equilíbrio e iniciativa. Influencia testes de relacionados a(s) seguinte(s) perícia(s) base(s): Briga; Condução; Esportes.
 
-Use os resultados na ordem que preferir. Rerole os dados para somas menores que 70 ou maiores que 102. Depois de escolher a maneira de gastar (pontos fixos ou jogada de dados) o sistema não permitirá você trocar.
+Destreza (DES): Influencia nas habilidades manuais e de combate. Influencia testes de relacionados a(s) seguinte(s) perícia(s) base(s): Armas brancas; Armas de fogo.
 
-Entende-se de modo geral que a cada 6 pontos você dobra a representação do Atributo. Isso significa dizer que alguém com 16 pontos de FORÇA é 2 vezes mais forte que alguém com 10 pontos de força, e alguém com 22 pontos de FORÇA é 2 vezes mais forte que alguém com 16 pontos (4 vezes mais forte do que alguém com 10 pontos). Essa compreensão vale para todos os atributos.
+Inteligência (INT): Exprime seu raciocínio lógico e memória. Também influencia na quantidade de pontos de perícias do seu personagem e em quantas línguas ele sabe se comunicar.  Influencia testes de relacionados a(s) seguinte(s) perícia(s) base(s): Ciência; Computação; Engenharia; Medicina.
 
-Lista de Atributos
+Percepção (PER): É a maneira como você recebe e interpreta o mundo ao seu redor. Influencia testes de relacionados a(s) seguinte(s) perícia(s) base(s): Armadilhas; Espionagem; Sentidos.
 
-Força (FOR): Equivale a sua potência muscular. Usada para dano corpo-a-corpo, cálculo oculto dos pontos de vida (PVs) pelo app, carregar e levantar peso, e testes relacionados à(s) seguinte(s) perícia(s) base(s): Extração.
+Carisma (CAR): Índica sua força de personalidade e capacidade empática de comunicação com outros seres. Influencia testes de relacionados a(s) seguinte(s) perícia(s) base(s): Arte; Avaliação de objetos; Institucional; Manipulação; Trato com animais.
 
-Constituição (CONS): Expressa a saúde, imunidade e resistência física. Define seus Pontos de Vida (PVs) base no aplicativo, resistência a venenos/doenças e capacidade de superar o cansaço. Influencia testes relacionados à(s) seguinte(s) perícia(s) base(s): Sobrevivência.
+Força de Vontade (WILL): Sua resiliência mental. Usada para resistir ao medo, controle mental. Influencia testes de relacionados a(s) seguinte(s) perícia(s) base(s): Jogos.
 
-Agilidade (AGI): Faz referência a sua coordenação motora grossa, equilíbrio e iniciativa. Influencia testes relacionados à(s) seguinte(s) perícia(s) base(s): Briga; Condução; Esportes.
+Além disso, os atributos geram capacidades diárias aos personagens conforme eles crescem. Essas capacidades em questão de jogo são bônus que os jogadores podem adicionar aos testes em momentos que eles considerarem cruciais. Cada jogador pode usar suas capacidades um número de vezes igual ao Modificador do Atributo base por descanso longo.
 
-Destreza (DES): Influencia nas habilidades manuais e de combate. Influencia testes relacionados à(s) seguinte(s) perícia(s) base(s): Armas brancas; Armas de fogo.
+* A descrição do que cada habilidade contidas nas suas capacidades está no capitulo 4.
 
-Inteligência (INT): Exprime seu raciocínio lógico e memória. Também influencia na quantidade de pontos de perícias do seu personagem e em quantas línguas ele sabe se comunicar. Influencia testes relacionados à(s) seguinte(s) perícia(s) base(s): Ciência; Computação; Engenharia; Medicina.
+Capacidades de FORÇA: “Sobrevida”
 
-Percepção (PER): É a maneira como você recebe e interpreta o mundo ao seu redor. Influencia testes relacionados à(s) seguinte(s) perícia(s) base(s): Armadilhas; Espionagem; Sentidos.
+Capacidades de CONSTITUIÇÃO: “Ignorar efeito negativo imediato”.
 
-Carisma (CAR): Indica sua força de personalidade e capacidade empática de comunicação com outros seres. Influencia testes relacionados à(s) seguinte(s) perícia(s) base(s): Arte; Avaliação de objetos; Institucional; Manipulação; Trato com animais.
+Capacidades de AGILIDADE: "impulso extra"; "tomar a iniciativa".
 
-Força de Vontade (WILL): Sua resiliência mental. Usada para resistir ao medo, controle mental e ações que requerem foco absurdo. Influencia testes relacionados à(s) seguinte(s) perícia(s) base(s): Jogos.
+Capacidades de DESTREZA: "Saque rápido"; "Troca rápida"; "Recarga rápida".
 
-Além disso, os atributos geram capacidades diárias aos personagens conforme eles crescem. Essas capacidades em questão de jogo são bônus que os jogadores podem adicionar aos testes em momentos que eles considerarem cruciais. Cada jogador pode usar suas capacidades um número de vezes igual ao Modificador do Atributo base por descanso longo. (A descrição do que cada habilidade contida nas suas capacidades faz está no capítulo 4).
+Capacidades de INTELIGENCIA: "Jogada esperta".
 
-==FORÇA: “Sobrevida”==
+Capacidades de PERCEPÇÃO: "Sexto sentido".
 
-==CONSTITUIÇÃO: “Ignorar efeito negativo imediato”.==
+Capacidades de CARISMA: "Encantar"; "Mesclar".
 
-==AGILIDADE: "Impulso extra"; "Tomar a iniciativa".==
+Capacidades de FORÇA DE VONTADE: "Persistência".
 
-==DESTREZA: "Saque rápido"; "Troca rápida"; "Recarga rápida".==
+Ao distribuir os pontos de atributos você vai gerar as seguintes estatísticas: Atributo%, Bônus Pericial e Modificador de Atributo (MOD ATRIB). Essas informações são geradas a partir do gasto com os atributos, você não precisa escolhê-las.
 
-==INTELIGÊNCIA: "Jogada esperta".==
+Atributo Percentual (ATRIB%): O “Atributo%” é o valor que você usará para testes quando requisitado e ele equivale a 4 vezes a pontuação base.
 
-==PERCEPÇÃO: "Sexto sentido".==
+Bônus Pericial: Suas perícias são baseadas em Atributos e ganham bônus em função disso. Para cada ponto de atributo a partir do 5°, você recebe +2 na perícia.
 
-==CARISMA: "Encantar"; "Mesclar".==
-
-==FORÇA DE VONTADE: "Persistência".==
-
-==[rever regras dessas capacidades dentro do sistema MAS]==
-
-Ao distribuir os pontos de atributos no Aplicativo MSA, o sistema vai gerar automaticamente as seguintes estatísticas: Atributo%, Bônus Pericial e Modificador de Atributo (MOD ATRIB). Você não precisa escolhê-las ou calculá-las à mão.
-
-Atributo Percentual (ATRIB%): O “Atributo%” é o valor usado para os cálculos primários de testes quando requisitado, e ele equivale a 4 vezes a pontuação base do atributo.
-
-Bônus Pericial: Suas perícias são baseadas em Atributos e ganham bônus em função disso. Para cada ponto de atributo a partir do 5°, você recebe +2 na perícia. O Aplicativo faz isso automaticamente.
-
-Modificador de Atributo (MOD ATRIB): Os modificadores servem como base mecânica para poderes, vantagens e definição da "quantidade de dados" que você possui na hora de agir em combate. O==Modificador de Força (MOD FOR) é somado à Severidade de danos de ataques físicos==, e o Modificador de Inteligência (MOD INT) define quantas línguas adicionais seu personagem fala. O cálculo equivale a 0 quando o atributo tem valor 10 e sobe +1 a cada 2 pontos de atributo. (Nota: humanos possuem +1 nos modificadores de Constituição, Inteligência, Carisma e Força de Vontade).
+Modificador de Atributo (MOD ATRIB): Os modificadores de atributo servem como base para poderes, vantagens e capacidades do personagem. Além disso, o Modificador de Força (MOD FOR) é somado ao dano de ataques físicos (briga e armas brancas) e o Modificador de Inteligência (MOD INT) define quantas línguas adicionais seu personagem fala. Vale lembrar que humanos possuem +1 nos modificadores de Constituição, Inteligência, Carisma e Força de Vontade. Os modificadores de atributos equivalem a 0 quando o atributo tem valor 10(dez) e sobem +1 a cada 2 pontos de atributo.
 
 Abaixo há um modelo dos atributos de Dormet, nossa personagem exemplar de nível 2.
 
@@ -186,7 +176,7 @@ Abaixo há um modelo dos atributos de Dormet, nossa personagem exemplar de níve
 | WILL | 8 | 32% | 6 | 0 |
 | CAR | 13 | 52% | 14 | 3 |
 
-Não se preocupe com os números, a ficha de preencherá sozinha. Basta entender quais informações você vai usar e quando.
+Não se preocupe com os números, a ficha de preenchimento acelerado vai completa-los sozinha. Basta entender quais informações você vai usar e quando.
 
 ## Passo 2. Profissões (e caminhos profissionais)
 
@@ -242,13 +232,13 @@ Abaixo estão descritas as profissões iniciais (liberadas no nível 1). Os cami
 
 As perícias base são um grupo de atividades e ao escolher ser bom nelas (gastar seus pontos para melhora-las), você está efetivamente indicando que você é treinado naquela atividade.
 
-Sub-perícias (também chamadas de subgrupos ou subcategorias das perícias básicas), são atividades específicas em que você pode escolher ser treinado e elas formam o grupo que compõe as “Perícias Base”.
+Sub-perícias (também chamamos elas de subgrupos ou subcategorias das perícias básicas), são atividades específicas em que você pode escolher ser treinado e elas formam o grupo que compõe as “Perícias Base”.
 
-Quando você for gastar seus pontos de perícias (PPs), você poderá escolher ser generalista dentro daquela atividade e aperfeiçoar sua Perícia Base (ou seja: você melhora todas as subperícias contidas dentro daquele grupo de perícia base ao mesmo tempo) ou você pode escolher ser um especialista focado em subperícias (onde você melhora só aquela subperícia, mas não outros subperícias dentro do mesmo grupo).
+Quando você for gastar seus pontos de perícias (PPs), você pode escolher ser generalista dentro daquela atividade e aperfeiçoar sua Perícia Base (ou seja: você melhora todas as subperícias contidas dentro daquele grupo de perícia base ao mesmo tempo) ou você pode escolher ser um especialista focado em subperícias (onde você melhora só aquela subperícia, mas não outros subperícias dentro do mesmo grupo).
 
 ### Calculando seus Pontos de Perícias (PPs)
 
-Personagens possuem PPs para gastar de acordo com seu nível e sua inteligência. O sistema vai te informar e calcular seus gastos automaticamente conforme o preenchimento da ficha. Os pontos são calculados da seguinte maneira:
+Personagens possuem PPs para gastar de acordo com seu nível e sua inteligência. Os pontos são calculados da seguinte maneira:
 
 Pontos de Perícia (PPs) = 70 + (5 * INT) + (20 * Nível)
 
@@ -260,11 +250,13 @@ O sistema permite que você melhore (treine) perícias especializadas (as conhec
 
 Mas a maneira como você conta o gasto de PPs para melhorar as perícias e a subperícias é diferente. Como ao melhorar uma “perícia base” você acaba por melhorar várias sub-perícias ao mesmo tempo, o custo para melhorar uma perícia base é maior.
 
-O custo para melhorar uma ‘Perícia Base’ é 3 vezes maior (você gasta 3 PPs para ganhar 1 ponto na perícia Base), com exceção Perícias de Combate, onde você deverá gastar 6PPs para cada ponto ganho. São elas: Briga, Armas Brancas e Armas de Fogo.
+O custo para melhorar uma ‘Perícia Base’ é 3vezes maior (você gasta 3 PPs para ganhar 1 ponto na perícia Base), com exceção Perícias de Combate, onde você deverá gastar 6PPs para cada ponto ganho. São elas: Briga, Armas Brancas e Armas de Fogo.
 
 Todas as perícias tem um limite de pontos por nível, sendo que esse limite considera só seus gastos (e desconsidera outros bônus como ‘Bônus Pericial’, as profissões ou outras vantagens).
 
 Esse limite equivale a 5+5*NÍVEL. Ou seja, no primeiro nível o limite é 10, e esse limite sobe +5% por nível avançado. Esse limite é COMPARTILHADO entre as perícias bases e suas sub-perícias. Isso significa, por exemplo, que se você avançar 3 pontos em uma Pericia Base, você só poderá avançar 7 pontos nas suas subcategorias no nível 1.
+
+A ficha de preenchimento acelerado simplifica todas essas regras para você, basta preenche-la e ela vai indicar as limitações dos seus gastos.
 
 Segue um exemplo prático para melhor entendimento do sistema:
 
@@ -300,7 +292,7 @@ Lâminas Longas: Espadas, cimitarras, katanas e facões de mato. Ataques com lâ
 
 Martelo: Armas de impacto contundente e peso concentrado, ideais para amassar armaduras ou quebrar ossos. Acertos críticos diminuem a durabilidade dos itens de proteção do adversário.
 
-Machado: Ferramentas de corte com peso na ponta. Machados são próprios para causar dano a objetos. Em batalha, eles tem -10% de chance de acerto. Eles causam 1D6 a mais de dano a objetos e ataques localizados com Machado diminuem o IP dos itens em +1 a partir do segundo ataque. Você também recebe VANTAGEM em testes de DESARMAR usando um machado de uma mão.
+Machado: Ferramentas de corte com peso na ponta. Machados são próprios para causar dano a objetos. Em batalha, eles tem -10% de chance de acerto. Eles causam 1D6 a mais de dano a objetos e ataques localizados com Machado diminuem o IP dos itens em 1 a partir do segundo ataque. Você também recebe VANTAGEM em testes de DESARMAR usando um machado.
 
 Toque: Uso de armas acopladas à mão como socos-ingleses, manoplas ou máquinas de choque. Armas de Toque não podem ser usadas para ‘Defesa Armada’.
 
@@ -312,7 +304,7 @@ Chicote: Armas flexíveis e de difícil manuseio, usadas para desarmar ou causar
 
 Exóticas: Existem armas criadas para fins diversos, mas que são exóticas demais para se enquadrar em qualquer uma das definições. Se esse for o caso, então ela é uma arma exótica. Armas exóticas tem -10% de chance de acerto e normalmente recebem uma vantagem própria descrita na própria arma.
 
-Improvisada: A habilidade de transformar qualquer objeto do cenário (uma cadeira, um pedaço de vidro, um osso) em uma arma letal. ‘Armas improvisadas’ tem dano 1D4, -10% de acerto.
+Improvisada: A habilidade de transformar qualquer objeto do cenário (uma cadeira, um pedaço de vidro, um osso) em uma arma letal. ‘Armas improvisadas’ tem dano 1D4, -10% de acerto e -10% de defesa armada.
 
 ### 2. ARMAS DE FOGO
 
@@ -349,6 +341,8 @@ Descrição: O combate desarmado ou corporal instintivo. Envolve tanto a troca d
 Subperícias:
 
 Ataque desarmado: A capacidade de acertar socos, chutes e cabeçadas de forma efetiva. O dano padrão de um ataque desarmado é 1D2 + Mod. FOR. O dano é considerado ‘Não Letal’ até o limiar de 30 pontos nessa perícia – após esse valor, o personagem escolhe se o dano é ‘Não letal’ ou ‘letal’.
+
+Defesa desarmada: A técnica de bloquear golpes aparando-os com o corpo ou membros. Você não pode usar sua ‘Defesa desarmada’ para bloquear ataques armados (armas brancas).
 
 Esquiva: Sair da trajetória de um golpe, sem se deslocar ou deslocando 1 passo (1,5m). Você pode usar ‘Esquiva’ para desviar de ataque armados (Armas Brancas), mas perde a mobilidade do próximo turno.
 
@@ -402,9 +396,9 @@ Descrição: O condicionamento físico aplicado a movimentos específicos. Defin
 
 Subperícias:
 
-Corrida: Explosão de velocidade e resistência para maratonas. No geral, testes de Corrida são comparativos – Testes bem sucedidos concedem o avanço de uma zona, iniciativa contra o adversário ou outra vantagem narrativa.
+Corrida: Explosão de velocidade e resistência para maratonas. No geral testes de Corrida são comparativos – Testes bem sucedidos concedem 1,5m adicionais ao seu deslocamento base. Corrida é uma ‘Ação Principal’ que exige que o personagem use seu deslocamento completo (no geral 9m de ação principal, semelhante a ‘Disparada’ e 9m de mobilidade do personagem).
 
-Natação: Capacidade de se mover na água e sobreviver na água sem se afogar. O deslocamento humano é 3 vezes inferior na agua do que em solo.
+Natação: Capacidade de se mover na água e sobreviver na água – Testes bem sucedidos concedem 1,5m adicionais ao seu deslocamento base. O deslocamento base de natação (superfície) de um humano é 3m.
 
 Escalada: Subir superfícies verticais, prédios em ruínas ou falésias naturais. Testes bem sucedidos concedem 1,5m adicionais ao seu deslocamento base. O deslocamento base de Escalada de um humano é 3m.
 
@@ -754,15 +748,15 @@ Montaria: A técnica de conduzir animais de modos diversos, sendo carregado ou p
 
 ## Passo 4. Classes
 
-O capítulo 3 se compromete a explicar detalhadamente todas as classes do jogo. As classes definem sua capacidades e poderes e expressam os caminhos que ele tomou. Você poderá ser muitas coisas entre cientistas e soldados e outras coisas necessárias nesse cenário de ruinas. Os personagens recebem seu primeiro nível de classe no nível 3 e devem seguir as vantagens descritas na Classe escolhida.
+O capítulo 3 se compromete a explicar detalhadamente todas as classes do jogo. As classes definem sua capacidades e poderes e expressam os caminhos que ele tomou. Você poderá ser muitas coisas entre cientistas e soldados e outras coisas necessários nesse cenário de ruinas. Os personagens recebem seu primeiro nível de classe no nível 3 e devem seguir as vantagens descritas na Classe escolhida.
 
 ## Passo 5. Vantagens
 
 Vantagens (ou Aprimoramentos) são habilidades únicas dos seus personagens. Você recebe 3 Pontos de Vantagem no Nível 1 para gastar conforme queira dentre os aprimoramentos contidos na lista de aprimoramentos gerais. Conforme você evolui de nível, você poderá adquirir novos aprimoramentos.
 
-Quando atingir o nível 3, haverá uma lista adicional da sua classe onde você também poderá escolher vantagens de lá.
+Você pode usar esses aprimoramentos quando escolher sua profissão (que vai lhe trazer os aprimoramentos já gastos) e quando atingir o nível 3, haverá uma lista adicional da sua classe onde você também poderá escolher vantagens de lá.
 
-Existe também uma lista de defeitos. Você deve escolher ao menos 1 defeito leve (custo 0) ou defeito normal (-1):  Viver no sistema MS não é fácil.
+Existe também uma lista de defeitos. Você deve escolher ao menos 1 defeito leve (0) ou defeito normal (-1):  Viver no sistema MS não é fácil.
 
 Caso escolha defeitos normais (-1) você pode usar esse ponto para adquirir mais uma vantagem. Você pode ter quantos defeitos você quiser! Mas o máximo que você recebe por isso é 1 ponto de Vantagem para gastar.
 
@@ -770,23 +764,23 @@ O mestre pode durante a aventura, dar e tirar Vantagens e defeitos em meio a sua
 
 ## Passo 6. Informações finais da ficha
 
-Nesse momento sua ficha está quase toda pronta, falta apenas você escolher seus itens iniciais. No primeiro nível seu personagem tem o equivalente a 300 $ créditos para gastar com qualquer item que desejar dentre a tabela de itens iniciais.
+Nesse momento sua ficha está quase toda pronta, falta apenas você escolher seus itens iniciais. Seu personagem tem o equivalente a 300 $ créditos para gastar com qualquer item que desejar dentre a tabela de itens iniciais.
 
-Para além disso, existem outros dados importantes na sua ficha que você não precisará preencher agora, mas são importantes de entender.
+Para além disso existem outros dados importantes na sua ficha que você não precisará preencher agora, mas são importantes de entender.
 
 Pontos de Vida (PVs): São a representação da sua vida, o quanto seu personagem é capaz de aguentar antes de desmaiar (e morrer). É calculado somando For + Cons +1 no 1° nível. A cada nível avançado seu personagem recebe +5 PVs (caso você melhore sua FOR ou CONS, some ao seu PV final também).
 
-Iniciativa: Define quem tem preferência na contagem de dano caso um lado fique com 0 PVs ou menos. Calcula-se AGI +1D10.
+Iniciativa: Define quem começará atacando em um eventual combate. Calcula-se AGI +1D10.
 
 Índice de Proteção (IP): Alguns itens e habilidades lhe dão proteção quando o inimigo lhe acerta um golpe, esse é o IP. Você deve subtrair o valor do IP do dano que você tomaria (mínimo 1 PV quando o inimigo lhe acerta). O IP também tem variações, que protegem o personagem só em casos de tipos de danos específicos. Os tipos de danos possíveis são: Corte; Perfuração; Concussão; Elétrico; Calor; Energia (Mágico); Radiação; Vibração; Onda de Choque; Ácido; Venenoso; Impacto*; Físico*; A distância*; Elemental*; Químico*; Psíquico.
 
 Idade: Você pode escolher a idade que desejar para o seu personagem, mas algumas idades tem ônus. Abaixo dos 15 anos -1 ATRIBS (todos), Abaixo dos 10 anos de idade -3 ATRIBs e abaixo dos 5 anos não são personagens jogáveis. A partir dos 60 anos os personagens também recebem -1 ATRIBS (todos). Esse valor é adicionado -1 para cada 10 anos subsequentes.
 
-Sanidade: Manter a sanidade nas ruínas não é fácil. Conforme seu personagem perde sanidade ele começa a receber defeitos que atrapalham o dia a dia do personagem. Calcula-se INT + WILL + 10.
+Sanidade:
 
-Humanidade:  A humanidade mantém seu personagem como um ser social e interativo, perdê-la significa se desligar de quem você é se aproximar de um monstro ou uma máquina. A humanidade máxima do seu personagem é calculada por: HUM = 50 + (CAR x 2) + (PER x 2), mas você pode escolhe valores melhores que esse até o limite de 51 no primeiro nível.
+Humanidade:
 
-### Tabela De Progressão Por Nível
+TABELA DE PROGRESSÃO POR NÍVELNÍVELATRIBPERICIAVANTPVs080903(FOR+CONS)/2+518690 + INT * 5-+52+2+20+1+53+2+20-+54+2+20+1+55+2+20-+56+2+20+1+57+2+20-+58+2+20+1+59+2+20-+510+2+20+1+511+2+20-+512+2+20+1+513+2+20-+514+2+20+1+515+2+20-+516+2+20+1+517+2+20-+518+2+20+1+519+2+20-+520+2+20+1+5TABELA DE PROGRESSÃO POR NÍVELNÍVELATRIBPERICIAVANTPVs080903(FOR+CONS)/2+518690 + INT * 5-+52+2+20+1+53+2+20-+54+2+20+1+55+2+20-+56+2+20+1+57+2+20-+58+2+20+1+59+2+20-+510+2+20+1+511+2+20-+512+2+20+1+513+2+20-+514+2+20+1+515+2+20-+516+2+20+1+517+2+20-+518+2+20+1+519+2+20-+520+2+20+1+5
 
 === [PÁGINA 3] ===
 
@@ -942,7 +936,7 @@ Comunicação Selvagem: Receba +10% de Trato com animais para interagir com anim
 
 Instinto de Sobrevivência [PER 13]: Receba Vantagem em Sentidos, Intuição e evasão para evitar/reagir a ataques surpresas e armadilhas.
 
-![](/livro-img/image41.png)
+![](/livro-img/mss/image3.png)
 
 === [PÁGINA 5] ===
 
@@ -1058,7 +1052,7 @@ Implante humanizado: Seus implantes possuem aparência humana, não permitindo a
 
 ==Air bag frontal: As placas metálicas do seu tórax possuem um mecanismo de defesa de curto alcance. Quando um ataque físico inimigo (Corpo-a-Corpo) lhe acertar, você pode usar a sua Reação para inflar o airbag uma fração de segundo antes do impacto. Você recebe +6 de IP (Índice de Proteção) Físico exclusivamente contra este ataque com o mínimo de 0PVs tomados. Caso o inimigo lhe dê dano, ele deve fazer um teste NORMAL de esporte (acrobacia) ou será empurrado 1,5m para trás. Exige implante Torácico==.==[transformar em um implante]==
 
-![](/livro-img/image26.png)
+![](/livro-img/mss/image4.png)
 
 === [PÁGINA 6] ===
 
@@ -1162,7 +1156,7 @@ Impressionante [Escolha uma subpericia com 40% ou maior, exceto Combate e Manipu
 
 Inspiração: Receba 1D20 para somar ao resultado do seu DP de uma perícia. Você também pode inspirar seus aliados (exceto em testes de combate). Você pode fazer isso um número de vezes igual ao seu MOD CAR + 1 (mínimo de 1 vez) por descanso longo. Inspirar alguém é uma ação bônus.
 
-![](/livro-img/image31.png)
+![](/livro-img/mss/image5.png)
 
 === [PÁGINA 7] ===
 
@@ -1232,9 +1226,9 @@ Outras melhorias: Caso você opte por dar à sua invenção umas dessas melhoria
 
 ### Tabela Resumo Da ‘Invenção!’
 
-![](/livro-img/image59.png)
+![](/livro-img/mss/image6.png)
 
-![](/livro-img/image29.png)
+![](/livro-img/mss/image7.png)
 
 Especializações (Subclasses)
 
@@ -1342,7 +1336,7 @@ Olhe de Novo: Uma vez por descanso longo você pode re-rolar item aleatório enc
 
 Restaurador: Receba +10% em testes de Reparo (Engenharia). Seus reparos podem recuperar até 2 níveis de durabilidade do item, até o limite da Durabilidade original do item.
 
-![](/livro-img/image33.png)
+![](/livro-img/mss/image8.png)
 
 === [PÁGINA 8] ===
 
@@ -1450,7 +1444,7 @@ Tóxico: Recebe +25% para resistir aos efeitos dos venenos. Além disso, quando 
 
 Vetor: Recebe +10% para resistir a ficar doente. Caso esteja doente, ser acertado por Ataques físicos dá 1 marcador de Vulnerabilidade ao inimigo (cumulativo até 3).
 
-![](/livro-img/image45.png)
+![](/livro-img/mss/image9.png)
 
 === [PÁGINA 9] ===
 
@@ -1588,7 +1582,7 @@ Pós visão Forense: Após passar em um teste de Autopsia você sabe exatamente 
 
 Mente bipartida: Você pode realizar testes puramente intelectuais(mentais) como uma ação livre, simultâneo a outros testes.
 
-![](/livro-img/image39.png)
+![](/livro-img/mss/image10.png)
 
 === [PÁGINA 10] ===
 
@@ -1698,7 +1692,7 @@ Atirador perspicaz: Sempre que você errar um ataque a distancia contra um alvo,
 
 Tiro preciso: Você sabe encontrar o ângulo perfeito por entre a sucata. Ao utilizar Armas de Fogo, você ignora os benefícios de Cobertura Parcial (+30% de defesa) que os inimigos possuam, acertando frestas improváveis.
 
-![](/livro-img/image42.png)
+![](/livro-img/mss/image11.png)
 
 === [PÁGINA 11] ===
 
@@ -1836,7 +1830,7 @@ Efeito Borboleta: Se você realizar um teste com vantagem e passar, escolha 1 al
 
 Blefe Involuntário: Você não sabe o que está dizendo, mas eles têm certeza de que você é um gênio (ou um psicopata). Uma vez por descanso longo para cada personagem, ao realizar um teste da Perícia Base Manipulação, você pode optar por inverter a dezena e a unidade do seu D100 (por exemplo, 28 pode virar um 82) após ver o resultado original rolado na mesa. Você gagueja, fala algo completamente fora de contexto ou solta uma piada ruim, mas o alvo interpreta a sua fala como uma metáfora brilhante ou uma ameaça velada assustadora, sendo manipulado sem que você sequer tenha tentado de verdade. Se você passar no teste de manipulação usando essa habilidade, independente de qual foi a subpericia usada, escolha o humor predominante do alvo.
 
-![](/livro-img/image51.png)
+![](/livro-img/mss/image12.png)
 
 === [PÁGINA 12] ===
 
@@ -1958,7 +1952,7 @@ Hibernação: Quando os recursos chegam a zero e a tempestade lá fora é mortal
 
 Entocado: Você consegue cavar uma toca em terrenos naturais do tamanho do seu corpo e se esconder lá. Essa ação demora 1minuto (aproximadamente 10 turnos). Dentro da toca você tem cobertura total e a toca lhe dá camuflagem +30%. Se alguém se posicionar a frente da toca (1,5m) você pode como reação fazer um ataque de oportunidade.
 
-![](/livro-img/image49.png)
+![](/livro-img/mss/image13.png)
 
 === [PÁGINA 13] ===
 
@@ -2068,7 +2062,7 @@ Supressão Coordenada: você e seu companheiro animal são uma equipe coordenada
 
 Comunicação selvagem: Receba +10% de Trato com animais para interagir com animais, bestas e monstros selvagens. Além disso, caso você acalme um animal selvagem, você pode realizar um Ataque surpresa contra ele, mas que esteja sob sua visão.
 
-![](/livro-img/image50.png)
+![](/livro-img/mss/image14.png)
 
 === [PÁGINA 14] ===
 
@@ -2186,7 +2180,11 @@ Talento Natural: Receba +5% em Artes. Escolha 1 subgrupo de artes para receber a
 
 Tecnomente: Recebe +25% de resistência contra 'Traumas' e os testes com itens de interface Neural recebem +10%.
 
-### Vantagens Gerais
+![](/livro-img/mss/image15.png)
+
+![](/livro-img/mss/image150.png)
+
+### Vantagens Geraisvantagens Gerais
 
 Viciado em Perigo: Se houver risco de receber dano ao falhar em Esportes (exceto arremesso), faça o teste em vantagem.
 
@@ -2200,7 +2198,7 @@ Vontade de Ferro: Receba +1 em Força de Vontade e +20% para resistir ao Medo.
 
 Tamanho: O tamanho dos personagens não representa sua altura exata e sim uma faixa de altura que lhe coloca de forma semelhante a seres que também estão na mesma faixa. O tamanho pode interferir no alcance dos ataques, deslocamento, zona de ameaça entre outros fatores que estão descritos com maior precisão no capítulo de regras. Os humanos são sempre de tamanho ‘Médio’(de 1,6m a 2,1m). Abaixo a tabela com resumo sobre os tamanhos.
 
-![](/livro-img/image46.png)
+![](/livro-img/mss/image16.png)
 
 Deslocamento base: O deslocamento expressa quanto uma criatura pode se deslocar por turno. Um humano padrão se desloca até 9 metros (6 quadrados).Esses valores podem ser afetados por poderes e vantagens, mas as criaturas não podem ter um deslocamento maior que o dobro do ‘deslocamento base’ da sua raça – No caso, o deslocamento máximo de um humano é de 18m (12 quadrados).
 
@@ -2310,7 +2308,11 @@ Estômago Sensível: Você não consegue digerir carne de monstros, água suja o
 
 Fobia leve: Escolha uma fobia entre: Fogo, Navegar, Ciborgues, Monstros, Mutantes, Armas de fogo, Armas brancas, Altura ou sangue humano. Você não pode se aproximar voluntariamente a menos de 4,5m da fonte do seu medo sem antes passar em um teste de WILL% Difícil. Seus testes diante da Fobia são 5% mais difíceis. ‘Fobia leve’ é um dos defeitos que podem ser adquiridos durante a ‘instabilidade’ da sua sanidade.
 
-Fotofobia: Seus olhos ardem com luz forte ou sol do meio-dia. Quando estiver sob o Sol ou em ambiente muito iluminado seus testes recebem -10%.DEFEITOS LEVES
+![](/livro-img/mss/image17.png)
+
+![](/livro-img/mss/image170.png)
+
+DEFEITOS LEVESDEFEITOS LEVESFotofobia: Seus olhos ardem com luz forte ou sol do meio-dia. Quando estiver sob o Sol ou em ambiente muito iluminado seus testes recebem -10%.
 
 Hipersensibilidade à Dor: O seu cérebro não filtra a dor, ele a amplifica. Quando você for afetado pelo efeito 'Dor', o efeito da ‘Dor’ é dobrado.
 
@@ -2372,7 +2374,11 @@ Voz Danificada (Rouco/Mudo): Suas cordas vocais foram rasgadas no passado. Você
 
 Vulnerável: Escolha um tipo de dano. Você recebe o dobro do normal.
 
-### Defeitos Normais
+![](/livro-img/mss/image18.png)
+
+![](/livro-img/mss/image180.png)
+
+### Defeitos Normaisdefeitos Normais
 
 ## HABILIDADES ÚNICAS
 
@@ -2402,7 +2408,7 @@ Esse sistema foi criado para apresentar itens em CARDs, mas não é obrigatório
 
 O ‘item card’ tem um formato semelhante o abaixo:
 
-![](/livro-img/image25.jpg)
+![](/livro-img/mss/image19.jpeg)
 
 As informações pertinentes são: Nome; Efeito; Peso; Preço; Maestria; Durabilidade, Pré-requisitos; Dano e tipo de dano; Descrição resumida
 
@@ -2791,7 +2797,7 @@ Carga atual: É como indicamos (numericamente em Kgs) quanto peso você está le
 
 Capacidade de Carregamento: O limite que seu personagem consegue levar sem sofre qualquer ônus. O carregamento de um humano comum é de 40Kgs, você pode utilizar a tabela para saber quanto seu personagem tem de capacidade de carregamento. (a ficha apresenta esse número para você)
 
-![](/livro-img/image54.png)
+![](/livro-img/mss/image20.png)
 
 Para outros valores basta lembrar que a cada 6 pontos, o valor dobra.
 
@@ -2809,9 +2815,9 @@ Usando a ‘Barra de Carga’:
 
 A barra de carga é uma torre simples com códigos de cores para que você e o mestre saibam como está a carga atual do seu personagem. Deixe o anel marcador na parte Verde enquanto estiver igual ou menor ao Carregamento, na parte Amarela se estiver entre o carregamento e o levantamento, na parte Vermelha se estiver Supercarregado e na parte preta se estiver sendo esmagado.
 
-![](/livro-img/image53.png)
+![](/livro-img/mss/image21.png)
 
-Barra de carga
+Barra de cargaBarra de carga
 
 PONTOS DE VIDA (PVs) E SACRIFICIO
 
@@ -2825,9 +2831,9 @@ A partir do sexto PV o personagem passa a contar seus pontos usando D6. Ele só 
 
 O personagem faz um ataque onde ele abandona a razão, recebendo +10% de chance de acerto e perdendo seu D6 atual de vida, usando-o para causar dano no inimigo. Essa habilidade só funciona com ataques físicos.
 
-![](/livro-img/image58.png)
+![](/livro-img/mss/image22.png)
 
-Barra de vida
+Barra de vidaBarra de vida
 
 ### Efeitos Diversos
 
@@ -2869,6 +2875,124 @@ Efeito: Todos os testes -10%
 
 Quando seu personagem está com uma peça de roupa danificada ou sem a peça de roupa (Dorso, Pernas e Pé) e exposto a uma intempere ele começa a sofrer o efeito de friagem. A cada 15minutos receba +1 marcador de vulnerabilidade.
 
+### Efeitos Sociais (Humor)
+
+Efeitos sociais regem a interação entre as pessoas e indicam como seu personagem deve se portar (e atuar). Esses efeitos podem ser controlados por outras pessoas, usando testes de manipulação (da mesma maneira que você pode tentar manipular os outros).
+
+Se você forçar sua interpretação para longe do seu efeito social, você passa a sofrer o efeito ‘apático’. O personagem não pode escolher por conta própria em qual humor ele estará, exceto que possua alguma habilidade que lhe permita isso, porém antes de começar uma interação com personagens que não são seus aliados, você pode escolher estar ‘Amigável’, ‘Indisposto’ ou neutro (sobre nenhum efeito social). Bônus e ônus Sociais se estendem durante o combate.
+
+Ao tentar usar algumas manipulações especificas e falhar o personagem alvo da manipulação pode escolher assumir determinados tipos de humor (descritos em cada descrição).
+
+Apático
+
+Efeitos: -5% nos testes – 1D6 HUM
+
+Caso você queira ignorar ou resistir ativamente a um 'efeito Social' imposto sobre o personagem, você pode se tornar apático, que lhe concede -5% nos testes. Personagens apáticos não podem usar ‘manipulação’ em outros personagens. Além disso, receba 1D6 de dano na sua Humanidade.
+
+Neutro
+
+Efeitos: Nenhum
+
+Não há efeitos sociais atuando sobre seu personagem.
+
+Amigável
+
+Efeitos: jogadas de manipulação +10%
+
+Quando seu personagem está animado e disposto a interagir com outros seres, ou quando possui uma ligação empática com outro personagem, você fica sobre o efeito ‘Amigável’. Testes de manipulação feitos por você e testes de manipulação nos quais você é o alvo recebem +10%.
+
+Indisposto
+
+Efeitos: jogadas de manipulação -10%
+
+Quando seu personagem está desanimado e não quer conversar, ou quando você encontra uma inimizade antiga, você fica sobre o efeito ‘Indisposto’. Testes de manipulação feitos por você e testes de manipulação nos quais você é o alvo recebem -10%.
+
+Atraído
+
+Efeitos Padrão: Resistencia a Manipulação -15. Vantagem em Manipulação, PER em Desvantagem.
+
+Seu personagem está se sentido fisicamente (ou até mentalmente) atraído por outro personagem. Enquanto estiver atraído por alguém, todos os testes de manipulação tem vantagem, mas sua resistência à manipulação cai em 15%.
+
+Esses bônus influenciam seus testes enquanto você estiver se relacionando socialmente com a pessoa pelo qual você está atraído. Personagens atraídos tem dificuldade de focar em qualquer coisa, se não o objeto de sua atração. Testes relacionados a PERCEPÇÃO que não envolvam o alvo da sua atração são feitos em Desvantagem.
+
+Você pode causar o efeito ‘Atraído’ usando as subpericias: Sedução e Impressionar.
+
+Enojado
+
+Efeitos Padrão: Desvantagem em testes mentais. Vantagem em ataques e iniciativa.
+
+Quando você sente uma repulsa por alguém ou por algo (ou até uma situação), você está enojado. Enquanto estiver diante do que te enoja, você permanece sobre o efeito. Personagens enojados tem asco e até ódio contra o objeto do seu nojo, podendo tender a se afastar ou atacar. Os testes baseados em atributos mentais (WILL, PER, CAR e INT) são feitos em desvantagem. Receba vantagem nos testes de ataque e iniciativa. Atacar algo que te deixa enojado exige testes WILL% Difícil – deixar de ataca-lo também.
+
+Você pode causar o efeito ‘Enojado’ usando as subpericias: Impressionar, Tortura e Etiqueta.
+
+Motivado
+
+Efeitos: 5% em todos os testes relacionados, -5% nos testes não relacionados.
+
+Um personagem motivado tem um objetivo em mente e isso lhe ajuda a avançar. Motivação é algo palpável, algo possível e não dura para sempre (mas pode vir em ondas, caso seja relevante). Personagem recebe +5% em todos os testes diretamente relacionados à sua motivação e -5% em todos os testes nos demais testes. Essa motivação nunca é algo banal e simplório, nem pode ser alto imposta. Quando você alcança seu objetivo, seu personagem fica cansado. Caso não alcance seu objetivo, seu personagem pode ficar ‘Desmotivado’ (WILL% Difícil).
+
+Apesar de ser um Humor induzido, seu personagem pode tentar resistir para não ficar motivado (CAR% difícil).
+
+Você pode causar o efeito ‘Motivado’ usando as subpericias: Empatia, Lábia e Liderança.
+
+Desmotivado
+
+Efeitos padrão: Vantagem contra Medo; -5% nos testes.
+
+Efeitos IA: Sentidos e Resistência ao medo +20%; Demais testes -5%.
+
+Você está desmotivado e o mundo está mais cinza. Parece que nada lhe dá forças para continuar e o peso das obrigações lhe curva os ombros. Receba -5% em todos os testes, EXCETO ‘Sentidos’ e resistência ao medo, onde você recebe +10%.
+
+Você pode causar o efeito ‘Desmotivado’ usando as subpericias: Lábia, Empatia e falha nos testes de liderança.
+
+Corajoso
+
+Efeitos padrão: Vantagem contra Medo e Iniciativa; Desvantagem em testes de Inteligência.
+
+Um personagem corajoso enfrenta o perigo sem temor, avança contra as linhas inimigas e não se deixa abalar pelos desafios. A coragem exige que você assuma alguns riscos. Receba Vantagem para resistir ao Medo e nos testes de iniciativa e Desvantagem nos testes relacionados a inteligência.
+
+Você pode causar o efeito ‘Corajoso’ usando as subpericias: Liderança, Sedução e falhas no teste de intimidação (sob critério do próprio personagem)
+
+Amedrontado (Medo)
+
+Efeitos padrão: Vantagem PER e iniciativa; Desvantagem em ataques e -30 em Resistência a Manipulação.
+
+O medo é a reação natural do sobrevivente e ele te leva a buscar segurança, evitar confrontos e viver mais um dia. Receba Vantagem nos testes de iniciativa e Percepção. Desvantagem em ataques e -30 em resistência a manipulações.
+
+Você pode causar o efeito ‘Medo’ usando as subpericias: Intimidação e Tortura.
+
+Confiante (Crédulo)
+
+Efeitos padrão: - 30 de Resistência a Manipulação; Defesas -5%; +5% nos demais testes.
+
+Um personagem confiante acredita em si e está confortável consigo mesmo, confortável até demais. Sua autoconfiança melhora seus resultados, mas dificulta o personagem a reconhecer perigos. Crédulo também significa que você confia em quem está com você, diminuindo sua capacidade de perceber e resistir à manipulações. Receba -5% nas defesas, -30 de Resistência a manipulações e +5% em todos os demais testes.
+
+Você pode causar o efeito ‘Confiante’ usando as subpericias: Liderança, Lábia, Empatia, Sedução e Interrogatório.
+
+Desconfiado (Incrédulo)
+
+Efeitos padrão: Resistência a manipulação +20; -5% nos testes.
+
+Quando o personagem está desconfiado seus sentidos se aguçam e ele fica atento e preparado para qualquer coisa que possa acontecer. É difícil focar em qualquer outra ação, mas ele está preparado para não ser traído.
+
+Você pode causar o efeito ‘Desconfiado’ usando as subpericias: Lábia e falhas nos testes de Interrogatório e lábia.
+
+==Raivoso==
+
+==Sereno==
+
+A Roda do Humor
+
+Para que o personagem saiba qual o seu humor atual (e o mestre também) o jogo utiliza a ‘Roda do Humor’. Um item que mostra qual o seu humor atual e qual o bônus que ele lhe concede.
+
+É importante ressaltar que seu humor não precisa mudar a interpretação geral do seu personagem, mas deve seguir como base para ele entender como está se sentindo naquela situação. Ou seja, seu humor não te obriga a nada.
+
+![](/livro-img/mss/image23.png)
+
+Roda do HumorRoda do Humor
+
+![](/livro-img/mss/image23.png)
+
 ### SANIDADE (SAN)
 
 Sua Sanidade mede sua resiliência ao horror. O quanto sua mente consegue se manter integra diante de um mundo distorcido que exige muito para sobreviver.
@@ -2903,139 +3027,13 @@ Régua de Sanidade
 
 A régua é um recurso simples para saber como anda a lucidez do seu personagem. Ela permite uma identificação visual rápida consulta durante o jogo.
 
-![](/livro-img/image18.png)
+![](/livro-img/mss/image24.png)
 
-Régua de Sanidade
+Régua de SanidadeRégua de Sanidade
 
 ### HUMANIDADE (HUM)
 
-==Rever==
-
-==Regra de Humanidade (HUM)==
-
-==A Humanidade (HUM) mede a conexão do personagem com sua própria essência, sua empatia e seu valor pela vida no mundo brutal de Ilha Gablue. Ela varia de 0 a 100 e define como o personagem reage ao perigo, à violência e às outras pessoas.==
-
-==Cálculo Inicial: HUM = 50 + (CAR x 2) + (PER x 2)==
-
-==(O limite máximo natural é 100).==
-
-==A Humanidade é alterada de duas formas:==
-
-==Modificação Física: Instalar implantes cibernéticos ou sofrer mutações severas reduz a HUM permanentemente (custos variam de -5 a -25 por modificação). Esta perda é inevitável.==
-
-==Degradação Moral: Cometer atos cruéis que quebrem a bússola moral atual do personagem. O personagem só testa a perda de HUM se cometer um ato classificado na sua faixa atual ou em faixas inferiores.==
-
-==Os Estágios de Humanidade==
-
-==A cada dezena perdida, a mente do personagem se adapta. A hesitação moral diminui, tornando-o mais rápido e letal em emboscadas, mas sua capacidade de interagir pacificamente com o mundo se deteriora.==
-
-==91 - 100 | Altruísta==
-
-==A vida é sagrada. O personagem hesita diante da violência e repudia táticas covardes.==
-
-==Combate: Sofre -2 em Iniciativa e Desvantagem (ou penalidade de -2) em Ataques Surpresa.==
-
-==Social: Recebe +2 em testes de interações sociais amigáveis (Empatia, Lábia, Diplomacia).==
-
-==Gatilho de Perda: Roubar por sobrevivência, negar ajuda a alguém em perigo claro, ferir gravemente (mesmo em autodefesa).==
-
-==81 - 90 | Compassivo==
-
-==Evita a morte, mas entende os perigos do mundo.==
-
-==Combate: Sofre -1 em Iniciativa e -1 em Ataques Surpresa.==
-
-==Social: Recebe +1 em testes de interações amigáveis.==
-
-==Gatilho de Perda: Matar um inimigo (mesmo em combate justo), deixar um inocente morrer por omissão, extorquir pessoas vulneráveis.==
-
-==71 - 80 | Protetor==
-
-==Defende os seus acima de tudo. Luta quando necessário, de frente.==
-
-==Mecânica: Sem bônus ou penalidades de combate ou sociais. Ponto de equilíbrio moral positivo.==
-
-==Gatilho de Perda: Torturar fisicamente, matar alguém desarmado ou rendido.==
-
-==61 - 70 | Pragmático==
-
-==A bússola moral está no "olho por olho". O sobrevivente padrão de Gablue.==
-
-==Mecânica: Sem bônus ou penalidades de combate ou sociais. Ponto de equilíbrio neutro.==
-
-==Gatilho de Perda: Trair um aliado por benefício próprio, matar inocentes deliberadamente.==
-
-==51 - 60 | Insensível==
-
-==As pessoas começam a ser vistas como recursos ou obstáculos. A empatia falha, o instinto aguça.==
-
-==Combate: Recebe +1 em Iniciativa.==
-
-==Social: Sofre -1 em testes sociais amigáveis.==
-
-==Gatilho de Perda: Torturar por puro prazer, matar aliados de confiança por conveniência.==
-
-==41 - 50 | Calculista / Frio==
-
-==A moralidade é um peso morto. Golpear pelas costas é apenas tática.==
-
-==Combate: Recebe +2 em Iniciativa e +1 nas rolagens de dano de Ataques Surpresa.==
-
-==Social: Sofre -2 em testes sociais amigáveis. Imune a testes de medo mundano ou hesitação moral.==
-
-==Gatilho de Perda: Mutilar corpos sem motivo prático, atos de crueldade extrema e desnecessária.==
-
-==31 - 40 | Predador==
-
-==A mente opera na lógica de caça e abate. Sempre alerta, sempre letal.==
-
-==Combate: Recebe +3 em Iniciativa e Vantagem (ou bônus de +2) para realizar Ataques Surpresa.==
-
-==Social: Sofre -3 em testes sociais amigáveis. NPCs comuns sentem desconforto em sua presença.==
-
-==Gatilho de Perda: Atos de depravação aberrante (ex: canibalismo), sacrificar a própria integridade física irracionalmente.==
-
-==21 - 30 | Máquina / Alienado==
-
-==A lógica da sobrevivência e as modificações corporais apagaram a humanidade.==
-
-==Combate: Recebe +4 em Iniciativa. O personagem não pode ser Surpreendido em combate regular.==
-
-==Social: Sofre -4 em testes sociais amigáveis. Testes extras são exigidos para que NPCs não-hostis aceitem interagir pacificamente.==
-
-==Gatilho de Perda: Apenas a recusa voluntária em resistir aos instintos do vírus, mutação ou falha cibernética.==
-
-==11 - 20 | Monstruoso==
-
-==Totalmente desconectado da espécie. Apenas o abate importa.==
-
-==Combate: Recebe +5 em Iniciativa e +1d6 de dano extra em qualquer Ataque Surpresa.==
-
-==Social: Sofre -5 em testes sociais. Falha automática em Empatia. Aliados precisam testar Vontade para não temê-lo.==
-
-==Gatilho de Perda: Qualquer falha em testes de controle instintivo.==
-
-==01 - 10 | Casca Vazia==
-
-==Instinto puro de destruição ou preservação absoluta. Reações elétricas de um nervo exposto.==
-
-==Combate: Recebe +6 em Iniciativa.==
-
-==Social: Falha automática em qualquer teste que não seja focado na própria sobrevivência imediata (como Intimidação instintiva). Não consegue formular táticas em grupo, apenas ataca ou foge.==
-
-==0 | A Perda==
-
-==A mente colapsa. O personagem se torna um Cyberpsycho, Aberração ou Monstro irremediável e passa a ser controlado pelo Mestre.==
-
-==Recuperação de Humanidade==
-
-==Recuperar a alma exige sacrifício. A Humanidade só pode ser restaurada através de grandes gestos em jogo (a critério do Mestre), tais como:==
-
-==Altruísmo Genuíno: Arriscar a própria vida ou gastar recursos vitais (sem chance de recompensa) para salvar inocentes.==
-
-==Conexão Genuína: Dedicar tempo e vulnerabilidade para se reconectar com artefatos do Velho Mundo ou criar laços profundos com outros sobreviventes, abdicando de vantagens táticas.==
-
-==Purificação Física: Remover implantes cibernéticos (um processo doloroso e mecanicamente punitivo) para recuperar a porção da alma que a máquina havia tomado.==
+==Desenvolver==
 
 As Ruínas
 
@@ -3043,11 +3041,11 @@ As Ruínas
 
 Como já foi descrito no capítulo dos Itens, esse jogo foi criado para ser utilizado com Cards de itens. Aqui vamos explicar como ler os cards e a jogabilidade deles.
 
-![](/livro-img/image25.jpg)
+![](/livro-img/mss/image19.jpeg)
 
 Os cards possuem diversas informações que para explicação estão enumeradas no exemplo abaixo:
 
-![](/livro-img/image13.jpg)
+![](/livro-img/mss/image25.jpeg)
 
 Sendo:
 
@@ -3083,31 +3081,31 @@ Existem 2 marcadores e várias marcas.  Os marcadores são acumulados até o pr�
 
 Os marcadores são acumulados até o limite de 10, o que lhe permite uma ação especial descrita nas classes.
 
-![](/livro-img/image15.png)
+![](/livro-img/mss/image26.png)
 
-![](/livro-img/image14.png)
+![](/livro-img/mss/image27.png)
 
-Marcadores
+MarcadoresMarcadores
 
-![](/livro-img/image17.png)
+![](/livro-img/mss/image28.png)
 
-![](/livro-img/image16.png)
+![](/livro-img/mss/image29.png)
 
-![](/livro-img/image52.png)
+![](/livro-img/mss/image30.png)
 
-![](/livro-img/image27.png)
+![](/livro-img/mss/image31.png)
 
-![](/livro-img/image24.png)
+![](/livro-img/mss/image32.png)
 
-![](/livro-img/image6.png)
+![](/livro-img/mss/image33.png)
 
-![](/livro-img/image4.png)
+![](/livro-img/mss/image34.png)
 
-![](/livro-img/image3.png)
+![](/livro-img/mss/image35.png)
 
-![](/livro-img/image1.png)
+![](/livro-img/mss/image36.png)
 
-Marcas
+MarcasMarcas
 
 ### Efeitos Físicos
 
@@ -3117,19 +3115,19 @@ Esse jogo tem 2 tipos de efeitos físicos que são controlados no tabuleiro. Sua
 
 Existem 4 níveis de fadiga: Cansado; Exausto; Desmaiado e Morto. Para cada nível avançado acumule uma ficha de fadiga (-10% em todos os testes). Existem diversos testes, habilidades, ações e situações onde o mestre lhe pedirá um teste de CONS para que seu personagem não sofra de algum nível de fadiga.
 
-![](/livro-img/image7.png)
+![](/livro-img/mss/image37.png)
 
 ### Efeitos De Mobilidade
 
 Existem 5 efeitos diferentes que afetam sua mobilidade: Enraizado; Paralisado; Aturdido; Desorientado; Vertigem.
 
-Quando seu personagem estiver sob o efeito de qualquer um deles, seu personagem perderá algum grau de mobilidade (podendo perder até a mobilidade por completo).Base Enraizada
+Base EnraizadaBase EnraizadaQuando seu personagem estiver sob o efeito de qualquer um deles, seu personagem perderá algum grau de mobilidade (podendo perder até a mobilidade por completo).
 
-![](/livro-img/image5.png)
+![](/livro-img/mss/image38.png)
 
 Coloque a base enraizada abaixo da sua miniatura e corrija seu deslocamento em quadrados no marcador encontrado no Board do seu Personagem.
 
-![](/livro-img/image8.png)
+![](/livro-img/mss/image39.png)
 
 Esse indicativo mostra quantos quadrados seu personagem pode se mover por turno. Um humano normal se desloca até 6 quadrados (9metros).
 
@@ -3159,9 +3157,135 @@ Quando algum desses efeitos estiver ativo, receba um marcador único para contro
 
 Esse sistema trás para cada jogador um board próprio para auxiliar a jogabilidade. O board tem espaço para controle dos itens, carga, PVs, itens equipados, efeitos, mobilidade, Sanidade e Humanidade. Ele é controlado pelo jogador durante o jogo.
 
-![](/livro-img/image9.png)
+![](/livro-img/mss/image40.png)
 
-Board do Jogador V1
+Board do Jogador V1Board do Jogador V1
+
+### Regras de Combate
+
+Nas Ilhas das Ruínas, puxar uma arma é aceitar que alguém não vai voltar para casa. Quando as negociações falham e o cheiro de ozônio e sangue toma o ar, o tempo do jogo desacelera e a ação passa a ser resolvida em Turnos e Rodadas.
+
+Uma rodada representa alguns segundos de combate frenético (em média 5 segundos). Durante uma rodada, cada personagem envolvido tem um turno para agir.
+
+#### Iniciativa: Quem Atira Primeiro
+
+A sobrevivência muitas vezes depende de quem puxa o gatilho (ou o facão) mais rápido. No início de um conflito, todos devem rolar a Iniciativa. A fórmula é simples:
+
+Iniciativa = Agilidade (AGI) + 1D10
+
+Nota tática: Personagens afetados por Efeitos de Humor (como Corajoso ou Amedrontado) ou sob efeitos de Sanidade podem ter bônus ou ônus severos em sua Iniciativa. O Mestre organizará a ordem do maior para o menor resultado. Quando você tem o maior resultado, você pode escolher aguardar para agir, porém sua posição na ordem de ação mudará para todos os turnos subsequentes.
+
+Combate com duas armas
+
+Qualquer personagem pode atacar com duas armas ou seja, 2 ataques em 1 turno. O ataque com a mão ágil (mão principal) tem -20% de chance de acerto. O da mão inábil tem -40%. Caso opte por agir com esses 2 ataques, o personagem só pode se deslocar 1 passo no turno.
+
+Personagens podem comprar o aprimoramento AMBIDESTRIA para utilizar as mãos com a mesma capacidade. Nesses casos o primeiro ataque (com qualquer mão que você escolher) é comum e o segundo ataque (com a outra mão) recebe -20% na chance de acerto. Deslocamento do turno continua sendo 1,5m.
+
+Combate Montado
+
+Combate montado acontece quando você está sobre um animal (ou ser semelhante) utilizando a perícia TRATO COM ANIMAIS [Montaria]. Todo ataque montado é feito em desvantagem. Algumas vantagens podem melhorar seu combate montado.
+
+Combate em Condução
+
+Combate em condução acontece quando você está dentro de uma condução em movimento (Perícia CONDUÇÃO). Personagens dentro de veículos fechados recebem COBERTURA PARCIAL para não serem atingidos.
+
+Ataques realizados por tripulantes são feitos em DESVANTAGENS. Ataques feitos pelo condutor, além de serem feitos em desvantagem, exigem um teste de Concentração para manter a condução.
+
+Procrastinado (Caído) e combate caído
+
+Personagens caídos (ou que deitam no chão por vontade própria) seguem algumas regras próprias:
+
+Cada deslocamento de 1 quadrado consome 4,5m do deslocamento do personagem. Para efeitos de ataque a distância, ele está com cobertura parcial (+30% de defesa). Eles podem levantar usando sua ação de movimento completa (isso não gera ataque de oportunidade). Ataques realizados pelo personagem são feitos em desvantagem. Ataques físicos contra personagens caídos são feitos com VANTAGEM.
+
+#### A Economia do Turno
+
+No seu turno, você não tem tempo para pensar muito. A ação é dividida em diferentes tipos de esforços para que você possa se mover, lutar e interagir com seu equipamento. Durante o seu turno, você tem direito a realizar:
+
+1. Ação Principal (Ação de Combate) É o núcleo do seu turno. É o esforço necessário para desferir um golpe fatal, disparar um fuzil, administrar Primeiros Socorros ou tentar desarmar uma bomba improvisada. Com a sua Ação Principal, você pode:
+
+Atacar: Utilizar Briga, Armas Brancas ou Armas de Fogo.
+
+Correr (Disparada): Você abre mão de atacar para se focar inteiramente em fugir ou avançar. Ao Correr, você pode se deslocar o dobro do seu deslocamento base.
+
+Manobras de Combate: Tentar Derrubar, Desarmar, Agarrar ou Deslocar (Empurrar) um oponente.
+
+Esconder-se: Fora do campo de visão inimigo (um cone de 90º à frente deles), você pode tentar sumir para se mover sem ser visto.
+
+Ação Completa: Algumas tarefas complexas ou ataques pesados consomem tanto a sua Ação Principal quanto a sua Ação de Movimento juntas.
+
+Nota: Realizar uma Ação Completa não consome e não impede o uso de sua Ação Bônus ou Reação.
+
+Sacar: Sacar uma arma, entre outras ações é considerada uma ‘intereção do objetos’ e exige uma ação bônus, ou uma ação principal (caso não tenha ação bônus naquele momento. Algumas habilidades/capacidades permitem você realizar essas ações como uma ‘ação livre’.
+
+2. Ação de Movimento A distância que você pode percorrer sem comprometer sua capacidade de lutar.
+
+Deslocamento Base: Um humano normal possui um deslocamento de 9 metros por turno. No tabuleiro, isso equivale a 6 quadrados (sendo que cada quadrado equivale a um "Passo" de 1,5m).
+
+Você pode quebrar seu movimento. Por exemplo, andar 3 metros, atirar (Ação Principal) e depois andar os 6 metros restantes para se abrigar.
+
+3. Ação Bônus Alguns equipamentos cibernéticos, injeções de adrenalina rápidas ou Habilidades de Classe permitem ações que são mais rápidas que uma Ação Principal, mas que requerem foco. Você só tem direito a uma Ação Bônus por turno, e somente se possuir uma característica ou item que permita ativá-la.
+
+4. Ação Livre Ações que não exigem esforço substancial. Falar uma frase curta, largar um objeto no chão ou pisar em um inseto.
+
+Ação Imediata (Reação) Acontece fora do seu turno, em resposta a um gatilho específico. A mais comum é o Ataque de Oportunidade. Há outras ‘Reações’ no jogo, as mesmas são descritas no texto de capa habilidade.
+
+Ataque surpresa: Quando o inimigo não tem ciência da origem do ataque, você faz um ataque com vantagem.
+
+Ação preparada: Você pode usar uma Ação Principal para definir um Gatilho e outra Ação Principal. Quando esse gatilho acontecer você pode fazer a Ação Principal pré-definida como uma Reação, PORÉM até lá, você não pode fazer outras ações principais.
+
+Ação com auxilio: Caso você seja auxiliado por alguém em uma ação pericial e esse alguém tenha 10% ou mais dessa perícia a mais que você, seus testes são feitos com vantagens.
+
+Arremesso: Arremessar é uma ação principal que permite você fazer uma jogada onde você lança um objeto no quadrado desejado. Caso o objeto não venha descrito, o alcance para objetos diminutos padrão é de 15m e o estendido é de 24m(esse valor diminui 4,5m  por incremento de tamanho do objeto). Personagens só podem arremessar objetos que seja capaz de ‘Carregar’. A dificuldade de acerto pode Variar de acordo com o ambiente e o objeto lançado, mas no geral arremessos dentro do alcance estipulado são testes Normais (ND70). Se o personagem não passar o mestre escolhe ou sorteia uma direção e para cada 5 pontos a menos do ND ele desloca o lançamento em 1,5m. Caso o DS seja 9 ou 10, o objeto é danificado no lançamento. Em ambientes fechados o teste de arremesso é difícil.
+
+Ação conjunta: Caso 2 ou mais jogadores realizem em conjunto uma ação, deixe apenas o maior jogar o D-MIL e faça esse teste com vantagem.
+
+Estabilizar: Um personagem ferido/desmaiado com menos de 0 PV vai morrer, exceto se outro personagem usar nele a perícia MEDICINA[Primeiros Socorros] para estabiliza-los. O ND do teste é 50  +10 para cada PV negativo do personagem.
+
+### Manobras Táticas e Sobrevivência Bruta
+
+Dentro da Perícia Base Briga existem manobras estratégicas de combate:
+
+Desarmar: Uma técnica para arrancar a arma da mão do oponente. Você deve estar desarmado (a menos que alguma habilidade permita isso), com o inimigo dentro da sua área de ameaça (1,5m). Você deve realizar o primeiro movimento (Perícia Briga[Desarmar] contra a defesa do alvo. No turno seguinte nem você nem o adversário podem atacar com essa arma (ou objeto), pois ele está em disputa. Vocês também não podem se mover sem soltar a arma. Faça um segundo teste de Briga[Desarmar] Contra FOR% +70 do alvo, caso você vença, a arma cai no chão. O adversário (no próprio turno) pode realizar o mesmo teste, porém caso ele vença, a arma fica em suas mãos. Se nenhum dos dois passar no teste, o objeto continua em disputa.
+
+Deslocar (Empurrão): Usar seu corpo para tirar o inimigo de uma posição vantajosa ou jogá-lo de uma beirada. Efetivamente ele força o a adversário a se deslocar 1,5m na direção em que desejar (esse deslocamento involuntário não gera ataques de oportunidade, mas pode acionar armadilhas).  O personagem faz um ataque de Briga[Deslocar] contra a defesa do alvo. Caso supere, o alvo recebe 1PV de dano e se move 1,5m na direção em que o atacante escolher. O atacante pode escolher se mover junto ou não.
+
+Imobilizar (agarrar): Chaves de braço e submissões para prender o alvo, deixando-o em desvantagem. Você deve fazer um teste de Briga[Imobilizar] contra a defesa do alvo, caso tenha sucesso, ambos entram em disputa. Enquanto estiverem em disputas, nem você, nem o personagem podem se mover, usar armas ou atacar [Você só pode agarrar personagem com o mesmo tamanho que você ou menor].
+
+No próximo turno você pode fazer um teste de Briga[Imobilizar] com ND FOR%+70. Se passar no teste o alvo fica imobilizado – o que permite que você o ataque OU desloque ambos 1,5m por turno [Um alvo imobilizado não pode atacar e os ataques contra ele tem Vantagem]. Já o alvo pode fazer um teste de FOR% (ou BRIGA[imobilizar]) vs. Briga[Imobilizar] do seu personagem. Se ele vencer a manobra é finalizada. Caso ele já esteja imobilizado, ele pode fazer um teste de FOR (pura) Vs. Briga[Imobilizar] para voltar ao estado de disputa.
+
+Investida: Usar o peso do corpo somado à sua Ação de Movimento para avançar contra o alvo, causando dano extra e podendo derrubá-lo. A investida exige que seu personagem se desloque em linha reta pelo menos 6m (4 quadrados) imediatamente antes de atacar o alvo. Caso você acerte, causa dano normal +1D4 e o alvo deve passar em um teste FOR% vs. FOR% para não cair. Testes contra seu personagem tem vantagem até seu próximo ataque.
+
+Evasão: Movimentação ampla e desesperada (3 metros ou mais) focada inteiramente em escapar da área de perigo, como o raio de uma granada ou o cone de um lança-chamas. A evasão é uma ação bônus.
+
+#### Salvaguardar
+
+Viver em grupo exige sacrifícios. A manobra Salvaguardar permite que você interaja com aliados em perigo, usando uma ação completa (Ação principal mais ação de movimento), porém você pode antecipar seu turno para realizar uma salvaguarda. Para realizar uma salvaguarda seu aliado deve estar dentro do seu alcance (dependendo do deslocamento do seu personagem), você não pode já ter agido nesse turno.
+
+Entrepor: Pular na frente de um projétil ou golpe, absorvendo o dano destinado ao aliado.
+
+Você deve anunciar o movimento quando o mestre anunciar quem será atacado. Você também precisa ter ciência que o ataque irá acontecer. Ao salvaguardar um aliado, o inimigo atacará você, porém com vantagem. MESMO ASSIM, para que você consiga se entrepor, você deve passar em um teste NORMAL de Briga[Salvaguarda].
+
+Evadir: Empurrar ou puxar o aliado para fora de uma área de risco (porém você fica dentro da área).
+
+Você pode anunciar essa ação após seu aliado falhar nos testes de Evasão. Você deve passar em um teste NORMAL de Briga[Salvaguarda].
+
+Segurar e Escorar: Impedir que o aliado caia em um buraco ou evitar que ele seja derrubado no chão por um impacto.
+
+Você deve passar em um teste NORMAL de Briga[Salvaguarda].
+
+Avivar: Aproximar-se no meio do fogo cruzado para despertar um aliado atordoado ou iniciar os Primeiros Socorros.
+
+### O Ambiente como Arma
+
+Seja lutando nas passarelas de metal enferrujado de um Refúgio ou nas ruínas escorregadias da Zona da Maré, o ambiente dita as regras:
+
+Cobertura Parcial e Total: Esconder-se atrás de um pilar ou latão de lixo aumenta drasticamente sua Defesa Passiva contra ataques a distancia. Uma Cobertura Total impede que você seja alvejado diretamente. A cobertura parcial lhe concede + 30% de defesa.
+
+Terreno Elevado / Rebaixado: Atirar ou atacar de uma posição superior concede vantagem e pode contornar coberturas parciais do alvo.
+
+Ataque Surpresa (Desprevenido): Atacar alguém que não notou a sua presença (devido a um teste bem-sucedido de Furtividade contra a Percepção inimiga). Seu ataque é realizado com vantagem.
+
+Terrenos acidentados: Terrenos acidentados (por qualquer motivo) custam o dobro do deslocamento padrão para que você possa se mover.
 
 ### Concentração
 
@@ -3173,11 +3297,19 @@ Personagem quando perdem a concentração fazem testes 30% mais difíceis.
 
 Personagens recebem 1d6+1 para cada 3m de queda. Eles podem fazer um teste de ‘Acrobacia’ Difícil para diminuir esse dano a 0 para quedas de até 3m, ou dano pela metade em quedas de até 9m.
 
+### Sobrevida
+
+Após ficar com menos de 0 PVs, o personagem desmaia e passa a perder 1 PV de vida por turno, até o limite da sua constituição, quando morre. Se tomar um dano adicional (ataque) nessas condições, ele morre imediatamente. Mesmo assim, o quanto antes você recuperar seu aliado, melhor. A cada PV perdido abaixo de zero, a dificuldade do teste aumenta em 10.
+
+### Ataque Localizado (Dano localizado)
+
+Você pode escolher acertar um ponto específico do alvo (escolha um membro ou local). Você possui 30% a menos de chance de acerto, mas causa 1D6 de dano adicional e mais outras possíveis vantagens relacionadas ao local atacado ou outras habilidades do seu personagem.
+
 ### Asfixia e afogamento
 
 Humanos conseguem ficar 5 turnos sem respirar como padrão independente da sua CONS. Para saber quantos turnos TOTAL (já considerando os 5 turnos padrão) seu personagem consegue ficar sem respirar, considere a tabela a baixo, lembrando que a cada 6pts adicionais, você dobra a capacidade.
 
-![](/livro-img/image2.png)
+![](/livro-img/mss/image41.png)
 
 ### Visibilidade
 
@@ -3186,6 +3318,14 @@ Humanos comuns tem DESVANTAGEM em testes de percepção em área de Penumbra e s
 ### Confuso
 
 O personagem confuso terá desvantagem no próximo teste mental (INT, CAR, PER ou WILL).
+
+### Humorado – Mal estar
+
+Esse humor é associado a Jogos, Artes e Alimentação. Personagens com ‘Mal-estar’ tem -5% nos testes. Dura no máximo 1 hora.
+
+### Humorado – Bem estar
+
+Esse humor é associado a Jogos, Artes e Alimentação. Personagens com ‘Bem-estar’ tem +5% nos testes. Dura no máximo 1 hora.
 
 ### Satisfeito
 

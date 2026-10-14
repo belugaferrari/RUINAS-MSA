@@ -2,7 +2,11 @@
 
 Uso:
     python3 -I ferramentas/livro/extrair_docx.py LIVRO.docx /tmp/texto_img.md --imagens
-    python3 -I ferramentas/livro/gerar_livro.py /tmp/texto_img.md LIVRO.docx conteudo/livros/regras.md public/livro-img
+    python3 -I ferramentas/livro/gerar_livro.py /tmp/texto_img.md LIVRO.docx conteudo/livros/regras-msa.md public/livro-img/msa conteudo/sistemas/msa
+    python3 -I ferramentas/livro/gerar_livro.py /tmp/texto_mss.md MSS.docx conteudo/livros/regras-mss.md public/livro-img/mss conteudo/sistemas/mss --completo
+
+- Com --completo (MSS), combate e regras sociais entram no livro.
+- Imagens .emf (comuns no livro MSS) são convertidas para .png com o LibreOffice.
 
 - Trechos grifados de amarelo viram ==texto== (o app destaca como "em revisão").
 - Combate e regras sociais do MSS ficam de fora: no MSA elas serão diferentes.
@@ -49,7 +53,7 @@ def profissoes_md(dir_msa):
     return out
 
 
-def principal(entrada, docx, saida, dir_img, dir_msa='conteudo/msa'):
+def principal(entrada, docx, saida, dir_img, dir_msa='conteudo/sistemas/msa', completo=False):
     t = open(entrada, encoding='utf-8').read().split('\n')
     ini = next(i for i, l in enumerate(t) if l.startswith('# CAPÍTULO 1'))
     fim = next((i for i, l in enumerate(t) if FIM in l), len(t))
@@ -68,7 +72,7 @@ def principal(entrada, docx, saida, dir_img, dir_msa='conteudo/msa'):
                 bloco_fim = None
             else:
                 continue
-        b = next((f for i, f in BLOCOS_FORA if AMARELO.sub(r'\1', lt).startswith(i)), None)
+        b = None if completo else next((f for i, f in BLOCOS_FORA if AMARELO.sub(r'\1', lt).startswith(i)), None)
         if b:
             bloco_fim = b
             continue
@@ -80,7 +84,7 @@ def principal(entrada, docx, saida, dir_img, dir_msa='conteudo/msa'):
                 pular_ate_nivel = None
             else:
                 continue
-        if nv and any(titulo_limpo.startswith(x) for x in TITULOS_FORA):
+        if nv and not completo and any(titulo_limpo.startswith(x) for x in TITULOS_FORA):
             pular_ate_nivel = nv
             continue
         # profissões estão embaralhadas em caixas de texto: usa a lista já organizada
@@ -107,7 +111,8 @@ def principal(entrada, docx, saida, dir_img, dir_msa='conteudo/msa'):
         # imagens
         for arq in re.findall(r'\[IMAGEM:([^\]]+)\]', lt):
             imagens.append(arq)
-            out += [f'![](/livro-img/{arq})', '']
+            web = re.sub(r'\.emf$', '.png', arq, flags=re.I)
+            out += [f'![](/livro-img/{os.path.basename(dir_img.rstrip("/"))}/{web})', '']
         lt = re.sub(r'\[IMAGEM(:[^\]]+)?\]', '', lt).strip()
         if not lt:
             continue
@@ -132,7 +137,7 @@ def principal(entrada, docx, saida, dir_img, dir_msa='conteudo/msa'):
         '# Livro do Jogador — Ilhas das Ruínas',
         '',
         f'> Gerado do documento de revisão em {date.today().strftime("%d/%m/%Y")}. ==Trechos destacados assim== estão grifados no livro e ainda podem mudar.',
-        '> As regras de **combate** e **sociais** do sistema MSS foram deixadas de fora: no MSA elas serão diferentes.',
+        '> Livro completo do sistema MSS.' if completo else '> As regras de **combate** e **sociais** do sistema MSS foram deixadas de fora: no MSA elas serão diferentes.',
         '',
     ]
     texto = '\n'.join(cabecalho + out)
@@ -144,11 +149,32 @@ def principal(entrada, docx, saida, dir_img, dir_msa='conteudo/msa'):
     for f in os.listdir(dir_img):
         os.remove(os.path.join(dir_img, f))
     z = zipfile.ZipFile(docx)
+    emfs = []
     for arq in set(imagens):
         with open(os.path.join(dir_img, arq), 'wb') as f:
             f.write(z.read(f'word/media/{arq}'))
+        if arq.lower().endswith('.emf'):
+            emfs.append(os.path.join(dir_img, arq))
+    if emfs:
+        converter_emf(emfs, dir_img)
     print(f'{len(texto)} caracteres, {len(set(imagens))} imagens')
 
 
+def converter_emf(emfs, dir_img):
+    # EMF não abre no navegador: vira PNG (LibreOffice) e é recortado no conteúdo.
+    import subprocess
+    subprocess.run(['soffice', '--headless', '--convert-to', 'png', '--outdir', dir_img, *emfs],
+                   check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=300)
+    from PIL import Image, ImageOps
+    for emf in emfs:
+        png = re.sub(r'\.emf$', '.png', emf, flags=re.I)
+        im = Image.open(png).convert('RGB')
+        caixa = ImageOps.invert(im).getbbox()
+        if caixa:
+            im.crop(caixa).save(png, optimize=True)
+        os.remove(emf)
+
+
 if __name__ == '__main__':
-    principal(*sys.argv[1:5])
+    args = [a for a in sys.argv[1:] if not a.startswith('--')]
+    principal(*args[:5], completo='--completo' in sys.argv)

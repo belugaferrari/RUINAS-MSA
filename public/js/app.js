@@ -1,5 +1,5 @@
 import { h, aviso } from './ui.js';
-import { estado, definirRender, mudar } from './estado.js';
+import { estado, definirRender, mudar, carregarSistema, sincronizarSistema } from './estado.js';
 import { sessao, get, conectar, emitir } from './api.js';
 import { telaLogin } from './views/login.js';
 import { telaSaguao, carregarSaguao } from './views/saguao.js';
@@ -57,6 +57,7 @@ export function iniciarSessao(s) {
       if (estado.tela === 'campanha' && estado.campanha) {
         try {
           estado.campanha = await emitir('campanha:entrar', { id: estado.campanha.id, area: estado.area });
+          await sincronizarSistema(estado.campanha);
         } catch (e) {
           aviso(e.message, 'erro');
           estado.tela = 'saguao';
@@ -70,7 +71,10 @@ export function iniciarSessao(s) {
     connect_error: e => {
       if (e.message === 'nao-autenticado') sairDaConta();
     },
-    estado: c => {
+    estado: async c => {
+      if (estado.campanha?.id !== c.id) return;
+      const anterior = estado.sistema?.id;
+      if (await sincronizarSistema(c) && anterior) aviso(`Agora a campanha usa o ${estado.sistema.nome} (${estado.sistema.nomeCompleto}).`);
       if (estado.campanha?.id === c.id) mudar({ campanha: c });
     },
     expulso: msg => {
@@ -88,7 +92,7 @@ export function sairDaConta() {
 
 async function iniciar() {
   try {
-    estado.sistema = await get('/api/sistema');
+    estado.sistema = await carregarSistema('msa');
   } catch (e) {
     raiz.replaceChildren(h('div', { class: 'centro' }, h('p', {}, `Não foi possível carregar o sistema: ${e.message}`)));
     return;

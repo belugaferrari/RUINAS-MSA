@@ -69,7 +69,17 @@ def paragrafo(p):
         texto = '#' * min(int(nivel), 4) + ' ' + texto
     return texto
 
-for el in body:
+def blocos(pai):
+    # Conteúdo dentro de controles de conteúdo do Word (w:sdt) é desembrulhado.
+    for el in pai:
+        if etree.QName(el).localname == 'sdt':
+            conteudo = el.find('w:sdtContent', ns)
+            if conteudo is not None:
+                yield from blocos(conteudo)
+        else:
+            yield el
+
+for el in blocos(body):
     tag = etree.QName(el).localname
     if tag == 'p':
         stats['paras'] += 1; out.append(paragrafo(el))
