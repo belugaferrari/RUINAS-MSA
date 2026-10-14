@@ -11,17 +11,9 @@
    "revisao": false
   }
  },
- "humanidade": {
-  "calculo": null,
-  "inicial": 50,
-  "revisao": true,
-  "descricao": "No livro MSS as regras de Humanidade ainda estão como \"Desenvolver\": o valor é anotado à mão.",
-  "estagios": []
- },
  "regras": {
   "rolagemAtributos": null,
   "formulas": {
-   "humanidade": "manual (livro MSS: \"Desenvolver\")",
    "iniciativa": "AGI + 1d10 (define quem começa atacando)"
   }
  },

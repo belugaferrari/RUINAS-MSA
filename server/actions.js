@@ -318,6 +318,13 @@ export const acoes = {
     exigirDonoOuMestre(ctx, p);
     const gasto = Math.max(0, parseInt(xpGasto, 10) || 0);
     if (gasto > (p.xp || 0)) throw erro('XP insuficiente.');
+    // Jogador: confere os pontos do novo nível (Tabela de Progressão) antes de aplicar.
+    if (!ctx.mestre) {
+      const nova = { ...p, ...Object.fromEntries(Object.entries(patch || {}).filter(([k]) => ['nivel', 'atributos', 'pericias', 'subpericias', 'vantagens', 'defeitos'].includes(k))) };
+      if (nova.nivel < p.nivel) throw erro('O nível não pode diminuir.');
+      const problemas = problemasFicha(nova, sistema(c.sistema), c, { apenasPontos: true });
+      if (problemas.length) throw erro(problemas[0]);
+    }
     const { backups, ...semBackups } = p;
     p.backups = [...(backups || []), { id: uid(), em: Date.now(), ficha: structuredClone(semBackups) }].slice(-MAX_BACKUPS);
     for (const k of ['nivel', 'classe', 'especializacao', 'escolhasClasse', 'atributos', 'pericias', 'subpericias', 'vantagens', 'defeitos', 'pv', 'sanidade', 'humanidade']) {

@@ -1,7 +1,7 @@
 import { h, botao, aviso, vazio, confirmar, icone, titulo, tabela, passador, seloRevisao, selecao } from '../ui.js';
 import { estado, render, mudar } from '../estado.js';
 import { acao } from '../api.js';
-import { novaFicha, pontosCampanha, pontosGastos, pontosPericiaTotal, pontosVantagemExtra, derivados, problemasFicha, custoPericiaBase } from '/shared/regras.js';
+import { novaFicha, pontosDoNivel, pontosGastos, pontosPericiaTotal, pontosVantagemExtra, derivados, problemasFicha, custoPericiaBase } from '/shared/regras.js';
 import { ICONE_TIPO } from './ficha.js';
 import { painelPericias } from './pericias.js';
 
@@ -53,7 +53,7 @@ function passoNivel() {
   const c = estado.campanha;
   const f = estado.criacao.ficha;
   const sis = estado.sistema;
-  const pts = pontosCampanha(c, sis);
+  const pts = pontosDoNivel(f.nivel, sis, c);
   const raca = sis.raca;
   return h('div', { class: 'form' },
     c.nivel === 'Variavel'
@@ -63,6 +63,7 @@ function passoNivel() {
     h('p', {}, c.padraoMSA ? `Início padrão do ${estado.sistema.nome}: ` : 'Pontos definidos pelo mestre: ',
       `${pts.atributos} pontos de atributo, ${pts.vantagens} pontos de vantagem e `,
       pts.pericias ? `${pts.pericias} pontos de perícia.` : 'pontos de perícia pela fórmula 70 + 5×INT + 20×nível.'),
+    f.nivel > 1 ? h('p', { class: 'dica' }, `Já inclui a Tabela de Progressão: +2 de atributo por nível e +1 vantagem nos níveis pares.`) : null,
     h('div', { class: 'cartao' },
       titulo(`Raça: ${raca.nome}`, 'user'),
       h('p', {}, `Tamanho ${raca.tamanho} · Deslocamento ${raca.deslocamento}`),
@@ -93,7 +94,7 @@ function passoIdentidade() {
 function passoAtributos() {
   const f = estado.criacao.ficha;
   const sis = estado.sistema;
-  const total = pontosCampanha(estado.campanha, sis).atributos;
+  const total = pontosDoNivel(f.nivel, sis, estado.campanha).atributos;
   const gasto = pontosGastos(f, sis).atributos;
   const d = derivados(f, sis);
   return h('div', {},
@@ -161,7 +162,7 @@ function passoClasse() {
 function passoVantagens() {
   const f = estado.criacao.ficha;
   const sis = estado.sistema;
-  const base = pontosCampanha(estado.campanha, sis).vantagens;
+  const base = pontosDoNivel(f.nivel, sis, estado.campanha).vantagens;
   const extra = pontosVantagemExtra(f, sis);
   const gasto = pontosGastos(f, sis).vantagens;
   const total = base + extra;
@@ -242,9 +243,9 @@ function passoRevisao() {
   const erros = problemasFicha(f, sis, estado.campanha);
   const g = pontosGastos(f, sis);
   const sobras = [
-    ['atributo', pontosCampanha(estado.campanha, sis).atributos - g.atributos],
+    ['atributo', pontosDoNivel(f.nivel, sis, estado.campanha).atributos - g.atributos],
     ['perícia', pontosPericiaTotal(f, sis, estado.campanha) - g.pericias],
-    ['vantagem', pontosCampanha(estado.campanha, sis).vantagens + pontosVantagemExtra(f, sis) - g.vantagens],
+    ['vantagem', pontosDoNivel(f.nivel, sis, estado.campanha).vantagens + pontosVantagemExtra(f, sis) - g.vantagens],
   ].filter(([, v]) => v > 0);
   const nome = (lista, id) => lista.find(x => x.id === id)?.nome;
   const treinadas = sis.pericias.flatMap(p => p.subpericias.filter(s => (f.pericias[p.id] || 0) + (f.subpericias[s.id] || 0) > 0).map(s => `${s.nome} ${d.subpericias[s.id]}%`));

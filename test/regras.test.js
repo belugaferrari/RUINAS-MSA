@@ -132,11 +132,26 @@ test('MSS: carrega o próprio conteúdo e as diferenças para o MSA', () => {
   assert.ok(sis.regras.rolagemAtributos);
   assert.equal(mss.atributos.length, 8, 'base comum');
   for (const c of mss.classes) for (const e of c.especializacoes) assert.equal(e.progressao?.length, 18, `${c.nome} › ${e.nome}`);
-  // Humanidade: calculada no MSA, manual no MSS.
+  // Humanidade: mesma fórmula e mesmos estágios nos dois sistemas.
   const f = R.novaFicha(mss, { nivel: 1 });
-  assert.equal(f.humanidade.max, mss.humanidade.inicial);
-  f.humanidade = { max: 63, atual: 63 };
-  assert.equal(R.derivados(f, mss).humanidadeMax, 63);
-  assert.equal(R.derivados(f, sis).humanidadeMax, 90);
+  assert.equal(f.humanidade.max, 90);
+  assert.equal(R.derivados(f, mss).estagioHumanidade.nome, R.derivados(f, sis).estagioHumanidade.nome);
   assert.ok(sistema('xyz').id === 'msa', 'id desconhecido cai no padrão');
+});
+
+test('pontos por nível (Tabela de Progressão) valem para MSA e MSS', () => {
+  for (const s of [sis, sistema('mss')]) {
+    assert.deepEqual(R.pontosDoNivel(1, s, { padraoMSA: true }), { atributos: 86, vantagens: 3, pericias: null });
+    assert.deepEqual(R.pontosDoNivel(2, s, { padraoMSA: true }), { atributos: 88, vantagens: 4, pericias: null });
+    assert.deepEqual(R.pontosDoNivel(5, s, { padraoMSA: true }), { atributos: 94, vantagens: 5, pericias: null });
+    assert.equal(R.pontosDoNivel(20, s, { padraoMSA: true }).vantagens, 13);
+  }
+  // Campanha com pontos próprios: o mestre define o nível 1, a progressão soma por cima.
+  assert.equal(R.pontosDoNivel(3, sis, { padraoMSA: false, pontos: { atributos: 90, vantagens: 2 } }).atributos, 94);
+  // Ficha de nível 3 pode gastar 90 pontos de atributo; 91 é demais.
+  const f = R.novaFicha(sis, { nivel: 3 });
+  Object.assign(f.atributos, { FOR: 14, CONS: 12, AGI: 12, DES: 10, INT: 10, PER: 10, CAR: 12, WILL: 10 });
+  assert.deepEqual(R.problemasFicha(f, sis, { padraoMSA: true }, { apenasPontos: true }), []);
+  f.atributos.WILL = 11;
+  assert.ok(R.problemasFicha(f, sis, { padraoMSA: true }, { apenasPontos: true }).some(x => /Atributos: 91 de 90/.test(x)));
 });

@@ -77,6 +77,19 @@ export function pontosCampanha(campanha, sistema) {
   return { atributos: p.atributos || r.pontosAtributos, vantagens: p.vantagens ?? r.pontosVantagem, pericias: p.pericias || null };
 }
 
+// Pontos até o nível (Tabela de Progressão por Nível): +2 de atributo por nível e +1 vantagem nos níveis pares.
+// As perícias seguem a fórmula 70 + 5×INT + 20×nível (ver pontosPericiaTotal).
+export function pontosDoNivel(nivel, sistema, campanha) {
+  const base = pontosCampanha(campanha, sistema);
+  const pn = regras(sistema).progressao?.porNivel || {};
+  const n = Math.max(1, nivel || 1);
+  return {
+    atributos: base.atributos + (pn.atributos ?? 0) * (n - 1),
+    vantagens: base.vantagens + (pn.vantagemNiveisPares ?? 0) * Math.floor(n / 2),
+    pericias: base.pericias,
+  };
+}
+
 export const atributoMax = (nivel, sistema) => {
   const r = regras(sistema);
   return Math.min(r.atributoMaxAbsoluto ?? 22, (r.atributoMaxNivel1 ?? 14) + (nivel || 1) - 1);
@@ -213,13 +226,14 @@ export function ganhosDeClasse(ficha, sistema) {
 }
 
 // Validação da ficha conforme os limites (usada na criação, no servidor e na tela).
-export function problemasFicha(ficha, sistema, campanha) {
+// apenasPontos: confere só atributos, perícias e vantagens (usado ao evoluir).
+export function problemasFicha(ficha, sistema, campanha, { apenasPontos = false } = {}) {
   const r = regras(sistema);
   const lista = [];
-  const pts = pontosCampanha(campanha, sistema);
+  const pts = pontosDoNivel(ficha.nivel, sistema, campanha);
   const g = pontosGastos(ficha, sistema);
   const max = atributoMax(ficha.nivel, sistema);
-  if (!String(ficha.nome || '').trim()) lista.push('Falta o nome do personagem.');
+  if (!apenasPontos && !String(ficha.nome || '').trim()) lista.push('Falta o nome do personagem.');
   for (const a of sistema.atributos) {
     const v = ficha.atributos?.[a.sigla] ?? 0;
     if (v < (r.atributoMin ?? 0)) lista.push(`${a.nome} abaixo do mínimo (${r.atributoMin}).`);
@@ -239,6 +253,7 @@ export function problemasFicha(ficha, sistema, campanha) {
   }
   const vDisp = pts.vantagens + pontosVantagemExtra(ficha, sistema);
   if (g.vantagens > vDisp) lista.push(`Vantagens: ${g.vantagens} de ${vDisp} pontos.`);
+  if (apenasPontos) return lista;
   if ((ficha.defeitos || []).length < (r.defeitosMinimos ?? 0)) lista.push(`Escolha ao menos ${r.defeitosMinimos} defeito.`);
   if (!ficha.profissao) lista.push('Escolha uma profissão.');
   if (ficha.classe && ficha.nivel < (r.nivelClasse ?? 3)) lista.push(`Classe só a partir do nível ${r.nivelClasse}.`);

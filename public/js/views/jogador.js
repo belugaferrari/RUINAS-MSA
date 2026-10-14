@@ -1,5 +1,5 @@
 import { h, abas, botao, selecao, aviso, confirmar, vazio, formatarData, icone, titulo, passador } from '../ui.js';
-import { derivados, ganhosDeClasse, pontosGastos, pontosPericiaTotal } from '/shared/regras.js';
+import { derivados, ganhosDeClasse, pontosGastos, pontosPericiaTotal, pontosDoNivel, pontosVantagemExtra, problemasFicha } from '/shared/regras.js';
 import { painelPericias } from './pericias.js';
 import { estado, mudar, render, personagemPorId, meusPersonagens } from '../estado.js';
 import { acao, emitir } from '../api.js';
@@ -114,6 +114,13 @@ function evoluirView(p) {
   const d = derivados(f, sis);
   const mudou = k => JSON.stringify(f[k]) !== JSON.stringify(p[k]);
   const ppTotal = pontosPericiaTotal(f, sis);
+  // Tabela de Progressão por Nível: +2 de atributo por nível e +1 vantagem nos níveis pares.
+  const ptsNivel = pontosDoNivel(f.nivel, sis, estado.campanha);
+  const gastos = pontosGastos(f, sis);
+  const atrRestam = ptsNivel.atributos - gastos.atributos;
+  const vantTotal = ptsNivel.vantagens + pontosVantagemExtra(f, sis);
+  const vantRestam = vantTotal - gastos.vantagens;
+  const ganhoNivel = f.nivel - p.nivel;
   const ppGasto = pontosGastos(f, sis).pericias;
   const muda = fn => { fn(f); render(); };
   const classe = sis.classes.find(c => c.id === f.classe);
@@ -125,7 +132,7 @@ function evoluirView(p) {
       h('span', { class: 'selo ok' }, icone('sparkles'), `XP disponível: ${p.xp || 0}`),
       h('span', { class: 'espaco' }),
       botao('Desfazer mudanças', () => { estado.sel.evolucao = null; render(); }, { icone: 'refresh-cw' })),
-    h('p', { class: 'dica' }, 'Custos de XP e pontos de atributo por nível ainda não estão no livro: informe o XP gasto e combine com o mestre. Ao confirmar, a ficha antiga vira backup.'),
+    h('p', { class: 'dica' }, 'Os pontos de cada nível seguem a Tabela de Progressão. O custo em XP ainda não está no livro: informe o XP gasto e combine com o mestre. Ao confirmar, a ficha antiga vira backup.'),
     h('div', { class: 'ficha-grade' },
       h('section', { class: 'bloco' }, titulo('Nível, classe e especialização', 'crown'),
         h('div', { class: 'valor-linha' }, h('span', {}, 'Nível'), h('small', {}, `atual ${p.nivel}`), passador(f.nivel, p.nivel, 20, v => muda(x => { x.nivel = v; }), 'nível')),
@@ -138,10 +145,15 @@ function evoluirView(p) {
         novosGanhos.length ? h('div', {}, titulo('Você ganha', 'sparkles', 'h4'),
           h('ul', { class: 'ganhos' }, novosGanhos.map(g => h('li', { title: g.descricao }, h('span', { class: 'selo' }, `nv ${g.nivel}`), ' ', g.nome)))) : null,
         h('p', { class: 'meta' }, `PV máx. ${p.pv.max} → ${d.pvMax} · Sanidade máx. ${p.sanidade.max} → ${d.sanidadeMax} · Humanidade máx. ${p.humanidade?.max ?? '—'} → ${d.humanidadeMax}`)),
+      ganhoNivel > 0 ? h('section', { class: 'bloco largo' }, titulo(`Subindo ${ganhoNivel} nível${ganhoNivel > 1 ? 'is' : ''}`, 'trending-up'),
+        h('p', {}, `Pela Tabela de Progressão: +${ptsNivel.atributos - pontosDoNivel(p.nivel, sis, estado.campanha).atributos} de atributo, `,
+          `+${pontosPericiaTotal(f, sis) - pontosPericiaTotal({ ...f, nivel: p.nivel }, sis)} de perícia, `,
+          `+${ptsNivel.vantagens - pontosDoNivel(p.nivel, sis, estado.campanha).vantagens} de vantagem e +${(sis.regras.progressao?.porNivel?.pv ?? 5) * ganhoNivel} de PV.`)) : null,
       h('section', { class: 'bloco' }, titulo(`Atributos (máx. ${d.atributoMax} no nível ${f.nivel})`, 'zap'),
+        h('div', { class: `contador ${atrRestam < 0 ? 'perigo' : atrRestam === 0 ? 'ok' : ''}` }, `Pontos de atributo: ${gastos.atributos} de ${ptsNivel.atributos} · restam ${atrRestam}`),
         h('div', { class: 'valores' }, sis.atributos.map(a => h('div', { class: `valor-linha ${f.atributos[a.sigla] !== p.atributos[a.sigla] ? 'marcado' : ''}` },
           h('span', {}, h('strong', {}, a.sigla), ' ', a.nome), h('small', {}, `atual ${p.atributos[a.sigla]}`),
-          passador(f.atributos[a.sigla], p.atributos[a.sigla], d.atributoMax, v => muda(x => { x.atributos[a.sigla] = v; }), a.nome))))),
+          passador(f.atributos[a.sigla], p.atributos[a.sigla], Math.min(d.atributoMax, f.atributos[a.sigla] + Math.max(0, atrRestam)), v => muda(x => { x.atributos[a.sigla] = v; }), a.nome))))),
       h('section', { class: 'bloco largo' }, titulo('Perícias', 'target'),
         h('div', { class: `contador ${ppGasto > ppTotal ? 'perigo' : ''}` }, `Pontos de perícia: ${ppGasto} de ${ppTotal} (fórmula do nível ${f.nivel}) · limite ${d.limitePericia}`),
         painelPericias(f, {
@@ -156,8 +168,9 @@ function evoluirView(p) {
           },
         })),
       h('section', { class: 'bloco largo' }, titulo('Novas vantagens', 'sparkles'),
+        h('div', { class: `contador ${vantRestam < 0 ? 'perigo' : vantRestam === 0 ? 'ok' : ''}` }, `Pontos de vantagem: ${gastos.vantagens} de ${vantTotal} · restam ${vantRestam}`),
         h('p', { class: 'dica' }, 'Nos níveis marcados como "Vantagem Extra" na tabela da classe você ganha uma vantagem.'),
-        selecao([{ valor: '', rotulo: '+ adicionar vantagem' }, ...sis.vantagens.filter(v => !f.vantagens.includes(v.id)).map(v => ({ valor: v.id, rotulo: v.nome + (v.requisito ? ` [${v.requisito}]` : '') }))], '',
+        vantRestam <= 0 ? h('p', { class: 'dica' }, 'Sem pontos de vantagem sobrando neste nível.') : selecao([{ valor: '', rotulo: '+ adicionar vantagem' }, ...sis.vantagens.filter(v => !f.vantagens.includes(v.id)).map(v => ({ valor: v.id, rotulo: v.nome + (v.requisito ? ` [${v.requisito}]` : '') }))], '',
           v => v && muda(x => { x.vantagens = [...x.vantagens, v]; })),
         h('ul', { class: 'lista-inline' }, f.vantagens.filter(id => !p.vantagens.includes(id)).map(id => h('li', {}, sis.vantagens.find(v => v.id === id)?.nome,
           h('button', { type: 'button', class: 'x so-icone', 'aria-label': 'Remover', onclick: () => muda(x => { x.vantagens = x.vantagens.filter(y => y !== id); }) }, icone('x'))))))),
@@ -165,7 +178,8 @@ function evoluirView(p) {
       h('label', { class: 'linha' }, 'XP gasto nesta evolução',
         h('input', { type: 'number', min: 0, max: p.xp || 0, value: ev.xpGasto, class: 'curto', onchange: e => { ev.xpGasto = parseInt(e.target.value, 10) || 0; } })),
       botao('Confirmar evolução', async () => {
-        if (ppGasto > ppTotal) throw new Error('Pontos de perícia acima do total.');
+        const problemas = problemasFicha(f, sis, estado.campanha, { apenasPontos: true });
+        if (problemas.length) throw new Error(problemas[0]);
         // PV e Sanidade máximos seguem as fórmulas; o atual acompanha o ganho.
         for (const [k, novo] of [['pv', d.pvMax], ['sanidade', d.sanidadeMax], ['humanidade', d.humanidadeMax]]) f[k] = { max: novo, atual: p[k].atual + (novo - p[k].max) };
         const patch = Object.fromEntries(CAMPOS_EVOLUCAO.filter(mudou).map(k => [k, f[k]]));

@@ -124,3 +124,24 @@ test('trocar o sistema no meio da campanha mantém as fichas', () => {
   delete antiga.sistema;
   assert.equal(visaoPara(antiga, m, 'mestre').sistema, 'msa');
 });
+
+test('evoluir: o jogador só gasta os pontos que o nível dá', () => {
+  const m = { id: 'm4', name: 'Mestre 4' };
+  const j = { id: 'j4', name: 'Lu' };
+  const c = novaCampanha(m, { nome: 'Evolução', maxJogadores: 1, nivel: 1, padraoMSA: true, sistema: 'mss' });
+  executar(c, 'campanha.atualizar', { aberta: true }, { user: m, mestre: true });
+  entrarNaCampanha(c, j, 'jogador');
+  const { id } = executar(c, 'personagem.criar', { ficha: fichaValida({ nome: 'Tom' }) }, { user: j, mestre: false });
+  const p = c.personagens.find(x => x.id === id);
+  // Nível 1 → 2: +2 de atributo (80 gastos de 88) e +1 vantagem.
+  const atributos = { ...p.atributos, FOR: 14, CONS: 14 };
+  assert.throws(() => executar(c, 'personagem.evoluir', { id, patch: { nivel: 1, atributos }, xpGasto: 0 }, { user: j, mestre: false }), /Atributos/);
+  executar(c, 'personagem.evoluir', { id, patch: { nivel: 2, atributos: { ...p.atributos, FOR: 14, CONS: 14 } }, xpGasto: 0 }, { user: j, mestre: false });
+  assert.equal(p.nivel, 2);
+  assert.equal(p.atributos.FOR, 14);
+  assert.throws(() => executar(c, 'personagem.evoluir', { id, patch: { nivel: 1 }, xpGasto: 0 }, { user: j, mestre: false }), /diminuir/);
+  // Vantagens: 3 + 1 (nível 2); o defeito leve não dá ponto extra.
+  const quatro = sis.vantagens.slice(0, 4).map(v => v.id);
+  executar(c, 'personagem.evoluir', { id, patch: { vantagens: quatro }, xpGasto: 0 }, { user: j, mestre: false });
+  assert.throws(() => executar(c, 'personagem.evoluir', { id, patch: { vantagens: sis.vantagens.slice(0, 5).map(v => v.id) }, xpGasto: 0 }, { user: j, mestre: false }), /Vantagens/);
+});

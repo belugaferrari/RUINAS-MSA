@@ -17,8 +17,9 @@ Pontos em que o app precisou escolher um caminho. Confira e me diga se a escolha
 
 ## Regras que ainda não existem no livro
 - **Custo de cada vantagem**: o app considera 1 ponto por vantagem.
-- **Pontos de atributo ao subir de nível** e **custo em XP** da evolução: lançados à mão no Evoluir.
-- **Humanidade**: fórmula e estágios entraram (grifados). Os efeitos de Combate e Social de cada estágio aparecem só como texto, já que essas regras serão diferentes no MSA.
+- **Custo em XP** da evolução: lançado à mão no Evoluir. Os pontos por nível já seguem a Tabela de Progressão (confirmado: vale para MSA e MSS).
+- **Vantagem Extra das classes × +1 vantagem nos níveis pares da Tabela de Progressão**: o app conta só os +1 dos níveis pares como pontos de vantagem e mostra a "Vantagem Extra" da classe como ganho de classe. Confirme se são a mesma coisa ou se somam.
+- **Humanidade**: fórmula e estágios (a cada 10 pontos) valem para MSA e MSS (confirmado). Os efeitos de Combate e Social de cada estágio aparecem só como texto.
 - **Disputa** no Confronto (os dois lados rolam): o livro só descreve Ação × Ação passiva. A disputa é provisória — maior total vence, empate pela maior ação, acerto crítico vence quem não tirou crítico.
 - **Tabela de itens** (capítulo 5): o app ainda usa itens de exemplo.
 - **Capacidades dos atributos**: grifadas ("rever regras dentro do MSA") — aparecem com o selo "em revisão".
@@ -30,11 +31,10 @@ Pontos em que o app precisou escolher um caminho. Confira e me diga se a escolha
 | Subperícia Briga › Defesa Desarmada | não existe | existe |
 | Rolagem alternativa de atributos (4D4…) | existe | não existe |
 | Sacrifício (habilidade única humana) | sucesso automático + 1D6 de dano puro | +10% de acerto e perde o D6 atual de vida |
-| Humanidade | 50 + 2×CAR + 2×PER, com estágios | "Desenvolver": valor manual (começa em 50) |
 | Iniciativa | quem cai primeiro quando os dois lados chegam a 0 PV | quem começa atacando |
 | Corrida e Natação | efeitos do texto antigo | +1,5 m de deslocamento em teste bem-sucedido |
 
 ## Livro MSS
-- **Tabela de Progressão por Nível**: só o MSS traz a tabela (+2 atributo, +20 perícia, +5 PV por nível, +1 vantagem nos níveis pares). O app usa essa tabela como referência para os dois sistemas — confirme se vale para o MSA.
-- **Humanidade inicial no MSS**: o app começa em 50 (o livro não define).
+- **Tabela de Progressão por Nível**: só o livro MSS traz a tabela preenchida (+2 atributo, +20 perícia, +5 PV por nível, +1 vantagem nos níveis pares). Confirmado que vale para os dois sistemas — o livro MSA ainda está com a tabela vazia.
+- **Humanidade no livro MSS** ainda diz "Desenvolver": o app usa as mesmas regras do MSA (confirmado).
 - As tabelas de classe do MSS são iguais às do MSA (conferido).
