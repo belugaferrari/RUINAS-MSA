@@ -7,7 +7,7 @@ import path from 'node:path';
 process.env.DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'msa-'));
 const { novaCampanha, executar, visaoPara } = await import('../server/actions.js');
 const { sistema } = await import('../server/sistema.js');
-const { resolverAtaque, aplicarAtaque, d6Atual, modoRolagem, rolarDP, defesaDoAlvo, resistenciaManipulacao, resolverManipulacao, sobrevida } = await import('../shared/combate.js');
+const { resolverAtaque, aplicarAtaque, d6Atual, modoRolagem, rolarDP, defesaDoAlvo, opcoesDefesa, ipDe, resistenciaManipulacao, resolverManipulacao, sobrevida } = await import('../shared/combate.js');
 const { novaFicha } = await import('../shared/regras.js');
 
 const mss = sistema('mss');
@@ -41,14 +41,36 @@ test('D6 de vida atual (Sacrifício)', () => {
   assert.equal(d6Atual(17), 6);
 });
 
-test('defesa passiva: melhor defesa + 50, cobertura só contra distância', () => {
+test('defesa escolhida pelo defensor: o que vale contra cada ataque', () => {
   const alvo = lutador('B', { subpericias: { 'briga.esquiva': 10 } });
+  const soco = { uid: 'desarmado', alcance: 'corpo' };
   const faca = { uid: 'x', alcance: 'corpo', pericia: 'arma-branca.laminas-curtas' };
   const tiro = { uid: 'y', alcance: 'distancia', pericia: 'armas-de-fogo.pistolas' };
+  const ids = (arma, o) => opcoesDefesa(alvo, arma, mss, o).map(x => x.id);
+  assert.deepEqual(ids(soco), ['esquiva', 'defesa-desarmada', 'nenhuma']);
+  assert.deepEqual(ids(faca), ['esquiva', 'nenhuma'], 'defesa desarmada só contra Briga');
+  assert.deepEqual(ids(tiro), ['nenhuma'], 'esquiva não vale contra tiro');
+  assert.deepEqual(ids(tiro, { area: true }), ['evasao', 'nenhuma']);
   const esquiva = 10 + 2 * (10 - 5); // pontos + bônus pericial de AGI 10
-  assert.equal(defesaDoAlvo(alvo, faca, mss).total, esquiva + 50);
-  assert.equal(defesaDoAlvo(alvo, tiro, mss, { cobertura: true }).total, esquiva + 80);
-  assert.equal(defesaDoAlvo(alvo, faca, mss, { cobertura: true }).total, esquiva + 50);
+  assert.equal(defesaDoAlvo(alvo, faca, mss, { escolha: 'esquiva' }).total, esquiva + 50);
+  assert.equal(defesaDoAlvo(alvo, faca, mss, { escolha: 'esquiva', cobertura: true }).total, esquiva + 50, 'cobertura só contra distância');
+  assert.equal(defesaDoAlvo(alvo, tiro, mss, { cobertura: true }).total, 80);
+  assert.throws(() => defesaDoAlvo(alvo, tiro, mss, { escolha: 'esquiva' }), /não vale/);
+});
+
+test('IP soma itens e habilidades', () => {
+  const b = lutador('B', { ipExtra: 3 });
+  b.itens = [{ uid: 'g', nome: 'Gibão', tipo: 'defesa', equipado: true, defesa: 2 }];
+  assert.equal(ipDe(b, mss), 5);
+});
+
+test('Evasão bem-sucedida contra ataque em área: metade do dano', () => {
+  const a = lutador('A');
+  const b = lutador('B');
+  const r = resolverAtaque(a, b, mss, { area: true }, 'evasao', seq(d100(10), d10(5), 0.99));
+  assert.equal(r.sucesso, false);
+  assert.ok(r.metadeEvasao);
+  assert.equal(r.dano, Math.floor(Math.max(1, r.danoBruto - r.ip) / 2));
 });
 
 test('ataque: acerto, dano − IP (mínimo 1), crítico e efeito pelo DS', () => {
@@ -57,7 +79,7 @@ test('ataque: acerto, dano − IP (mínimo 1), crítico e efeito pelo DS', () =>
   const b = lutador('B');
   b.itens = [{ uid: 'g', nome: 'Gibão', tipo: 'defesa', equipado: true, defesa: 2 }];
   // d100 = 99 (acerto crítico), DS = 2, faca 4, crítico 3.
-  const r = resolverAtaque(a, b, mss, { armaUid: 'f' }, seq(d100(99), d10(2), 0.99, 0.6));
+  const r = resolverAtaque(a, b, mss, { armaUid: 'f' }, 'nenhuma', seq(d100(99), d10(2), 0.99, 0.6));
   assert.equal(r.critico, 'acerto');
   assert.ok(r.sucesso);
   assert.equal(r.danoBruto, 4 + 3 + 2); // + MOD FOR 2
@@ -69,12 +91,12 @@ test('ataque: acerto, dano − IP (mínimo 1), crítico e efeito pelo DS', () =>
   assert.ok(b.marcadores.includes('Sangramento'));
 
   // Erro crítico sempre erra.
-  const e = resolverAtaque(a, b, mss, { armaUid: 'f', mod: 100 }, seq(d100(3), d10(5)));
+  const e = resolverAtaque(a, b, mss, { armaUid: 'f', mod: 100 }, 'nenhuma', seq(d100(3), d10(5)));
   assert.equal(e.sucesso, false);
 
   // Dano mínimo 1 mesmo com IP alto; DS acima do efeito não aplica efeito.
   b.itens[0].defesa = 50;
-  const m = resolverAtaque(a, b, mss, { armaUid: 'f', mod: 100 }, seq(d100(60), d10(9), 0.1));
+  const m = resolverAtaque(a, b, mss, { armaUid: 'f', mod: 100 }, 'nenhuma', seq(d100(60), d10(9), 0.1));
   assert.equal(m.dano, 1);
   assert.equal(m.efeito, null);
 });
@@ -82,7 +104,7 @@ test('ataque: acerto, dano − IP (mínimo 1), crítico e efeito pelo DS', () =>
 test('ataque com vantagem contra alvo caído e localizado', () => {
   const a = lutador('A');
   const b = lutador('B', { marcadores: ['Caído'] });
-  const r = resolverAtaque(a, b, mss, { localizado: true }, seq(d100(20), d100(90), d10(5), 0.5, 0.5));
+  const r = resolverAtaque(a, b, mss, { localizado: true }, 'esquiva', seq(d100(20), d100(90), d10(5), 0.5, 0.5));
   assert.equal(r.modo, 'vantagem');
   assert.equal(r.dp, 90);
   assert.ok(r.mods.some(x => x.nome === 'localizado' && x.valor === -30));
@@ -105,7 +127,10 @@ test('manipulação: R.MNP pelo humor, sucesso muda humor, falha dá opções', 
   const a = lutador('A', { subpericias: { 'manipulacao.intimidacao': 20 } });
   const b = lutador('B');
   const base = resistenciaManipulacao(b, mss);
-  assert.equal(base, 40 + 50);
+  assert.equal(base, 4 * 10 + 50, 'R.MNP = CAR% + 50');
+  b.rmnpExtra = 5;
+  assert.equal(resistenciaManipulacao(b, mss), base + 5);
+  b.rmnpExtra = 0;
   b.humor = 'confiante';
   assert.equal(resistenciaManipulacao(b, mss), base - 30);
   b.humor = 'neutro';
@@ -135,8 +160,13 @@ test('ações de combate e humor no servidor (MSS) e bloqueio no MSA', () => {
   executar(c, 'combate.proximo', {}, ctxM);
   executar(c, 'combate.proximo', {}, ctxM);
   assert.equal(cb.rodada, 2);
-  const r = executar(c, 'combate.atacar', { atacante: ids[0], alvo: ids[1], opcoes: { vantagem: true } }, { user: ana, mestre: false });
+  const pend = executar(c, 'combate.atacar', { atacante: ids[0], alvo: ids[1], opcoes: { vantagem: true } }, { user: ana, mestre: false });
+  assert.equal(c.salas.batalha.pendentes.length, 1);
+  assert.throws(() => executar(c, 'combate.defender', { id: pend.id, defesa: 'esquiva' }, { user: ana, mestre: false }), /controla o alvo/);
+  const r = executar(c, 'combate.defender', { id: pend.id, defesa: 'esquiva' }, ctxM);
   assert.equal(r.tipo, 'ataque');
+  assert.match(r.rotulo, /Esquiva/);
+  assert.equal(c.salas.batalha.pendentes.length, 0);
   assert.ok(!/mestre/.test(r.detalhe), 'jogador não força vantagem');
   assert.throws(() => executar(c, 'combate.atacar', { atacante: ids[1], alvo: ids[0] }, { user: ana, mestre: false }), /não é seu/);
   executar(c, 'sala.remover', { sala: 'batalha', id: ids[2] }, ctxM);

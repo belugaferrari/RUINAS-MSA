@@ -22,7 +22,7 @@
   "social": true
  },
  "combate": {
-  "_aviso": "Automação do Campo de Batalha a partir do Livro MSS. Itens marcados como provisórios em PENDENCIAS.md.",
+  "_aviso": "Automação do Campo de Batalha a partir do Livro MSS. A defesa é escolhida pelo defensor. Escolhas provisórias em PENDENCIAS.md.",
   "defesaPassiva": 50,
   "coberturaParcial": 30,
   "localizado": {
@@ -64,8 +64,8 @@
   ]
  },
  "social": {
-  "_aviso": "Roda do Humor do Livro MSS. Resistência à Manipulação (R.MNP) = WILL% + 50 é provisória.",
-  "resistenciaBase": "WILL",
+  "_aviso": "Roda do Humor do Livro MSS. Resistência à Manipulação (R.MNP) = CAR% + 50 + modificadores.",
+  "resistenciaBase": "CAR",
   "humores": [
    {
     "id": "neutro",
@@ -149,6 +149,18 @@
     "efeitos": "R.MNP +20; −5% nos testes.",
     "rmnp": 20,
     "testes": -5
+   },
+   {
+    "id": "raivoso",
+    "nome": "Raivoso",
+    "efeitos": "Efeitos ainda não definidos no livro (aguardando o texto).",
+    "revisao": true
+   },
+   {
+    "id": "sereno",
+    "nome": "Sereno",
+    "efeitos": "Efeitos ainda não definidos no livro (aguardando o texto).",
+    "revisao": true
    }
   ],
   "manipulacoes": {

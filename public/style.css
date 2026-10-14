@@ -528,3 +528,9 @@ mark.revisao { background: #5a4510; color: #ffe7a8; border-bottom: 1px dashed va
 .lista-humores { margin: .4em 0 0; padding-left: 1.1em; display: flex; flex-direction: column; gap: .25em; }
 .log .detalhe { display: block; opacity: .8; }
 .participante .marcadores { display: flex; flex-wrap: wrap; gap: .25em; margin-top: .2em; }
+.pendentes { margin-top: .6em; display: flex; flex-direction: column; gap: .5em; }
+.pendente { border: 1px dashed var(--ouro-esc); border-radius: var(--raio); padding: .5em .7em; display: flex; flex-direction: column; gap: .35em; }
+.ajuste { margin-top: .3em; gap: .4em; font-size: .9em; }
+.pendente > button { align-self: flex-start; }
+.participante label.ajuste { display: flex; flex-direction: row; align-items: center; flex-wrap: wrap; }
+.participante .ajuste input { width: 5em; flex: none; }

@@ -3,7 +3,7 @@ import { h, botao, selecao, aviso, icone, titulo } from '../ui.js';
 import { estado, personagemPorId, render } from '../estado.js';
 import { acao } from '../api.js';
 import { derivados } from '/shared/regras.js';
-import { armasDisponiveis, defesaDoAlvo, resistenciaManipulacao } from '/shared/combate.js';
+import { armasDisponiveis, opcoesDefesa, defesaDoAlvo, ipDe, resistenciaManipulacao } from '/shared/combate.js';
 
 const meuOuMestre = (p, mestre) => mestre || p.donoId === estado.usuario.id;
 const opcoesPersonagens = lista => lista.map(p => ({ valor: p.id, rotulo: p.nome }));
@@ -24,7 +24,37 @@ export function combateView(participantes, mestre) {
     cb ? ordemView(cb, mestre) : h('div', { class: 'barra' },
       h('p', { class: 'dica' }, 'Iniciativa = AGI + 1d10 (Corajoso, Amedrontado e Enojado rolam com vantagem). A ordem vai do maior para o menor.'),
       mestre ? botao('Iniciar combate', () => acao('combate.iniciar'), { class: 'primario', icone: 'play', disabled: participantes.length < 2 }) : null),
+    pendentesView(mestre),
     ataqueView(participantes, mestre, cb));
+}
+
+// Ataques declarados esperando a defesa. Quem controla o alvo (ou o mestre) escolhe; os valores só aparecem para quem escolhe.
+function pendentesView(mestre) {
+  const sis = estado.sistema;
+  const lista = estado.campanha.salas.batalha.pendentes || [];
+  if (!lista.length) return null;
+  return h('div', { class: 'pendentes' },
+    titulo('Aguardando defesa', 'shield'),
+    lista.map(pd => {
+      const a = personagemPorId(pd.atacante);
+      const b = personagemPorId(pd.alvo);
+      const escolhe = b && b.atributos && meuOuMestre(b, mestre);
+      const podeCancelar = mestre || a?.donoId === estado.usuario.id;
+      let botoes = [];
+      if (escolhe) {
+        const arma = { uid: pd.opcoes.armaUid || 'desarmado', alcance: pd.alcance };
+        botoes = opcoesDefesa(b, arma, sis, { area: pd.area }).map(o => {
+          const total = defesaDoAlvo(b, arma, sis, { escolha: o.id, cobertura: pd.opcoes.cobertura, area: pd.area }).total;
+          return botao(`${o.nome} (${total})`, () => acao('combate.defender', { id: pd.id, defesa: o.id }).then(r => aviso(`${r.autor} ${r.rotulo}: ${r.texto}`, r.sucesso ? 'erro' : 'ok')),
+            { class: o.id === 'nenhuma' ? 'pequeno' : 'pequeno primario', icone: o.id === 'nenhuma' ? 'x' : 'shield', title: o.nota || `Defender com ${o.nome}` });
+        });
+      }
+      return h('div', { class: 'pendente' },
+        h('div', {}, h('strong', {}, a?.nome || '?'), ` ataca `, h('strong', {}, b?.nome || '?'), ` com ${pd.arma}${pd.area ? ' (ataque em área)' : ''}${pd.alcance === 'distancia' ? ' (a distância)' : ''}`),
+        escolhe ? h('div', { class: 'barra' }, h('span', { class: 'dica' }, 'Defender com:'), botoes)
+          : h('p', { class: 'dica' }, `Aguardando ${b?.nome || 'o alvo'} escolher a defesa…`),
+        podeCancelar ? botao('Cancelar ataque', () => acao('combate.cancelar', { id: pd.id }), { class: 'pequeno perigo', icone: 'square-x' }) : null);
+    }));
 }
 
 function ordemView(cb, mestre) {
@@ -61,8 +91,9 @@ function ataqueView(participantes, mestre, cb) {
   const arma = armas.find(x => x.uid === sel.arma);
   const d = derivados(a, sis);
   const b = personagemPorId(sel.alvo);
-  // Só o mestre vê a defesa do alvo (ela revela as perícias dele).
-  const defesa = mestre && b?.atributos ? defesaDoAlvo(b, arma, sis, { cobertura: sel.cobertura }) : null;
+  // Só o mestre vê as defesas e o IP do alvo (revelam as perícias dele).
+  const defesas = mestre && b?.atributos ? opcoesDefesa(b, arma, sis, { area: sel.area }).filter(o => o.id !== 'nenhuma')
+    .map(o => `${o.nome} ${defesaDoAlvo(b, arma, sis, { escolha: o.id, cobertura: sel.cobertura, area: sel.area }).total}`) : null;
   const pericia = arma.pericia || 'briga.ataque-desarmado';
   return h('details', { class: 'ataque', open: estado.sel.ataqueAberto ?? true, ontoggle: e => { estado.sel.ataqueAberto = e.target.open; } },
     h('summary', {}, icone('crosshair'), 'Atacar'),
@@ -74,11 +105,13 @@ function ataqueView(participantes, mestre, cb) {
     h('p', { class: 'dica' }, `Ataque: ${pericia.split('.').pop().replace(/-/g, ' ')} ${d.subpericias[pericia] ?? 0}%`,
       arma.alcance === 'corpo' && d.mod.FOR ? ` · dano + MOD FOR ${d.mod.FOR}` : '',
       ` · efeito ${arma.tipoDano} se DS ≤ ${arma.efeitoDano}`,
-      defesa ? ` · defesa do alvo ${defesa.total} (${defesa.partes.map(x => `${x.nome} ${x.valor}`).join(' + ')})` : ''),
+      ' · o alvo escolhe a defesa',
+      defesas ? ` (${defesas.length ? defesas.join(', ') : 'sem defesa possível'} · IP ${ipDe(b, sis)})` : ''),
     h('div', { class: 'barra opcoes-ataque' },
       caixa(sel, 'localizado', 'Localizado (−30%, +1d6)'),
       caixa(sel, 'surpresa', 'Surpresa'),
       caixa(sel, 'elevado', 'Terreno elevado'),
+      h('label', { class: 'linha' }, h('input', { type: 'checkbox', checked: !!sel.area, onchange: e => { sel.area = e.target.checked; render(); } }), 'Ataque em área'),
       arma.alcance === 'distancia' ? caixa(sel, 'cobertura', 'Alvo em cobertura (+30)') : null,
       a.tipo === 'pj' ? caixa(sel, 'sacrificio', 'Sacrifício (+10%, D6 de vida no dano)') : null,
       selecao([{ valor: '', rotulo: 'Uma arma' }, { valor: 'principal', rotulo: 'Duas armas: mão principal (−20%)' }, { valor: 'inabil', rotulo: 'Duas armas: mão inábil (−40%)' }],
@@ -91,11 +124,11 @@ function ataqueView(participantes, mestre, cb) {
       if (!sel.alvo) throw new Error('Escolha o alvo.');
       const r = await acao('combate.atacar', {
         atacante: sel.atacante, alvo: sel.alvo,
-        opcoes: { armaUid: sel.arma, localizado: sel.localizado, surpresa: sel.surpresa, elevado: sel.elevado, cobertura: sel.cobertura, sacrificio: sel.sacrificio,
+        opcoes: { armaUid: sel.arma, localizado: sel.localizado, surpresa: sel.surpresa, elevado: sel.elevado, cobertura: sel.cobertura, area: sel.area, sacrificio: sel.sacrificio,
           duasArmas: sel.duasArmas || null, vantagem: sel.vantagem, desvantagem: sel.desvantagem, mod: sel.mod, danoLivre: sel.danoLivre || null },
       });
       sel.sacrificio = false;
-      aviso(`${r.autor} ${r.rotulo}: ${r.texto}`, r.sucesso ? 'ok' : 'erro');
+      aviso('Ataque declarado: aguardando a defesa do alvo.');
     }, { class: 'primario', icone: 'swords', disabled: !alvos.length }));
 }
 
@@ -167,6 +200,19 @@ export function manipulacaoView(participantes, mestre) {
         const r = await acao('social.manipular', { autor: sel.autor, alvo: sel.alvo, sub: sel.sub, humor: sel.humor, mod: sel.mod });
         aviso(`${r.autor}: ${r.texto}`, r.sucesso ? 'ok' : 'erro');
       }, { class: 'primario', icone: 'drama', disabled: !alvos.length })),
-    h('p', { class: 'dica' }, `Teste contra a Resistência à Manipulação do alvo (provisório: WILL% + 50 + humor)${rmnp != null ? ` — R.MNP de ${b.nome}: ${rmnp}` : ''}.`,
+    h('p', { class: 'dica' }, `Teste contra a Resistência à Manipulação do alvo (CAR% + 50 + modificadores)${rmnp != null ? ` — R.MNP de ${b.nome}: ${rmnp}` : ''}.`,
       regra.falha.length ? ` Se falhar, o alvo pode escolher ficar ${regra.falha.map(nomeHumor).join(' ou ')}.` : ''));
+}
+
+// Campos que só o mestre ajusta no cartão do participante: IP de habilidades (batalha) e modificador de R.MNP (social).
+export function ajustesMestre(p, nome) {
+  const sis = estado.sistema;
+  const ligado = nome === 'batalha' ? sis.modulos?.combate : sis.modulos?.social;
+  if (!ligado || !p.atributos) return null;
+  const chave = nome === 'batalha' ? 'ipExtra' : 'rmnpExtra';
+  const total = nome === 'batalha' ? `IP total ${ipDe(p, sis)}` : `R.MNP ${resistenciaManipulacao(p, sis)}`;
+  return h('label', { class: 'linha ajuste' }, nome === 'batalha' ? 'IP de habilidades' : 'Mod. R.MNP',
+    h('input', { type: 'number', class: 'curto', value: p[chave] || 0, 'aria-label': `${nome === 'batalha' ? 'IP de habilidades' : 'Modificador de R.MNP'} de ${p.nome}`,
+      onchange: e => acao('combate.ip', { id: p.id, [chave]: e.target.value }) }),
+    h('small', {}, total));
 }

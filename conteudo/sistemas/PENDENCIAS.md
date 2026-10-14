@@ -40,16 +40,29 @@ Pontos em que o app precisou escolher um caminho. Confira e me diga se a escolha
 - As tabelas de classe do MSS são iguais às do MSA (conferido).
 
 ## Combate e social automáticos (só MSS)
-Ligados por `modulos.combate` / `modulos.social` em `mss.json`; no MSA ficam só os testes, a iniciativa e os PV. Regras em `shared/combate.js`. Escolhas provisórias:
-- **Defesa do alvo**: o livro cita "Defesa Passiva" mas não dá a fórmula. O app usa a melhor defesa que o alvo pode usar + 50: Esquiva sempre; Defesa desarmada só contra ataque desarmado; Defesa armada (subperícia da arma branca empunhada; Toque e Chicote não servem) só contra corpo a corpo. Cobertura parcial +30 só contra ataque a distância (alvo caído conta como cobertura parcial contra tiros).
-- **IP**: soma do campo "defesa" dos itens equipados. Dano final = dado da arma (+ MOD FOR em corpo a corpo) − IP, mínimo 1. Faser / Energia ignoram IP. Resistência a tipo de dano (metade) ainda é manual.
-- **Efeito de dano**: aplicado como marcador quando o ataque acerta e o DS ≤ "efeitoDano" da arma. Arma sem esse campo usa 3. Tipo → efeito: Corte = Sangramento, Perfuração = Ferida aberta, Concussão/Elétrico = Aturdido, Calor/Frio/Ácido = Queimadura, desarmado = Dor. Sangramento, Ferida aberta e Dor ainda são descontados à mão.
-- **Vantagem / Desvantagem**: rola 2d100 e fica com o maior / menor; uma anula a outra. Vantagem automática: ataque surpresa, terreno elevado, alvo caído (corpo a corpo), alvo Aturdido/Imobilizado, atacante Enojado. Desvantagem: atacante caído ou aturdido, atacante Amedrontado.
-- **Crítico**: +1 dado igual ao primeiro dado da arma. Erro crítico sempre erra (a consequência é narrada).
-- **PV**: chegou a 0 ou menos → marcador Desmaiado. Dano com PV já negativo → Morto (exceto dano não letal). Sobrevida: no turno de quem está abaixo de 0 (sem o marcador "Estabilizado"), perde 1 PV; morre ao chegar a −CONS.
-- **Sacrifício (MSS)**: +10% no acerto; o D6 de vida atual vai para o dano e o atacante perde esses PV (mesmo errando).
-- **Resistência à Manipulação (R.MNP)**: o livro não dá a fórmula. Provisório: WILL% + 50 + ajuste do humor (Atraído −15, Amedrontado −30, Confiante −30, Desconfiado +20).
+Ligados por `modulos.combate` / `modulos.social` em `mss.json`; no MSA ficam só os testes, a iniciativa e os PV. Regras em `shared/combate.js`.
+
+**Confirmado pelo autor**
+- **Defesa**: quem escolhe é o defensor (o jogador do alvo; o mestre nos NPCs). O atacante declara o ataque e ele fica "aguardando defesa". Esquiva vale contra Briga e Armas Brancas e, se o defensor não for acertado, permite deslocar até 1,5 m. Defesa desarmada só contra Briga. Evasão só contra ataque em área e exige deslocamento. Cobertura (+30) só contra ataques a distância.
+- **R.MNP** = CAR + 50 + outros modificadores (humor e o campo "Mod. R.MNP" que o mestre ajusta no cartão).
+- **IP** subtrai do dano recebido. Vem dos itens equipados (campo "defesa") e de habilidades (campo "IP de habilidades" que o mestre ajusta no cartão).
+- **Vantagem / Desvantagem**: rola 2d100 e fica com o maior / menor; uma anula a outra.
+
+**Ainda provisório — conferir**
+- **Defesa contra armas de fogo (sem ser em área)**: nenhuma defesa ativa vale; sobra "Sem defesa" (base 50, +30 com cobertura).
+- **Defesa armada** (subperícia da arma branca empunhada; Toque e Chicote não servem) continua valendo contra corpo a corpo, como no livro.
+- **"CAR + 50"**: o app usa CAR% (CAR × 4), como nas outras ações passivas de atributo.
+- **Valor da defesa** = subperícia escolhida + 50 (a defesa não rola dado; o atacante rola contra esse valor).
+- **Evasão bem-sucedida** contra ataque em área: metade do dano (texto do livro).
+- **Dano mínimo 1** depois do IP.
+- **Efeito de dano**: marcador quando o ataque acerta e o DS ≤ "efeitoDano" da arma (sem o campo, 3). Corte = Sangramento, Perfuração = Ferida aberta, Concussão/Elétrico = Aturdido, Calor/Frio/Ácido = Queimadura, desarmado = Dor. Sangramento, Ferida aberta e Dor ainda são descontados à mão.
+- **Vantagem automática**: surpresa, terreno elevado, alvo caído (corpo a corpo), alvo Aturdido/Imobilizado, atacante Enojado. **Desvantagem**: atacante caído ou aturdido, atacante Amedrontado.
+- **Crítico**: +1 dado igual ao primeiro dado da arma. Erro crítico sempre erra.
+- **PV**: 0 ou menos → Desmaiado; dano com PV já negativo → Morto (exceto não letal). Sobrevida: −1 PV no turno de quem está abaixo de 0 (sem "Estabilizado"); morre ao chegar a −CONS.
+- **Sacrifício (MSS)**: +10% no acerto; o D6 de vida atual vai para o dano e o atacante perde esses PV.
 - **Manipulação**: subperícia + Amigável/Indisposto de quem manipula e do alvo (±10) + bônus geral do humor. Sucesso troca o humor do alvo; falha libera o humor de falha do livro (Liderança → Desmotivado, Intimidação → Corajoso, Interrogatório/Lábia → Desconfiado) para o dono do alvo escolher.
-- **Humores "Raivoso" e "Sereno"** estão só com o título no livro: ficaram de fora.
-- **Bônus geral do humor** (Apático −5, Desmotivado −5, Confiante +5, Desconfiado −5) entra sozinho nos testes D-MIL do rolador da sala e no ataque. Motivado e as desvantagens por tipo de teste (Percepção, mentais, Inteligência) ainda são aplicados à mão.
-- **Itens de exemplo** ganharam `pericia`, `tipoDano`, `efeitoDano` e `alcance` para o combate funcionar até a tabela de itens real chegar.
+- **Bônus geral do humor** (Apático −5, Desmotivado −5, Confiante +5, Desconfiado −5) entra sozinho nos testes D-MIL do rolador da sala e no ataque. Motivado e as desvantagens por tipo de teste ainda são aplicados à mão.
+- **Itens de exemplo** ganharam `pericia`, `tipoDano`, `efeitoDano` e `alcance` até a tabela de itens real chegar.
+
+**Aguardando o texto**
+- **Humores Raivoso e Sereno**: já aparecem na Roda do Humor, sem efeito, até chegar a descrição.

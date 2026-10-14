@@ -48,26 +48,45 @@ export function armasDisponiveis(p, sistema) {
   return [{ uid: 'desarmado', efeitoDano: cfg.efeitoPadrao, ...cfg.desarmado }, ...armas];
 }
 
-// Defesa passiva provisória: a melhor defesa que o alvo pode usar + 50.
-// Esquiva vale sempre; Defesa desarmada só contra ataque desarmado; Defesa armada (subperícia da arma branca empunhada) só contra corpo a corpo.
-export function defesaDoAlvo(alvo, arma, sistema, { cobertura = false } = {}) {
+// Defesas que o alvo pode escolher contra este ataque (quem escolhe é o defensor):
+// Esquiva contra Briga e Armas Brancas; Defesa desarmada só contra Briga; Defesa armada (arma branca empunhada) contra corpo a corpo;
+// Evasão só contra ataque em área. "Sem defesa" sempre existe (ex.: pego de surpresa).
+export function opcoesDefesa(alvo, arma, sistema, { area = false } = {}) {
   const cfg = sistema.combate;
   const d = derivados(alvo, sistema);
-  const opcoes = [{ nome: 'Esquiva', valor: d.subpericias['briga.esquiva'] ?? 0 }];
-  if (arma.uid === 'desarmado') opcoes.push({ nome: 'Defesa desarmada', valor: d.subpericias['briga.defesa-desarmada'] ?? 0 });
-  if (arma.alcance === 'corpo') {
+  const sub = id => d.subpericias[id] ?? 0;
+  const opcoes = [];
+  if (area) {
+    opcoes.push({ id: 'evasao', nome: 'Evasão', valor: sub('briga.evasao'), nota: 'exige deslocamento de 3 m ou mais' });
+  } else if (arma.alcance === 'corpo') {
+    opcoes.push({ id: 'esquiva', nome: 'Esquiva', valor: sub('briga.esquiva'), nota: 'se não for acertado, o defensor pode se deslocar até 1,5 m' });
+    if (arma.uid === 'desarmado') opcoes.push({ id: 'defesa-desarmada', nome: 'Defesa desarmada', valor: sub('briga.defesa-desarmada') });
     for (const a of armasDisponiveis(alvo, sistema)) {
       if (a.uid === 'desarmado' || !a.pericia?.startsWith('arma-branca.') || cfg.semDefesaArmada.includes(a.pericia)) continue;
-      opcoes.push({ nome: `Defesa armada (${a.nome})`, valor: d.subpericias[a.pericia] ?? 0 });
+      opcoes.push({ id: `armada:${a.uid}`, nome: `Defesa armada (${a.nome})`, valor: sub(a.pericia) });
     }
   }
-  const melhor = opcoes.reduce((m, o) => (o.valor > m.valor ? o : m));
-  const partes = [{ nome: melhor.nome, valor: melhor.valor }, { nome: 'passiva', valor: cfg.defesaPassiva }];
+  opcoes.push({ id: 'nenhuma', nome: 'Sem defesa', valor: 0 });
+  return opcoes;
+}
+
+// Valor de defesa contra o qual o atacante rola: defesa escolhida + 50 (+30 de cobertura parcial só contra ataques a distância).
+export function defesaDoAlvo(alvo, arma, sistema, { escolha = 'nenhuma', cobertura = false, area = false } = {}) {
+  const cfg = sistema.combate;
+  const opcoes = opcoesDefesa(alvo, arma, sistema, { area });
+  const esc = opcoes.find(o => o.id === escolha);
+  if (!esc) throw new Error('Essa defesa não vale contra este ataque.');
+  const partes = [{ nome: esc.nome, valor: esc.valor }, { nome: 'base', valor: cfg.defesaPassiva }];
   const caidoDistancia = arma.alcance === 'distancia' && tem(alvo, 'Caído');
   if (arma.alcance === 'distancia' && (cobertura || caidoDistancia)) partes.push({ nome: 'cobertura parcial', valor: cfg.coberturaParcial });
   const humor = sistema.modulos?.social ? humorDe(alvo, sistema) : null;
   if (humor?.defesa) partes.push({ nome: humor.nome, valor: humor.defesa });
-  return { total: partes.reduce((s, x) => s + x.valor, 0), partes };
+  return { id: esc.id, nome: esc.nome, nota: esc.nota || null, total: partes.reduce((s, x) => s + x.valor, 0), partes };
+}
+
+// IP (Índice de Proteção) do alvo: itens equipados + habilidades (campo ipExtra da ficha). Subtrai do dano recebido.
+export function ipDe(p, sistema) {
+  return derivados(p, sistema).defesa + (parseInt(p.ipExtra, 10) || 0);
 }
 
 // Valor do D6 de vida atual (os 5 primeiros PV ficam à parte; dali para cima conta-se em D6).
@@ -77,8 +96,9 @@ export function d6Atual(pv) {
 }
 
 // Resolve um ataque completo: acerto × defesa, dano − IP, efeito pelo DS. Não altera nada: devolve o que aplicar.
-// op: { armaUid, danoLivre, localizado, duasArmas: 'principal'|'inabil', sacrificio, surpresa, elevado, cobertura, vantagem, desvantagem, mod }
-export function resolverAtaque(atacante, alvo, sistema, op = {}, rng = Math.random) {
+// op: { armaUid, danoLivre, localizado, duasArmas: 'principal'|'inabil', sacrificio, surpresa, elevado, cobertura, area, vantagem, desvantagem, mod }
+// defesa: id escolhido pelo defensor (ver opcoesDefesa).
+export function resolverAtaque(atacante, alvo, sistema, op = {}, defesaId = 'nenhuma', rng = Math.random) {
   const cfg = sistema.combate;
   let arma = armasDisponiveis(atacante, sistema).find(a => a.uid === (op.armaUid || 'desarmado'));
   if (!arma) throw new Error('Arma não equipada.');
@@ -111,7 +131,7 @@ export function resolverAtaque(atacante, alvo, sistema, op = {}, rng = Math.rand
   if (hA?.desvantagemAtaque) motivosD.push(hA.nome);
   const modo = modoRolagem(motivosV.length > 0, motivosD.length > 0);
 
-  const defesa = defesaDoAlvo(alvo, arma, sistema, { cobertura: !!op.cobertura });
+  const defesa = defesaDoAlvo(alvo, arma, sistema, { escolha: defesaId, cobertura: !!op.cobertura, area: !!op.area });
   const teste = testeContra(acao, defesa.total, sistema, { modo, rng });
   const r = {
     arma: arma.nome, pericia, acao, mods, defesa, ...teste, motivosVantagem: motivosV, motivosDesvantagem: motivosD,
@@ -119,7 +139,8 @@ export function resolverAtaque(atacante, alvo, sistema, op = {}, rng = Math.rand
   };
   // Sacrifício: perde o D6 atual de vida mesmo errando (abandona a razão no ataque).
   if (op.sacrificio) r.perdaSacrificio = d6Atual(atacante.pv?.atual ?? 0);
-  if (!teste.sucesso) return r;
+  // Ataque em área: quem passa na Evasão recebe só metade do dano.
+  if (!teste.sucesso && !(op.area && defesa.id === 'evasao')) return r;
 
   const partes = [];
   const rolar = (nome, expr) => { const x = rolarDado(expr, rng); partes.push({ nome, expr, dados: x.dados, total: x.total }); };
@@ -133,11 +154,12 @@ export function resolverAtaque(atacante, alvo, sistema, op = {}, rng = Math.rand
   if (r.perdaSacrificio) partes.push({ nome: 'Sacrifício', total: r.perdaSacrificio });
   r.danoPartes = partes;
   r.danoBruto = partes.reduce((s, p) => s + p.total, 0);
-  r.ip = cfg.ignoramIP.includes(arma.tipoDano) ? 0 : derivados(alvo, sistema).defesa;
+  r.ip = cfg.ignoramIP.includes(arma.tipoDano) ? 0 : ipDe(alvo, sistema);
   r.dano = Math.max(cfg.danoMinimo, r.danoBruto - r.ip);
+  if (!teste.sucesso) { r.dano = Math.floor(r.dano / 2); r.metadeEvasao = true; }
   if (tem(alvo, 'Queimadura')) { r.dano += 1; r.queimadura = true; }
   const efeito = cfg.efeitosPorTipo[arma.tipoDano];
-  if (efeito && teste.ds <= arma.efeitoDano) r.efeito = efeito;
+  if (efeito && teste.sucesso && teste.ds <= arma.efeitoDano) r.efeito = efeito;
   return r;
 }
 
@@ -145,7 +167,7 @@ export function resolverAtaque(atacante, alvo, sistema, op = {}, rng = Math.rand
 export function aplicarAtaque(atacante, alvo, r) {
   const marcar = m => { if (!(alvo.marcadores ||= []).includes(m)) alvo.marcadores.push(m); };
   if (r.perdaSacrificio) atacante.pv.atual -= r.perdaSacrificio;
-  if (!r.sucesso) return [];
+  if (!r.sucesso && !r.dano) return [];
   const notas = [];
   const antes = alvo.pv.atual;
   alvo.pv.atual -= r.dano;
@@ -179,12 +201,12 @@ export function rolarIniciativa(p, sistema, rng = Math.random) {
 
 // ---------- Social ----------
 
-// Resistência à Manipulação (provisória): WILL% + 50 + ajustes do humor.
+// Resistência à Manipulação (R.MNP) = CAR% + 50 + modificadores (humor e o campo rmnpExtra da ficha).
 export function resistenciaManipulacao(p, sistema) {
   const d = derivados(p, sistema);
-  const base = d.percentual[sistema.social?.resistenciaBase || 'WILL'] ?? 0;
+  const base = d.percentual[sistema.social?.resistenciaBase || 'CAR'] ?? 0;
   const h = humorDe(p, sistema);
-  return base + (sistema.teste.passiva?.soma ?? 50) + (h?.rmnp || 0);
+  return base + (sistema.teste.passiva?.soma ?? 50) + (h?.rmnp || 0) + (parseInt(p.rmnpExtra, 10) || 0);
 }
 
 // Teste de manipulação: subperícia de Manipulação contra a R.MNP do alvo. Sucesso muda o humor do alvo.

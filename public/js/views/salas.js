@@ -3,7 +3,7 @@ import { estado, personagemPorId, meusPersonagens, render } from '../estado.js';
 import { acao } from '../api.js';
 import { derivados, LIMITE_SALA } from '/shared/regras.js';
 import { linhaRolagem } from './ficha.js';
-import { combateView, humorCartao, manipulacaoView, rodaDoHumor } from './combate.js';
+import { combateView, humorCartao, manipulacaoView, rodaDoHumor, ajustesMestre } from './combate.js';
 
 const TITULOS = { social: 'Sala Social', batalha: 'Campo de Batalha' };
 const ICONES_SALA = { social: 'drama', batalha: 'swords' };
@@ -66,7 +66,8 @@ function cartaoParticipante(nome, s, p, i, total, mestre) {
         h('span', {}, icone('brain'), p.sanidade?.atual ?? '-'),
         h('span', {}, icone('hand-heart'), p.humanidade?.atual ?? '-')) : null,
       veStats && p.marcadores?.length ? h('div', { class: 'marcadores' }, p.marcadores.map(m => h('span', { class: 'etiqueta' }, m))) : null,
-      nome === 'social' ? humorCartao(p, mestre || meu, mestre) : null),
+      nome === 'social' ? humorCartao(p, mestre || meu, mestre) : null,
+      mestre ? ajustesMestre(p, nome) : null),
     h('div', { class: 'acoes' },
       veStats && p.pv ? botao('PV', () => acao('pv.alterar', { id: p.id, delta: -1 }), { class: 'pequeno', icone: 'minus', title: `Tirar 1 PV de ${p.nome}`, 'aria-label': `Tirar 1 PV de ${p.nome}` }) : null,
       veStats && p.pv ? botao('PV', () => acao('pv.alterar', { id: p.id, delta: 1 }), { class: 'pequeno', icone: 'plus', title: `Dar 1 PV a ${p.nome}`, 'aria-label': `Dar 1 PV a ${p.nome}` }) : null,
