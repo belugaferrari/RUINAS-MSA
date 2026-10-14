@@ -61,7 +61,12 @@
   "semDefesaArmada": [
    "arma-branca.toque",
    "arma-branca.chicote"
-  ]
+  ],
+  "distancia": {
+   "base": 50,
+   "porNivel": 5
+  },
+  "esquivaArmada": 2
  },
  "social": {
   "_aviso": "Roda do Humor do Livro MSS. Resistência à Manipulação (R.MNP) = perícia base Manipulação + 50 + modificadores.",

@@ -92,8 +92,12 @@ function ataqueView(participantes, mestre, cb) {
   const d = derivados(a, sis);
   const b = personagemPorId(sel.alvo);
   // Só o mestre vê as defesas e o IP do alvo (revelam as perícias dele).
-  const defesas = mestre && b?.atributos ? opcoesDefesa(b, arma, sis, { area: sel.area }).filter(o => o.id !== 'nenhuma')
-    .map(o => `${o.nome} ${defesaDoAlvo(b, arma, sis, { escolha: o.id, cobertura: sel.cobertura, area: sel.area }).total}`) : null;
+  const tiro = arma.alcance === 'distancia' && !sel.area;
+  const defesas = mestre && b?.atributos
+    ? (tiro ? [`dificuldade do tiro ${defesaDoAlvo(b, arma, sis, { cobertura: sel.cobertura }).total}`]
+      : opcoesDefesa(b, arma, sis, { area: sel.area }).filter(o => o.id !== 'nenhuma')
+        .map(o => `${o.nome} ${defesaDoAlvo(b, arma, sis, { escolha: o.id, cobertura: sel.cobertura, area: sel.area }).total}`))
+    : null;
   const pericia = arma.pericia || 'briga.ataque-desarmado';
   return h('details', { class: 'ataque', open: estado.sel.ataqueAberto ?? true, ontoggle: e => { estado.sel.ataqueAberto = e.target.open; } },
     h('summary', {}, icone('crosshair'), 'Atacar'),
@@ -105,7 +109,7 @@ function ataqueView(participantes, mestre, cb) {
     h('p', { class: 'dica' }, `Ataque: ${pericia.split('.').pop().replace(/-/g, ' ')} ${d.subpericias[pericia] ?? 0}%`,
       arma.alcance === 'corpo' && d.mod.FOR ? ` · dano + MOD FOR ${d.mod.FOR}` : '',
       ` · efeito ${arma.tipoDano} se DS ≤ ${arma.efeitoDano}`,
-      ' · o alvo escolhe a defesa',
+      tiro ? ' · tiro: sem defesa, dificuldade 50 + 5 × nível do alvo' : ' · o alvo escolhe a defesa',
       defesas ? ` (${defesas.length ? defesas.join(', ') : 'sem defesa possível'} · IP ${ipDe(b, sis)})` : ''),
     h('div', { class: 'barra opcoes-ataque' },
       caixa(sel, 'localizado', 'Localizado (−30%, +1d6)'),
@@ -128,7 +132,8 @@ function ataqueView(participantes, mestre, cb) {
           duasArmas: sel.duasArmas || null, vantagem: sel.vantagem, desvantagem: sel.desvantagem, mod: sel.mod, danoLivre: sel.danoLivre || null },
       });
       sel.sacrificio = false;
-      aviso('Ataque declarado: aguardando a defesa do alvo.');
+      if (r.tipo === 'ataque') aviso(`${r.autor} ${r.rotulo}: ${r.texto}`, r.sucesso ? 'ok' : 'erro');
+      else aviso('Ataque declarado: aguardando a defesa do alvo.');
     }, { class: 'primario', icone: 'swords', disabled: !alvos.length }));
 }
 

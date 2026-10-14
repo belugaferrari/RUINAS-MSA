@@ -49,8 +49,9 @@ export function armasDisponiveis(p, sistema) {
 }
 
 // Defesas que o alvo pode escolher contra este ataque (quem escolhe é o defensor):
-// Esquiva contra Briga e Armas Brancas; Defesa desarmada só contra Briga; Defesa armada (arma branca empunhada) contra corpo a corpo;
-// Evasão só contra ataque em área. "Sem defesa" sempre existe (ex.: pego de surpresa).
+// Esquiva contra Briga e Armas Brancas (acertado por arma, recebe +2 de dano); Defesa desarmada só contra Briga;
+// Defesa armada (perícia da arma branca empunhada) contra corpo a corpo; Evasão só contra ataque em área.
+// Contra tiro (a distância, fora de área) não há defesa. "Sem defesa" sempre existe (ex.: pego de surpresa).
 export function opcoesDefesa(alvo, arma, sistema, { area = false } = {}) {
   const cfg = sistema.combate;
   const d = derivados(alvo, sistema);
@@ -59,24 +60,30 @@ export function opcoesDefesa(alvo, arma, sistema, { area = false } = {}) {
   if (area) {
     opcoes.push({ id: 'evasao', nome: 'Evasão', valor: sub('briga.evasao'), nota: 'exige deslocamento de 3 m ou mais' });
   } else if (arma.alcance === 'corpo') {
-    opcoes.push({ id: 'esquiva', nome: 'Esquiva', valor: sub('briga.esquiva'), nota: 'se não for acertado, o defensor pode se deslocar até 1,5 m' });
+    opcoes.push({ id: 'esquiva', nome: 'Esquiva', valor: sub('briga.esquiva'),
+      nota: arma.uid === 'desarmado' ? 'se não for acertado, pode se deslocar até 1,5 m' : 'se não for acertado, pode se deslocar até 1,5 m; se for acertado, +2 de dano' });
     if (arma.uid === 'desarmado') opcoes.push({ id: 'defesa-desarmada', nome: 'Defesa desarmada', valor: sub('briga.defesa-desarmada') });
     for (const a of armasDisponiveis(alvo, sistema)) {
       if (a.uid === 'desarmado' || !a.pericia?.startsWith('arma-branca.') || cfg.semDefesaArmada.includes(a.pericia)) continue;
       opcoes.push({ id: `armada:${a.uid}`, nome: `Defesa armada (${a.nome})`, valor: sub(a.pericia) });
     }
   }
-  opcoes.push({ id: 'nenhuma', nome: 'Sem defesa', valor: 0 });
+  const tiro = arma.alcance === 'distancia' && !area;
+  opcoes.push({ id: 'nenhuma', nome: tiro ? 'Sem defesa (tiro)' : 'Sem defesa', valor: 0 });
   return opcoes;
 }
 
-// Valor de defesa contra o qual o atacante rola: defesa escolhida + 50 (+30 de cobertura parcial só contra ataques a distância).
+// Valor de defesa contra o qual o atacante rola (só o ataque rola): defesa escolhida + 50.
+// Contra tiro (a distância, fora de área) a dificuldade é 50 + 5 × nível do alvo. Cobertura parcial +30 só contra ataques a distância.
 export function defesaDoAlvo(alvo, arma, sistema, { escolha = 'nenhuma', cobertura = false, area = false } = {}) {
   const cfg = sistema.combate;
   const opcoes = opcoesDefesa(alvo, arma, sistema, { area });
   const esc = opcoes.find(o => o.id === escolha);
   if (!esc) throw new Error('Essa defesa não vale contra este ataque.');
-  const partes = [{ nome: esc.nome, valor: esc.valor }, { nome: 'base', valor: cfg.defesaPassiva }];
+  const tiro = arma.alcance === 'distancia' && !area;
+  const partes = tiro
+    ? [{ nome: 'base', valor: cfg.distancia.base }, { nome: `nível ${alvo.nivel || 1} × ${cfg.distancia.porNivel}`, valor: cfg.distancia.porNivel * (alvo.nivel || 1) }]
+    : [{ nome: esc.nome, valor: esc.valor }, { nome: 'base', valor: cfg.defesaPassiva }];
   const caidoDistancia = arma.alcance === 'distancia' && tem(alvo, 'Caído');
   if (arma.alcance === 'distancia' && (cobertura || caidoDistancia)) partes.push({ nome: 'cobertura parcial', valor: cfg.coberturaParcial });
   const humor = sistema.modulos?.social ? humorDe(alvo, sistema) : null;
@@ -150,6 +157,7 @@ export function resolverAtaque(atacante, alvo, sistema, op = {}, defesaId = 'nen
     if (m) rolar('crítico', `1d${m[1]}`);
   }
   if (op.localizado) rolar('localizado', cfg.localizado.dano);
+  if (teste.sucesso && defesa.id === 'esquiva' && arma.uid !== 'desarmado') partes.push({ nome: 'esquiva contra arma', total: cfg.esquivaArmada });
   if (arma.alcance === 'corpo' && da.mod.FOR) partes.push({ nome: 'MOD FOR', total: da.mod.FOR });
   if (r.perdaSacrificio) partes.push({ nome: 'Sacrifício', total: r.perdaSacrificio });
   r.danoPartes = partes;

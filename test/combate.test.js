@@ -49,13 +49,28 @@ test('defesa escolhida pelo defensor: o que vale contra cada ataque', () => {
   const ids = (arma, o) => opcoesDefesa(alvo, arma, mss, o).map(x => x.id);
   assert.deepEqual(ids(soco), ['esquiva', 'defesa-desarmada', 'nenhuma']);
   assert.deepEqual(ids(faca), ['esquiva', 'nenhuma'], 'defesa desarmada só contra Briga');
-  assert.deepEqual(ids(tiro), ['nenhuma'], 'esquiva não vale contra tiro');
+  assert.deepEqual(ids(tiro), ['nenhuma'], 'não há defesa contra tiro');
   assert.deepEqual(ids(tiro, { area: true }), ['evasao', 'nenhuma']);
   const esquiva = 10 + 2 * (10 - 5); // pontos + bônus pericial de AGI 10
   assert.equal(defesaDoAlvo(alvo, faca, mss, { escolha: 'esquiva' }).total, esquiva + 50);
   assert.equal(defesaDoAlvo(alvo, faca, mss, { escolha: 'esquiva', cobertura: true }).total, esquiva + 50, 'cobertura só contra distância');
-  assert.equal(defesaDoAlvo(alvo, tiro, mss, { cobertura: true }).total, 80);
+  alvo.nivel = 3;
+  assert.equal(defesaDoAlvo(alvo, tiro, mss).total, 50 + 5 * 3, 'tiro: 50 + 5 × nível do alvo');
+  assert.equal(defesaDoAlvo(alvo, tiro, mss, { cobertura: true }).total, 50 + 15 + 30);
   assert.throws(() => defesaDoAlvo(alvo, tiro, mss, { escolha: 'esquiva' }), /não vale/);
+});
+
+test('Esquiva contra arma: se for acertado, +2 de dano', () => {
+  const a = lutador('A');
+  a.itens = [{ uid: 'f', nome: 'Faca', tipo: 'arma', equipado: true, dano: '1d4', pericia: 'arma-branca.laminas-curtas', tipoDano: 'Corte', efeitoDano: 3, alcance: 'corpo' }];
+  const b = lutador('B');
+  const rng = () => seq(d100(90), d10(9), 0.5);
+  const esq = resolverAtaque(a, b, mss, { armaUid: 'f' }, 'esquiva', rng());
+  const sem = resolverAtaque(a, b, mss, { armaUid: 'f' }, 'nenhuma', rng());
+  assert.ok(esq.sucesso && sem.sucesso);
+  assert.equal(esq.danoBruto, sem.danoBruto + 2);
+  const soco = resolverAtaque(a, b, mss, {}, 'esquiva', rng());
+  assert.ok(!soco.danoPartes.some(x => x.nome === 'esquiva contra arma'), 'contra Briga não tem o +2');
 });
 
 test('IP soma itens e habilidades', () => {
@@ -172,6 +187,13 @@ test('ações de combate e humor no servidor (MSS) e bloqueio no MSA', () => {
   assert.equal(c.salas.batalha.pendentes.length, 0);
   assert.ok(!/mestre/.test(r.detalhe), 'jogador não força vantagem');
   assert.throws(() => executar(c, 'combate.atacar', { atacante: ids[1], alvo: ids[0] }, { user: ana, mestre: false }), /não é seu/);
+  // Tiro não tem defesa: resolve na hora, sem esperar.
+  const npc = c.personagens.find(p => p.id === ids[1]);
+  npc.itens = [{ uid: 'rv', nome: 'Revólver', tipo: 'arma', equipado: true, dano: '2d6', pericia: 'armas-de-fogo.pistolas', tipoDano: 'Perfuração', alcance: 'distancia' }];
+  const tiro = executar(c, 'combate.atacar', { atacante: ids[1], alvo: ids[0], opcoes: { armaUid: 'rv' } }, ctxM);
+  assert.equal(tiro.tipo, 'ataque');
+  assert.match(tiro.detalhe, /nível 1 × 5/);
+  assert.equal(c.salas.batalha.pendentes.length, 0);
   executar(c, 'sala.remover', { sala: 'batalha', id: ids[2] }, ctxM);
   assert.equal(cb.ordem.length, 2);
   executar(c, 'combate.encerrar', {}, ctxM);

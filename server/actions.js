@@ -1,6 +1,6 @@
 import { db, save, uid } from './db.js';
 import { sistema, idSistema } from './sistema.js';
-import { resolverAtaque, aplicarAtaque, armasDisponiveis, sobrevida, rolarIniciativa, resolverManipulacao, modHumorTestes, humorDe } from '../shared/combate.js';
+import { resolverAtaque, aplicarAtaque, armasDisponiveis, opcoesDefesa, sobrevida, rolarIniciativa, resolverManipulacao, modHumorTestes, humorDe } from '../shared/combate.js';
 import { novaFicha, podeEquipar, rolarDado, rolarAtributosCriacao, testeDMil, gerarEncontro, derivados, problemasFicha, LIMITE_SALA } from '../shared/regras.js';
 
 const GRUPO_ENCONTROS = 'encontros';
@@ -220,6 +220,35 @@ function sairDoCombate(s, id) {
   if (i < cb.vez) cb.vez--;
   if (cb.vez >= cb.ordem.length) cb.vez = 0;
   if (!cb.ordem.length) s.combate = null;
+}
+
+// Resolve um ataque declarado com a defesa escolhida: rola, aplica o dano e registra.
+function resolverPendente(c, s, pend, defesa, sis) {
+  const a = personagem(c, pend.atacante);
+  const b = personagem(c, pend.alvo);
+  let r;
+  try {
+    r = resolverAtaque(a, b, sis, pend.opcoes, defesa || 'nenhuma');
+  } catch (e) {
+    throw erro(e.message);
+  }
+  s.pendentes = (s.pendentes || []).filter(x => x.id !== pend.id);
+  const notas = aplicarAtaque(a, b, r);
+  const mods = r.mods.map(m => `${m.nome} ${fmtMod(m.valor)}`).join(', ');
+  const modo = r.modo ? ` · ${r.modo} (${(r.modo === 'vantagem' ? r.motivosVantagem : r.motivosDesvantagem).join(', ')}) d100 [${r.dados.join(', ')}]` : '';
+  const def = r.defesa.partes.map(x => `${x.nome} ${x.valor}`).join(' + ');
+  const danoTxt = r.dano
+    ? ` — dano ${r.dano}${r.metadeEvasao ? ' (metade pela Evasão)' : ''} (${r.danoPartes.map(x => `${x.nome} ${x.dados ? `[${x.dados.join(', ')}]` : ''}${x.total}`).join(' + ')}${r.ip ? ` − IP ${r.ip}` : ''}${r.queimadura ? ' +1 queimadura' : ''}) · ${b.nome} ${b.pv.atual}/${b.pv.max} PV`
+    : '';
+  const notaDefesa = !r.sucesso && r.defesa.id === 'esquiva' ? ` · ${b.nome} pode se deslocar até 1,5 m` : '';
+  const entrada = {
+    tipo: 'ataque', autor: a.nome, rotulo: `ataca ${b.nome} com ${r.arma} (defesa: ${r.defesa.nome})`, sucesso: r.sucesso, critico: r.critico,
+    texto: `${r.sucesso ? 'ACERTOU' : 'ERROU'}${r.critico ? ` (crítico de ${r.critico})` : ''}${danoTxt}${notas.length ? ` · ${notas.join(', ')}` : ''}${notaDefesa}`
+      + `${r.perdaSacrificio ? ` · Sacrifício: ${a.nome} perde ${r.perdaSacrificio} PV` : ''}`,
+    detalhe: `d100 ${r.dp} + ação ${r.acao}${mods ? ` (${mods})` : ''} = ${r.total} contra defesa ${r.nd} (${def})${modo} · DS ${r.ds}`,
+  };
+  registrar(s.log, entrada);
+  return entrada;
 }
 
 const fmtMod = v => (v > 0 ? `+${v}` : `${v}`);
@@ -618,6 +647,8 @@ export const acoes = {
       try { rolarDado(op.danoLivre); } catch { throw erro(`Dano inválido: ${op.danoLivre}`); }
     }
     const pend = { id: uid(), atacante: a.id, alvo: b.id, opcoes: op, arma: arma.nome, alcance: arma.alcance, area: !!op.area, em: Date.now() };
+    // Contra tiro não há defesa a escolher: resolve na hora.
+    if (opcoesDefesa(b, arma, sis, { area: pend.area }).length === 1) return resolverPendente(c, s, pend, 'nenhuma', sis);
     (s.pendentes ||= []).push(pend);
     registrar(s.log, { autor: a.nome, rotulo: `${a.nome} ataca ${b.nome} com ${arma.nome}${op.area ? ' (área)' : ''}`, texto: `aguardando a defesa de ${b.nome}` });
     return pend;
@@ -629,32 +660,9 @@ export const acoes = {
     const s = c.salas.batalha;
     const pend = (s.pendentes || []).find(x => x.id === id);
     if (!pend) throw erro('Esse ataque já foi resolvido.');
-    const a = personagem(c, pend.atacante);
     const b = personagem(c, pend.alvo);
     if (!ctx.mestre && b.donoId !== ctx.user.id) throw erro('Só quem controla o alvo (ou o mestre) escolhe a defesa.');
-    let r;
-    try {
-      r = resolverAtaque(a, b, sis, pend.opcoes, defesa || 'nenhuma');
-    } catch (e) {
-      throw erro(e.message);
-    }
-    s.pendentes = s.pendentes.filter(x => x.id !== id);
-    const notas = aplicarAtaque(a, b, r);
-    const mods = r.mods.map(m => `${m.nome} ${fmtMod(m.valor)}`).join(', ');
-    const modo = r.modo ? ` · ${r.modo} (${(r.modo === 'vantagem' ? r.motivosVantagem : r.motivosDesvantagem).join(', ')}) d100 [${r.dados.join(', ')}]` : '';
-    const def = r.defesa.partes.map(x => `${x.nome} ${x.valor}`).join(' + ');
-    const danoTxt = r.dano
-      ? ` — dano ${r.dano}${r.metadeEvasao ? ' (metade pela Evasão)' : ''} (${r.danoPartes.map(x => `${x.nome} ${x.dados ? `[${x.dados.join(', ')}]` : ''}${x.total}`).join(' + ')}${r.ip ? ` − IP ${r.ip}` : ''}${r.queimadura ? ' +1 queimadura' : ''}) · ${b.nome} ${b.pv.atual}/${b.pv.max} PV`
-      : '';
-    const notaDefesa = !r.sucesso && r.defesa.id === 'esquiva' ? ` · ${b.nome} pode se deslocar até 1,5 m` : '';
-    const entrada = {
-      tipo: 'ataque', autor: a.nome, rotulo: `ataca ${b.nome} com ${r.arma} (defesa: ${r.defesa.nome})`, sucesso: r.sucesso, critico: r.critico,
-      texto: `${r.sucesso ? 'ACERTOU' : 'ERROU'}${r.critico ? ` (crítico de ${r.critico})` : ''}${danoTxt}${notas.length ? ` · ${notas.join(', ')}` : ''}${notaDefesa}`
-        + `${r.perdaSacrificio ? ` · Sacrifício: ${a.nome} perde ${r.perdaSacrificio} PV` : ''}`,
-      detalhe: `d100 ${r.dp} + ação ${r.acao}${mods ? ` (${mods})` : ''} = ${r.total} contra defesa ${r.nd} (${def})${modo} · DS ${r.ds}`,
-    };
-    registrar(s.log, entrada);
-    return entrada;
+    return resolverPendente(c, s, pend, defesa, sis);
   },
 
   'combate.cancelar'(c, { id }, ctx) {
