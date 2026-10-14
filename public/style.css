@@ -418,3 +418,48 @@ details.bloco summary { display: flex; align-items: center; gap: .4em; }
 .valor-linha > * { min-width: 0; }
 .valor-linha label.linha { overflow-wrap: anywhere; }
 .valor-linha small { white-space: nowrap; }
+
+/* ===================== Regras do livro (MSA) ===================== */
+.selo.revisao { color: #f0c873; border-color: #8a6420; background: #2f2616; }
+.valor-final { color: var(--ouro); font-weight: 700; min-width: 3.2em; text-align: right; }
+.cartao-mini { background: var(--painel2); border: 1px solid var(--borda); border-radius: var(--raio); padding: .5em .8em; margin: .4em 0; }
+.cartao-mini p { margin: .3em 0; }
+.lista-regras { list-style: none; padding: 0; margin: .3em 0 .8em; display: flex; flex-direction: column; gap: .4em; }
+.lista-regras li { background: var(--painel2); border: 1px solid var(--borda); border-radius: 6px; padding: .45em .7em; line-height: 1.4; }
+.lista-regras .bloco-texto { display: block; color: var(--suave); margin-top: .2em; }
+.ganhos { list-style: none; padding: 0; display: flex; flex-direction: column; gap: .3em; }
+.ganhos-nivel { display: flex; flex-wrap: wrap; gap: .2em; }
+.etiqueta.extra { color: var(--suave); border-style: dashed; }
+.tabela-progressao td:first-child { width: 4em; }
+.rolagem.sucesso .total { color: var(--ok); }
+.rolagem.falha .total { color: var(--perigo); }
+
+.pericias { display: flex; flex-direction: column; gap: .35em; }
+.grupo-pericia { border: 1px solid var(--borda); border-radius: var(--raio); background: var(--painel2); }
+.grupo-pericia.treinada { border-color: var(--ouro-esc); }
+.grupo-pericia-topo { display: flex; align-items: center; gap: .5em; padding: .35em .6em; flex-wrap: wrap; }
+.grupo-pericia-topo .grupo-nome { display: inline-flex; align-items: center; gap: .35em; color: var(--texto); }
+.grupo-pericia-topo .mini { display: inline-flex; align-items: center; gap: .3em; color: var(--suave); }
+.subpericias { padding: .2em .6em .6em; border-top: 1px dashed var(--borda); }
+.subpericia { display: grid; grid-template-columns: 1fr auto 3.6em auto; gap: .5em; align-items: center; padding: .2em .3em; border-radius: 4px; }
+.subpericia:nth-child(even) { background: #0000001a; }
+.subpericia.treinada .sub-nome { color: var(--ouro-claro); }
+.sub-nome { display: inline-flex; flex-wrap: wrap; align-items: center; gap: .3em; min-width: 0; }
+.tabela-atributos td { white-space: nowrap; }
+.detalhe-classe { margin-top: 1em; }
+.cartoes.classes .cartao small { color: var(--suave); }
+
+@media (max-width: 860px) {
+  .subpericia { grid-template-columns: 1fr auto auto; }
+  .subpericia .valor-final { grid-column: 2; grid-row: 1; }
+  .subpericia .passador { grid-column: 1 / -1; justify-self: start; }
+  .grupo-pericia-topo .mini { width: 100%; }
+  .tabela.compacta { display: table; white-space: normal; font-size: .85rem; }
+  .tabela.compacta th, .tabela.compacta td { padding: .2em .25em; }
+  .tabela-atributos small { display: none; }
+  .tabela-atributos .passador { gap: .2em; }
+}
+@media (min-width: 1100px) { .ficha-grade .bloco.duplo { grid-column: span 2; } }
+.tabela-atributos td, .tabela-atributos th { padding: .25em .4em; }
+select { max-width: 100%; text-overflow: ellipsis; }
+.ficha details > summary { cursor: pointer; color: var(--ouro); display: flex; align-items: center; gap: .3em; margin: .6em 0 .3em; }

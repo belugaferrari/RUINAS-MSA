@@ -1,10 +1,12 @@
-import { h, abas, botao, selecao, aviso, confirmar, vazio, formatarData, icone, titulo } from '../ui.js';
+import { h, abas, botao, selecao, aviso, confirmar, vazio, formatarData, icone, titulo, passador } from '../ui.js';
+import { derivados, ganhosDeClasse, pontosGastos, pontosPericiaTotal } from '/shared/regras.js';
+import { painelPericias } from './pericias.js';
 import { estado, mudar, render, personagemPorId, meusPersonagens } from '../estado.js';
 import { acao, emitir } from '../api.js';
 import { topo, carregarSaguao } from './saguao.js';
-import { fichaView, equipamento } from './ficha.js';
+import { fichaView, equipamento, nomeClasse } from './ficha.js';
 import { salaView } from './salas.js';
-import { livroView, lojaView, markdown } from './livros.js';
+import { lojaView, markdown, referenciaView } from './livros.js';
 import { redesSociaisView } from './relacoes.js';
 import { criacaoView, iniciarCriacao } from './criacao.js';
 
@@ -48,11 +50,11 @@ function escolherPersonagem(meus) {
     titulo('Escolha seu personagem', 'users', 'h2'),
     meus.length ? h('div', { class: 'cartoes' }, meus.map(p => h('button', { type: 'button', class: 'cartao escolha', onclick: () => mudar({ sel: { ...estado.sel, personagem: p.id }, aba: 'ficha' }) },
       p.foto ? h('img', { class: 'retrato', src: p.foto, alt: '' }) : h('div', { class: 'retrato vazio-retrato' }, icone('user')),
-      h('h3', {}, p.nome), h('p', { class: 'meta' }, `${p.classe} · Nível ${p.nivel}`)))) : vazio('Você ainda não tem personagens nesta campanha.', 'user'),
+      h('h3', {}, p.nome), h('p', { class: 'meta' }, `${nomeClasse(p)} · Nível ${p.nivel}`)))) : vazio('Você ainda não tem personagens nesta campanha.', 'user'),
     livres.length ? h('div', {},
       titulo('Personagens criados pelo mestre (livres)', 'crown'),
       h('div', { class: 'cartoes' }, livres.map(p => h('div', { class: 'cartao' },
-        h('h3', {}, p.nome), h('p', { class: 'meta' }, `${p.classe || 'Sem classe'} · Nível ${p.nivel}`),
+        h('h3', {}, p.nome), h('p', { class: 'meta' }, `${nomeClasse(p)} · Nível ${p.nivel}`),
         botao('Assumir este personagem', async () => {
           await acao('personagem.assumir', { id: p.id });
           mudar({ sel: { ...estado.sel, personagem: p.id }, aba: 'ficha' });
@@ -77,7 +79,7 @@ function conteudoAba(aba, p) {
     case 'social': return salaView('social');
     case 'batalha': return salaView('batalha');
     case 'evoluir': return evoluirView(p);
-    case 'regras': return livroView('regras', 'Livro de Regras');
+    case 'regras': return referenciaView('livro', true);
     case 'loja': return lojaView();
     default: return vazio('Aba desconhecida.');
   }
@@ -95,59 +97,79 @@ function imagensMostradas() {
 
 // ---------- Evoluir ----------
 
-const CAMPOS_EVOLUCAO = ['nivel', 'classe', 'escolhasClasse', 'atributos', 'pericias', 'vantagens', 'pv', 'sanidade', 'humanidade'];
+const CAMPOS_EVOLUCAO = ['nivel', 'classe', 'especializacao', 'atributos', 'pericias', 'subpericias', 'vantagens', 'defeitos', 'pv', 'sanidade', 'humanidade'];
 
 function evoluirView(p) {
   const sis = estado.sistema;
   if (estado.sel.evolucao?.id !== p.id) {
-    estado.sel.evolucao = { id: p.id, ficha: structuredClone(Object.fromEntries(CAMPOS_EVOLUCAO.map(k => [k, p[k]]))), xpGasto: 0 };
+    estado.sel.evolucao = { id: p.id, ficha: structuredClone(Object.fromEntries(CAMPOS_EVOLUCAO.map(k => [k, p[k] ?? (k === 'pericias' || k === 'subpericias' || k === 'atributos' ? {} : k === 'vantagens' || k === 'defeitos' ? [] : '')]))), xpGasto: 0 };
   }
   const ev = estado.sel.evolucao;
   const f = ev.ficha;
+  const d = derivados(f, sis);
   const mudou = k => JSON.stringify(f[k]) !== JSON.stringify(p[k]);
-  const passo = (obj, k, min, max) => h('span', { class: 'passador' },
-    h('button', { type: 'button', 'aria-label': 'Diminuir', disabled: obj[k] <= min, onclick: () => { obj[k] -= 1; render(); } }, icone('minus')),
-    h('strong', {}, obj[k]),
-    h('button', { type: 'button', 'aria-label': 'Aumentar', disabled: obj[k] >= max, onclick: () => { obj[k] += 1; render(); } }, icone('plus')));
-  const linhaValor = (chave, item) => h('div', { class: `valor-linha ${f[chave][item.nome] !== p[chave][item.nome] ? 'marcado' : ''}` },
-    h('span', {}, item.nome), h('small', {}, `atual ${p[chave][item.nome]}`), passo(f[chave], item.nome, p[chave][item.nome], item.max ?? 99));
+  const ppTotal = pontosPericiaTotal(f, sis);
+  const ppGasto = pontosGastos(f, sis).pericias;
+  const muda = fn => { fn(f); render(); };
+  const classe = sis.classes.find(c => c.id === f.classe);
+  const novosGanhos = ganhosDeClasse(f, sis).filter(g => g.nivel > p.nivel);
 
-  return h('div', {},
+  return h('div', { class: 'evoluir' },
     h('div', { class: 'barra' },
       titulo(`Evoluir ${p.nome}`, 'trending-up', 'h2'),
       h('span', { class: 'selo ok' }, icone('sparkles'), `XP disponível: ${p.xp || 0}`),
       h('span', { class: 'espaco' }),
       botao('Desfazer mudanças', () => { estado.sel.evolucao = null; render(); }, { icone: 'refresh-cw' })),
-    h('p', { class: 'dica' }, 'Os custos de XP ainda não estão automatizados: informe quanto XP esta evolução gasta. Ao confirmar, uma cópia da ficha antiga é guardada como backup.'),
+    h('p', { class: 'dica' }, 'Custos de XP e pontos de atributo por nível ainda não estão no livro: informe o XP gasto e combine com o mestre. Ao confirmar, a ficha antiga vira backup.'),
     h('div', { class: 'ficha-grade' },
-      h('section', { class: 'bloco' }, titulo('Nível e classe', 'crown'),
-        h('div', { class: 'valor-linha' }, h('span', {}, 'Nível'), h('small', {}, `atual ${p.nivel}`), passo(f, 'nivel', p.nivel, 20)),
-        h('label', {}, 'Classe', selecao(sis.classes.map(c => c.nome), f.classe, v => { f.classe = v; render(); })),
-        h('h4', {}, 'Máximos'),
-        ['pv', 'sanidade', 'humanidade'].map(k => h('div', { class: 'valor-linha' }, h('span', {}, k === 'pv' ? 'PV' : k), h('small', {}, `atual ${p[k].max}`),
-          h('span', { class: 'passador' },
-            h('button', { type: 'button', 'aria-label': 'Diminuir', disabled: f[k].max <= p[k].max, onclick: () => { f[k] = { ...f[k], max: f[k].max - 1 }; render(); } }, icone('minus')),
-            h('strong', {}, f[k].max),
-            h('button', { type: 'button', 'aria-label': 'Aumentar', onclick: () => { f[k] = { ...f[k], max: f[k].max + 1 }; render(); } }, icone('plus')))))),
-      h('section', { class: 'bloco' }, titulo('Atributos', 'zap'), h('div', { class: 'valores' }, sis.atributos.map(a => linhaValor('atributos', a)))),
-      h('section', { class: 'bloco' }, titulo('Perícias', 'target'), h('div', { class: 'valores' }, sis.pericias.map(x => linhaValor('pericias', x)))),
-      h('section', { class: 'bloco' }, titulo('Vantagens', 'sparkles'),
-        sis.vantagens.map(v => h('label', { class: 'linha' },
-          h('input', { type: 'checkbox', checked: f.vantagens.includes(v.nome), disabled: p.vantagens.includes(v.nome), onchange: e => { f.vantagens = e.target.checked ? [...f.vantagens, v.nome] : f.vantagens.filter(x => x !== v.nome); render(); } }),
-          `${v.nome} (custo ${v.custo})`)))),
+      h('section', { class: 'bloco' }, titulo('Nível, classe e especialização', 'crown'),
+        h('div', { class: 'valor-linha' }, h('span', {}, 'Nível'), h('small', {}, `atual ${p.nivel}`), passador(f.nivel, p.nivel, 20, v => muda(x => { x.nivel = v; }), 'nível')),
+        d.temClasse ? h('label', {}, 'Classe', p.classe
+          ? h('strong', {}, sis.classes.find(c => c.id === p.classe)?.nome)
+          : selecao([{ valor: '', rotulo: '— escolher —' }, ...sis.classes.map(c => ({ valor: c.id, rotulo: c.nome }))], f.classe, v => muda(x => { x.classe = v; x.especializacao = ''; }))) : h('p', { class: 'dica' }, `Classe no nível ${sis.regras.nivelClasse}.`),
+        classe && d.temEspecializacao ? h('label', {}, 'Especialização', p.especializacao
+          ? h('strong', {}, classe.especializacoes.find(e => e.id === p.especializacao)?.nome)
+          : selecao([{ valor: '', rotulo: '— escolher —' }, ...classe.especializacoes.map(e => ({ valor: e.id, rotulo: e.nome }))], f.especializacao, v => muda(x => { x.especializacao = v; }))) : null,
+        novosGanhos.length ? h('div', {}, titulo('Você ganha', 'sparkles', 'h4'),
+          h('ul', { class: 'ganhos' }, novosGanhos.map(g => h('li', { title: g.descricao }, h('span', { class: 'selo' }, `nv ${g.nivel}`), ' ', g.nome)))) : null,
+        h('p', { class: 'meta' }, `PV máx. ${p.pv.max} → ${d.pvMax} · Sanidade máx. ${p.sanidade.max} → ${d.sanidadeMax}`)),
+      h('section', { class: 'bloco' }, titulo(`Atributos (máx. ${d.atributoMax} no nível ${f.nivel})`, 'zap'),
+        h('div', { class: 'valores' }, sis.atributos.map(a => h('div', { class: `valor-linha ${f.atributos[a.sigla] !== p.atributos[a.sigla] ? 'marcado' : ''}` },
+          h('span', {}, h('strong', {}, a.sigla), ' ', a.nome), h('small', {}, `atual ${p.atributos[a.sigla]}`),
+          passador(f.atributos[a.sigla], p.atributos[a.sigla], d.atributoMax, v => muda(x => { x.atributos[a.sigla] = v; }), a.nome))))),
+      h('section', { class: 'bloco largo' }, titulo('Perícias', 'target'),
+        h('div', { class: `contador ${ppGasto > ppTotal ? 'perigo' : ''}` }, `Pontos de perícia: ${ppGasto} de ${ppTotal} (fórmula do nível ${f.nivel}) · limite ${d.limitePericia}`),
+        painelPericias(f, {
+          d, chave: `evoluir:${p.id}`,
+          editar: {
+            limite: d.limitePericia,
+            maxRestante: () => ppTotal - pontosGastos(f, sis).pericias,
+            minBase: id => p.pericias?.[id] ?? 0,
+            minSub: id => p.subpericias?.[id] ?? 0,
+            base: (id, v) => muda(x => { x.pericias = { ...x.pericias, [id]: v }; }),
+            sub: (id, v) => muda(x => { x.subpericias = { ...x.subpericias, [id]: v }; }),
+          },
+        })),
+      h('section', { class: 'bloco largo' }, titulo('Novas vantagens', 'sparkles'),
+        h('p', { class: 'dica' }, 'Nos níveis marcados como "Vantagem Extra" na tabela da classe você ganha uma vantagem.'),
+        selecao([{ valor: '', rotulo: '+ adicionar vantagem' }, ...sis.vantagens.filter(v => !f.vantagens.includes(v.id)).map(v => ({ valor: v.id, rotulo: v.nome + (v.requisito ? ` [${v.requisito}]` : '') }))], '',
+          v => v && muda(x => { x.vantagens = [...x.vantagens, v]; })),
+        h('ul', { class: 'lista-inline' }, f.vantagens.filter(id => !p.vantagens.includes(id)).map(id => h('li', {}, sis.vantagens.find(v => v.id === id)?.nome,
+          h('button', { type: 'button', class: 'x so-icone', 'aria-label': 'Remover', onclick: () => muda(x => { x.vantagens = x.vantagens.filter(y => y !== id); }) }, icone('x'))))))),
     h('div', { class: 'barra' },
       h('label', { class: 'linha' }, 'XP gasto nesta evolução',
         h('input', { type: 'number', min: 0, max: p.xp || 0, value: ev.xpGasto, class: 'curto', onchange: e => { ev.xpGasto = parseInt(e.target.value, 10) || 0; } })),
       botao('Confirmar evolução', async () => {
+        if (ppGasto > ppTotal) throw new Error('Pontos de perícia acima do total.');
+        // PV e Sanidade máximos seguem as fórmulas; o atual acompanha o ganho.
+        for (const [k, novo] of [['pv', d.pvMax], ['sanidade', d.sanidadeMax]]) f[k] = { max: novo, atual: p[k].atual + (novo - p[k].max) };
         const patch = Object.fromEntries(CAMPOS_EVOLUCAO.filter(mudou).map(k => [k, f[k]]));
         if (!Object.keys(patch).length) throw new Error('Nada foi alterado.');
         if (!(await confirmar(`Confirmar evolução gastando ${ev.xpGasto} XP? Um backup da ficha atual será salvo.`))) return;
-        // Ao subir o máximo, o atual acompanha o ganho.
-        for (const k of ['pv', 'sanidade', 'humanidade']) if (patch[k]) patch[k] = { ...patch[k], atual: p[k].atual + (patch[k].max - p[k].max) };
         await acao('personagem.evoluir', { id: p.id, patch, xpGasto: ev.xpGasto });
         estado.sel.evolucao = null;
         aviso('Evolução salva!');
       }, { class: 'primario', icone: 'check' })),
     titulo('Histórico de backups', 'save'),
-    (p.backups || []).length ? h('ul', {}, [...p.backups].reverse().map(b => h('li', {}, `${formatarData(b.em)} — nível ${b.ficha.nivel}, classe ${b.ficha.classe}`))) : vazio('Nenhuma evolução ainda.', 'save'));
+    (p.backups || []).length ? h('ul', {}, [...p.backups].reverse().map(b => h('li', {}, `${formatarData(b.em)} — nível ${b.ficha.nivel}`))) : vazio('Nenhuma evolução ainda.', 'save'));
 }

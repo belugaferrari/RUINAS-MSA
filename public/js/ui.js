@@ -137,11 +137,25 @@ export function titulo(texto, ic, tag = 'h3') {
 
 // Tabela que vira "cartões" no celular: cada célula leva o nome da coluna (data-rotulo).
 // Coluna com título vazio é a de ações e ocupa a linha inteira no celular.
+// Classe "compacta": tabela estreita que continua tabela no celular.
 export function tabela(colunas, linhas, classe = '') {
-  return h('table', { class: `tabela responsiva ${classe}`.trim() },
+  return h('table', { class: `tabela ${classe.includes('compacta') ? '' : 'responsiva'} ${classe}`.trim() },
     h('thead', {}, h('tr', {}, colunas.map(c => h('th', {}, c)))),
     h('tbody', {}, linhas.map(l => {
       const { celulas, ...props } = Array.isArray(l) ? { celulas: l } : l;
       return h('tr', props, celulas.map((cel, i) => h('td', { 'data-rotulo': colunas[i] || null, class: colunas[i] ? null : 'acoes' }, cel)));
     })));
+}
+
+// Selo para regras grifadas no livro (ainda podem mudar).
+export function seloRevisao(ativo = true, texto = 'em revisão') {
+  return ativo ? h('span', { class: 'selo revisao', title: 'Trecho grifado no livro: ainda pode mudar' }, icone('circle-alert'), texto) : null;
+}
+
+// Botões − valor + (passo a passo). aoMudar recebe o novo valor.
+export function passador(valor, min, max, aoMudar, rotulo = '') {
+  return h('span', { class: 'passador' },
+    h('button', { type: 'button', 'aria-label': `Diminuir ${rotulo}`.trim(), disabled: valor <= min, onclick: () => aoMudar(valor - 1) }, icone('minus')),
+    h('strong', {}, valor),
+    h('button', { type: 'button', 'aria-label': `Aumentar ${rotulo}`.trim(), disabled: valor >= max, onclick: () => aoMudar(valor + 1) }, icone('plus')));
 }

@@ -85,9 +85,11 @@ function novaCampanha() {
   const nivelVar = h('input', { type: 'checkbox' });
   const nivel = h('input', { type: 'number', min: 1, max: 20, value: 1 });
   const padrao = h('input', { type: 'checkbox', checked: true });
-  const pts = { atributos: h('input', { type: 'number', min: 0, value: 20 }), vantagens: h('input', { type: 'number', min: 0, value: 5 }), pericias: h('input', { type: 'number', min: 0, value: 15 }) };
+  const r = estado.sistema.regras;
+  const pts = { atributos: h('input', { type: 'number', min: 0, value: r.pontosAtributos }), vantagens: h('input', { type: 'number', min: 0, value: r.pontosVantagem }), pericias: h('input', { type: 'number', min: 0, value: 0 }) };
   const blocoPts = h('fieldset', { hidden: true }, h('legend', {}, 'Pontos para a criação de personagem'),
-    h('div', { class: 'grade3' }, h('label', {}, 'Atributos', pts.atributos), h('label', {}, 'Vantagens', pts.vantagens), h('label', {}, 'Perícias', pts.pericias)));
+    h('div', { class: 'grade3' }, h('label', {}, 'Atributos', pts.atributos), h('label', {}, 'Vantagens', pts.vantagens), h('label', {}, 'Perícias (0 = fórmula)', pts.pericias)),
+    h('p', { class: 'dica' }, `Padrão MSA: ${r.pontosAtributos} de atributo, ${r.pontosVantagem} de vantagem e perícias por ${r.formulas.pontosPericia}.`));
   nivelVar.onchange = () => { nivel.disabled = nivelVar.checked; };
   padrao.onchange = () => { blocoPts.hidden = padrao.checked; };
 

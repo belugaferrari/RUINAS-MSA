@@ -6,6 +6,10 @@ import path from 'node:path';
 
 process.env.DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'msa-'));
 const { novaCampanha, executar, entrarNaCampanha, visaoPara } = await import('../server/actions.js');
+const { sistema } = await import('../server/sistema.js');
+const sis = sistema();
+const defeito = sis.defeitos.find(d => d.tipo === 'leve').id;
+const fichaValida = extra => ({ nome: 'Lia', profissao: 'batedor', defeitos: [defeito], ...extra });
 
 const mestre = { id: 'm', name: 'Mestre' };
 const ana = { id: 'a', name: 'Ana' };
@@ -18,19 +22,25 @@ test('fluxo básico de campanha e permissões', () => {
   entrarNaCampanha(c, ana, 'jogador');
   assert.throws(() => entrarNaCampanha(c, beto, 'jogador'), /máximo/);
 
-  const { id } = executar(c, 'personagem.criar', { ficha: { nome: 'Lia', nivel: 20, itens: [{ itemId: 'faca' }] } }, { user: ana, mestre: false });
+  const { id } = executar(c, 'personagem.criar', { ficha: fichaValida({ nivel: 20, itens: [{ itemId: 'faca' }], pv: { max: 999, atual: 999 } }) }, { user: ana, mestre: false });
   const lia = c.personagens.find(p => p.id === id);
   assert.equal(lia.nivel, 2, 'nível fixo da campanha prevalece');
   assert.equal(lia.donoId, 'a');
-  assert.equal(lia.dinheiro, 90);
+  assert.equal(lia.dinheiro, sis.regras.creditosIniciais - sis.itens.find(i => i.id === 'faca').preco);
+  assert.notEqual(lia.pv.max, 999, 'PV é recalculado no servidor');
 
   // Jogador não altera atributos direto, só pela evolução.
-  executar(c, 'personagem.atualizar', { id, patch: { atributos: { Força: 10 }, anotacoes: 'oi' } }, { user: ana, mestre: false });
-  assert.notEqual(lia.atributos.Força, 10);
+  executar(c, 'personagem.atualizar', { id, patch: { atributos: { FOR: 14 }, anotacoes: 'oi' } }, { user: ana, mestre: false });
+  assert.notEqual(lia.atributos.FOR, 14);
   assert.equal(lia.anotacoes, 'oi');
 
   // Pontos acima do padrão são recusados.
-  assert.throws(() => executar(c, 'personagem.criar', { ficha: { nome: 'X', pericias: { Briga: 5, Lábia: 5, Medicina: 5, Atletismo: 5 } } }, { user: ana, mestre: false }), /Perícias/);
+  assert.throws(() => executar(c, 'personagem.criar', { ficha: fichaValida({ pericias: { briga: 10, 'arma-branca': 10, 'armas-de-fogo': 10 } }) }, { user: ana, mestre: false }), /Perícias/);
+  assert.throws(() => executar(c, 'personagem.criar', { ficha: { nome: 'Sem profissão', defeitos: [defeito] } }, { user: ana, mestre: false }), /profissão/);
+
+  // Teste D-MIL calculado no servidor a partir da ficha.
+  const r = executar(c, 'rolar', { id, acaoRef: 'sub:sentidos.visao', nd: 70 }, { user: ana, mestre: false });
+  assert.equal(r.acao, 15, 'Visão = bônus pericial de PER 10 (10) + profissão Batedor (5)');
 
   // NPC só aparece para o jogador quando entra em sala ou é conhecido.
   const g = executar(c, 'grupo.criar', { nome: 'Piratas' }, { user: mestre, mestre: true });

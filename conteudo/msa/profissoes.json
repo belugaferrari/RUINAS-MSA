@@ -1,0 +1,126 @@
+{
+ "_fonte": "Livro do Jogador MSS — base provisória para o MSA",
+ "dados": [
+  {
+   "id": "sobrevivente",
+   "nome": "Sobrevivente",
+   "descricao": "Você aprendeu a se virar em todas as situações. Estar preparado é seu lema e você sabe que há um dia seguinte para quem fizer tudo certo.",
+   "vantagem": "Receba +5 PVs. Jogue a Iniciativa com Vantagem caso você ou algum aliado tenha sofrido um ataque surpresa.",
+   "bonus": 5,
+   "subpericias": [
+    "espionagem.camuflagem",
+    "esportes.escalada",
+    "sobrevivencia.sobrevivencia-basica",
+    "esportes.natacao"
+   ],
+   "subpericiasLivro": [
+    "Espionagem/Camuflagem",
+    "Esportes/Escalada",
+    "Sobrevivência/Sobrevivência básica",
+    "Esportes/Natação"
+   ],
+   "extras": {
+    "pv": 5
+   }
+  },
+  {
+   "id": "batedor",
+   "nome": "Batedor",
+   "descricao": "Batedores são abre-alas. Especializados em avaliar situações, desbravar terrenos e identificar perigos, os batedores são informantes importantes para os grupos.",
+   "vantagem": "Caso você tenha sucesso em um teste de CONCENTRAÇÃO, você pode se deslocar por terrenos naturalmente acidentados sem penalidade.",
+   "bonus": 5,
+   "subpericias": [
+    "sobrevivencia.rastreio",
+    "espionagem.furtividade",
+    "sentidos.visao",
+    "armadilhas.encontrar"
+   ],
+   "subpericiasLivro": [
+    "Sobrevivência/Rastreio",
+    "Espionagem/Furtividade",
+    "Sentidos/Visão",
+    "Armadilhas/Encontrar"
+   ],
+   "extras": {}
+  },
+  {
+   "id": "socorrista",
+   "nome": "Socorrista",
+   "descricao": "Socorristas se especializaram em prestar socorros ao grupo e aos próximos. Em meio ao caos e tempestade, os socorristas estão dispostos a ajudar seus companheiros.",
+   "vantagem": "Caso o aliado fique com menos de 0 PVs, você recebe Vantagem nos testes de primeiros socorros.",
+   "bonus": 5,
+   "subpericias": [
+    "medicina.primeiros-socorros",
+    "ciencia.botanica",
+    "trato-de-animais.veterinaria",
+    "briga.salvaguardar"
+   ],
+   "subpericiasLivro": [
+    "Medicina/Primeiros Socorros",
+    "Ciência/Botânica",
+    "Trato de Animais/Veterinária",
+    "Briga/Salvaguardar"
+   ],
+   "extras": {}
+  },
+  {
+   "id": "protetor",
+   "nome": "Protetor",
+   "descricao": "Algumas pessoas assumem a linha de frente quando ninguém mais quer. Arriscam suas vidas pelo time e tentam chamar a atenção dos inimigos.",
+   "vantagem": "Nos turnos em que você fizer uma Salvaguarda, seu deslocamento base sobe +3m e você recebe +1 IP geral.",
+   "bonus": 5,
+   "subpericias": [
+    "briga.escudo",
+    "briga.salvaguardar",
+    "trato-de-animais.doma"
+   ],
+   "subpericiasLivro": [
+    "Briga/Escudo",
+    "Briga/Defesa Desarmada",
+    "Briga/Salvaguardar",
+    "Trato de Animais/Doma"
+   ],
+   "extras": {}
+  },
+  {
+   "id": "coletor",
+   "nome": "Coletor",
+   "descricao": "Recursos são essenciais para novos aventureiros e coletá-los é de extrema importância. Alimentos, medicação, armas, vestes. Tudo pode lhe ajudar a resistir mais um dia.",
+   "vantagem": "A durabilidade dos itens encontrados pelos coletores é sempre +1 (até o limite de 9). Os coletores podem pegar um item caído como uma ação livre.",
+   "bonus": 5,
+   "subpericias": [
+    "espionagem.furtar",
+    "extracao.mineracao",
+    "extracao.colheita",
+    "avaliacao-de-objetos.identificacao"
+   ],
+   "subpericiasLivro": [
+    "Espionagem/Furtar",
+    "Extração/Mineração",
+    "Extração/Colheita",
+    "Avaliação de Objetos/Identificação"
+   ],
+   "extras": {}
+  },
+  {
+   "id": "zelador",
+   "nome": "Zelador",
+   "descricao": "Ter um objeto é importante, mas mantê-lo é ainda mais. Algumas pessoas se preocupam em manter os itens e equipamentos em bom uso e sem surpresas desagradáveis.",
+   "vantagem": "Faça testes com VANTAGEM para Reparar Armamentos e Vestes.",
+   "bonus": 5,
+   "subpericias": [
+    "engenharia.mecanica",
+    "engenharia.militar",
+    "computacao.manutencao",
+    "arte.costura"
+   ],
+   "subpericiasLivro": [
+    "Engenharia/Mecânica",
+    "Engenharia/Militar",
+    "Computação/Manutenção",
+    "Arte/Costura"
+   ],
+   "extras": {}
+  }
+ ]
+}

@@ -44,18 +44,33 @@ Para jogar pela internet (sem estar na mesma Wi‑Fi), o mesmo app pode ser publ
 
 ## Onde ficam as regras
 
+As regras vêm do **Livro do Jogador MSS** (base para o MSA). Trechos grifados de amarelo no livro aparecem no app com o selo **"em revisão"**.
+
 | Arquivo | O que tem |
 |---|---|
-| `conteudo/sistema.json` | Atributos, perícias, vantagens, classes (e escolhas de classe), itens, slots de equipamento, monstros, valores iniciais, tipos de relação, dado de teste. O app relê o arquivo sozinho quando ele muda. |
-| `conteudo/livros/regras.md` | Livro de Regras (Markdown; os títulos `#`/`##`/`###` viram o índice). |
-| `conteudo/livros/mestre.md` | Livro do Mestre. |
-| `shared/regras.js` | As **fórmulas** (pontos gastos, bônus de itens, slots, testes, encontros). É aqui que a matemática do MSA entra. |
+| `conteudo/sistema.json` | Regras centrais: atributos, pontos iniciais, fórmulas, teste D-MIL, sanidade, origens, tipos de dano, estados, slots, itens e monstros (exemplos). |
+| `conteudo/msa/*.json` | Perícias e subperícias, profissões, classes (com especializações e tabela de progressão), vantagens, defeitos e capacidades. **Gerados a partir do livro.** |
+| `conteudo/msa/PENDENCIAS.md` | Inconsistências do livro e escolhas provisórias do app. |
+| `conteudo/livros/*.md` | Livro de Regras e Livro do Mestre (texto livre). |
+| `shared/regras.js` | Toda a matemática: %, bônus pericial, MOD, PV, sanidade, pontos e limites de perícia, teste D-MIL, validação da ficha. |
+
+### Atualizar a partir de uma nova versão do livro
+
+```bash
+python3 -I ferramentas/livro/extrair_docx.py "Livro do Jogador.docx" /tmp/texto.md
+python3 -I ferramentas/livro/gerar_conteudo.py /tmp/texto.md conteudo/msa
+npm run modelo   # atualiza a planilha de NPCs
+npm test
+```
+
+As tabelas de progressão das classes estão em imagens no livro, então ficam transcritas em `ferramentas/livro/progressao.py`. Se uma tabela mudar, ela precisa ser corrigida ali à mão.
 
 ## Estrutura
 
 ```
 server/      servidor (Express + Socket.IO), contas, ações da campanha, Excel
 shared/      regras usadas pelo servidor e pelo navegador
+ferramentas/ scripts que leem o livro (.docx) e geram conteudo/msa
 public/      interface (HTML/CSS/JS sem etapa de build)
 conteudo/    regras e livros editáveis
 modelos/     planilha modelo de NPCs

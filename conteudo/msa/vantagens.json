@@ -1,0 +1,745 @@
+{
+ "_fonte": "Livro do Jogador MSS — base provisória para o MSA",
+ "dados": {
+  "gerais": [
+   {
+    "nome": "Absorver Nutrientes",
+    "requisito": "",
+    "descricao": "Você recupera 2 PVs por refeição ao invés de 1 PV e só precisa se alimentar uma vez ao dia (demora 12h a mais para sofrer os efeitos de fome).",
+    "revisao": false,
+    "id": "absorver-nutrientes",
+    "custo": 1
+   },
+   {
+    "nome": "Acerto Mortal",
+    "requisito": "",
+    "descricao": "Sempre que rolar o valor máximo em ao menos um dos seus dados de dano, adicione +1D6 de dano extra.",
+    "revisao": false,
+    "id": "acerto-mortal",
+    "custo": 1
+   },
+   {
+    "nome": "Ambidestria",
+    "requisito": "",
+    "descricao": "Você tão hábil com sua mão esquerda quanto com sua mão direita. Você não precisa mais definir qual é sua mão hábil (não há mais penalidade da mão inábil) e caso você ataque com cada mão, o segundo ataque é feito apenas com -20%.",
+    "revisao": false,
+    "id": "ambidestria",
+    "custo": 1
+   },
+   {
+    "nome": "Ambiente Favorito",
+    "requisito": "",
+    "descricao": "Escolha um bioma entre: Floresta, Pântano, Mar, Savana, Tundra, Penhascos, Planícies, Urbano ou Ruínas. Receba +10% em testes de Sobrevivência e Sentidos quando estiver no bioma escolhido.",
+    "revisao": false,
+    "id": "ambiente-favorito",
+    "custo": 1
+   },
+   {
+    "nome": "Armadilha Mortal",
+    "requisito": "",
+    "descricao": "As armadilhas que você cria causam +1D4 de dano, além do normal. Sobe 1 passo no dano atual e o ND de desarme sobe em +5.",
+    "revisao": false,
+    "id": "armadilha-mortal",
+    "custo": 1
+   },
+   {
+    "nome": "Armadilheiro",
+    "requisito": "",
+    "descricao": "Receba +5% na Perícia Base Armadilhas. Uma vez por descanso longo dê um \"Aprimoramento\" à sua armadilha.",
+    "revisao": false,
+    "id": "armadilheiro",
+    "custo": 1
+   },
+   {
+    "nome": "Assassino",
+    "requisito": "",
+    "descricao": "Em todos os seus ataques armados adicione +1D4 de dano extra que ignora o IP do alvo.(apenas o 1D4 ignora IP)",
+    "revisao": false,
+    "id": "assassino",
+    "custo": 1
+   },
+   {
+    "nome": "Ataque Certeiro",
+    "requisito": "",
+    "descricao": "Escolha uma subperícia de combate (Briga, Armas brancas ou armas de fogo): Some +5%  a sua chance de acerto e +1 de dano.",
+    "revisao": false,
+    "id": "ataque-certeiro",
+    "custo": 1
+   },
+   {
+    "nome": "Ataque Desarmado Treinado",
+    "requisito": "Briga 21+",
+    "descricao": "Ataques desarmados causam +1 Dano e a margem do Efeito de dano ‘Dor’ sobe em +1. Você fica imune ao DS quando erra, exceto para erros críticos.",
+    "revisao": false,
+    "id": "ataque-desarmado-treinado",
+    "custo": 1
+   },
+   {
+    "nome": "Biblioteca Virtual",
+    "requisito": "",
+    "descricao": "Escolha 2 subcategorias entre as perícias de Ciência e Engenharia. Se tiver tempo para consultar (enquanto conseguir manter a concentração), receba +25% nos testes. Você fica imune aos efeitos das falhas dessas perícias enquanto estiver usando essa vantagem.",
+    "revisao": false,
+    "id": "biblioteca-virtual",
+    "custo": 1
+   },
+   {
+    "nome": "Bom Senso",
+    "requisito": "INT 12+",
+    "descricao": "Uma vez por descanso longo, o personagem pode TROCAR sua ação e re-rolar o dado após ver o resultado. Além disso, o personagem pode fazer um testes de Espionagem[Investigação] no lugar de Armadilhas[Encontrar] quando estiver em terreno Urbano ou Ruínas.",
+    "revisao": false,
+    "id": "bom-senso",
+    "custo": 1
+   },
+   {
+    "nome": "Calejado",
+    "requisito": "",
+    "descricao": "Recebe IP 1 contra Concussão e você é imune a dor.",
+    "revisao": false,
+    "id": "calejado",
+    "custo": 1
+   },
+   {
+    "nome": "Companheiro Animal",
+    "requisito": "",
+    "descricao": "Escolha um dos animais da lista: Cachorro, Gato, Cobra, Pomba, Coruja, Galinha/Galo, Porco. Você tem um companheiro animal da raça que você escolheu, ele é considerado ‘Adestrado’ e tem INT+2. Ele age no mesmo turno que você. [Colocar no livro dos monstros a explicação de como agem esses animais adestrados] Caso perca seu companheiro, pode usar \"Doma\" com Vantagem nos testes para conseguir um novo.",
+    "revisao": true,
+    "id": "companheiro-animal",
+    "custo": 1
+   },
+   {
+    "nome": "Contatos",
+    "requisito": "",
+    "descricao": "Receba +5% em institucional. Ao chegar em uma cidade você pode fazer um teste Institucional Normal para ter um contato dentro da cidade ligado a uma subpericia qualquer a sua escolha. Você pode usar essa habilidade uma vez por descanso longo – O contato não é necessariamente seu amigo, no geral é um politico ou comerciante com seus interesses próprios e será necessário negociar com ele.",
+    "revisao": false,
+    "id": "contatos",
+    "custo": 1
+   },
+   {
+    "nome": "Corpo Flexível",
+    "requisito": "",
+    "descricao": "Receba +10% na subperícia Espionagem[Escapismo] e IP 2 contra Concussão.",
+    "revisao": false,
+    "id": "corpo-flexivel",
+    "custo": 1
+   },
+   {
+    "nome": "Defesa Aprimorada",
+    "requisito": "",
+    "descricao": "Escolha 1 subgrupo de 'Armas Brancas' ou Defesa desarmada. Receba IP físico 1 e +5% de defesa quando estiver se defendendo com o subgrupo escolhido (O mínimo recebido é 1 caso o inimigo te acerte).",
+    "revisao": false,
+    "id": "defesa-aprimorada",
+    "custo": 1
+   },
+   {
+    "nome": "Defesa Crítica",
+    "requisito": "Subgrupo da defesa usada > 30",
+    "descricao": "Quando você é acertado com o Dano máximo de um ou mais dos 'Dados de Dano', o inimigo deverá Re-rolar os dados que tirarem o número máximo e ficar com o segundo resultado (mesmo que seja o valor máximo de novo).",
+    "revisao": false,
+    "id": "defesa-critica",
+    "custo": 1
+   },
+   {
+    "nome": "Escudo Amigo",
+    "requisito": "Escudo >30",
+    "descricao": "Com uma ação Bônus você pode usar sua defesa (Escudo) para um aliado adjacente (1,5m). Caso falhe, o aliado toma o dano normalmente (não tem direito a jogar a própria defesa), mas reduz do dano pelo IP do escudo (caso aplicável).",
+    "revisao": false,
+    "id": "escudo-amigo",
+    "custo": 1
+   },
+   {
+    "nome": "Especialista em Combate",
+    "requisito": "Ataque certeiro",
+    "descricao": "Escolha a mesma subpericia de 'Ataque Certeiro'. Receba subgrupo +5%, Dano +1. Você não tem mais erros críticos (se transformam em erros normais) e você pode re-rolar falha de durabilidade 1 vez por descanso longo.",
+    "revisao": false,
+    "id": "especialista-em-combate",
+    "custo": 1
+   },
+   {
+    "nome": "Especialista Pericial",
+    "requisito": "",
+    "descricao": "Escolha 1 perícia base: Receba +5%. Pode repetir a perícia uma vez a cada 5 níveis. Essa vantagem não se acumula com outras vantagens que também concedem +5% na mesma perícia (exceto após 5 níveis). Não pode ser usado com perícias de combate.",
+    "revisao": false,
+    "id": "especialista-pericial",
+    "custo": 1
+   },
+   {
+    "nome": "Genes Fortes",
+    "requisito": "CONS 12+",
+    "descricao": "Receba +10% nos testes para resistir a mutações e ganha resistência Radioativa.",
+    "revisao": false,
+    "id": "genes-fortes",
+    "custo": 1
+   },
+   {
+    "nome": "Gênio Especialista",
+    "requisito": "",
+    "descricao": "Escolha 1 subgrupo(exceto combate): Receba +10%. Pode repetir a perícia uma vez a cada 5 níveis. Essa vantagem não se acumula com outros bônus e outras vantagens que afetem a mesma subperícia.",
+    "revisao": false,
+    "id": "genio-especialista",
+    "custo": 1
+   },
+   {
+    "nome": "Glutão",
+    "requisito": "",
+    "descricao": "Se comer o dobro da ração, seu personagem pode realizar um teste com 'Inspiração' (exceto combate). Você pode fazer isso um número de vezes por dia igual ao seu MOD CONS. Além disso, após comer o dobro do comum, ele fica sob o efeito 'Bem-Estar' até o próximo descanso curto e/ou longo.",
+    "revisao": false,
+    "id": "glutao",
+    "custo": 1
+   },
+   {
+    "nome": "Herói",
+    "requisito": "",
+    "descricao": "Seus testes de Salvaguarda recebem + 10% de chance de acerto. Uma vez por descanso longo ignore o dano tomado durante um teste de salvaguarda.",
+    "revisao": false,
+    "id": "heroi",
+    "custo": 1
+   },
+   {
+    "nome": "Humano de Carga",
+    "requisito": "",
+    "descricao": "Você carrega como se tivesse FOR+3. Além disso, você não sofre nenhum ônus de carga até chegar ao limite do seu \"levantamento\".",
+    "revisao": false,
+    "id": "humano-de-carga",
+    "custo": 1
+   },
+   {
+    "nome": "Improvisar Armadilha",
+    "requisito": "",
+    "descricao": "Receba um bônus na subperícia ‘Improvisar Armadilhas’ de +10%. Você pode rerolar um dado negativo para cada Armadilha Improvisada que você fizer (você deve ficar com o segundo resultado).",
+    "revisao": false,
+    "id": "improvisar-armadilha",
+    "custo": 1
+   },
+   {
+    "nome": "Maestria em combate",
+    "requisito": "",
+    "descricao": "Escolha um subgrupo de armas. Ganhe +1 Dano e +5% Acerto com elas.",
+    "revisao": false,
+    "id": "maestria-em-combate",
+    "custo": 1
+   },
+   {
+    "nome": "Mercador",
+    "requisito": "",
+    "descricao": "Receba Negociação +10% e mais 200 $ por nível acima do padrão.",
+    "revisao": false,
+    "id": "mercador",
+    "custo": 1
+   },
+   {
+    "nome": "Meticuloso",
+    "requisito": "",
+    "descricao": "Escolha uma subperícia (exceto combate). Você é imune a erros críticos e seus erros não causam efeitos negativos (dado de suporte).",
+    "revisao": false,
+    "id": "meticuloso",
+    "custo": 1
+   },
+   {
+    "nome": "Poliglota",
+    "requisito": "INT 11+",
+    "descricao": "Você fala uma língua adicional e + 1 língua adicional para cada ponto de INT acima de 10. (normal: A cada +2 de INT acima de 10, aprenda uma língua adicional)",
+    "revisao": false,
+    "id": "poliglota",
+    "custo": 1
+   },
+   {
+    "nome": "Reflexos Rápidos",
+    "requisito": "",
+    "descricao": "Ganhe +1 Agilidade e +5% em Esquiva.",
+    "revisao": false,
+    "id": "reflexos-rapidos",
+    "custo": 1
+   },
+   {
+    "nome": "Resistente às Drogas",
+    "requisito": "",
+    "descricao": "Receba +25% nos testes de Resistencia ao efeito 'Vício'. Caso você fique viciado, os testes de abstinência são feitos com Vantagem.",
+    "revisao": false,
+    "id": "resistente-as-drogas",
+    "custo": 1
+   },
+   {
+    "nome": "Saúde de Ferro",
+    "requisito": "",
+    "descricao": "Ganhe +1 Constituição. +10% para resistir a Doenças.",
+    "revisao": false,
+    "id": "saude-de-ferro",
+    "custo": 1
+   },
+   {
+    "nome": "Sentido Aguçado",
+    "requisito": "",
+    "descricao": "Escolha 1 sentido. Receba +15% em testes e o dobro do seu alcance normal*. [Preciso por a tabela dos alcances dos sentidos aqui no livro]",
+    "revisao": true,
+    "id": "sentido-agucado",
+    "custo": 1
+   },
+   {
+    "nome": "Silencioso",
+    "requisito": "",
+    "descricao": "Receba +5% em espionagem. Uma vez por descanso longo, caso visto/percebido, você pode rolar um novo teste resistido de Furtividade ou Camuflagem contra a Percepção o u Sentidos do Adversário.",
+    "revisao": false,
+    "id": "silencioso",
+    "custo": 1
+   },
+   {
+    "nome": "Simpático",
+    "requisito": "",
+    "descricao": "Quando você estiver com o humor 'Amigável' receba +10% para manipulações em  Empatia, Sedução e Impressionar.",
+    "revisao": false,
+    "id": "simpatico",
+    "custo": 1
+   },
+   {
+    "nome": "Sobrevivente",
+    "requisito": "",
+    "descricao": "Personagem recebe +5% em Sobrevivência e quando está com menos que 6 PVs, recebe +5% em todos os testes e +1,5m de deslocamento.",
+    "revisao": false,
+    "id": "sobrevivente",
+    "custo": 1
+   },
+   {
+    "nome": "Suporte Especializado",
+    "requisito": "",
+    "descricao": "Ao Ajudar um aliado ('Ação Assistida' ou 'Ação Conjunta'), além da vantagem você concede +10% de chance de acerto e não permite que o teste tenha um erro crítico.",
+    "revisao": false,
+    "id": "suporte-especializado",
+    "custo": 1
+   },
+   {
+    "nome": "Talento Natural",
+    "requisito": "",
+    "descricao": "Receba +5% em Artes. Escolha 1 subgrupo de artes para receber as seguintes vantagens: Os testes demoram a metade do tempo e são feitos com Vantagem.",
+    "revisao": false,
+    "id": "talento-natural",
+    "custo": 1
+   },
+   {
+    "nome": "Tecnomente",
+    "requisito": "",
+    "descricao": "Recebe +25% de resistência contra 'Traumas' e os testes com itens de interface Neural recebem +10%.",
+    "revisao": false,
+    "id": "tecnomente",
+    "custo": 1
+   },
+   {
+    "nome": "Viciado em Perigo",
+    "requisito": "",
+    "descricao": "Se houver risco de receber dano ao falhar em Esportes (exceto arremesso), faça o teste em vantagem.",
+    "revisao": false,
+    "id": "viciado-em-perigo",
+    "custo": 1
+   },
+   {
+    "nome": "Vitalidade",
+    "requisito": "",
+    "descricao": "Receba 3PVs e +2 PVs por nível (incluindo o primeiro).",
+    "revisao": false,
+    "id": "vitalidade",
+    "custo": 1
+   },
+   {
+    "nome": "Vontade de Ferro",
+    "requisito": "",
+    "descricao": "Receba +1 em Força de Vontade e +20% para resistir ao Medo.",
+    "revisao": false,
+    "id": "vontade-de-ferro",
+    "custo": 1
+   }
+  ],
+  "defeitosLeves": [
+   {
+    "nome": "Acumulador",
+    "requisito": "",
+    "descricao": "Você não consegue largar a sucata que encontra, achando que tudo será útil. Caso você deixe um item para trás (seu ou de um aliado) receba -10% nos testes até o próximo descanso longo.",
+    "revisao": false,
+    "id": "acumulador",
+    "tipo": "leve"
+   },
+   {
+    "nome": "Alergia à Maré",
+    "requisito": "",
+    "descricao": "Receba -10% nos testes de CONS quando estiver em áreas selvagens (todas exceto urbano).",
+    "revisao": false,
+    "id": "alergia-a-mare",
+    "tipo": "leve"
+   },
+   {
+    "nome": "Asma",
+    "requisito": "",
+    "descricao": "Sempre que você usar 'Disparada' faça um teste de CONS% difícil para não receber um efeito de fadiga. Quando estiver fadigado seu deslocamento cai -3m.",
+    "revisao": false,
+    "id": "asma",
+    "tipo": "leve"
+   },
+   {
+    "nome": "Azarado",
+    "requisito": "",
+    "descricao": "Uma vez por descanso longo re-role um acerto crítico.",
+    "revisao": false,
+    "id": "azarado",
+    "tipo": "leve"
+   },
+   {
+    "nome": "Covarde",
+    "requisito": "",
+    "descricao": "Ao ficar com 10PVs ou menos, você deverá fazer um testes de WILL% difícil ou sairá correndo fugindo da batalha/perigo.",
+    "revisao": false,
+    "id": "covarde",
+    "tipo": "leve"
+   },
+   {
+    "nome": "Curioso Imprudente",
+    "requisito": "",
+    "descricao": "O desconhecido te atrai cegamente. Ao se deparar com uma anomalia, terminal ligado ou artefato estranho, você precisa fazer um teste de WILL% Normal para resistir a tocar, apertar ou interagir imediatamente, antes mesmo do grupo procurar armadilhas.",
+    "revisao": false,
+    "id": "curioso-imprudente",
+    "tipo": "leve"
+   },
+   {
+    "nome": "Estômago Sensível",
+    "requisito": "",
+    "descricao": "Você não consegue digerir carne de monstros, água suja ou comida crua. Se consumir, faça um teste de CONS% Difícil. Se falhar, você vomita (perde qualquer benefício da alimentação), e recebe -5% nos testes até o próximo descanso.",
+    "revisao": false,
+    "id": "estomago-sensivel",
+    "tipo": "leve"
+   },
+   {
+    "nome": "Fobia leve",
+    "requisito": "",
+    "descricao": "Escolha uma fobia entre: Fogo, Navegar, Ciborgues, Monstros, Mutantes, Armas de fogo, Armas brancas, Altura ou sangue humano. Você não pode se aproximar voluntariamente a menos de 4,5m da fonte do seu medo sem antes passar em um teste de WILL% Difícil. Seus testes diante da Fobia são 5% mais difíceis. ‘Fobia leve’ é um dos defeitos que podem ser adquiridos durante a ‘instabilidade’ da sua sanidade.",
+    "revisao": false,
+    "id": "fobia-leve",
+    "tipo": "leve"
+   },
+   {
+    "nome": "Fotofobia",
+    "requisito": "",
+    "descricao": "Seus olhos ardem com luz forte ou sol do meio-dia. Quando estiver sob o Sol ou em ambiente muito iluminado seus testes recebem -10%.DEFEITOS LEVES",
+    "revisao": false,
+    "id": "fotofobia",
+    "tipo": "leve"
+   },
+   {
+    "nome": "Hipersensibilidade à Dor",
+    "requisito": "",
+    "descricao": "O seu cérebro não filtra a dor, ele a amplifica. Quando você for afetado pelo efeito 'Dor', o efeito da ‘Dor’ é dobrado.",
+    "revisao": false,
+    "id": "hipersensibilidade-a-dor",
+    "tipo": "leve"
+   },
+   {
+    "nome": "Inocente",
+    "requisito": "",
+    "descricao": "Você é uma pessoa sem malicia e acaba não percebendo os sinais ao seu redor R.MNP -15, iniciativa -3.",
+    "revisao": false,
+    "id": "inocente",
+    "tipo": "leve"
+   },
+   {
+    "nome": "Insônia",
+    "requisito": "",
+    "descricao": "Faça um teste de CAR% difícil na hora do descanso longo. Caso falhe, recupere apenas metade da regeneração normal do descanso longo e fique sobre o efeito 'Sono' até o próximo descanso curto.",
+    "revisao": false,
+    "id": "insonia",
+    "tipo": "leve"
+   },
+   {
+    "nome": "Mãos fracas",
+    "requisito": "",
+    "descricao": "Sempre que você precisar segurar algo firme (desarme, quando usar FOR enquanto está sobre o efeito[Sobrecarregada]; testes de escalar) faça um teste de FOR% difícil adicional aos outros testes para saber se você não solta o item.",
+    "revisao": false,
+    "id": "maos-fracas",
+    "tipo": "leve"
+   },
+   {
+    "nome": "Metabolismo Acelerado",
+    "requisito": "",
+    "descricao": "Você precisa consumir o dobro de rações diárias para não sofrer o efeito de Fome. Você passa a ser suscetível a fome a partir de 12horas sem comer.",
+    "revisao": false,
+    "id": "metabolismo-acelerado",
+    "tipo": "leve"
+   },
+   {
+    "nome": "Ossos Frágeis",
+    "requisito": "",
+    "descricao": "Seus ossos quebram sob pressão. Caso você receba dano de concussão e o DS for 4 ou menor, receba 1D4 de dano adicional e reduza seu deslocamento em 1,5m.",
+    "revisao": false,
+    "id": "ossos-frageis",
+    "tipo": "leve"
+   },
+   {
+    "nome": "Paranoia Sobrevivente",
+    "requisito": "",
+    "descricao": "Você não confia em ninguém, nem nos seus aliados. Você não pode receber os benefícios da ação \"Ajudar\", ou da manipulação 'Liderança'. Testes para ajudar você (Salvaguarda, primeiro-socorros) recebem -10%.",
+    "revisao": false,
+    "id": "paranoia-sobrevivente",
+    "tipo": "leve"
+   },
+   {
+    "nome": "Pavio Curto",
+    "requisito": "",
+    "descricao": "O seu limiar de estresse é nulo. Sempre que você falhar em um teste de Manipulação, o seu estado na Roda do Humor muda automaticamente para 'Raivoso'. Quando alguém intimidar você (com sucesso ou não) você deve fazer um teste de WILL% muito difícil para não ataca-lo.",
+    "revisao": false,
+    "id": "pavio-curto",
+    "tipo": "leve"
+   },
+   {
+    "nome": "Resistência baixa",
+    "requisito": "",
+    "descricao": "Sempre que você receber um Marcador Genético ou de Vulnerabilidade, faça um teste de CONS% difícil para não ganhar um marcador adicional.",
+    "revisao": false,
+    "id": "resistencia-baixa",
+    "tipo": "leve"
+   },
+   {
+    "nome": "Sincericídio",
+    "requisito": "",
+    "descricao": "Você não sabe mentir ou blefar. Testes de Manipulação [Lábia] sofrem -20% e se você mentir sua consciência pesada lhe causará -10% em todos os testes até o próximo descanso longo.",
+    "revisao": false,
+    "id": "sincericidio",
+    "tipo": "leve"
+   },
+   {
+    "nome": "Sono Pesado",
+    "requisito": "",
+    "descricao": "Quando está dormindo, você é virtualmente um cadáver. Você não acorda com barulhos, para te acordar é necessário uma Ação Principal com toque ou caso receba dano. Caso seja forçado a acorda receba -10% nos testes por 1 hora.",
+    "revisao": false,
+    "id": "sono-pesado",
+    "tipo": "leve"
+   },
+   {
+    "nome": "Vício Enraizado",
+    "requisito": "",
+    "descricao": "Após o terminar o descanso longo e até consumir alguma droga ou substância semelhante recebe -5% nos testes.",
+    "revisao": false,
+    "id": "vicio-enraizado",
+    "tipo": "leve"
+   },
+   {
+    "nome": "Tique Nervoso",
+    "requisito": "",
+    "descricao": "Você desenvolve um tique nervoso (a sua escolha) que aparece quando você entra em combate ou quando ativamente utiliza suas perícias sociais (Manipulação ou Institucional). Esse tique lhe concede -10% nas pericias e -5% nas defesas ativas (Defesa desarmada e armada). ‘Tique nervoso’ é um dos defeitos que podem ser adquiridos durante a ‘instabilidade’ da sua sanidade – caso você adquira tique nervoso através da perda de sanidade, o defeito também aparece quando sua sanidade se torna ‘Instável’ ou pior.",
+    "revisao": false,
+    "id": "tique-nervoso",
+    "tipo": "leve"
+   }
+  ],
+  "defeitosNormais": [
+   {
+    "nome": "Aura de Presa",
+    "requisito": "",
+    "descricao": "Você exala o cheiro de uma vítima. Animais, bestas e monstros e focam os ataques em você sempre que possível. Se você estiver passando e eles estiverem com humor 'Corajoso', 'Enojado', 'Raivoso' ou 'Indisposto', ele irá ataca-lo",
+    "revisao": false,
+    "id": "aura-de-presa",
+    "tipo": "normal"
+   },
+   {
+    "nome": "Caolho / Visão Debilitada",
+    "requisito": "",
+    "descricao": "Você sofre um ônus de -15% em testes de Sentido[Visão] e -5% em ataques a distância e arremessos.",
+    "revisao": false,
+    "id": "caolho-visao-debilitada",
+    "tipo": "normal"
+   },
+   {
+    "nome": "Desastrado",
+    "requisito": "",
+    "descricao": "Você tem dificuldade em controlar o próprio corpo e fazer silêncio. Seus testes de Furtividade recebem -20%. Em caso de Falha em testes de Esportes você cai no chão (condição: 'Caído').",
+    "revisao": false,
+    "id": "desastrado",
+    "tipo": "normal"
+   },
+   {
+    "nome": "Doença crônica",
+    "requisito": "",
+    "descricao": "O seu corpo possui uma falha biológica que exige medicação. Se você não consumir um remédio (como um frasco de cura, estabilizador ou equivalente médico) a cada 3 dias você passar a receber -10% em todos os testes e -3PVs persistentes. A cada dia depois disso acumule -3PVs adicionais até o limite de deixar seu personagem com apenas 5PVs.",
+    "revisao": false,
+    "id": "doenca-cronica",
+    "tipo": "normal"
+   },
+   {
+    "nome": "Gremillin",
+    "requisito": "",
+    "descricao": "Após usar um equipamento elétrico/eletrônico, independente dos testes anteriores, jogue 1D10. Se o resultado for 5 ou menor, diminua 1 sua durabilidade.",
+    "revisao": false,
+    "id": "gremillin",
+    "tipo": "normal"
+   },
+   {
+    "nome": "Hemofobia",
+    "requisito": "",
+    "descricao": "Ver sangue em abundância engatilha seu desespero. Se uma criatura a até 4,5m receber o efeito 'Sangramento' ou 'Ferida Aberta', faça um teste de WILL% difícil ou mude seu humor para ‘Enojado’. Você deve fazer outro teste de WILL% difícil para se aproximar do sangue.",
+    "revisao": false,
+    "id": "hemofobia",
+    "tipo": "normal"
+   },
+   {
+    "nome": "Imuno suprimido",
+    "requisito": "",
+    "descricao": "Você não pode usar drogas e estimulantes – se usar receba 1D6 de dano e não receba os efeitos do item. Testes de Medicina contra você são sempre 1 passo mais difícil.",
+    "revisao": false,
+    "id": "imuno-suprimido",
+    "tipo": "normal"
+   },
+   {
+    "nome": "Insônia pós traumática",
+    "requisito": "",
+    "descricao": "Fechar os olhos é reviver o pesadelo. Durante um Descanso Longo, role 1d10. Com resultados menores que 5, o descanso é considerado apenas um Descanso Curto para você e você fica sobre o 'Sono'.",
+    "revisao": false,
+    "id": "insonia-pos-traumatica",
+    "tipo": "normal"
+   },
+   {
+    "nome": "Manco",
+    "requisito": "",
+    "descricao": "Seu deslocamento base é -3m. Você não pode usar a manobra 'disparada'.",
+    "revisao": false,
+    "id": "manco",
+    "tipo": "normal"
+   },
+   {
+    "nome": "Mãos trêmulas",
+    "requisito": "",
+    "descricao": "Você sofre -10% em testes de Engenharia, Armadilhas e Medicina. Quando falhar em um teste em que você esteja segurando um item (incluindo batalha) você precisa passar em um teste de FOR% normal para não derrubar o item.",
+    "revisao": false,
+    "id": "maos-tremulas",
+    "tipo": "normal"
+   },
+   {
+    "nome": "Mouco / Surdo",
+    "requisito": "",
+    "descricao": "Você sofre um ônus de -15% em testes de Sentido[Audição] e -10% em percepção passiva e intuição.",
+    "revisao": false,
+    "id": "mouco-surdo",
+    "tipo": "normal"
+   },
+   {
+    "nome": "Pulmões da Maré",
+    "requisito": "",
+    "descricao": "Seus pulmões foram afetados pela maré morta. Eles produzem um muco que é expelido pelo seu nariz e boca sempre que você faz algum esforço maior. Receba -1 CONS. Quando fizer esforço físico (esportes e combate físico) você expele esse muco - Após terminar a ação faça um teste de CONS% difícil para não ficar com um nível de fadiga.",
+    "revisao": false,
+    "id": "pulmoes-da-mare",
+    "tipo": "normal"
+   },
+   {
+    "nome": "Regeneração Lenta",
+    "requisito": "",
+    "descricao": "Sua regeneração natural é falha. Você recupera metade dos PVs normais (arredondado para baixo) durante Descansos Curtos e Longos. Itens e habilidades de cura (como Primeiros Socorros) recuperam 1 PV a menos em você.",
+    "revisao": false,
+    "id": "regeneracao-lenta",
+    "tipo": "normal"
+   },
+   {
+    "nome": "Sangue Fino",
+    "requisito": "",
+    "descricao": "Seus ferimentos não fecham. Quando você sofre o efeito Sangramento ou Ferida Aberta, você recebe +1 de dano extra por turno, e os testes para estancar o sangramento são um passo mais difíceis.",
+    "revisao": false,
+    "id": "sangue-fino",
+    "tipo": "normal"
+   },
+   {
+    "nome": "Voz Danificada (Rouco/Mudo)",
+    "requisito": "",
+    "descricao": "Suas cordas vocais foram rasgadas no passado. Você não pode gritar (seu som alcança no máximo 6m). Habilidades que exigem que aliados te ouçam (como ordens táticas, Liderança ou Comando Feral) recebem -20% de chance de acerto se o alvo estiver a mais de 1 passo (1,5m) de distância.",
+    "revisao": false,
+    "id": "voz-danificada-rouco-mudo",
+    "tipo": "normal"
+   },
+   {
+    "nome": "Vulnerável",
+    "requisito": "",
+    "descricao": "Escolha um tipo de dano. Você recebe o dobro do normal.",
+    "revisao": false,
+    "id": "vulneravel",
+    "tipo": "normal"
+   }
+  ],
+  "capacidades": [
+   {
+    "id": "sobrevida",
+    "atributo": "FOR",
+    "nome": "Sobrevida",
+    "descricao": "Adicione 4PVs temporários aos seus PVs. Dura até o fim da batalha.",
+    "revisao": true
+   },
+   {
+    "id": "ignorar-efeito-negativo",
+    "atributo": "CONS",
+    "nome": "Ignorar Efeito Negativo",
+    "descricao": "Quando um efeito físico prejudicial for aplicado a você, ative esta capacidade imediatamente para ignorá-lo completamente. Você pode ignorar um dos seguintes efeitos: Aturdido, Sangramento, Ferida aberta, Vertigem, Desorientado, Um Marcador de Vulnerabilidade, um Marcador Genético. Nota: Esta habilidade não pode ser usada contra doenças.",
+    "revisao": true
+   },
+   {
+    "id": "saque-rapido",
+    "atributo": "DES",
+    "nome": "Saque Rápido",
+    "descricao": "Puxar uma arma do coldre ou bainha como uma ação livre. Ou puxar a segunda arma como uma ação bônus. NORMAL: sacar uma arma é uma ação bônus (que qualquer personagem pode realizar).Caso você queira sacar uma segunda arma no mesmo turno, utilize uma ação principal.",
+    "revisao": true
+   },
+   {
+    "id": "troca-rapida",
+    "atributo": "DES",
+    "nome": "Troca Rápida",
+    "descricao": "Guardar uma arma e sacar outra no mesmo movimento como uma ação Bônus.",
+    "revisao": true
+   },
+   {
+    "id": "recarga-rapida",
+    "atributo": "DES",
+    "nome": "Recarga Rápida",
+    "descricao": "A recarga da sua arma a distância é acelerada. Para pentes e virotes (bestas) se torna uma ação bônus. Para outras arma considere a seguinte regressão de tempo, de acordo com o tempo de recarga de cada uma: Ação completa – Se torna uma ação bônus; Ação bônus – Se torna uma ação livre.",
+    "revisao": true
+   },
+   {
+    "id": "impulso-extra",
+    "atributo": "AGI",
+    "nome": "Impulso Extra",
+    "descricao": "Aumente seu Deslocamento em +1,5 metros durante 3 turnos completos.",
+    "revisao": true
+   },
+   {
+    "id": "tomar-a-iniciativa",
+    "atributo": "AGI",
+    "nome": "Tomar a Iniciativa",
+    "descricao": "adiciona 1D10 a sua iniciativa para tentar atacar antes que seu adversário a partir do segundo turno de combate. Some +1d10 à sua rolagem de Iniciativa inicial e compare com a iniciativa dos outros personagens.",
+    "revisao": true
+   },
+   {
+    "id": "jogada-esperta",
+    "atributo": "INT",
+    "nome": "Jogada Esperta",
+    "descricao": "Antes de rolar os dados para um teste (exceto testes de combate), você pode somar o seu valor puro de INT (não o bônus, o atributo inteiro) ao resultado. É o lampejo de genialidade.",
+    "revisao": true
+   },
+   {
+    "id": "persistencia",
+    "atributo": "WILL",
+    "nome": "Persistência",
+    "descricao": "Caso você tenha falhado em um teste e vá tenta-lo novamente, você pode usar ‘Persistência’ para adicionar 1D20 ou resultado do novo teste.",
+    "revisao": true
+   },
+   {
+    "id": "sexto-sentido",
+    "atributo": "PER",
+    "nome": "Sexto Sentido",
+    "descricao": "A nuca arrepia antes da lâmina descer. Quando for alvo de um Ataque Surpresa, você pode escolher somar sua PER diretamente na sua Defesa para tentar anular o golpe vindo das sombras.",
+    "revisao": true
+   },
+   {
+    "id": "encantar",
+    "atributo": "CAR",
+    "nome": "Encantar",
+    "descricao": "Você se torna o centro das atenções, seja por lábia ou presença intimidadora. Todos os alvos ao seu redor (à escolha do Mestre) recebem um ônus em testes de Sentidos (Percepção) igual ao CAR, distraídos pela sua figura.",
+    "revisao": true
+   },
+   {
+    "id": "mesclar",
+    "atributo": "CAR",
+    "nome": "Mesclar",
+    "descricao": "Você vira parte da multidão. Ao tentar se esconder ou passar despercebido em um local com outras pessoas, receba um bônus na sua rolagem de Espionagem igual ao seu CAR.",
+    "revisao": true
+   }
+  ]
+ }
+}

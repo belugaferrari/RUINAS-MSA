@@ -1,88 +1,447 @@
 {
-  "_aviso": "TODOS os valores abaixo são EXEMPLOS provisórios. Substitua pelas regras reais do MSA. O app lê este arquivo a cada acesso, então basta salvar e recarregar a página.",
-
-  "padraoMSA": { "atributos": 20, "vantagens": 5, "pericias": 15 },
-  "atributos": [
-    { "nome": "Força", "min": 1, "max": 10 },
-    { "nome": "Destreza", "min": 1, "max": 10 },
-    { "nome": "Vigor", "min": 1, "max": 10 },
-    { "nome": "Inteligência", "min": 1, "max": 10 },
-    { "nome": "Percepção", "min": 1, "max": 10 },
-    { "nome": "Carisma", "min": 1, "max": 10 },
-    { "nome": "Manipulação", "min": 1, "max": 10 }
-  ],
-  "pericias": [
-    { "nome": "Briga", "atributo": "Força", "max": 5 },
-    { "nome": "Armas brancas", "atributo": "Destreza", "max": 5 },
-    { "nome": "Armas de fogo", "atributo": "Destreza", "max": 5 },
-    { "nome": "Furtividade", "atributo": "Destreza", "max": 5 },
-    { "nome": "Atletismo", "atributo": "Vigor", "max": 5 },
-    { "nome": "Investigação", "atributo": "Inteligência", "max": 5 },
-    { "nome": "Medicina", "atributo": "Inteligência", "max": 5 },
-    { "nome": "Prontidão", "atributo": "Percepção", "max": 5 },
-    { "nome": "Persuasão", "atributo": "Carisma", "max": 5 },
-    { "nome": "Intimidação", "atributo": "Carisma", "max": 5 },
-    { "nome": "Lábia", "atributo": "Manipulação", "max": 5 }
-  ],
-  "vantagens": [
-    { "nome": "Sorte", "custo": 2, "descricao": "Exemplo: pode rolar novamente um teste por sessão." },
-    { "nome": "Contatos", "custo": 1, "descricao": "Exemplo: conhece pessoas úteis em uma ilha." },
-    { "nome": "Resistente", "custo": 2, "descricao": "Exemplo: +PV máximos." },
-    { "nome": "Recursos", "custo": 1, "descricao": "Exemplo: começa com mais dinheiro." }
-  ],
-  "classes": [
-    {
-      "nome": "Sem classe",
-      "descricao": "Personagem sem classe definida.",
-      "escolhas": []
-    },
-    {
-      "nome": "Exemplo: Ocultista",
-      "descricao": "Classe de exemplo para mostrar escolhas próprias de classe.",
-      "escolhas": [
-        { "id": "tradicao", "rotulo": "Tradição", "opcoes": ["Sangue", "Ossos", "Névoa"], "quantidade": 1 },
-        { "id": "rituais", "rotulo": "Rituais iniciais", "opcoes": ["Selo", "Visão", "Chamado", "Proteção"], "quantidade": 2 }
-      ]
-    },
-    {
-      "nome": "Exemplo: Caçador",
-      "descricao": "Classe de exemplo com companheiro.",
-      "escolhas": [
-        { "id": "companheiro", "rotulo": "Companheiro animal", "opcoes": ["Cão", "Falcão", "Lobo"], "quantidade": 1 }
-      ]
-    }
-  ],
-
-  "inicio": { "dinheiro": 100, "pvBase": 10, "sanidade": 10, "humanidade": 10, "sanidadeMax": 10, "humanidadeMax": 10 },
-  "teste": { "dado": "1d20", "descricao": "Provisório: rola o dado e soma os valores selecionados." },
-  "relacoes": ["Aliado", "Amigável", "Neutro", "Rival", "Inimigo"],
-
-  "slots": [
-    { "id": "cabeca", "nome": "Cabeça / Capacete", "capacidade": 1 },
-    { "id": "corpo", "nome": "Armadura / Corpo", "capacidade": 1 },
-    { "id": "vestimenta", "nome": "Vestimenta", "capacidade": 1 },
-    { "id": "maos", "nome": "Mãos", "capacidade": 2 },
-    { "id": "joia", "nome": "Joias", "capacidade": 4 },
-    { "id": "costas", "nome": "Costas / Mochila", "capacidade": 1 }
-  ],
-  "itens": [
-    { "id": "faca", "nome": "Faca", "tipo": "arma", "slot": "maos", "ocupa": 1, "preco": 10, "venda": 5, "durabilidade": 20, "peso": 0.5, "dano": "1d4", "bonus": {} },
-    { "id": "machado", "nome": "Machado de duas mãos", "tipo": "arma", "slot": "maos", "ocupa": 2, "preco": 40, "venda": 20, "durabilidade": 30, "peso": 3, "dano": "1d10", "bonus": {} },
-    { "id": "revolver", "nome": "Revólver", "tipo": "arma", "slot": "maos", "ocupa": 1, "preco": 80, "venda": 40, "durabilidade": 25, "peso": 1, "dano": "2d6", "bonus": {} },
-    { "id": "escudo", "nome": "Escudo de madeira", "tipo": "defesa", "slot": "maos", "ocupa": 1, "preco": 25, "venda": 12, "durabilidade": 15, "peso": 2, "defesa": 2, "bonus": {} },
-    { "id": "capacete", "nome": "Capacete de couro", "tipo": "defesa", "slot": "cabeca", "ocupa": 1, "preco": 20, "venda": 10, "durabilidade": 15, "peso": 1, "defesa": 1, "bonus": {} },
-    { "id": "gibao", "nome": "Gibão acolchoado", "tipo": "defesa", "slot": "corpo", "ocupa": 1, "preco": 35, "venda": 17, "durabilidade": 20, "peso": 4, "defesa": 2, "bonus": { "Destreza": -1 } },
-    { "id": "capa", "nome": "Capa de viagem", "tipo": "vestimenta", "slot": "vestimenta", "ocupa": 1, "preco": 8, "venda": 4, "durabilidade": 10, "peso": 1, "bonus": { "Furtividade": 1 } },
-    { "id": "anel", "nome": "Anel de prata", "tipo": "joia", "slot": "joia", "ocupa": 1, "preco": 50, "venda": 30, "durabilidade": 50, "peso": 0, "bonus": { "Carisma": 1 } },
-    { "id": "armadilha_urso", "nome": "Armadilha de urso", "tipo": "armadilha", "slot": null, "ocupa": 0, "preco": 30, "venda": 15, "durabilidade": 5, "peso": 5, "dano": "2d6", "bonus": {} },
-    { "id": "corda", "nome": "Corda (15 m)", "tipo": "geral", "slot": null, "ocupa": 0, "preco": 5, "venda": 2, "durabilidade": 10, "peso": 2, "bonus": {} },
-    { "id": "mochila", "nome": "Mochila", "tipo": "geral", "slot": "costas", "ocupa": 1, "preco": 10, "venda": 5, "durabilidade": 15, "peso": 1, "bonus": {} }
-  ],
-
-  "monstros": [
-    { "nome": "Afogado", "dificuldade": 2, "pv": 12, "defesa": 1, "ataque": "Garras 1d6", "descricao": "Exemplo: cadáver que se arrasta das marés." },
-    { "nome": "Cão das ruínas", "dificuldade": 1, "pv": 8, "defesa": 1, "ataque": "Mordida 1d4", "descricao": "Exemplo: cão selvagem e magro." },
-    { "nome": "Guardião de pedra", "dificuldade": 5, "pv": 30, "defesa": 4, "ataque": "Punho 2d8", "descricao": "Exemplo: estátua animada." },
-    { "nome": "Bruxa da névoa", "dificuldade": 4, "pv": 18, "defesa": 2, "ataque": "Maldição 2d6", "descricao": "Exemplo: conjuradora reclusa." }
+ "_aviso": "Base tirada do Livro do Jogador MSS (rev. 14/10/2026). O MSA pode mudar regras: tudo marcado com 'revisao' ainda será conferido. Perícias, profissões, classes e vantagens ficam em conteudo/msa/*.json (gerados por ferramentas/livro).",
+ "moeda": "créditos",
+ "raca": {
+  "nome": "Humano",
+  "tamanho": "Médio (1,6m a 2,1m)",
+  "deslocamento": "9m (6 quadrados) por turno",
+  "modificadores": {
+   "CONS": 1,
+   "INT": 1,
+   "WILL": 1,
+   "CAR": 1
+  },
+  "habilidadeUnica": {
+   "nome": "Sacrifício",
+   "descricao": "Você age abandonando a autopreservação e o instinto. O humano recebe um sucesso automático em um ataque físico. Porém, ao final do turno ele receberá 1D6 de dano puro adicional.",
+   "revisao": true
+  }
+ },
+ "atributos": [
+  {
+   "sigla": "FOR",
+   "nome": "Força",
+   "descricao": "Potência muscular. Dano corpo-a-corpo, PVs, carga."
+  },
+  {
+   "sigla": "CONS",
+   "nome": "Constituição",
+   "descricao": "Saúde, imunidade e resistência física. PVs, venenos e doenças, cansaço."
+  },
+  {
+   "sigla": "AGI",
+   "nome": "Agilidade",
+   "descricao": "Coordenação motora grossa, equilíbrio e iniciativa."
+  },
+  {
+   "sigla": "DES",
+   "nome": "Destreza",
+   "descricao": "Habilidades manuais e de combate."
+  },
+  {
+   "sigla": "INT",
+   "nome": "Inteligência",
+   "descricao": "Raciocínio lógico e memória. Pontos de perícia e línguas."
+  },
+  {
+   "sigla": "PER",
+   "nome": "Percepção",
+   "descricao": "Como você recebe e interpreta o mundo ao redor."
+  },
+  {
+   "sigla": "CAR",
+   "nome": "Carisma",
+   "descricao": "Força de personalidade e comunicação empática."
+  },
+  {
+   "sigla": "WILL",
+   "nome": "Força de Vontade",
+   "descricao": "Resiliência mental: medo, controle mental, foco."
+  }
+ ],
+ "regras": {
+  "pontosAtributos": 86,
+  "atributoMin": 4,
+  "atributoInicial": 10,
+  "atributoMaxNivel1": 14,
+  "atributoMaxAbsoluto": 22,
+  "pontosVantagem": 3,
+  "defeitoNormalDaPonto": 1,
+  "maxPontosPorDefeitos": 1,
+  "defeitosMinimos": 1,
+  "creditosIniciais": 300,
+  "nivelClasse": 3,
+  "nivelEspecializacao": 5,
+  "pericias": {
+   "base": 70,
+   "porInt": 5,
+   "porNivel": 20,
+   "custoBase": 3,
+   "custoBaseCombate": 6,
+   "custoSub": 1,
+   "limiteBase": 5,
+   "limitePorNivel": 5
+  },
+  "formulas": {
+   "atributoPercentual": "4 × atributo",
+   "bonusPericial": "+2 por ponto de atributo a partir do 5º  →  2 × (atributo − 5)",
+   "modificador": "0 no valor 10, +1 a cada 2 pontos  →  ⌊(atributo − 10) ÷ 2⌋ (+1 racial em CONS, INT, WILL, CAR)",
+   "pv": "5 + 5 × nível + ⌊(FOR + CONS) ÷ 2⌋   (o Passo 6 do livro diz FOR + CONS + 1 — conferir)",
+   "sanidade": "INT + WILL + 10",
+   "iniciativa": "AGI + 1d10",
+   "pontosPericia": "70 + 5 × INT + 20 × nível",
+   "limitePericia": "5 + 5 × nível (gastos na base + na subperícia)"
+  },
+  "revisao": [
+   "pv",
+   "capacidades",
+   "humanidade"
   ]
+ },
+ "teste": {
+  "dado": "1d100",
+  "dadoSuporte": "1d10",
+  "dificuldades": [
+   {
+    "nome": "Fácil",
+    "nd": 50
+   },
+   {
+    "nome": "Normal",
+    "nd": 70
+   },
+   {
+    "nome": "Difícil",
+    "nd": 100
+   },
+   {
+    "nome": "Muito difícil",
+    "nd": 100,
+    "metade": true
+   }
+  ],
+  "criticoAcerto": 96,
+  "criticoErro": 5,
+  "descricao": "AÇÃO% + 1d100 ≥ ND. Acerto crítico: 96–100 no d100. Erro crítico: 1–5. O 1d10 é o Dado de Suporte (DS)."
+ },
+ "sanidade": {
+  "estados": [
+   {
+    "abaixoDe": 24,
+    "nome": "Abalado"
+   },
+   {
+    "abaixoDe": 16,
+    "nome": "Instável"
+   },
+   {
+    "abaixoDe": 8,
+    "nome": "Surtado"
+   },
+   {
+    "abaixoDe": 1,
+    "nome": "Insano"
+   }
+  ]
+ },
+ "humanidade": {
+  "revisao": true,
+  "descricao": "Regras ainda em desenvolvimento no livro."
+ },
+ "origens": [
+  {
+   "nome": "Cria das cidades",
+   "descricao": "Cresceu num Refúgio. Entende de hierarquia, negociação, tecnologia e manipulações humanas."
+  },
+  {
+   "nome": "Nômade das Águas",
+   "descricao": "Sua casa era um barco ou plataforma flutuante. Navegação, pesca, armas brancas e armadilhas para peixes."
+  },
+  {
+   "nome": "Sobrevivente dos Ermos",
+   "descricao": "Viveu fora dos muros. Conhece tocas de monstros, frutas comestíveis, como extrair comida, água e sucata."
+  }
+ ],
+ "motivacoes": [
+  "A Dívida",
+  "O Mistério",
+  "A Necessidade",
+  "Fama e riquezas",
+  "Vingança"
+ ],
+ "tiposDano": [
+  "Corte",
+  "Perfuração",
+  "Concussão",
+  "Elétrico",
+  "Calor",
+  "Energia (Mágico)",
+  "Radiação",
+  "Vibração",
+  "Onda de Choque",
+  "Ácido",
+  "Venenoso",
+  "Impacto",
+  "Físico",
+  "A distância",
+  "Elemental",
+  "Químico",
+  "Psíquico"
+ ],
+ "estados": [
+  "Cansado (-10%)",
+  "Exausto (-20%)",
+  "Desmaiado",
+  "Confuso",
+  "Humorado – mal estar",
+  "Humorado – bem estar",
+  "Satisfeito",
+  "Alerta",
+  "Drogado",
+  "Abstinência",
+  "Dor",
+  "Sangramento",
+  "Ferida aberta",
+  "Queimadura",
+  "Envenenado",
+  "Enraizado",
+  "Paralisado",
+  "Aturdido",
+  "Desorientado",
+  "Vertigem"
+ ],
+ "finalidadesItens": [
+  "Alimentação",
+  "Armamento",
+  "Proteção",
+  "Boticário",
+  "Diversas",
+  "Transporte",
+  "Comunicação",
+  "Ferramental",
+  "Vestuário",
+  "Matéria-prima",
+  "Munição"
+ ],
+ "relacoes": [
+  "Aliado",
+  "Amigável",
+  "Neutro",
+  "Rival",
+  "Inimigo"
+ ],
+ "slots": [
+  {
+   "id": "cabeca",
+   "nome": "Cabeça / Capacete",
+   "capacidade": 1
+  },
+  {
+   "id": "corpo",
+   "nome": "Armadura / Corpo",
+   "capacidade": 1
+  },
+  {
+   "id": "vestimenta",
+   "nome": "Vestimenta",
+   "capacidade": 1
+  },
+  {
+   "id": "maos",
+   "nome": "Mãos",
+   "capacidade": 2
+  },
+  {
+   "id": "joia",
+   "nome": "Joias",
+   "capacidade": 4
+  },
+  {
+   "id": "costas",
+   "nome": "Costas / Mochila",
+   "capacidade": 1
+  }
+ ],
+ "_avisoItens": "Itens e monstros abaixo ainda são EXEMPLOS (a lista de itens do livro está em revisão).",
+ "itens": [
+  {
+   "id": "faca",
+   "nome": "Faca",
+   "tipo": "arma",
+   "slot": "maos",
+   "ocupa": 1,
+   "preco": 30,
+   "venda": 15,
+   "durabilidade": 20,
+   "peso": 0.5,
+   "dano": "1d4",
+   "bonus": {}
+  },
+  {
+   "id": "machado",
+   "nome": "Machado de duas mãos",
+   "tipo": "arma",
+   "slot": "maos",
+   "ocupa": 2,
+   "preco": 120,
+   "venda": 60,
+   "durabilidade": 30,
+   "peso": 3,
+   "dano": "1d10",
+   "bonus": {}
+  },
+  {
+   "id": "revolver",
+   "nome": "Revólver",
+   "tipo": "arma",
+   "slot": "maos",
+   "ocupa": 1,
+   "preco": 240,
+   "venda": 120,
+   "durabilidade": 25,
+   "peso": 1,
+   "dano": "2d6",
+   "bonus": {}
+  },
+  {
+   "id": "escudo",
+   "nome": "Escudo de madeira",
+   "tipo": "defesa",
+   "slot": "maos",
+   "ocupa": 1,
+   "preco": 75,
+   "venda": 37,
+   "durabilidade": 15,
+   "peso": 2,
+   "defesa": 2,
+   "bonus": {}
+  },
+  {
+   "id": "capacete",
+   "nome": "Capacete de couro",
+   "tipo": "defesa",
+   "slot": "cabeca",
+   "ocupa": 1,
+   "preco": 60,
+   "venda": 30,
+   "durabilidade": 15,
+   "peso": 1,
+   "defesa": 1,
+   "bonus": {}
+  },
+  {
+   "id": "gibao",
+   "nome": "Gibão acolchoado",
+   "tipo": "defesa",
+   "slot": "corpo",
+   "ocupa": 1,
+   "preco": 105,
+   "venda": 52,
+   "durabilidade": 20,
+   "peso": 4,
+   "defesa": 2,
+   "bonus": {
+    "DES": -1
+   }
+  },
+  {
+   "id": "capa",
+   "nome": "Capa de viagem",
+   "tipo": "vestimenta",
+   "slot": "vestimenta",
+   "ocupa": 1,
+   "preco": 24,
+   "venda": 12,
+   "durabilidade": 10,
+   "peso": 1,
+   "bonus": {
+    "espionagem.furtividade": 5
+   }
+  },
+  {
+   "id": "anel",
+   "nome": "Anel de prata",
+   "tipo": "joia",
+   "slot": "joia",
+   "ocupa": 1,
+   "preco": 150,
+   "venda": 75,
+   "durabilidade": 50,
+   "peso": 0,
+   "bonus": {
+    "CAR": 1
+   }
+  },
+  {
+   "id": "armadilha_urso",
+   "nome": "Armadilha de urso",
+   "tipo": "armadilha",
+   "slot": null,
+   "ocupa": 0,
+   "preco": 90,
+   "venda": 45,
+   "durabilidade": 5,
+   "peso": 5,
+   "dano": "2d6",
+   "bonus": {}
+  },
+  {
+   "id": "corda",
+   "nome": "Corda (15 m)",
+   "tipo": "geral",
+   "slot": null,
+   "ocupa": 0,
+   "preco": 15,
+   "venda": 7,
+   "durabilidade": 10,
+   "peso": 2,
+   "bonus": {}
+  },
+  {
+   "id": "mochila",
+   "nome": "Mochila",
+   "tipo": "geral",
+   "slot": "costas",
+   "ocupa": 1,
+   "preco": 30,
+   "venda": 15,
+   "durabilidade": 15,
+   "peso": 1,
+   "bonus": {}
+  }
+ ],
+ "monstros": [
+  {
+   "nome": "Afogado",
+   "dificuldade": 2,
+   "pv": 12,
+   "defesa": 1,
+   "ataque": "Garras 1d6",
+   "descricao": "Exemplo: cadáver que se arrasta das marés."
+  },
+  {
+   "nome": "Cão das ruínas",
+   "dificuldade": 1,
+   "pv": 8,
+   "defesa": 1,
+   "ataque": "Mordida 1d4",
+   "descricao": "Exemplo: cão selvagem e magro."
+  },
+  {
+   "nome": "Guardião de pedra",
+   "dificuldade": 5,
+   "pv": 30,
+   "defesa": 4,
+   "ataque": "Punho 2d8",
+   "descricao": "Exemplo: estátua animada."
+  },
+  {
+   "nome": "Bruxa da névoa",
+   "dificuldade": 4,
+   "pv": 18,
+   "defesa": 2,
+   "ataque": "Maldição 2d6",
+   "descricao": "Exemplo: conjuradora reclusa."
+  }
+ ]
 }

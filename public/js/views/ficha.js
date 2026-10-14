@@ -1,37 +1,53 @@
-import { h, campo, botao, selecao, aviso, confirmar, pedirTexto, formatarData, vazio, icone, titulo, tabela } from '../ui.js';
+import { h, campo, botao, selecao, aviso, confirmar, pedirTexto, formatarData, vazio, icone, titulo, tabela, seloRevisao } from '../ui.js';
 import { estado, render } from '../estado.js';
 import { acao, enviarArquivo } from '../api.js';
-import { derivados, slotsOcupados } from '/shared/regras.js';
+import { derivados, slotsOcupados, ganhosDeClasse, pontosGastos, pontosPericiaTotal } from '/shared/regras.js';
+import { painelPericias } from './pericias.js';
 
 export const ICONE_TIPO = { arma: 'sword', defesa: 'shield', vestimenta: 'shirt', joia: 'gem', armadilha: 'crosshair', geral: 'backpack' };
 
 const atualizar = (p, patch) => acao('personagem.atualizar', { id: p.id, patch });
 
-// Valores marcados para o próximo teste, por personagem (local a este dispositivo).
-const selecionados = new Map();
-const marcados = id => {
-  if (!selecionados.has(id)) selecionados.set(id, new Set());
-  return selecionados.get(id);
-};
+export const nomeProfissao = p => estado.sistema.profissoes.find(x => x.id === p.profissao)?.nome || '';
+export function nomeClasse(p) {
+  const c = estado.sistema.classes.find(x => x.id === p.classe);
+  if (!c) return p.nivel >= (estado.sistema.regras?.nivelClasse ?? 3) ? 'Classe não escolhida' : 'Sem classe (nível < 3)';
+  const e = c.especializacoes.find(x => x.id === p.especializacao);
+  return e ? `${c.nome} · ${e.nome}` : c.nome;
+}
 
 export function fichaView(p, { mestre = false } = {}) {
   const sis = estado.sistema;
   const d = derivados(p, sis);
+  const rolar = (acaoRef, nome) => rolarTeste(p, acaoRef, nome);
   return h('div', { class: 'ficha' },
     cabecalho(p, mestre),
     h('div', { class: 'ficha-grade' },
       h('section', { class: 'bloco' }, titulo('Identidade', 'user'), identidade(p)),
       h('section', { class: 'bloco' }, titulo('Estado', 'heart-pulse'), trilhas(p, mestre)),
-      h('section', { class: 'bloco' }, titulo('Atributos', 'zap'), valores(p, 'atributos', sis.atributos, d.atributos, d.bonus, mestre)),
-      h('section', { class: 'bloco' }, titulo('Perícias', 'target'), valores(p, 'pericias', sis.pericias, d.pericias, d.bonus, mestre)),
-      h('section', { class: 'bloco largo' }, titulo('Teste', 'dices'), painelTeste(p)),
-      h('section', { class: 'bloco' }, titulo('Classe e vantagens', 'shield'), classeVantagens(p, mestre)),
-      h('section', { class: 'bloco largo' }, titulo(`Equipamento · Defesa ${d.defesa} · Carga ${d.carga.toFixed(1)}`, 'backpack'), equipamento(p, mestre)),
+      h('section', { class: 'bloco duplo' }, titulo('Atributos', 'zap'), atributosView(p, d, mestre, rolar)),
+      h('section', { class: 'bloco largo' }, titulo('Teste (D-MIL)', 'dices'), painelTeste(p, d)),
+      h('section', { class: 'bloco largo' }, titulo(`Perícias · limite ${d.limitePericia} por perícia`, 'target'),
+        h('p', { class: 'dica' }, `Pontos de perícia: ${pontosGastos(p, sis).pericias} gastos de ${pontosPericiaTotal(p, sis)}. Clique no dado para testar com a dificuldade escolhida acima.`),
+        painelPericias(p, { d, rolar, chave: `ficha:${p.id}`, editar: mestre ? editorMestre(p) : null })),
+      h('section', { class: 'bloco' }, titulo('Profissão e classe', 'shield'), profissaoClasse(p, mestre)),
+      h('section', { class: 'bloco' }, titulo('Vantagens, defeitos e capacidades', 'sparkles'), vantagensView(p, d, mestre)),
+      h('section', { class: 'bloco largo' }, titulo(`Equipamento · Defesa ${d.defesa} · Carga ${d.carga.toFixed(1)} kg`, 'backpack'), equipamento(p, mestre)),
       h('section', { class: 'bloco largo' }, titulo('Anotações', 'notebook-pen'),
         campo(`${p.id}:anotacoes`, p.anotacoes, v => atualizar(p, { anotacoes: v }), { multilinha: true, rows: 5, placeholder: 'Suas anotações…' })),
       h('section', { class: 'bloco largo' }, titulo('Background', 'scroll'),
         campo(`${p.id}:background`, p.background, v => atualizar(p, { background: v }), { multilinha: true, rows: 6 })),
       mestre ? h('section', { class: 'bloco largo' }, titulo('Controle do mestre', 'crown'), controleMestre(p)) : null));
+}
+
+// O mestre ajusta pontos de perícia direto na ficha (sem travar nos limites, só avisando).
+function editorMestre(p) {
+  return {
+    limite: 99,
+    maxRestante: () => 99,
+    base: (id, v) => atualizar(p, { pericias: { ...p.pericias, [id]: v } }),
+    sub: (id, v) => atualizar(p, { subpericias: { ...p.subpericias, [id]: v } }),
+  };
 }
 
 function cabecalho(p, mestre) {
@@ -57,16 +73,20 @@ function cabecalho(p, mestre) {
     h('div', { class: 'ficha-titulo' },
       campo(`${p.id}:nome`, p.nome, v => atualizar(p, { nome: v }), { class: 'nome-grande' }),
       h('p', { class: 'meta' },
-        `${p.tipo === 'npc' ? 'NPC' : 'Personagem-jogador'} · ${p.classe || 'Sem classe'} · Nível ${p.nivel} · XP ${p.xp || 0} · Dinheiro ${p.dinheiro ?? 0}`,
+        `${p.tipo === 'npc' ? 'NPC' : 'Personagem-jogador'} · ${nomeProfissao(p) || 'Sem profissão'} · ${nomeClasse(p)} · Nível ${p.nivel} · XP ${p.xp || 0} · ${p.dinheiro ?? 0} ${estado.sistema.moeda || 'créditos'}`,
         p.tipo === 'pj' ? ` · Jogador: ${p.dono || 'livre'}` : null)),
     mestre ? h('label', { class: 'mini' }, 'Nível',
       campo(`${p.id}:nivel`, p.nivel, v => atualizar(p, { nivel: v }), { tipo: 'number', min: 1, max: 20 })) : null);
 }
 
 function identidade(p) {
+  const sis = estado.sistema;
   const linha = (rot, k) => h('label', {}, rot, campo(`${p.id}:${k}`, p[k], v => atualizar(p, { [k]: v })));
   return h('div', { class: 'form' },
     h('div', { class: 'grade3' }, linha('Idade', 'idade'), linha('Peso', 'peso'), linha('Tamanho', 'altura')),
+    h('div', { class: 'grade2' },
+      h('label', {}, 'Origem', selecao([{ valor: '', rotulo: '—' }, ...sis.origens.map(o => o.nome)], p.origem, v => atualizar(p, { origem: v }))),
+      h('label', {}, 'Motivação', selecao([{ valor: '', rotulo: '—' }, ...sis.motivacoes], p.motivacao, v => atualizar(p, { motivacao: v })))),
     linha('Instinto', 'instinto'),
     h('label', {}, 'Características', campo(`${p.id}:caracteristicas`, p.caracteristicas, v => atualizar(p, { caracteristicas: v }), { multilinha: true, rows: 2 })));
 }
@@ -91,13 +111,14 @@ function trilha(p, chave, rotulo) {
 
 function trilhas(p, mestre) {
   const novoMarcador = async () => {
-    const t = await pedirTexto('Novo marcador', 'Descrição (ex.: Envenenado, Assustado)');
+    const t = await pedirTexto('Novo marcador', `Ex.: ${estado.sistema.estados.slice(0, 4).join(', ')}`);
     if (t) await atualizar(p, { marcadores: [...(p.marcadores || []), t] });
   };
   return h('div', {},
     trilha(p, 'pv', 'PV'),
     trilha(p, 'sanidade', 'Sanidade'),
-    trilha(p, 'humanidade', 'Humanidade'),
+    h('p', { class: 'meta' }, icone('brain'), ` Estado mental: ${derivados(p, estado.sistema).estadoSanidade}`),
+    trilha(p, 'humanidade', 'Humanidade'), seloRevisao(true, 'regras de Humanidade em desenvolvimento'),
     mestre ? h('div', { class: 'grade3 mini' },
       ...['pv', 'sanidade', 'humanidade'].map(k => h('label', {}, `${k === 'pv' ? 'PV' : k[0].toUpperCase() + k.slice(1)} máx.`,
         campo(`${p.id}:${k}:max`, p[k]?.max, v => atualizar(p, { [k]: { ...p[k], max: v } }), { tipo: 'number', min: 0 })))) : null,
@@ -108,73 +129,131 @@ function trilhas(p, mestre) {
       botao('Marcador', novoMarcador, { class: 'pequeno', icone: 'tag' })));
 }
 
-function valores(p, chave, lista, finais, bonus, mestre) {
-  const sel = marcados(p.id);
-  return h('div', { class: 'valores' }, lista.map(item => {
-    const base = p[chave]?.[item.nome] ?? 0;
-    const b = bonus[item.nome] || 0;
-    const id = `${chave}:${item.nome}`;
-    return h('div', { class: `valor-linha ${sel.has(id) ? 'marcado' : ''}` },
-      h('label', { class: 'linha', title: 'Marcar para o teste' },
-        h('input', { type: 'checkbox', checked: sel.has(id), onchange: e => { e.target.checked ? sel.add(id) : sel.delete(id); render(); } }),
-        item.nome, item.atributo ? h('small', {}, ` (${item.atributo})`) : null),
-      mestre
-        ? campo(`${p.id}:${id}`, base, v => atualizar(p, { [chave]: { ...p[chave], [item.nome]: v } }), { tipo: 'number', class: 'num' })
-        : h('span', { class: 'num' }, base),
-      b ? h('span', { class: `bonus ${b > 0 ? 'ok' : 'perigo'}`, title: 'Bônus/ônus de itens equipados' }, b > 0 ? `+${b}` : b) : h('span', { class: 'bonus' }),
-      h('strong', { class: 'final' }, finais[item.nome]));
-  }));
+function atributosView(p, d, mestre, rolar) {
+  const sis = estado.sistema;
+  return h('div', {},
+    tabela(['Atributo', 'Base', '%', 'Bônus per.', 'MOD', ''], sis.atributos.map(a => {
+      const item = d.bonus[a.sigla] || 0;
+      return [
+        h('span', { title: a.descricao }, h('strong', {}, a.sigla), ' ', h('small', {}, a.nome)),
+        [mestre
+          ? campo(`${p.id}:atr:${a.sigla}`, p.atributos?.[a.sigla] ?? 0, v => atualizar(p, { atributos: { ...p.atributos, [a.sigla]: v } }), { tipo: 'number', class: 'num', 'aria-label': `${a.nome} base` })
+          : (p.atributos?.[a.sigla] ?? 0),
+        item ? h('span', { class: `bonus ${item > 0 ? 'ok' : 'perigo'}`, title: 'Itens equipados' }, ` ${item > 0 ? '+' : ''}${item}`) : null],
+        h('strong', { class: 'valor-final' }, `${d.percentual[a.sigla]}%`),
+        `+${d.bonusPericial[a.sigla]}`,
+        h('strong', {}, d.mod[a.sigla] >= 0 ? `+${d.mod[a.sigla]}` : d.mod[a.sigla]),
+        botao('', () => rolar(`atr:${a.sigla}`, a.nome), { class: 'pequeno', icone: 'dices', title: `Testar ${a.nome}` }),
+      ];
+    }), 'tabela-atributos compacta'),
+    h('div', { class: 'icones-meta' },
+      h('span', { title: 'AGI + 1d10' }, icone('zap'), `Iniciativa: AGI ${d.iniciativa} + 1d10`),
+      h('span', {}, icone('book'), `Línguas extras: ${d.linguasExtras}`),
+      h('span', {}, icone('trending-up'), `Máx. de atributo no nível: ${d.atributoMax}`)),
+    botao('Rolar iniciativa', async () => {
+      const r = await acao('rolar', { id: p.id, tipo: 'iniciativa', sala: estado.sel.ondeRolar || null });
+      aviso(`Iniciativa de ${p.nome}: ${r.total}`);
+    }, { class: 'pequeno', icone: 'zap' }));
 }
 
-function painelTeste(p) {
+const DIFICULDADES = () => [...estado.sistema.teste.dificuldades.map((x, i) => ({ valor: String(i), rotulo: `${x.nome} (ND ${x.nd}${x.metade ? ', metade' : ''})` })),
+  { valor: 'livre', rotulo: 'ND livre…' }, { valor: 'sem', rotulo: 'Sem ND (só ver o total)' }];
+
+// Configuração do próximo teste (local a este aparelho).
+const cfgTeste = () => (estado.sel.teste ||= { dif: '1', ndLivre: 70, mod: 0 });
+
+async function rolarTeste(p, acaoRef, nome) {
+  const cfg = cfgTeste();
+  const dif = estado.sistema.teste.dificuldades[Number(cfg.dif)];
+  const nd = cfg.dif === 'sem' ? null : cfg.dif === 'livre' ? cfg.ndLivre : dif?.nd;
+  const r = await acao('rolar', { id: p.id, acaoRef, mod: cfg.mod, nd, metade: !!dif?.metade, sala: estado.sel.ondeRolar || null });
+  aviso(`${nome}: ${r.total}${r.nd != null ? (r.sucesso ? ' — SUCESSO' : ' — FALHA') : ''}${r.critico ? ` (crítico de ${r.critico})` : ''} · DS ${r.ds}`, r.sucesso === false ? 'erro' : 'ok');
+}
+
+function painelTeste(p, d) {
   const sis = estado.sistema;
-  const d = derivados(p, sis);
-  const sel = [...marcados(p.id)];
-  const componentes = sel.map(id => {
-    const [chave, nome] = id.split(/:(.*)/s);
-    return { nome, valor: (chave === 'atributos' ? d.atributos : d.pericias)[nome] ?? 0 };
-  });
-  const rotulo = h('input', { placeholder: 'Nome do teste (opcional)' });
-  const dado = h('input', { value: sis.teste.dado, class: 'curto', title: 'Dado (ex.: 1d20, 2d6+1)' });
+  const cfg = cfgTeste();
   const ondeOpcoes = [{ valor: '', rotulo: 'Rolagens gerais' }, { valor: 'social', rotulo: 'Sala Social' }, { valor: 'batalha', rotulo: 'Campo de Batalha' }];
-  const onde = selecao(ondeOpcoes, estado.sel.ondeRolar || '', v => { estado.sel.ondeRolar = v; });
+  const opcoesAcao = [{ valor: '', rotulo: 'Escolha o que testar…' },
+    ...sis.atributos.map(a => ({ valor: `atr:${a.sigla}`, rotulo: `${a.nome}% (${d.percentual[a.sigla]})` })),
+    ...sis.pericias.flatMap(x => [{ valor: `per:${x.id}`, rotulo: `${x.nome} (${d.pericias[x.id]})` },
+      ...x.subpericias.map(s => ({ valor: `sub:${s.id}`, rotulo: `  ${x.nome} › ${s.nome} (${d.subpericias[s.id]})` }))])];
   const ultimo = (estado.campanha.log || []).filter(e => e.autor === p.nome).at(-1);
   return h('div', {},
-    h('p', { class: 'dica' }, sel.length ? `Somando: ${componentes.map(c => `${c.nome} (${c.valor})`).join(' + ')}` : 'Marque atributos e perícias acima para somar no teste.'),
-    h('div', { class: 'barra' },
-      rotulo, dado, onde,
-      botao('Rolar', async () => {
-        const r = await acao('rolar', { id: p.id, sala: onde.value || null, rotulo: rotulo.value || componentes.map(c => c.nome).join(' + ') || 'Teste', componentes, dado: dado.value });
-        aviso(`${r.rotulo}: ${r.total} (dados ${r.dados.join(', ')})`);
-        marcados(p.id).clear();
-        render();
-      }, { class: 'primario', icone: 'dices' }),
-      sel.length ? botao('Limpar', () => { marcados(p.id).clear(); render(); }, { icone: 'x' }) : null),
     h('p', { class: 'dica' }, sis.teste.descricao),
-    ultimo ? h('p', {}, 'Último teste geral: ', linhaRolagem(ultimo)) : null);
+    h('div', { class: 'barra' },
+      selecao(opcoesAcao, cfg.acao || '', v => { cfg.acao = v; }, { 'aria-label': 'O que testar' }),
+      selecao(DIFICULDADES(), cfg.dif, v => { cfg.dif = v; render(); }, { 'aria-label': 'Dificuldade' }),
+      cfg.dif === 'livre' ? h('input', { type: 'number', class: 'curto', value: cfg.ndLivre, 'aria-label': 'ND', onchange: e => { cfg.ndLivre = Number(e.target.value) || 0; } }) : null,
+      h('label', { class: 'linha' }, 'Mod.', h('input', { type: 'number', class: 'curto', value: cfg.mod, step: 5, 'aria-label': 'Modificador', onchange: e => { cfg.mod = Number(e.target.value) || 0; } })),
+      selecao(ondeOpcoes, estado.sel.ondeRolar || '', v => { estado.sel.ondeRolar = v; }, { 'aria-label': 'Onde registrar' }),
+      botao('Rolar', async () => {
+        if (!cfg.acao) throw new Error('Escolha o que testar.');
+        const op = opcoesAcao.find(o => o.valor === cfg.acao);
+        await rolarTeste(p, cfg.acao, op.rotulo.replace(/\s*\(.*$/, '').trim());
+      }, { class: 'primario', icone: 'dices' })),
+    ultimo ? h('p', {}, 'Último teste: ', linhaRolagem(ultimo)) : null);
 }
 
 export function linhaRolagem(e) {
   if (e.texto) return h('span', {}, h('strong', {}, e.rotulo), ': ', e.texto);
-  const partes = [`${e.dado}: [${e.dados.join(', ')}]${e.mod ? (e.mod > 0 ? ` +${e.mod}` : ` ${e.mod}`) : ''}`, ...e.componentes.map(c => `${c.nome} ${c.valor}`)];
+  if (e.tipo === 'dmil') {
+    const res = e.nd == null ? '' : e.sucesso ? 'sucesso' : 'falha';
+    return h('span', { class: `rolagem ${res}` },
+      h('strong', {}, `${e.autor} — ${e.rotulo}: `),
+      h('span', { class: 'total' }, e.total),
+      e.nd != null ? h('span', { class: `selo ${e.sucesso ? 'ok' : 'perigo'}` }, icone(e.sucesso ? 'check' : 'x'), `${res} (ND ${e.nd})`) : null,
+      e.critico ? h('span', { class: 'selo cheio' }, `crítico de ${e.critico}`) : null,
+      h('small', {}, ` (d100 ${e.dp} + ação ${e.acao}${e.metade ? ' [metade]' : ''}${e.mod ? ` ${e.mod > 0 ? '+' : ''}${e.mod} já incluso` : ''} · DS ${e.ds})`),
+      e.secreta ? h('span', { class: 'selo' }, 'secreta') : null);
+  }
+  const partes = [`${e.dado}: [${e.dados.join(', ')}]${e.mod ? (e.mod > 0 ? ` +${e.mod}` : ` ${e.mod}`) : ''}`, ...(e.componentes || []).map(c => `${c.nome} ${c.valor}`)];
   return h('span', {}, h('strong', {}, `${e.autor} — ${e.rotulo}: `), h('span', { class: 'total' }, e.total), h('small', {}, ` (${partes.join(' + ')})`), e.secreta ? h('span', { class: 'selo' }, 'secreta') : null);
 }
 
-function classeVantagens(p, mestre) {
+function profissaoClasse(p, mestre) {
   const sis = estado.sistema;
-  const classe = sis.classes.find(c => c.nome === p.classe);
+  const prof = sis.profissoes.find(x => x.id === p.profissao);
+  const classe = sis.classes.find(c => c.id === p.classe);
+  const ganhos = ganhosDeClasse(p, sis);
   return h('div', {},
-    mestre
-      ? h('label', {}, 'Classe', selecao(sis.classes.map(c => c.nome), p.classe, v => atualizar(p, { classe: v })))
-      : h('p', {}, h('strong', {}, 'Classe: '), p.classe || 'Sem classe'),
-    classe?.escolhas?.length ? h('ul', {}, classe.escolhas.map(e => h('li', {}, h('strong', {}, `${e.rotulo}: `), (p.escolhasClasse?.[e.id] || []).join(', ') || '—'))) : null,
-    h('p', {}, h('strong', {}, 'Vantagens: ')),
-    (p.vantagens || []).length
-      ? h('ul', {}, p.vantagens.map(v => h('li', { title: sis.vantagens.find(x => x.nome === v)?.descricao }, v,
-        mestre ? botao('', () => atualizar(p, { vantagens: p.vantagens.filter(x => x !== v) }), { class: 'x', icone: 'x', title: `Remover ${v}` }) : null)))
-      : vazio('Nenhuma.'),
-    mestre ? selecao([{ valor: '', rotulo: '+ adicionar vantagem' }, ...sis.vantagens.filter(v => !p.vantagens?.includes(v.nome)).map(v => ({ valor: v.nome, rotulo: `${v.nome} (${v.custo})` }))], '',
-      v => v && atualizar(p, { vantagens: [...(p.vantagens || []), v] })) : null);
+    mestre ? h('label', {}, 'Profissão', selecao([{ valor: '', rotulo: '—' }, ...sis.profissoes.map(x => ({ valor: x.id, rotulo: x.nome }))], p.profissao, v => atualizar(p, { profissao: v }))) : null,
+    prof ? h('div', { class: 'cartao-mini' }, h('strong', {}, icone('backpack'), ` ${prof.nome}`), h('p', {}, prof.vantagem),
+      h('small', {}, `+${prof.bonus}% em: ${prof.subpericiasLivro.join('; ')}`)) : vazio('Sem profissão.'),
+    mestre ? h('div', { class: 'grade2' },
+      h('label', {}, 'Classe', selecao([{ valor: '', rotulo: '—' }, ...sis.classes.map(c => ({ valor: c.id, rotulo: c.nome }))], p.classe, v => atualizar(p, { classe: v, especializacao: '' }))),
+      h('label', {}, 'Especialização', selecao([{ valor: '', rotulo: '—' }, ...(classe?.especializacoes || []).map(e => ({ valor: e.id, rotulo: e.nome }))], p.especializacao, v => atualizar(p, { especializacao: v })))) : null,
+    classe ? h('div', {},
+      h('p', {}, h('strong', {}, nomeClasse(p))),
+      ganhos.length ? h('ul', { class: 'ganhos' }, ganhos.map(g => h('li', { title: g.descricao },
+        h('span', { class: 'selo' }, `nv ${g.nivel}`), ' ', h('strong', {}, g.nome), g.descricao ? h('small', {}, ` — ${g.descricao.slice(0, 140)}${g.descricao.length > 140 ? '…' : ''}`) : null))) : null)
+      : h('p', { class: 'dica' }, `A classe chega no nível ${sis.regras.nivelClasse} e a especialização no nível ${sis.regras.nivelEspecializacao}.`));
+}
+
+function vantagensView(p, d, mestre) {
+  const sis = estado.sistema;
+  const item = (lista, id) => lista.find(x => x.id === id);
+  const linhaItem = (x, campoLista) => h('li', { title: x.descricao },
+    h('strong', {}, x.nome), x.requisito ? h('small', {}, ` [${x.requisito}]`) : null, x.tipo ? h('span', { class: `selo ${x.tipo === 'normal' ? 'perigo' : ''}` }, x.tipo) : null, seloRevisao(x.revisao),
+    h('small', { class: 'bloco-texto' }, x.descricao),
+    mestre ? botao('', () => atualizar(p, { [campoLista]: p[campoLista].filter(y => y !== x.id) }), { class: 'x', icone: 'x', title: `Remover ${x.nome}` }) : null);
+  const adicionar = (lista, campoLista, rot) => mestre ? selecao([{ valor: '', rotulo: `+ ${rot}` }, ...lista.filter(x => !(p[campoLista] || []).includes(x.id)).map(x => ({ valor: x.id, rotulo: x.nome + (x.tipo ? ` (${x.tipo})` : '') }))], '',
+    v => v && atualizar(p, { [campoLista]: [...(p[campoLista] || []), v] })) : null;
+  return h('div', {},
+    titulo('Vantagens', 'sparkles', 'h4'),
+    (p.vantagens || []).length ? h('ul', { class: 'lista-regras' }, p.vantagens.map(id => item(sis.vantagens, id)).filter(Boolean).map(x => linhaItem(x, 'vantagens'))) : vazio('Nenhuma.'),
+    adicionar(sis.vantagens, 'vantagens', 'adicionar vantagem'),
+    titulo('Defeitos', 'skull', 'h4'),
+    (p.defeitos || []).length ? h('ul', { class: 'lista-regras' }, p.defeitos.map(id => item(sis.defeitos, id)).filter(Boolean).map(x => linhaItem(x, 'defeitos'))) : vazio('Nenhum.'),
+    adicionar(sis.defeitos, 'defeitos', 'adicionar defeito'),
+    h('details', { open: !!estado.sel.capAbertas, ontoggle: e => { estado.sel.capAbertas = e.target.open; } },
+      h('summary', {}, icone('zap'), ` Capacidades (usos por descanso longo = MOD) · ${sis.capacidades.filter(c => (d.mod[c.atributo] ?? 0) > 0).length} disponíveis`),
+      seloRevisao(true, 'regras das capacidades em revisão'),
+      h('ul', { class: 'lista-regras' }, sis.capacidades.map(c => h('li', { title: c.descricao },
+        h('span', { class: 'selo' }, c.atributo), ' ', h('strong', {}, c.nome), h('span', { class: 'selo ok' }, `${Math.max(0, d.mod[c.atributo] ?? 0)}×`),
+        h('small', { class: 'bloco-texto' }, c.descricao))))),
+    titulo(`Habilidade única (${sis.raca.nome})`, 'crown', 'h4'),
+    h('p', {}, h('strong', {}, sis.raca.habilidadeUnica.nome), ': ', sis.raca.habilidadeUnica.descricao, seloRevisao(sis.raca.habilidadeUnica.revisao)));
 }
 
 export function equipamento(p, mestre, filtro = null) {

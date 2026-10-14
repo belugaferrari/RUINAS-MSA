@@ -4,7 +4,7 @@ import { acao, emitir, enviarArquivo } from '../api.js';
 import { topo, carregarSaguao } from './saguao.js';
 import { fichaView } from './ficha.js';
 import { salaView } from './salas.js';
-import { livroView, monstrosView, classesView, lojaView, markdown } from './livros.js';
+import { livroView, monstrosView, lojaView, markdown, referenciaView } from './livros.js';
 import { mapaRelacoesView } from './relacoes.js';
 
 const ABAS = [
@@ -44,7 +44,7 @@ function conteudoAba(aba) {
     case 'monstros': return monstrosView();
     case 'mestre': return livroView('mestre', 'Livro do Mestre');
     case 'loja': return lojaView();
-    case 'classes': return classesView();
+    case 'classes': return referenciaView('classes', false);
     case 'lore': return abaLore();
     case 'campanha': return abaCampanha();
     default: return vazio('Aba desconhecida.');

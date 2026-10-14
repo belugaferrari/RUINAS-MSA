@@ -1,0 +1,1085 @@
+{
+ "_fonte": "Livro do Jogador MSS — base provisória para o MSA",
+ "dados": [
+  {
+   "id": "arma-branca",
+   "nome": "Arma Branca",
+   "atributo": "DES",
+   "descricao": "A arte de ferir o inimigo de perto usando armas. Em um mundo onde a munição é escassa, esta é uma habilidade essencial. Cada arma tem suas funções (vantagens e desvantagens), além de peso e maestria (que indica quantas mãos você deve usar para manuseá-la propriamente). Todo ataque com arma branca, além do próprio dano descrito na arma, soma o MOD FOR.",
+   "subpericias": [
+    {
+     "id": "arma-branca.laminas-curtas",
+     "nome": "Lâminas Curtas",
+     "descricao": "Uso de facas, adagas, canivetes e punhais. Testes para ocultar a arma são sempre fáceis. -10% para Defesa Armada.",
+     "revisao": false
+    },
+    {
+     "id": "arma-branca.laminas-longas",
+     "nome": "Lâminas Longas",
+     "descricao": "Espadas, cimitarras, katanas e facões de mato. Ataques com lâminas longas em ambientes fechados possuem -10% de chance de acerto.",
+     "revisao": false
+    },
+    {
+     "id": "arma-branca.martelo",
+     "nome": "Martelo",
+     "descricao": "Armas de impacto contundente e peso concentrado, ideais para amassar armaduras ou quebrar ossos. Acertos críticos diminuem a durabilidade dos itens de proteção do adversário.",
+     "revisao": false
+    },
+    {
+     "id": "arma-branca.machado",
+     "nome": "Machado",
+     "descricao": "Ferramentas de corte com peso na ponta. Machados são próprios para causar dano a objetos. Em batalha, eles tem -10% de chance de acerto. Eles causam 1D6 a mais de dano a objetos e ataques localizados com Machado diminuem o IP dos itens em +1 a partir do segundo ataque. Você também recebe VANTAGEM em testes de DESARMAR usando um machado de uma mão.",
+     "revisao": false
+    },
+    {
+     "id": "arma-branca.toque",
+     "nome": "Toque",
+     "descricao": "Uso de armas acopladas à mão como socos-ingleses, manoplas ou máquinas de choque. Armas de Toque não podem ser usadas para ‘Defesa Armada’.",
+     "revisao": false
+    },
+    {
+     "id": "arma-branca.lanca",
+     "nome": "Lança",
+     "descricao": "Armas de haste focadas em perfuração e manter o inimigo à distância. Lanças em combate recebem -10% de acerto contra inimigos a 1 passo de você (1,5m). Se você estiver empunhando uma lança o inimigo deve se aproximar de você usando um passo(1,5m) como sua ação de movimento completa OU receberá um ataque de oportunidade que causa +1D6 de dano além do dano normal da arma. Todo o dano é dobrado caso ele venha usando a manobra ‘investida’.",
+     "revisao": false
+    },
+    {
+     "id": "arma-branca.bastao",
+     "nome": "Bastão",
+     "descricao": "Tacos, clavas, porretes, tacapes e varas de combate. Versáteis para ataque e defesa. +10% de acerto em Ataque Localizado.",
+     "revisao": false
+    },
+    {
+     "id": "arma-branca.chicote",
+     "nome": "Chicote",
+     "descricao": "Armas flexíveis e de difícil manuseio, usadas para desarmar ou causar dor. Inclui chicotes, laços e similares. Seu dano é não letal. Permite fazer manobras de agarrar a distância. Não pode ser usada para ‘Defesa Armada’.",
+     "revisao": true
+    },
+    {
+     "id": "arma-branca.exoticas",
+     "nome": "Exóticas",
+     "descricao": "Existem armas criadas para fins diversos, mas que são exóticas demais para se enquadrar em qualquer uma das definições. Se esse for o caso, então ela é uma arma exótica. Armas exóticas tem -10% de chance de acerto e normalmente recebem uma vantagem própria descrita na própria arma.",
+     "revisao": false
+    },
+    {
+     "id": "arma-branca.improvisada",
+     "nome": "Improvisada",
+     "descricao": "A habilidade de transformar qualquer objeto do cenário (uma cadeira, um pedaço de vidro, um osso) em uma arma letal. ‘Armas improvisadas’ tem dano 1D4, -10% de acerto. [IMAGEM]",
+     "revisao": false
+    }
+   ],
+   "combate": true
+  },
+  {
+   "id": "armas-de-fogo",
+   "nome": "Armas de Fogo",
+   "atributo": "DES",
+   "descricao": "O manuseio de qualquer armamento que dispare projéteis ou energia. É a pericia usada para testes de ataque a distância (exceto arremessos de itens). Toda subpericia de ‘Arma de Fogo’ vem com a descrição da ‘Cadência natural’: ele indica quantos ataques a arma é capaz de fazer, mas esse valor pode ser alterado por habilidades ou pela descrição da própria arma.",
+   "subpericias": [
+    {
+     "id": "armas-de-fogo.projeteis",
+     "nome": "Projéteis",
+     "descricao": "Armas de tensão mecânica que não usam pólvora ou energia. Arcos, bestas, fundas, zarabatanas e arpões. Silenciosas e permitem recuperar a munição caso não tenha sido danificada (erro com DS maior que 5). Cadência natural é 1.",
+     "revisao": false
+    },
+    {
+     "id": "armas-de-fogo.pistolas",
+     "nome": "Pistolas",
+     "descricao": "Armas de mão única e cano curto. Revólveres, pistolas automáticas e tasers de disparo. Cadência natural é 1. Testes para ocultar a arma são sempre fáceis.",
+     "revisao": false
+    },
+    {
+     "id": "armas-de-fogo.rifle-de-assalto",
+     "nome": "Rifle de Assalto",
+     "descricao": "Armas automáticas ou semiautomáticas de médio porte. Submetralhadoras e fuzis de infantaria. Cadência natural é 2.",
+     "revisao": false
+    },
+    {
+     "id": "armas-de-fogo.rifle-de-precisao",
+     "nome": "Rifle de Precisão",
+     "descricao": "Armas de longo alcance com lunetas. Snipers e rifles de caça modificados. Cadência natural é 1.",
+     "revisao": false
+    },
+    {
+     "id": "armas-de-fogo.cano-longo",
+     "nome": "Cano Longo",
+     "descricao": "Armas de dispersão ou alto calibre de curto alcance. Espingardas, escopetas e carabinas. Cadência natural é 1.",
+     "revisao": false
+    },
+    {
+     "id": "armas-de-fogo.jato",
+     "nome": "Jato",
+     "descricao": "Armas que expelem substâncias contínuas. Lança-chamas, sprays de ácido ou nitrogênio líquido. Cadência natural é 1. Jatos podem ter dano em linha ou em cone, mas param de avançar quando encontram o primeiro obstáculo.",
+     "revisao": false
+    },
+    {
+     "id": "armas-de-fogo.faser",
+     "nome": "Faser",
+     "descricao": "Armas de feixe de energia dirigida (lasers contínuos). Raras e requerem baterias potentes. Cadência natural é 1. Fasers ignoram IP (exceto IP de energia).",
+     "revisao": false
+    },
+    {
+     "id": "armas-de-fogo.artilharia",
+     "nome": "Artilharia",
+     "descricao": "Armamento pesado, geralmente montado em veículos ou tripés. Canhões, morteiros, metralhadoras fixas e lança-mísseis. Cadência natural é 1.",
+     "revisao": false
+    },
+    {
+     "id": "armas-de-fogo.vibracao",
+     "nome": "Vibração",
+     "descricao": "Armas experimentais com dano sonoro. Cadência natural é 1. Armas de vibração atacam em cone ou em área e afetam toda a região. [IMAGEM]",
+     "revisao": false
+    }
+   ],
+   "combate": true
+  },
+  {
+   "id": "briga",
+   "nome": "Briga",
+   "atributo": "AGI",
+   "descricao": "O combate desarmado ou corporal instintivo. Envolve tanto a troca de socos quanto a capacidade de não ser atingido. É a base da defesa pessoal.",
+   "subpericias": [
+    {
+     "id": "briga.ataque-desarmado",
+     "nome": "Ataque desarmado",
+     "descricao": "A capacidade de acertar socos, chutes e cabeçadas de forma efetiva. O dano padrão de um ataque desarmado é 1D2 + Mod. FOR. O dano é considerado ‘Não Letal’ até o limiar de 30 pontos nessa perícia – após esse valor, o personagem escolhe se o dano é ‘Não letal’ ou ‘letal’.",
+     "revisao": false
+    },
+    {
+     "id": "briga.esquiva",
+     "nome": "Esquiva",
+     "descricao": "Sair da trajetória de um golpe, sem se deslocar ou deslocando 1 passo (1,5m). Você pode usar ‘Esquiva’ para desviar de ataque armados (Armas Brancas), mas perde a mobilidade do próximo turno.",
+     "revisao": false
+    },
+    {
+     "id": "briga.evasao",
+     "nome": "Evasão",
+     "descricao": "Movimentação ampla (3m ou mais) para sair de uma área de perigo (como uma explosão). Sucessos de ‘Evasão’ permitem que você receba só metade do dano.",
+     "revisao": false
+    },
+    {
+     "id": "briga.desarmar",
+     "nome": "Desarmar",
+     "descricao": "Técnicas para tirar a arma da mão do oponente. Desarmar um oponente é uma ação continua que requer sucessos consecutivos. Essa ação está descrita no capitulo das Regras.",
+     "revisao": false
+    },
+    {
+     "id": "briga.agarrar-imobilizar",
+     "nome": "Agarrar/Imobilizar",
+     "descricao": "Chaves de braço, gravatas e técnicas de submissão para prender o alvo. Agarrar/Imobilizar é uma ação continua que requer sucessos consecutivos. Essa ação está descrita no capitulo das Regras.",
+     "revisao": false
+    },
+    {
+     "id": "briga.deslocar",
+     "nome": "Deslocar",
+     "descricao": "Técnicas de empurrão para mudar a posição do inimigo no campo de batalha. Essa ação está descrita no capitulo das Regras.",
+     "revisao": false
+    },
+    {
+     "id": "briga.salvaguardar",
+     "nome": "Salvaguardar",
+     "descricao": "A habilidade de se colocar na frente de um aliado para absorver ou bloquear um ataque destinado a ele. Existem os seguintes movimentos de salvaguarda:",
+     "revisao": false
+    },
+    {
+     "id": "briga.entrepor",
+     "nome": "Entrepor",
+     "descricao": "você se coloca afrente do aliado para impedir/receber um dano que seria destinado a ele.",
+     "revisao": false
+    },
+    {
+     "id": "briga.evadir",
+     "nome": "Evadir",
+     "descricao": "Desloca o aliado para retira-lo de uma área ameaçada.",
+     "revisao": false
+    },
+    {
+     "id": "briga.segurar",
+     "nome": "Segurar",
+     "descricao": "Impede/ajuda um aliado a não cair em um buraco ou local semelhante.",
+     "revisao": false
+    },
+    {
+     "id": "briga.escorar",
+     "nome": "Escorar",
+     "descricao": "Impede/ajuda um aliado a não ser derrubado no chão ou deslocado.",
+     "revisao": false
+    },
+    {
+     "id": "briga.avivar",
+     "nome": "Avivar",
+     "descricao": "se aproxima(toque) para iniciar ações médicas em personagens desmaiados. Um teste bem sucedido de Avivar permite que o personagem comece os ‘Primeiros socorros’ no aliado ferido com uma ação Bônus.",
+     "revisao": false
+    },
+    {
+     "id": "briga.investida",
+     "nome": "Investida",
+     "descricao": "O uso do peso do corpo em movimento para derrubar ou causar dano de impacto ou deslocar um alvo. Essa ação está descrita no capitulo das Regras.",
+     "revisao": false
+    },
+    {
+     "id": "briga.escudo",
+     "nome": "Escudo",
+     "descricao": "O uso correto de escudos (improvisados ou táticos) para maximizar a cobertura. Escudos concede IP e aumentam sua defesa geral. [IMAGEM]",
+     "revisao": false
+    }
+   ],
+   "combate": true
+  },
+  {
+   "id": "armadilhas",
+   "nome": "Armadilhas",
+   "atributo": "PER",
+   "descricao": "A arte da guerra de guerrilha. Envolve criar, detectar e utilizar mecanismos para capturar ou ferir inimigos e animais. Essencial para caçadores e defesa de acampamento. Existe um capitulo destino a explicar como funcionam as armadilhas dentro do sistema.",
+   "subpericias": [
+    {
+     "id": "armadilhas.armar",
+     "nome": "Armar",
+     "descricao": "A habilidade técnica de montar o dispositivo corretamente sem que ele dispare na sua cara. Nessa etapa itens podem ser consumidos para a criação da armadilha. Nessa etapa ERROS aumentam o tempo de preparação da armadilha. Erros com DS 9 ou Maior consomem os itens utilizados na armadilha e ‘Erros críticos’ acionam a armadilha no seu personagem.",
+     "revisao": false
+    },
+    {
+     "id": "armadilhas.desarmar",
+     "nome": "Desarmar",
+     "descricao": "A capacidade de inutilizar uma armadilha existente sem ativá-la. Antes de desarmar você precisa detectar a armadilha. Caso você falhe no teste use o DS, se o valor for menor que 6 a armadilha dispara. Caso consiga desarmar uma armadilha corretamente, você pode reutilizar seus componentes.",
+     "revisao": false
+    },
+    {
+     "id": "armadilhas.encontrar",
+     "nome": "Encontrar",
+     "descricao": "O olho treinado para notar fios quase invisíveis, placas de pressão ou alterações no terreno. O ND para encontrar armadilhas é definido no momento da criação da armadilha.",
+     "revisao": false
+    },
+    {
+     "id": "armadilhas.improvisar",
+     "nome": "Improvisar",
+     "descricao": "Criar armadilhas usando apenas o lixo e a natureza ao redor (você não precisa estar com os itens para a criação, pode utilizar matérias primas, sucatas e outros itens ao redor)[FALTA DEFINIR AS PENALIDADES QUE AS ARMADILHAS IMPROVISADAS TEM.",
+     "revisao": true
+    },
+    {
+     "id": "armadilhas.pescaria",
+     "nome": "Pescaria",
+     "descricao": "O uso de redes, linhas e covos para capturar vida aquática. [IMAGEM]",
+     "revisao": false
+    }
+   ],
+   "combate": false
+  },
+  {
+   "id": "esportes",
+   "nome": "Esportes",
+   "atributo": "AGI",
+   "descricao": "O condicionamento físico aplicado a movimentos específicos. Define quão bem o personagem interage com o ambiente físico.",
+   "subpericias": [
+    {
+     "id": "esportes.corrida",
+     "nome": "Corrida",
+     "descricao": "Explosão de velocidade e resistência para maratonas. No geral, testes de Corrida são comparativos – Testes bem sucedidos concedem o avanço de uma zona, iniciativa contra o adversário ou outra vantagem narrativa.",
+     "revisao": false
+    },
+    {
+     "id": "esportes.natacao",
+     "nome": "Natação",
+     "descricao": "Capacidade de se mover na água e sobreviver na água sem se afogar. O deslocamento humano é 3 vezes inferior na agua do que em solo.",
+     "revisao": false
+    },
+    {
+     "id": "esportes.escalada",
+     "nome": "Escalada",
+     "descricao": "Subir superfícies verticais, prédios em ruínas ou falésias naturais. Testes bem sucedidos concedem 1,5m adicionais ao seu deslocamento base. O deslocamento base de Escalada de um humano é 3m.",
+     "revisao": false
+    },
+    {
+     "id": "esportes.salto",
+     "nome": "Salto",
+     "descricao": "Transpor abismos e obstáculos horizontalmente ou verticalmente. Um humano pode saltar 1,5m para frente parado (ou 3m com impulso) e alcançar objetos a até 1,5m acima do próprio tamanho [padrões para testes NORMAIS]. Você pode aumentar a dificuldade do teste para Muito difícil e elevar 1,5m esses limites.",
+     "revisao": false
+    },
+    {
+     "id": "esportes.mergulho",
+     "nome": "Mergulho",
+     "descricao": "Técnicas de apneia e movimentação subaquática profunda. Testes bem sucedidos concedem 1,5m adicionais ao seu deslocamento base. O deslocamento base de Mergulho de um humano é de 1,5m. Você também pode realizar testes de mergulho para exceder a apneia do seu personagem: Fazendo um teste DIFICIL você pode suportar (3+MOD CONS) turnos a mais do que sua apneia normal, você pode repetir esse teste como MUITO DIFICIL para aumentar o mesmo tanto de turnos adicionais.",
+     "revisao": false
+    },
+    {
+     "id": "esportes.paraquedismo",
+     "nome": "Paraquedismo",
+     "descricao": "Controle de queda livre e uso de paraquedas.",
+     "revisao": false
+    },
+    {
+     "id": "esportes.surf",
+     "nome": "Surf",
+     "descricao": "Habilidade de manter o equilíbrio em pranchas na água e controlar sua direção.",
+     "revisao": false
+    },
+    {
+     "id": "esportes.esportes-coletivos",
+     "nome": "Esportes Coletivos",
+     "descricao": "Trabalho em equipe física e coordenação (ex: jogos de bola adaptados).",
+     "revisao": false
+    },
+    {
+     "id": "esportes.arremessar",
+     "nome": "Arremessar",
+     "descricao": "A precisão e força para jogar objetos (granadas, pedras, cordas) em um local específico (vide regras para ‘Arremesso’).",
+     "revisao": false
+    },
+    {
+     "id": "esportes.acrobacia",
+     "nome": "Acrobacia",
+     "descricao": "Permite você se deslocar pulando ou com movimentos complexos e até diminuir o dano de uma queda. Também engloba testes de equilíbrio. Deslocamento com acrobacia ignoram terrenos naturalmente acidentados, mas não permite que você use ‘disparada’ (consome sua ação de movimento). [IMAGEM]",
+     "revisao": false
+    }
+   ],
+   "combate": false
+  },
+  {
+   "id": "conducao",
+   "nome": "Condução",
+   "atributo": "AGI",
+   "descricao": "A capacidade de operar veículos diversos.",
+   "subpericias": [
+    {
+     "id": "conducao.pranchas-urbanas",
+     "nome": "Pranchas Urbanas",
+     "descricao": "Skates, hoverboards ou pranchas de flutuação magnética de curto alcance.",
+     "revisao": false
+    },
+    {
+     "id": "conducao.pranchas-marinhas",
+     "nome": "Pranchas Marinhas",
+     "descricao": "Jet-skis, pranchas de surf motorizadas.",
+     "revisao": false
+    },
+    {
+     "id": "conducao.aero-pranchas",
+     "nome": "Aero-Pranchas",
+     "descricao": "Pranchas com capacidade de voo.",
+     "revisao": false
+    },
+    {
+     "id": "conducao.biciclos",
+     "nome": "Biciclos",
+     "descricao": "Motos, bicicletas e veículos de duas rodas.",
+     "revisao": false
+    },
+    {
+     "id": "conducao.automoveis-de-passeio",
+     "nome": "Automóveis de Passeio",
+     "descricao": "Carros comuns, buggies e jipes leves e semelhantes.",
+     "revisao": false
+    },
+    {
+     "id": "conducao.veiculos-pesados",
+     "nome": "Veículos Pesados",
+     "descricao": "Caminhões, ônibus, tratores, maquinas agrícolas, maquinas de construção e transportadores de carga (blindados).",
+     "revisao": false
+    },
+    {
+     "id": "conducao.veiculos-aereos",
+     "nome": "Veículos Aéreos",
+     "descricao": "Helicópteros, aviões pequenos e girocópteros.",
+     "revisao": false
+    },
+    {
+     "id": "conducao.drones",
+     "nome": "Drones",
+     "descricao": "Pilotagem dispositivos voadores ou terrestres, tripulados ou não.",
+     "revisao": false
+    },
+    {
+     "id": "conducao.marinhos-de-pequeno-porte",
+     "nome": "Marinhos de Pequeno Porte",
+     "descricao": "Lanchas, botes e canoas a motor.",
+     "revisao": false
+    },
+    {
+     "id": "conducao.marinhos-de-grande-porte",
+     "nome": "Marinhos de Grande Porte",
+     "descricao": "Navios, balsas e cargueiros.",
+     "revisao": false
+    },
+    {
+     "id": "conducao.espaciais",
+     "nome": "Espaciais",
+     "descricao": "Pilotagem de naves ou cápsulas.",
+     "revisao": false
+    },
+    {
+     "id": "conducao.submersos",
+     "nome": "Submersos",
+     "descricao": "Submarinos e drones de profundidade.",
+     "revisao": false
+    },
+    {
+     "id": "conducao.militares",
+     "nome": "Militares",
+     "descricao": "Tanques e veículos de guerra específicos.",
+     "revisao": false
+    },
+    {
+     "id": "conducao.mechas",
+     "nome": "Mechas",
+     "descricao": "Pilotagem de trajes robóticos ou exoesqueletos. [IMAGEM]",
+     "revisao": false
+    }
+   ],
+   "combate": false
+  },
+  {
+   "id": "extracao",
+   "nome": "Extração",
+   "atributo": "FOR",
+   "descricao": "A habilidade de retirar recursos brutos da natureza ou das ruínas. É a perícia econômica primária, importante para encontrar recursos e itens. Em locais específicos, você pode realizar um teste de extração para conseguir um item adicional por dia.",
+   "subpericias": [
+    {
+     "id": "extracao.mineracao",
+     "nome": "Mineração",
+     "descricao": "Identificar e extrair minérios, metais e cristais das rochas e do solo.",
+     "revisao": false
+    },
+    {
+     "id": "extracao.colheita",
+     "nome": "Colheita",
+     "descricao": "Coletar plantas, fungos e frutos sem danificá-los ou se envenenar no processo.",
+     "revisao": false
+    },
+    {
+     "id": "extracao.lenhar",
+     "nome": "Lenhar",
+     "descricao": "Derrubada de árvores e corte de madeira de forma eficiente e segura.",
+     "revisao": false
+    },
+    {
+     "id": "extracao.cultivo",
+     "nome": "Cultivo",
+     "descricao": "A agricultura; preparar o solo, plantar e fazer plantas e fungos crescerem. [IMAGEM]",
+     "revisao": false
+    }
+   ],
+   "combate": false
+  },
+  {
+   "id": "sobrevivencia",
+   "nome": "Sobrevivência",
+   "atributo": "CONS",
+   "descricao": "O conjunto de conhecimentos necessários para não morrer de fome, frio ou exposição nos ermos.",
+   "subpericias": [
+    {
+     "id": "sobrevivencia.sobrevivencia-basica",
+     "nome": "Sobrevivência básica",
+     "descricao": "Montar e desmontar abrigo seguro, acender fogueiras sem fumaça, cuidar das roupas e assar a comida para evitar doenças.",
+     "revisao": false
+    },
+    {
+     "id": "sobrevivencia.navegacao",
+     "nome": "Navegação",
+     "descricao": "Ler mapas antigos, usar bússolas, guiar-se pelas estrelas e entender o fluxo dos rios.",
+     "revisao": false
+    },
+    {
+     "id": "sobrevivencia.ambiental",
+     "nome": "Ambiental",
+     "descricao": "Conhecimento sobre terrenos, suas particularidades e perigos naturais e como agir diante deles. Avaliar um terreno e seus perigos.",
+     "revisao": false
+    },
+    {
+     "id": "sobrevivencia.esfolamento",
+     "nome": "Esfolamento",
+     "descricao": "A arte de retirar couro, carne, garras e órgãos de seres mortos para venda, criação de roupas, sapatos e alimentos.",
+     "revisao": false
+    },
+    {
+     "id": "sobrevivencia.rastreio",
+     "nome": "Rastreio",
+     "descricao": "Seguir pegadas, identificar a idade do rastro e também a habilidade de ocultar seus próprios rastros. Rastrear um alvo (qualquer tipo de criatura) lhe impõe uma redução deslocamento de 4,5m. As dificuldades dos testes variam de acordo com o ambiente em que você está fazendo o teste.",
+     "revisao": false
+    }
+   ],
+   "combate": false
+  },
+  {
+   "id": "ciencia",
+   "nome": "Ciência",
+   "atributo": "INT",
+   "descricao": "O conhecimento acadêmico do Velho Mundo e o estudo empírico do Novo Mundo.",
+   "subpericias": [
+    {
+     "id": "ciencia.historia",
+     "nome": "História",
+     "descricao": "Conhecimento sobre o mundo pré-impacto(PI) e depois do impacto (DI), localização de antigas cidades e a cronologia da queda. Também a história das cidades e personagens recentes e relevantes.",
+     "revisao": false
+    },
+    {
+     "id": "ciencia.geografia",
+     "nome": "Geografia",
+     "descricao": "Entendimento de mapas, tectônica de placas (importante nas Ilhas) e formações rochosas, caminhos dos rios, depressões, vales e outras formações.",
+     "revisao": false
+    },
+    {
+     "id": "ciencia.botanica",
+     "nome": "Botânica",
+     "descricao": "Estudo profundo da flora, incluindo propriedades medicinais complexas e identificação de plantas, comuns, mutantes ou venenosas.",
+     "revisao": false
+    },
+    {
+     "id": "ciencia.religiao",
+     "nome": "Religião",
+     "descricao": "Conhecimento sobre cultos, deuses e seitas. Dos antigos aos atuais.",
+     "revisao": false
+    },
+    {
+     "id": "ciencia.ocultismo",
+     "nome": "Ocultismo",
+     "descricao": "Estudo de fenômenos inexplicáveis, antes e depois da queda, incluindo os poderes das bestas e monstros. Você pode usar essa pericia para reconhecer habilidades e poderes de monstros,",
+     "revisao": false
+    },
+    {
+     "id": "ciencia.matematica",
+     "nome": "Matemática",
+     "descricao": "Cálculos complexos, lógica e teorias. Inclui testes sobre física teórica.[IMAGEM]",
+     "revisao": false
+    }
+   ],
+   "combate": false
+  },
+  {
+   "id": "computacao",
+   "nome": "Computação",
+   "atributo": "INT",
+   "descricao": "A capacidade de interagir com computadores antigos e novos. Isso não inclui veículos (condução).",
+   "subpericias": [
+    {
+     "id": "computacao.operacional",
+     "nome": "Operacional",
+     "descricao": "Uso básico de computadores, tablets e terminais de acesso. Isso engloba o uso de funções já programadas dos equipamentos.",
+     "revisao": false
+    },
+    {
+     "id": "computacao.interface-neural",
+     "nome": "Interface Neural",
+     "descricao": "A habilidade de utilizar equipamentos com comandos neurais (com ou sem plugs).",
+     "revisao": false
+    },
+    {
+     "id": "computacao.programacao",
+     "nome": "Programação",
+     "descricao": "Escrever códigos, criar vírus e alterar o comportamento de softwares. Essa habilidade permite mudar ou adicionar funções à equipamentos.",
+     "revisao": false
+    },
+    {
+     "id": "computacao.manutencao",
+     "nome": "Manutenção",
+     "descricao": "Conserto de computadores de modo geral e suas função básicas (não cria novas funções). Essa manutenção é para computadores, itens neurais e a parte computacional dos itens cibernéticos, outras manutenções estão contempladas na perícia ‘Engenharia’.",
+     "revisao": false
+    },
+    {
+     "id": "computacao.decodificacao",
+     "nome": "Decodificação",
+     "descricao": "Quebrar senhas, firewalls e criptografias digitais. Essa perícia permite invadir e extrair as informações dos equipamentos eletrônicos. [IMAGEM]",
+     "revisao": false
+    }
+   ],
+   "combate": false
+  },
+  {
+   "id": "engenharia",
+   "nome": "Engenharia",
+   "atributo": "INT",
+   "descricao": "A aplicação prática da ciência para construir, reparar e destruir estruturas e máquinas.",
+   "subpericias": [
+    {
+     "id": "engenharia.quimica",
+     "nome": "Química",
+     "descricao": "Criação de explosivos, ácidos, combustíveis, drogas e compostos sintéticos (não inclui remédios).",
+     "revisao": false
+    },
+    {
+     "id": "engenharia.civil",
+     "nome": "Civil",
+     "descricao": "Construção, demolição, avaliação e reparo de construções em madeira e concreto como abrigos, pontes, prédios, barragens e ruínas.",
+     "revisao": false
+    },
+    {
+     "id": "engenharia.mecanica",
+     "nome": "Mecânica",
+     "descricao": "Construção, desmontagem, avaliação e reparo de componentes e conjuntos mecânicos como motores, veículos, engrenagens e armas brancas.",
+     "revisao": false
+    },
+    {
+     "id": "engenharia.eletrica",
+     "nome": "Elétrica",
+     "descricao": "Construção, desmontagem, avaliação e reparo de componentes elétricos como redes de energia, baterias, geradores e fiação.",
+     "revisao": false
+    },
+    {
+     "id": "engenharia.militar",
+     "nome": "Militar",
+     "descricao": "Construção, desmontagem, avaliação e reparo de armas de fogo, fortificações estruturais, blindagens e componentes balísticos como granadas, misseis e rojões.",
+     "revisao": false
+    },
+    {
+     "id": "engenharia.nuclear",
+     "nome": "Nuclear",
+     "descricao": "Construção, desmontagem, avaliação e reparo de materiais e componentes radioativos, reatores antigos, baterias de fusão, equipamentos de rádio e nucleares, baterias de energia e avançadas. [IMAGEM]",
+     "revisao": false
+    }
+   ],
+   "combate": false
+  },
+  {
+   "id": "medicina",
+   "nome": "Medicina",
+   "atributo": "INT",
+   "descricao": "A arte de manter a biologia funcionando, corpos em movimento e pulmões com ar.",
+   "subpericias": [
+    {
+     "id": "medicina.primeiros-socorros",
+     "nome": "Primeiros Socorros",
+     "descricao": "Estabilizar ferimentos em campo, parar sangramentos, fechar feridas, reanimação básica e melhorar a cura. (Pode ser usado em combate). Testes bem sucedidos de Primeiros socorros aumentam em +1PV a regeneração nos próximos 3 descansos (não cumulativo). ‘Primeiros socorros’ consumem insumos.",
+     "revisao": false
+    },
+    {
+     "id": "medicina.genetica",
+     "nome": "Genética",
+     "descricao": "Estudo do DNA, mutações e manipulação biológica. Essencial para entender os Buffs/Debuffs dos Mutantes. Você pode fazer testes de genética para descobrir vantagens e desvantagens de uma mutação.",
+     "revisao": false
+    },
+    {
+     "id": "medicina.cibernetica",
+     "nome": "Cibernética",
+     "descricao": "A medicina aplicada à fusão carne-metal. Instalação e rejeição de implantes. Essa perícia é usada no local de primeiros socorros para ciborgues.",
+     "revisao": false
+    },
+    {
+     "id": "medicina.farmaceutica",
+     "nome": "Farmacêutica",
+     "descricao": "Criação e identificação de remédios, soros e venenos artificiais, poderosos e com funções específicas.",
+     "revisao": false
+    },
+    {
+     "id": "medicina.cirurgica",
+     "nome": "Cirúrgica",
+     "descricao": "Procedimentos invasivos complexos. Remover balas, amputar membros ou transplantar órgãos. Utilizado em alguns casos para curar danos persistentes.",
+     "revisao": false
+    },
+    {
+     "id": "medicina.autopsia",
+     "nome": "Autópsia",
+     "descricao": "Determinar a causa da morte, tempo do óbito e extrair informações de cadáveres, revelar itens e doenças dos corpos. [IMAGEM]",
+     "revisao": false
+    }
+   ],
+   "combate": false
+  },
+  {
+   "id": "arte",
+   "nome": "Arte",
+   "atributo": "CAR",
+   "descricao": "A expressão de criatividade e vida. Usada para manter a empatia, sanidade, causar emoções. As artes nesse sistema podem gerar efeitos práticos nos personagens e o sistema está descrito do capitulo das Regras. Artes é uma perícias também usada para regenerar sua SANIDADE, sendo que você pode produzir ou consumir artes para tal.",
+   "subpericias": [
+    {
+     "id": "arte.canto",
+     "nome": "Canto",
+     "descricao": "Performance vocal, com ou sem palavras. Afeta a audição. Você tem vantagens em testes de Manipulação com criaturas que usem do seu canto para recuperar sanidade.",
+     "revisao": false
+    },
+    {
+     "id": "arte.instrumentos-musicais",
+     "nome": "Instrumentos Musicais",
+     "descricao": "Tocar instrumentos de cordas, sopros, percussão e outros. Afeta a audição. Você pode usar esse teste para manipular o humor das criaturas (Corajoso, Amedrontado, Amigável, Indisposto).",
+     "revisao": false
+    },
+    {
+     "id": "arte.escultura",
+     "nome": "Escultura",
+     "descricao": "Modelar materiais (barro, metal, pedra). Afeta a visão e o tato. Você pode usar uma obra de escultura para alcançar 1 dos seguintes efeitos: Aturdido(1D4 turnos); Motivado (Humor)(Cena); Desmotivado (Humor) (Cena); R.MNP -20%(Cena). Criaturas de VANTAGEM para resistir aos efeitos da sua Obra a partir da segunda vez que são expostos a ela.",
+     "revisao": false
+    },
+    {
+     "id": "arte.redacao",
+     "nome": "Redação",
+     "descricao": "Escrever de forma eloquente e persuasiva. Afeta pela visão ou audição. Você pode usar uma obra literária para alcançar 1 dos seguintes efeitos por uma cena: -10% testes base de Percepção; +10% nos testes base de Inteligência. Criaturas de VANTAGEM para resistir aos efeitos da sua Obra a partir da segunda vez que são expostos a ela.",
+     "revisao": false
+    },
+    {
+     "id": "arte.desenho",
+     "nome": "Desenho",
+     "descricao": "Criar mapas visuais, retratos falados, pinturas, quadros ou diagramas técnicos. Afeta a visão. Desenhos recuperam a Sanidade com apenas 15minutos diário.",
+     "revisao": false
+    },
+    {
+     "id": "arte.culinaria",
+     "nome": "Culinária",
+     "descricao": "Transformar ingredientes diversos e duvidosos em comida comestível, segura, saborosa. Afeta o paladar. Suas obras gastronômicas podem causar os seguintes efeitos: Bem-estar; Mal-estar; Satisfeito.",
+     "revisao": false
+    },
+    {
+     "id": "arte.costura",
+     "nome": "Costura",
+     "descricao": "Criar e remendar roupas. Afeta o Tato. Pode influenciar nos testes de intemperes (temperaturas) e de conforto no descanso longo.",
+     "revisao": false
+    },
+    {
+     "id": "arte.arquitetura",
+     "nome": "Arquitetura",
+     "descricao": "Permite construções incríveis. Construções arquitetônicas podem dar +5% em um subpericia (a sua escolha) para todos que estiverem dentro de suas dependências.",
+     "revisao": false
+    },
+    {
+     "id": "arte.danca",
+     "nome": "Dança",
+     "descricao": "Performance corporal com movimentos elaborados e ritmados. Afeta a visão. Dançar com 30 minutos ou mais lhe dá +5% nos teste base de Agilidade até o próximo descanso (curto ou longo)",
+     "revisao": false
+    },
+    {
+     "id": "arte.ilusionismo",
+     "nome": "Ilusionismo",
+     "descricao": "Truques de mão, prestidigitação e enganação visual simples. Afeta pela visão. Você pode mudar o humor das pessoas com ilusionismo para: Desconfiado. Você pode fazer um teste ‘Ilusionismo’ após um teste de ‘Furtar’ para esconder o item furtado em um lugar a seu alcance (em você ou a 1,5m de você). Se passar, qualquer teste de investigação para encontra-lo será em desvantagem. [IMAGEM]",
+     "revisao": false
+    }
+   ],
+   "combate": false
+  },
+  {
+   "id": "avaliacao-de-objetos",
+   "nome": "Avaliação de Objetos",
+   "atributo": "CAR",
+   "descricao": "O olho clínico para bens materiais, trocas e itens de um modo geral.",
+   "subpericias": [
+    {
+     "id": "avaliacao-de-objetos.identificacao",
+     "nome": "Identificação",
+     "descricao": "Saber o que é um artefato, item ou equipamento e qual a sua função. Itens comuns e mundanos são naturalmente identificados quando você tem luz e está a 6m ou menos dele – todos os demais itens necessitam de um teste de Identificação.",
+     "revisao": false
+    },
+    {
+     "id": "avaliacao-de-objetos.precificacao",
+     "nome": "Precificação",
+     "descricao": "Saber quanto algo vale no mercado de escambo atual. Com essa perícia você é capaz de descobrir a durabilidade e possíveis vantagens (Características) de um item. Precificação é uma ação de 5 minutos.",
+     "revisao": false
+    },
+    {
+     "id": "avaliacao-de-objetos.falsificacao",
+     "nome": "Falsificação",
+     "descricao": "Falsificar documentos, credenciais ou réplicas de itens. Normalmente exige consumo de materiais. Você pode realizar a falsificação de um item pequeno ou menor por descanso curto e para itens maiores dobre o tempo para cada avanço no tamanho. Você pode usar falsificação para enganar analistas (Avaliação de Objetos) criando status falsos como: Durabilidade, preço, dano de armas.",
+     "revisao": false
+    },
+    {
+     "id": "avaliacao-de-objetos.abrir-fechadura",
+     "nome": "Abrir Fechadura",
+     "descricao": "O conhecimento técnico de como trancas funcionam para destravá-las sem danificar o mecanismo. Usado em fechaduras mecânicas e elétricas (não fechaduras eletrônicas).",
+     "revisao": false
+    },
+    {
+     "id": "avaliacao-de-objetos.negociacao",
+     "nome": "Negociação",
+     "descricao": "Convencer alguém a pagar mais ou vender por menos. Essa é uma perícia que pode ser usada de modo passivo ou ativo, seguindo as seguintes regras:",
+     "revisao": false
+    },
+    {
+     "id": "avaliacao-de-objetos.negociacao-com-comerciantes",
+     "nome": "Negociação com comerciantes",
+     "descricao": "Nenhum item será comprado com desconto maior que 25% e nem vendido com ganhos acima de 25%. O valor base de compra do item fica informado na carta do próprio item. Isso significa que o comerciante vende naquele preço, mas você revende ao comerciante pela metade do valor. Você pode escolher fazer o teste de negociação contra o comerciante para ganhar ou perder 25% desse valor na negociação, ou pode considerar ¼ da sua subpericia base de ‘Negociação’ com benefícios da compra/venda dos itens.  Exemplo: se você possuir ‘Negociação’ 60%, significa que você compra 15% mais barato e revende 15% mais caro que o padrão. Em um item de custo 50, você venderia a 65 créditos e compraria a 85 créditos. [IMAGEM]",
+     "revisao": false
+    }
+   ],
+   "combate": false
+  },
+  {
+   "id": "espionagem",
+   "nome": "Espionagem",
+   "atributo": "PER",
+   "descricao": "A arte de não ser visto e descobrir o que está escondido, além de seguir e se disfarçar sem ser reconhecido.",
+   "subpericias": [
+    {
+     "id": "espionagem.pesquisar",
+     "nome": "Pesquisar",
+     "descricao": "Encontrar informações em bibliotecas (físicas ou digitais) e arquivos mortos. Relacionado com leitura dinâmica.",
+     "revisao": false
+    },
+    {
+     "id": "espionagem.investigacao",
+     "nome": "Investigação",
+     "descricao": "Deduzir fatos a partir de pistas, dados e hipóteses. Análise de cenários.",
+     "revisao": false
+    },
+    {
+     "id": "espionagem.balistica",
+     "nome": "Balística",
+     "descricao": "Analisar trajetórias de tiros e projéteis.",
+     "revisao": false
+    },
+    {
+     "id": "espionagem.camuflagem",
+     "nome": "Camuflagem",
+     "descricao": "Usar o ambiente para se esconder estaticamente.",
+     "revisao": false
+    },
+    {
+     "id": "espionagem.furtividade",
+     "nome": "Furtividade",
+     "descricao": "A habilidade de mover-se em silêncio.",
+     "revisao": false
+    },
+    {
+     "id": "espionagem.disfarce",
+     "nome": "Disfarce",
+     "descricao": "Alterar a própria aparência com roupas e adereços para passar por alguém genérico que não é você.",
+     "revisao": false
+    },
+    {
+     "id": "espionagem.maquiagem",
+     "nome": "Maquiagem",
+     "descricao": "Alterar traços faciais, simular ferimentos/doenças ou mutações e tentar se passar por outra pessoa.",
+     "revisao": false
+    },
+    {
+     "id": "espionagem.escapismo",
+     "nome": "Escapismo",
+     "descricao": "Libertar-se de amarras, algemas e cordas. Você pode tentar realizar um teste de escapismo por descanso longo. Caso você não tenha pontos nessa perícia, você não pode realizar os testes.",
+     "revisao": false
+    },
+    {
+     "id": "espionagem.furtar",
+     "nome": "Furtar",
+     "descricao": "Roubar objetos sem ser notado (para tamanhos menores do que o do próprio personagem). [IMAGEM]",
+     "revisao": false
+    }
+   ],
+   "combate": false
+  },
+  {
+   "id": "institucional",
+   "nome": "Institucional",
+   "atributo": "CAR",
+   "descricao": "O conhecimento de como funcionam as estruturas de poder humano, atuais e antigas. As instituições são usadas pelas organizações de poder para diminuir a Sanidade e Humanidade das pessoas, além de afetar seu humor. Seu personagem faz testes institucionais para permear nesses meandros sem sofrer essas penalidades e chegar a pessoas e informações protegidas.",
+   "subpericias": [
+    {
+     "id": "institucional.burocracia",
+     "nome": "Burocracia",
+     "descricao": "Habilidade de navegar pela papelada, conseguir licenças e subornar os oficiais certos em estruturas civis. Falhas afetam seu humor e podem afetar sua sanidade.",
+     "revisao": false
+    },
+    {
+     "id": "institucional.direito",
+     "nome": "Direito",
+     "descricao": "Conhecer as leis (escritas e não escritas) e suas jurisprudências. Utilizar ela a seu favor e caminhar em estruturas judiciarias. Falhas podem afetar sua sanidade.",
+     "revisao": false
+    },
+    {
+     "id": "institucional.hierarquia",
+     "nome": "Hierarquia",
+     "descricao": "Entender quem manda em quem e saber como se portar. Entender a estrutura de governo e militar e civil dentro das corporações.",
+     "revisao": false
+    },
+    {
+     "id": "institucional.politica",
+     "nome": "Política",
+     "descricao": "Conhecer e manipular grupos de poder, gerar alianças e subverter a ordem e as instituições vigentes. Falhas podem diminuir sua humanidade.",
+     "revisao": false
+    },
+    {
+     "id": "institucional.comunitaria",
+     "nome": "Comunitária",
+     "descricao": "Habilidade de conhecer as leis que regem a comunidade e sociabilidade do dia a dia, bem como a cultura local e a comunidade local (pessoas relevantes). [IMAGEM]",
+     "revisao": false
+    }
+   ],
+   "combate": false
+  },
+  {
+   "id": "jogos",
+   "nome": "Jogos",
+   "atributo": "WILL",
+   "descricao": "Jogos de azar e estratégia formas comuns de entretenimento social. Esta perícia mede sua sorte e capacidade lógica sob pressão de aposta. Jogos podem ser usados ativamente para regenerar sua Sanidade e Humanidade, porém jogos podem causar vício. Vício em Jogos: O vício em jogos é diferente de outros vícios. O personagem não sobre nenhum dos efeitos das 3 fases de abstinência (mas ainda precisa dos 3 dias limpos para se livrar do vício). Enquanto estiver sob o efeito do vício é necessário o dobro do tempo (1hora) para regenerar sua Sanidade e Humanidade.",
+   "subpericias": [
+    {
+     "id": "jogos.cartas",
+     "nome": "Cartas",
+     "descricao": "Jogos com cartas (poker, blackjack, tranca, buraco).",
+     "revisao": false
+    },
+    {
+     "id": "jogos.rpg",
+     "nome": "RPG",
+     "descricao": "Jogos de interpretação.",
+     "revisao": false
+    },
+    {
+     "id": "jogos.tabuleiro",
+     "nome": "Tabuleiro",
+     "descricao": "Jogos feitos em tabuleiros, regras e afins.",
+     "revisao": false
+    },
+    {
+     "id": "jogos.dados",
+     "nome": "Dados",
+     "descricao": "Logicas e estratégias.",
+     "revisao": false
+    },
+    {
+     "id": "jogos.video-game",
+     "nome": "Video Game",
+     "descricao": "Reflexos e conhecimentos de jogos eletrônicos.",
+     "revisao": false
+    },
+    {
+     "id": "jogos.grupo",
+     "nome": "Grupo",
+     "descricao": "Jogos de equipe e esportes mentais, gincanas.",
+     "revisao": false
+    },
+    {
+     "id": "jogos.sorte",
+     "nome": "Sorte",
+     "descricao": "Às vezes o jogo é apenas sobre ter sorte (e você pode ser bom nisso). [IMAGEM]",
+     "revisao": false
+    }
+   ],
+   "combate": false
+  },
+  {
+   "id": "manipulacao",
+   "nome": "Manipulação",
+   "atributo": "CAR",
+   "descricao": "A engenharia social. É a arte de conduzir outras pessoas a fazer o que você quer, hora consciente, hora não. Essa pericia é usada para alterar o ‘Humor’ de outros personagens, assim como sua interpretação. Preciso no capitulo de regras – humor falar sobre dano psicológico, comandos, verdades, etc, referentes as manipulações, e regras para o dano HUM da etiqueta.",
+   "subpericias": [
+    {
+     "id": "manipulacao.labia",
+     "nome": "Lábia",
+     "descricao": "Mentir de forma convincente; convencer de modo conveniente. Lábia é a habilidade dos malandros e golpistas e também pode ser utilizada para imitar vozes e sons (Testes Muito Difícil). Você também pode usar ‘lábia’ para mudar o humor de outra pessoa para: Motivado; Desmotivado; Confiante; Desconfiado. Erros em testes de lábia podem levar o alvo para o humor: Desconfiado.",
+     "revisao": false
+    },
+    {
+     "id": "manipulacao.empatia",
+     "nome": "Empatia",
+     "descricao": "Empatia permite que você perceba as emoções de outras pessoas (não animais, bestas e monstros) e detectar mentiras. Todo teste de Empatia é um teste difícil para descobrir emoções ou detectar mentiras. Você também pode usar empatia para mudar o humor de outra pessoa para: Motivado; Desmotivado; Confiante.",
+     "revisao": false
+    },
+    {
+     "id": "manipulacao.seducao",
+     "nome": "Sedução",
+     "descricao": "Usar charme ou apelo sexual para deixar a pessoa focada em você. Você também pode usar ‘sedução’ para mudar o humor de outra pessoa para: Corajoso; Atraido; Confiante.",
+     "revisao": false
+    },
+    {
+     "id": "manipulacao.lideranca",
+     "nome": "Liderança",
+     "descricao": "Inspirar moral, dar ordens em combate e coordenar equipes. Também pode ser testado quando você fala em nome do seu grupo. Você pode usar ‘liderança’ para mudar o humor de outra pessoa para: Confiante.",
+     "revisao": false
+    },
+    {
+     "id": "manipulacao.intimidacao",
+     "nome": "Intimidação",
+     "descricao": "Usar o medo e ameaças (físicas ou psicológicas) para coagir pessoas, deixando-as suscetíveis a suas manipulações. Você pode usar ‘intimidação’ para mudar o humor de outra pessoa para: Amedrontada. Falhas em testes de intimidar podem levar o alvo para o humor: Confiante.",
+     "revisao": false
+    },
+    {
+     "id": "manipulacao.impressionar",
+     "nome": "Impressionar",
+     "descricao": "Causar admiração ou asco através de postura, histórias ou feitos. Você pode usar ‘Impressionar’ para mudar o humor de outra pessoa para: Atraído; enojado.",
+     "revisao": false
+    },
+    {
+     "id": "manipulacao.interrogatorio",
+     "nome": "Interrogatório",
+     "descricao": "A habilidade de Extrair informações de alguém, mesmo quando a pessoa não quer falar. Você pode usar ‘intimidação’ para mudar o humor de outra pessoa para: Confiante. Falhas em testes de intimidar podem levar o alvo para o humor: Desconfiada.",
+     "revisao": false
+    },
+    {
+     "id": "manipulacao.tortura",
+     "nome": "Tortura",
+     "descricao": "O uso de dor física calculada para quebrar a vontade de alguém. Tortura pode ser usada também para causar traumas e danos psicológicos. Você pode usar ‘tortura’ para mudar o humor de outra pessoa para: Enojado; Amedrontado.",
+     "revisao": false
+    },
+    {
+     "id": "manipulacao.etiqueta",
+     "nome": "Etiqueta",
+     "descricao": "Saber se portar em ambientes \"civilizados\". Testes de etiqueta em ambientes institucionais/civilizados podem causar dano temporário na humanidade alheia. Você pode usar ‘tortura’ para mudar o humor de outra pessoa para: Enojado. [IMAGEM]",
+     "revisao": false
+    }
+   ],
+   "combate": false
+  },
+  {
+   "id": "sentidos",
+   "nome": "Sentidos",
+   "atributo": "PER",
+   "descricao": "A acuidade dos seus sentidos naturais. Muitas vezes usada passivamente pelo Mestre, mas pode ser testada ativamente e serve para perceber e interpretar o mundo ao seu redor.",
+   "subpericias": [
+    {
+     "id": "sentidos.visao",
+     "nome": "Visão",
+     "descricao": "Notar detalhes visuais distantes ou minúsculos. Uma pessoa enxerga até 3 km de distância caso tenha luz e visibilidade. No geral a visão depende da luz ambiente.",
+     "revisao": false
+    },
+    {
+     "id": "sentidos.audicao",
+     "nome": "Audição",
+     "descricao": "Ouvir e distinguir sons a distância, saber sua origem espacial.",
+     "revisao": false
+    },
+    {
+     "id": "sentidos.olfato",
+     "nome": "Olfato",
+     "descricao": "Identificar cheiros (gás, podridão, ozônio) e a direção da sua origem.",
+     "revisao": false
+    },
+    {
+     "id": "sentidos.tato",
+     "nome": "Tato",
+     "descricao": "Sentir vibrações no chão, temperaturas ou texturas no escuro. Identificar item ou saliências, materiais e formas.",
+     "revisao": false
+    },
+    {
+     "id": "sentidos.paladar",
+     "nome": "Paladar",
+     "descricao": "Identificar gostos estranhos (veneno) na comida, elementos químicos e outros componentes. [IMAGEM]",
+     "revisao": false
+    }
+   ],
+   "combate": false
+  },
+  {
+   "id": "trato-de-animais",
+   "nome": "Trato de Animais",
+   "atributo": "CAR",
+   "descricao": "A capacidade de interagir, entender e controlar a fauna. Trato com animais tem verdadeira importância na relação com animais, bestas e monstros.",
+   "subpericias": [
+    {
+     "id": "trato-de-animais.zoologia",
+     "nome": "Zoologia",
+     "descricao": "Conhecimento teórico sobre as espécies. Permite identificar fraquezas, hábitos alimentares, habitats e distinguir um animal natural de uma mutação perigosa. Reconhecer e entender poderes e habilidades.",
+     "revisao": false
+    },
+    {
+     "id": "trato-de-animais.treinamento-adestrar",
+     "nome": "Treinamento(Adestrar)",
+     "descricao": "Ensina comandos complexos (atacar, vigiar, buscar) a animais que já são domesticados. Apenas animais adestrados obedecem seus comandos[criar as regras de adestramento]",
+     "revisao": true
+    },
+    {
+     "id": "trato-de-animais.veterinaria",
+     "nome": "Veterinária",
+     "descricao": "Diagnosticar, tratar e curar ferimentos e doenças em animais.",
+     "revisao": false
+    },
+    {
+     "id": "trato-de-animais.doma",
+     "nome": "Doma",
+     "descricao": "Quebrar a vontade selvagem de uma besta para torná-la submissa. É um teste para mudar o humor dos animais selvagens.",
+     "revisao": false
+    },
+    {
+     "id": "trato-de-animais.montaria",
+     "nome": "Montaria",
+     "descricao": "A técnica de conduzir animais de modos diversos, sendo carregado ou puxado por eles. [IMAGEM]",
+     "revisao": false
+    }
+   ],
+   "combate": false
+  }
+ ]
+}

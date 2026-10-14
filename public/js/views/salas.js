@@ -7,7 +7,11 @@ import { linhaRolagem } from './ficha.js';
 const TITULOS = { social: 'Sala Social', batalha: 'Campo de Batalha' };
 const ICONES_SALA = { social: 'drama', batalha: 'swords' };
 // Sugestões de teste rápido por sala (provisório até as regras chegarem).
-const SUGESTOES = { social: ['Carisma', 'Manipulação', 'Persuasão', 'Lábia', 'Intimidação'], batalha: ['Destreza', 'Força', 'Briga', 'Armas brancas', 'Armas de fogo'] };
+// Sugestões por sala (base do livro MSS): social usa Manipulação/Carisma; combate usa Briga e armas.
+const SUGESTOES = {
+  social: ['atr:CAR', 'sub:manipulacao.labia', 'sub:manipulacao.empatia', 'sub:manipulacao.seducao', 'sub:manipulacao.intimidacao', 'sub:manipulacao.lideranca', 'sub:manipulacao.impressionar'],
+  batalha: ['sub:briga.ataque-desarmado', 'sub:briga.esquiva', 'sub:arma-branca.laminas-curtas', 'sub:arma-branca.laminas-longas', 'sub:armas-de-fogo.pistolas', 'sub:sentidos.visao'],
+};
 
 export function salaView(nome) {
   const c = estado.campanha;
@@ -71,26 +75,44 @@ function rolagemRapida(nome, participantes, mestre) {
   const meus = participantes.filter(p => mestre || p.donoId === estado.usuario.id);
   if (!meus.length && !mestre) return h('p', { class: 'dica' }, 'Entre na sala com um personagem para rolar testes aqui.');
   const chaveSel = `rolar-${nome}`;
-  const sel = estado.sel[chaveSel] ||= { quem: !mestre && meus.length === 1 ? meus[0].id : '', a: '', b: '' };
-  const nomes = [...sis.atributos, ...sis.pericias].map(x => x.nome);
-  const sugeridos = SUGESTOES[nome].filter(n => nomes.includes(n));
-  const lista = [...sugeridos, ...nomes.filter(n => !sugeridos.includes(n))];
+  const sel = estado.sel[chaveSel] ||= { quem: !mestre && meus.length === 1 ? meus[0].id : '', acao: '', dif: '1', valor: 50 };
+  const p = sel.quem && personagemPorId(sel.quem);
+  const d = p?.atributos ? derivados(p, sis) : null;
+  // Sugestões da sala aparecem primeiro.
+  const sugestoes = SUGESTOES[nome].map(ref => {
+    const [tipo, id] = ref.split(':');
+    if (tipo === 'atr') { const a = sis.atributos.find(x => x.sigla === id); return a && { valor: ref, rotulo: `★ ${a.nome}%${d ? ` (${d.percentual[id]})` : ''}` }; }
+    if (tipo === 'per') { const x = sis.pericias.find(y => y.id === id); return x && { valor: ref, rotulo: `★ ${x.nome}${d ? ` (${d.pericias[id]})` : ''}` }; }
+    const per = sis.pericias.find(y => y.subpericias.some(z => z.id === id));
+    const sub = per?.subpericias.find(z => z.id === id);
+    return sub && { valor: ref, rotulo: `★ ${per.nome} › ${sub.nome}${d ? ` (${d.subpericias[id]})` : ''}` };
+  }).filter(Boolean);
+  const todas = d ? [...sis.atributos.map(a => ({ valor: `atr:${a.sigla}`, rotulo: `${a.nome}% (${d.percentual[a.sigla]})` })),
+    ...sis.pericias.flatMap(x => x.subpericias.map(s => ({ valor: `sub:${s.id}`, rotulo: `${x.nome} › ${s.nome} (${d.subpericias[s.id]})` })))] : [];
+  const difs = [...sis.teste.dificuldades.map((x, i) => ({ valor: String(i), rotulo: `${x.nome} (ND ${x.nd})` })), { valor: 'sem', rotulo: 'Sem ND' }];
   const secreta = h('input', { type: 'checkbox' });
   return h('div', { class: 'bloco' },
-    titulo('Rolar teste', 'dices'),
+    titulo('Rolar teste (D-MIL)', 'dices'),
     h('div', { class: 'barra' },
-      selecao([{ valor: '', rotulo: mestre ? 'Mestre (sem ficha)' : 'Escolha o personagem' }, ...meus.map(p => ({ valor: p.id, rotulo: p.nome }))], sel.quem, v => { sel.quem = v; }),
-      selecao([{ valor: '', rotulo: '— valor 1 —' }, ...lista], sel.a, v => { sel.a = v; }),
-      selecao([{ valor: '', rotulo: '— valor 2 —' }, ...lista], sel.b, v => { sel.b = v; }),
+      selecao([{ valor: '', rotulo: mestre ? 'Mestre (valor livre)' : 'Escolha o personagem' }, ...meus.map(x => ({ valor: x.id, rotulo: x.nome }))], sel.quem, v => { sel.quem = v; sel.acao = ''; render(); }, { 'aria-label': 'Quem rola' }),
+      d ? selecao([{ valor: '', rotulo: 'O que testar…' }, ...sugestoes, ...todas], sel.acao, v => { sel.acao = v; }, { 'aria-label': 'O que testar' })
+        : h('label', { class: 'linha' }, 'Ação %', h('input', { type: 'number', class: 'curto', value: sel.valor, onchange: e => { sel.valor = Number(e.target.value) || 0; } })),
+      selecao(difs, sel.dif, v => { sel.dif = v; }, { 'aria-label': 'Dificuldade' }),
       mestre ? h('label', { class: 'linha' }, secreta, 'secreta') : null,
       botao('Rolar', async () => {
-        const p = sel.quem && personagemPorId(sel.quem);
         if (!p && !mestre) throw new Error('Escolha o personagem.');
-        const d = p?.atributos ? derivados(p, sis) : null;
-        const componentes = [sel.a, sel.b].filter(Boolean).map(n => ({ nome: n, valor: d ? (d.atributos[n] ?? d.pericias[n] ?? 0) : 0 }));
-        const r = await acao('rolar', { sala: nome, id: p?.id || null, rotulo: componentes.map(x => x.nome).join(' + ') || 'Teste', componentes, secreta: secreta.checked });
-        aviso(`${r.autor}: ${r.total}`);
-      }, { class: 'primario', icone: 'dices' })));
+        if (d && !sel.acao) throw new Error('Escolha o que testar.');
+        const dif = sis.teste.dificuldades[Number(sel.dif)];
+        const r = await acao('rolar', {
+          sala: nome, id: p?.id || null, acaoRef: d ? sel.acao : null, acao: d ? null : sel.valor, rotulo: d ? null : 'Teste do mestre',
+          nd: sel.dif === 'sem' ? null : dif.nd, metade: !!dif?.metade, secreta: secreta.checked,
+        });
+        aviso(`${r.autor} — ${r.rotulo}: ${r.total}${r.nd != null ? (r.sucesso ? ' SUCESSO' : ' FALHA') : ''}`, r.sucesso === false ? 'erro' : 'ok');
+      }, { class: 'primario', icone: 'dices' }),
+      p ? botao('Iniciativa', async () => {
+        const r = await acao('rolar', { sala: nome, id: p.id, tipo: 'iniciativa' });
+        aviso(`Iniciativa de ${p.nome}: ${r.total}`);
+      }, { icone: 'zap' }) : null));
 }
 
 function encontroAleatorio() {

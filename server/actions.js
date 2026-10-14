@@ -1,6 +1,6 @@
 import { db, save, uid } from './db.js';
 import { sistema } from './sistema.js';
-import { novaFicha, pontosCampanha, pontosGastos, podeEquipar, rolarDado, gerarEncontro, LIMITE_SALA } from '../shared/regras.js';
+import { novaFicha, podeEquipar, rolarDado, testeDMil, gerarEncontro, derivados, problemasFicha, LIMITE_SALA } from '../shared/regras.js';
 
 const GRUPO_ENCONTROS = 'encontros';
 const MAX_LOG = 100;
@@ -56,7 +56,7 @@ export function resumoCampanha(c) {
 const nomeUsuario = id => db.users.find(u => u.id === id)?.name ?? null;
 
 function fichaPublica(p) {
-  return { id: p.id, tipo: p.tipo, nome: p.nome, classe: p.classe, nivel: p.nivel, foto: p.foto, donoId: p.donoId, dono: nomeUsuario(p.donoId) };
+  return { id: p.id, tipo: p.tipo, nome: p.nome, classe: p.classe, especializacao: p.especializacao, profissao: p.profissao, nivel: p.nivel, foto: p.foto, donoId: p.donoId, dono: nomeUsuario(p.donoId) };
 }
 
 // O que cada pessoa enxerga da campanha. O mestre vê tudo; o jogador só o que é dele ou público.
@@ -133,34 +133,37 @@ function itemDoCatalogo(itemId) {
   return { ...structuredClone(it), uid: uid(), itemId: it.id, equipado: false, durabilidadeAtual: it.durabilidade };
 }
 
-const ROTULOS_PONTOS = { atributos: 'Atributos', vantagens: 'Vantagens', pericias: 'Perícias' };
-
-// O jogador não pode passar dos limites definidos pelo mestre.
+// O jogador não pode passar dos limites definidos pelo mestre (as mesmas regras da tela de criação).
 function validarCriacao(c, p, sis) {
   if (c.nivel !== 'Variavel') p.nivel = c.nivel;
   p.nivel = Math.max(1, Math.min(20, parseInt(p.nivel, 10) || 1));
-  const max = pontosCampanha(c, sis);
-  const gastos = pontosGastos(p, sis);
-  for (const k of ['atributos', 'vantagens', 'pericias']) {
-    if (gastos[k] > max[k]) throw erro(`Pontos de ${ROTULOS_PONTOS[k]} acima do permitido (${gastos[k]}/${max[k]}).`);
-  }
-  for (const a of sis.atributos) {
-    const v = p.atributos?.[a.nome] ?? 0;
-    if (v < (a.min ?? 0) || v > (a.max ?? 99)) throw erro(`${a.nome} fora do limite.`);
-  }
-  for (const x of sis.pericias) {
-    const v = p.pericias?.[x.nome] ?? 0;
-    if (v < 0 || v > (x.max ?? 99)) throw erro(`${x.nome} fora do limite.`);
-  }
-  // Itens e dinheiro são recalculados a partir do catálogo, nunca confiando no navegador.
-  const ini = sis.inicio?.dinheiro ?? 0;
+  const problemas = problemasFicha(p, sis, c);
+  if (problemas.length) throw erro(problemas[0]);
+  // Itens, dinheiro, PV e Sanidade são recalculados aqui, nunca confiando no navegador.
+  const ini = sis.regras?.creditosIniciais ?? 0;
   const itens = (p.itens || []).map(i => itemDoCatalogo(i.itemId || i.id));
   const custo = itens.reduce((s, i) => s + (i.preco || 0), 0);
-  if (custo > ini) throw erro('Os itens custam mais que o dinheiro inicial.');
+  if (custo > ini) throw erro(`Os itens custam mais que os ${ini} ${sis.moeda || 'créditos'} iniciais.`);
   p.itens = itens;
   p.dinheiro = ini - custo;
+  const d = derivados(p, sis);
+  p.pv = { max: d.pvMax, atual: d.pvMax };
+  p.sanidade = { max: d.sanidadeMax, atual: d.sanidadeMax };
   p.xp = 0;
   p.marcadores = [];
+}
+
+// Valor da ação calculado no servidor a partir da ficha: "sub:<id>", "per:<id>" ou "atr:<sigla>".
+function valorAcao(p, ref, sis) {
+  const d = derivados(p, sis);
+  const [tipo, id] = String(ref || '').split(/:(.*)/s);
+  if (tipo === 'sub' && id in d.subpericias) {
+    const per = sis.pericias.find(x => x.subpericias.some(y => y.id === id));
+    return { valor: d.subpericias[id], nome: `${per.nome} › ${per.subpericias.find(y => y.id === id).nome}` };
+  }
+  if (tipo === 'per' && id in d.pericias) return { valor: d.pericias[id], nome: sis.pericias.find(x => x.id === id).nome };
+  if (tipo === 'atr' && id in d.percentual) return { valor: d.percentual[id], nome: `${sis.atributos.find(a => a.sigla === id).nome}%` };
+  throw erro('Escolha o que vai testar.');
 }
 
 function npcDeMonstro(c, m) {
@@ -175,7 +178,7 @@ const nomeStr = v => String(v ?? '').slice(0, 20000);
 
 // Campos que um jogador pode alterar diretamente na própria ficha (o resto passa pelo mestre ou por ações específicas).
 const CAMPOS_JOGADOR = new Set([
-  'nome', 'idade', 'peso', 'altura', 'instinto', 'caracteristicas', 'background', 'anotacoes',
+  'nome', 'idade', 'peso', 'altura', 'instinto', 'caracteristicas', 'background', 'anotacoes', 'origem', 'motivacao', 'familia',
   'foto', 'pv', 'sanidade', 'humanidade', 'marcadores',
 ]);
 const CAMPOS_PROTEGIDOS = new Set(['id', 'tipo', 'donoId', 'backups']);
@@ -309,7 +312,7 @@ export const acoes = {
     if (gasto > (p.xp || 0)) throw erro('XP insuficiente.');
     const { backups, ...semBackups } = p;
     p.backups = [...(backups || []), { id: uid(), em: Date.now(), ficha: structuredClone(semBackups) }].slice(-MAX_BACKUPS);
-    for (const k of ['nivel', 'classe', 'escolhasClasse', 'atributos', 'pericias', 'vantagens', 'pv', 'sanidade', 'humanidade']) {
+    for (const k of ['nivel', 'classe', 'especializacao', 'escolhasClasse', 'atributos', 'pericias', 'subpericias', 'vantagens', 'defeitos', 'pv', 'sanidade', 'humanidade']) {
       if (k in (patch || {})) p[k] = patch[k];
     }
     p.xp -= gasto;
@@ -444,17 +447,33 @@ export const acoes = {
   },
 
   // Rolagens acontecem no servidor para todos verem o mesmo resultado.
-  'rolar'(c, { sala: nome, id, rotulo, componentes, dado, secreta }, ctx) {
+  // Rolagens acontecem no servidor para todos verem o mesmo resultado.
+  // Teste D-MIL: { acaoRef | acao, mod, nd, metade }. Iniciativa: { tipo: 'iniciativa' }. Livre: { dado: '2d6' }.
+  'rolar'(c, { sala: nome, id, rotulo, tipo, acaoRef, acao, mod, nd, metade, dado, secreta }, ctx) {
+    const sis = sistema();
     let autor = ctx.mestre ? 'Mestre' : ctx.user.name;
+    let p = null;
     if (id) {
-      const p = personagem(c, id);
+      p = personagem(c, id);
       exigirDonoOuMestre(ctx, p);
       autor = p.nome;
     }
-    const comps = (componentes || []).slice(0, 10).map(x => ({ nome: String(x.nome).slice(0, 40), valor: parseInt(x.valor, 10) || 0 }));
-    const r = rolarDado(dado || sistema().teste.dado);
-    const total = r.total + comps.reduce((s, x) => s + x.valor, 0);
-    const entrada = { autor, rotulo: String(rotulo || 'Teste').slice(0, 80), dado: r.expr, dados: r.dados, mod: r.mod, componentes: comps, total, secreta: !!(ctx.mestre && secreta) };
+    const base = { autor, secreta: !!(ctx.mestre && secreta) };
+    let entrada;
+    if (tipo === 'iniciativa') {
+      const r = rolarDado('1d10');
+      const agi = p ? derivados(p, sis).iniciativa : 0;
+      entrada = { ...base, tipo: 'iniciativa', rotulo: 'Iniciativa', dado: '1d10', dados: r.dados, mod: 0, componentes: [{ nome: 'AGI', valor: agi }], total: r.total + agi };
+    } else if (dado) {
+      const r = rolarDado(dado);
+      entrada = { ...base, rotulo: String(rotulo || dado).slice(0, 80), dado: r.expr, dados: r.dados, mod: r.mod, componentes: [], total: r.total };
+    } else {
+      const a = acaoRef && p ? valorAcao(p, acaoRef, sis) : { valor: parseInt(acao, 10) || 0, nome: String(rotulo || 'Teste').slice(0, 80) };
+      const modificador = Math.max(-100, Math.min(100, parseInt(mod, 10) || 0));
+      const ndNum = nd === '' || nd == null ? null : Math.max(0, parseInt(nd, 10) || 0);
+      const r = testeDMil(a.valor + modificador, ndNum, sis, { metade: !!metade });
+      entrada = { ...base, tipo: 'dmil', rotulo: String(rotulo || a.nome).slice(0, 80), acaoNome: a.nome, mod: modificador, metade: !!metade, ...r };
+    }
     if (nome && c.salas[nome]) registrar(c.salas[nome].log, entrada);
     else registrar(c.log, entrada);
     return entrada;
