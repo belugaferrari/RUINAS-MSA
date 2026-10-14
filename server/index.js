@@ -10,6 +10,7 @@ import { registrar, entrar, usuarioDoToken, sair } from './auth.js';
 import { sistema, CONTEUDO } from './sistema.js';
 import { novaCampanha, resumoCampanha, visaoPara, entrarNaCampanha, executar, acoes } from './actions.js';
 import { modeloNpcs, lerNpcs } from './excel.js';
+import { montarSprite } from './icones.js';
 
 const PORTA = parseInt(process.env.PORT, 10) || 3000;
 const LIVROS = new Set(['regras', 'mestre']);
@@ -22,6 +23,8 @@ app.use(express.json({ limit: '2mb' }));
 app.use(express.static(path.join(RAIZ, 'public')));
 app.use('/shared', express.static(path.join(RAIZ, 'shared')));
 app.use('/uploads', express.static(UPLOADS, { maxAge: '7d' }));
+const SPRITE = montarSprite();
+app.get('/icones.svg', (_req, res) => res.type('image/svg+xml').set('Cache-Control', 'max-age=3600').send(SPRITE));
 app.get('/vendor/marked.js', (_req, res) => res.sendFile(path.join(RAIZ, 'node_modules/marked/lib/marked.esm.js')));
 
 const rota = fn => async (req, res) => {

@@ -1,4 +1,4 @@
-import { h, aviso } from '../ui.js';
+import { h, aviso, icone } from '../ui.js';
 import { mudar } from '../estado.js';
 import { sessao, post } from '../api.js';
 import { iniciarSessao } from '../app.js';
@@ -37,12 +37,12 @@ export function telaLogin() {
     },
   },
   titulo,
-  h('label', {}, 'Nome', nome),
-  h('label', {}, 'Senha', senha),
+  h('label', {}, h('span', { class: 'rotulo-ic' }, icone('user'), 'Nome'), nome),
+  h('label', {}, h('span', { class: 'rotulo-ic' }, icone('lock'), 'Senha'), senha),
   h('label', { class: 'linha' }, lembrar, 'Lembrar neste dispositivo'),
   enviar, alternar);
 
   return h('div', { class: 'centro' },
-    h('div', { class: 'marca' }, h('h1', {}, 'Ilhas das Ruínas'), h('p', {}, 'MSA — apoio de mesa')),
+    h('div', { class: 'marca' }, h('div', { class: 'marca-icone' }, icone('anchor')), h('h1', {}, 'Ilhas das Ruínas'), h('p', {}, 'MSA — apoio de mesa')),
     form);
 }

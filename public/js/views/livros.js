@@ -1,4 +1,5 @@
-import { h, botao, selecao, aviso, vazio } from '../ui.js';
+import { h, botao, selecao, aviso, vazio, icone, titulo, tabela } from '../ui.js';
+import { ICONE_TIPO } from './ficha.js';
 import { estado, render, personagemPorId, meusPersonagens } from '../estado.js';
 import { acao } from '../api.js';
 import { marked } from '/vendor/marked.js';
@@ -29,7 +30,7 @@ export function markdown(texto) {
   return div;
 }
 
-export function livroView(nome, titulo) {
+export function livroView(nome, nomeLivro) {
   if (!(nome in cacheLivros)) {
     cacheLivros[nome] = null;
     fetch(`/api/livro/${nome}`).then(r => r.text()).then(t => { cacheLivros[nome] = t; render(); })
@@ -53,12 +54,17 @@ export function livroView(nome, titulo) {
     secoes.push(secao);
     for (const s of secoes) if (!s.some(el => el.textContent.toLowerCase().includes(q))) s.forEach(el => { el.hidden = true; });
   }
+  // No celular o índice começa recolhido para o texto aparecer logo.
+  const chaveIndice = `indice:${nome}`;
+  if (!(chaveIndice in estado.sel)) estado.sel[chaveIndice] = !matchMedia('(max-width: 860px)').matches;
   return h('div', { class: 'livro' },
     h('aside', { class: 'indice' },
-      h('h3', {}, titulo),
-      filtroBusca(nome, 'Buscar no livro…'),
-      h('ul', {}, titulos.filter(t => !t.closest('[hidden]') && !t.hidden).map(t => h('li', { class: t.tagName.toLowerCase() },
-        h('a', { href: `#${t.id}`, onclick: e => { e.preventDefault(); document.getElementById(t.id)?.scrollIntoView({ behavior: 'smooth' }); } }, t.textContent))))),
+      titulo(nomeLivro, nome === 'mestre' ? 'library' : 'book-open'),
+      h('label', { class: 'busca' }, icone('search'), filtroBusca(nome, 'Buscar no livro…')),
+      h('details', { open: estado.sel[chaveIndice], ontoggle: e => { estado.sel[chaveIndice] = e.target.open; } },
+        h('summary', {}, icone('bookmark'), 'Índice'),
+        h('ul', {}, titulos.filter(t => !t.closest('[hidden]') && !t.hidden).map(t => h('li', { class: t.tagName.toLowerCase() },
+        h('a', { href: `#${t.id}`, onclick: e => { e.preventDefault(); document.getElementById(t.id)?.scrollIntoView({ behavior: 'smooth' }); } }, t.textContent)))))),
     corpo);
 }
 
@@ -67,25 +73,28 @@ export function monstrosView() {
   const q = busca('monstros');
   const lista = estado.sistema.monstros.filter(m => !q || JSON.stringify(m).toLowerCase().includes(q));
   return h('div', {},
-    h('div', { class: 'barra' }, h('h2', {}, 'Livro dos Monstros'), h('span', { class: 'espaco' }), filtroBusca('monstros', 'Buscar criatura…')),
-    lista.length ? h('div', { class: 'cartoes' }, lista.map(m => h('div', { class: 'cartao' },
-      h('h3', {}, m.nome),
-      h('p', { class: 'meta' }, `Dificuldade ${m.dificuldade} · PV ${m.pv} · Defesa ${m.defesa}`),
-      h('p', {}, h('strong', {}, 'Ataque: '), m.ataque),
+    h('div', { class: 'barra' }, titulo('Livro dos Monstros', 'skull', 'h2'), h('span', { class: 'espaco' }), h('label', { class: 'busca' }, icone('search'), filtroBusca('monstros', 'Buscar criatura…'))),
+    lista.length ? h('div', { class: 'cartoes' }, lista.map(m => h('div', { class: 'cartao monstro' },
+      titulo(m.nome, 'skull'),
+      h('p', { class: 'meta icones-meta' },
+        h('span', { title: 'Dificuldade' }, icone('flame'), `Dif. ${m.dificuldade}`),
+        h('span', { title: 'Pontos de vida' }, icone('heart'), `PV ${m.pv}`),
+        h('span', { title: 'Defesa' }, icone('shield'), `Def ${m.defesa}`)),
+      h('p', {}, icone('sword'), h('strong', {}, ' Ataque: '), m.ataque),
       h('p', {}, m.descricao),
       mestre ? botao('Colocar no Campo de Batalha', async () => {
         await acao('monstro.adicionar', { nome: m.nome });
         aviso(`${m.nome} entrou no Campo de Batalha.`);
-      }, { class: 'pequeno' }) : null))) : vazio('Nenhuma criatura encontrada.'));
+      }, { class: 'pequeno', icone: 'swords' }) : null))) : vazio('Nenhuma criatura encontrada.', 'search'));
 }
 
 export function classesView() {
   const q = busca('classes');
   const lista = estado.sistema.classes.filter(c => !q || JSON.stringify(c).toLowerCase().includes(q));
   return h('div', {},
-    h('div', { class: 'barra' }, h('h2', {}, 'Classes'), h('span', { class: 'espaco' }), filtroBusca('classes', 'Buscar classe…')),
+    h('div', { class: 'barra' }, titulo('Classes', 'shield', 'h2'), h('span', { class: 'espaco' }), h('label', { class: 'busca' }, icone('search'), filtroBusca('classes', 'Buscar classe…'))),
     h('div', { class: 'cartoes' }, lista.map(c => h('div', { class: 'cartao' },
-      h('h3', {}, c.nome),
+      titulo(c.nome, 'wand-sparkles'),
       h('p', {}, c.descricao),
       c.escolhas?.length ? h('ul', {}, c.escolhas.map(e => h('li', {}, h('strong', {}, `${e.rotulo} (escolha ${e.quantidade}): `), e.opcoes.join(', ')))) : null))));
 }
@@ -93,7 +102,7 @@ export function classesView() {
 const TIPOS = { arma: 'Arma', defesa: 'Defesa', vestimenta: 'Vestimenta', joia: 'Joia', armadilha: 'Armadilha', geral: 'Geral' };
 
 // Catálogo de itens. Com "compra", mostra o botão de comprar para o personagem escolhido.
-export function lojaView({ titulo = 'Loja', tipos = null } = {}) {
+export function lojaView({ titulo: tituloLoja = 'Loja', tipos = null } = {}) {
   const c = estado.campanha;
   const sis = estado.sistema;
   const mestre = c.papel === 'mestre';
@@ -108,31 +117,31 @@ export function lojaView({ titulo = 'Loja', tipos = null } = {}) {
 
   return h('div', {},
     h('div', { class: 'barra' },
-      h('h2', {}, titulo),
-      mestre ? h('label', { class: 'linha' },
+      titulo(tituloLoja, 'store', 'h2'),
+      mestre ? h('label', { class: 'linha interruptor' },
         h('input', { type: 'checkbox', checked: c.lojaAberta, onchange: e => acao('campanha.atualizar', { lojaAberta: e.target.checked }) }),
-        'Loja liberada para os jogadores') : h('span', { class: `selo ${c.lojaAberta ? 'ok' : 'perigo'}` }, c.lojaAberta ? 'Loja aberta' : 'Loja fechada pelo mestre'),
+        icone(c.lojaAberta ? 'lock-open' : 'lock'), 'Loja liberada para os jogadores') : h('span', { class: `selo ${c.lojaAberta ? 'ok' : 'perigo'}` }, icone(c.lojaAberta ? 'lock-open' : 'lock'), c.lojaAberta ? 'Loja aberta' : 'Loja fechada pelo mestre'),
       h('span', { class: 'espaco' }),
       tipos ? null : selecao([{ valor: '', rotulo: 'Todos os tipos' }, ...Object.entries(TIPOS).map(([v, r]) => ({ valor: v, rotulo: r }))], tipoSel, v => { estado.sel.lojaTipo = v; render(); }),
-      filtroBusca('loja', 'Buscar item…')),
+      h('label', { class: 'busca' }, icone('search'), filtroBusca('loja', 'Buscar item…'))),
     compradores.length ? h('div', { class: 'barra' },
-      h('span', {}, mestre ? 'Comprar/dar para:' : 'Comprar para:'),
+      h('span', {}, icone('user'), mestre ? ' Comprar/dar para:' : ' Comprar para:'),
       selecao(compradores.map(p => ({ valor: p.id, rotulo: p.nome })), compradorId, v => { estado.sel.comprador = v; render(); }),
-      comprador ? h('span', { class: 'selo' }, `Dinheiro: ${comprador.dinheiro ?? 0}`) : null) : null,
-    h('table', { class: 'tabela' },
-      h('thead', {}, h('tr', {}, ['Item', 'Tipo', 'Slot', 'Preço', 'Venda', 'Durab.', 'Peso', 'Dano/Def.', 'Bônus', ''].map(t => h('th', {}, t)))),
-      h('tbody', {}, itens.map(i => h('tr', {},
-        h('td', {}, i.nome), h('td', {}, TIPOS[i.tipo] || i.tipo), h('td', {}, slotNome(i.slot), i.ocupa > 1 ? ` (${i.ocupa})` : ''),
-        h('td', {}, i.preco), h('td', {}, i.venda), h('td', {}, i.durabilidade), h('td', {}, i.peso),
-        h('td', {}, [i.dano, i.defesa ? `Def ${i.defesa}` : null].filter(Boolean).join(' · ') || '—'),
-        h('td', {}, Object.entries(i.bonus || {}).map(([k, v]) => `${k} ${v > 0 ? '+' : ''}${v}`).join(', ') || '—'),
-        h('td', { class: 'acoes' },
-          podeComprar ? botao('Comprar', async () => {
-            await acao('item.comprar', { id: comprador.id, itemId: i.id });
-            aviso(`${i.nome} comprado para ${comprador.nome}.`);
-          }, { class: 'pequeno primario' }) : null,
-          mestre && comprador ? botao('Dar', async () => {
-            await acao('item.adicionar', { id: comprador.id, itemId: i.id });
-            aviso(`${i.nome} entregue a ${comprador.nome}.`);
-          }, { class: 'pequeno' }) : null))))));
+      comprador ? h('span', { class: 'selo moeda' }, icone('coins'), `${comprador.dinheiro ?? 0}`) : null) : null,
+    itens.length ? tabela(['Item', 'Tipo', 'Slot', 'Preço', 'Venda', 'Durab.', 'Peso', 'Dano/Def.', 'Bônus', ''], itens.map(i => [
+      h('span', { class: 'item-nome' }, icone(ICONE_TIPO[i.tipo] || 'tag'), i.nome), TIPOS[i.tipo] || i.tipo, [slotNome(i.slot), i.ocupa > 1 ? ` (${i.ocupa})` : ''],
+      h('span', { class: 'moeda' }, icone('coins'), i.preco), i.venda, i.durabilidade, i.peso,
+      [i.dano, i.defesa ? `Def ${i.defesa}` : null].filter(Boolean).join(' · ') || '—',
+      Object.entries(i.bonus || {}).map(([k, v]) => `${k} ${v > 0 ? '+' : ''}${v}`).join(', ') || '—',
+      [
+        podeComprar ? botao('Comprar', async () => {
+          await acao('item.comprar', { id: comprador.id, itemId: i.id });
+          aviso(`${i.nome} comprado para ${comprador.nome}.`);
+        }, { class: 'pequeno primario', icone: 'coins' }) : null,
+        mestre && comprador ? botao('Dar', async () => {
+          await acao('item.adicionar', { id: comprador.id, itemId: i.id });
+          aviso(`${i.nome} entregue a ${comprador.nome}.`);
+        }, { class: 'pequeno', icone: 'gem' }) : null,
+      ],
+    ])) : vazio('Nenhum item encontrado.', 'search'));
 }

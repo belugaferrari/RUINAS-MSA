@@ -1,9 +1,11 @@
-import { h, botao, aviso, vazio, confirmar } from '../ui.js';
+import { h, botao, aviso, vazio, confirmar, icone, titulo, tabela } from '../ui.js';
 import { estado, render, mudar } from '../estado.js';
 import { acao } from '../api.js';
 import { novaFicha, pontosCampanha, pontosGastos } from '/shared/regras.js';
+import { ICONE_TIPO } from './ficha.js';
 
 const PASSOS = ['Pontos e nível', 'Identidade', 'Classe', 'Vantagens', 'Atributos', 'Perícias', 'Itens', 'Humanidade e Sanidade', 'Background', 'Revisão'];
+const ICONES_PASSOS = ['trending-up', 'user', 'shield', 'sparkles', 'zap', 'target', 'backpack', 'brain', 'scroll', 'check'];
 
 const chaveRascunho = () => `msa.criacao.${estado.campanha.id}.${estado.usuario.id}`;
 
@@ -47,9 +49,9 @@ function contador(rotulo, gasto, total) {
 
 function passador(valor, min, max, aoMudar) {
   return h('span', { class: 'passador' },
-    h('button', { type: 'button', disabled: valor <= min, onclick: () => aoMudar(valor - 1) }, '−'),
+    h('button', { type: 'button', 'aria-label': 'Diminuir', disabled: valor <= min, onclick: () => aoMudar(valor - 1) }, icone('minus')),
     h('strong', {}, valor),
-    h('button', { type: 'button', disabled: valor >= max, onclick: () => aoMudar(valor + 1) }, '+'));
+    h('button', { type: 'button', 'aria-label': 'Aumentar', disabled: valor >= max, onclick: () => aoMudar(valor + 1) }, icone('plus')));
 }
 
 // ---------- passos ----------
@@ -91,9 +93,9 @@ function passoClasse() {
     h('div', { class: 'cartoes' }, estado.sistema.classes.map(c => h('button', {
       type: 'button', class: `cartao escolha ${f.classe === c.nome ? 'escolhido' : ''}`,
       onclick: () => alterar(x => { x.classe = c.nome; x.escolhasClasse = {}; }),
-    }, h('h3', {}, c.nome), h('p', {}, c.descricao)))),
+    }, titulo(c.nome, f.classe === c.nome ? 'check' : 'wand-sparkles'), h('p', {}, c.descricao)))),
     classe?.escolhas?.length ? h('div', { class: 'bloco' },
-      h('h3', {}, `Escolhas próprias de ${classe.nome}`),
+      titulo(`Escolhas próprias de ${classe.nome}`, 'sparkles'),
       classe.escolhas.map(e => {
         const atuais = f.escolhasClasse[e.id] || [];
         return h('fieldset', {}, h('legend', {}, `${e.rotulo} — escolha ${e.quantidade} (${atuais.length}/${e.quantidade})`),
@@ -144,21 +146,20 @@ function passoItens() {
   const f = estado.criacao.ficha;
   const sis = estado.sistema;
   return h('div', {},
-    h('p', {}, h('strong', {}, `Dinheiro disponível: ${f.dinheiro}`)),
-    h('h3', {}, 'Itens escolhidos'),
-    f.itens.length ? h('ul', {}, f.itens.map((i, idx) => h('li', {}, `${i.nome} (${i.preco}) `,
-      h('button', { type: 'button', class: 'x', onclick: () => alterar(x => { x.itens.splice(idx, 1); x.dinheiro += i.preco; }) }, '×')))) : vazio('Nenhum item ainda.'),
-    h('h3', {}, 'Catálogo'),
-    h('table', { class: 'tabela' },
-      h('thead', {}, h('tr', {}, ['Item', 'Tipo', 'Preço', 'Dano/Def.', 'Bônus', ''].map(t => h('th', {}, t)))),
-      h('tbody', {}, sis.itens.map(i => h('tr', {},
-        h('td', {}, i.nome), h('td', {}, i.tipo), h('td', {}, i.preco),
-        h('td', {}, [i.dano, i.defesa ? `Def ${i.defesa}` : null].filter(Boolean).join(' · ') || '—'),
-        h('td', {}, Object.entries(i.bonus || {}).map(([k, v]) => `${k} ${v > 0 ? '+' : ''}${v}`).join(', ') || '—'),
-        h('td', {}, h('button', {
-          type: 'button', class: 'pequeno', disabled: f.dinheiro < i.preco,
-          onclick: () => alterar(x => { x.itens.push({ ...structuredClone(i), itemId: i.id, equipado: false, durabilidadeAtual: i.durabilidade }); x.dinheiro -= i.preco; }),
-        }, 'Escolher')))))),
+    h('p', { class: 'contador' }, icone('coins'), h('strong', {}, ` Dinheiro disponível: ${f.dinheiro}`)),
+    titulo('Itens escolhidos', 'backpack'),
+    f.itens.length ? h('ul', { class: 'lista-inline' }, f.itens.map((i, idx) => h('li', {}, `${i.nome} (${i.preco}) `,
+      h('button', { type: 'button', class: 'x so-icone', 'aria-label': `Devolver ${i.nome}`, title: `Devolver ${i.nome}`, onclick: () => alterar(x => { x.itens.splice(idx, 1); x.dinheiro += i.preco; }) }, icone('x'))))) : vazio('Nenhum item ainda.', 'backpack'),
+    titulo('Catálogo', 'store'),
+    tabela(['Item', 'Tipo', 'Preço', 'Dano/Def.', 'Bônus', ''], sis.itens.map(i => [
+      h('span', { class: 'item-nome' }, icone(ICONE_TIPO[i.tipo] || 'tag'), i.nome), i.tipo, h('span', { class: 'moeda' }, icone('coins'), i.preco),
+      [i.dano, i.defesa ? `Def ${i.defesa}` : null].filter(Boolean).join(' · ') || '—',
+      Object.entries(i.bonus || {}).map(([k, v]) => `${k} ${v > 0 ? '+' : ''}${v}`).join(', ') || '—',
+      h('button', {
+        type: 'button', class: 'pequeno', disabled: f.dinheiro < i.preco,
+        onclick: () => alterar(x => { x.itens.push({ ...structuredClone(i), itemId: i.id, equipado: false, durabilidadeAtual: i.durabilidade }); x.dinheiro -= i.preco; }),
+      }, icone('plus'), 'Escolher'),
+    ])),
     h('p', { class: 'dica' }, 'Você poderá equipar os itens na ficha depois de criada.'));
 }
 
@@ -202,12 +203,12 @@ function passoRevisao() {
     erros.length ? h('div', { class: 'alerta perigo' }, h('strong', {}, 'Antes de criar:'), h('ul', {}, erros.map(e => h('li', {}, e)))) : null,
     sobra.length ? h('div', { class: 'alerta' }, `Ainda sobram pontos — ${sobra.join(', ')}. Você pode criar assim mesmo.`) : null,
     h('div', { class: 'ficha-grade' },
-      h('section', { class: 'bloco' }, h('h3', {}, f.nome || '(sem nome)'),
+      h('section', { class: 'bloco' }, titulo(f.nome || '(sem nome)', 'user'),
         h('p', {}, `Nível ${f.nivel} · ${f.classe}`), h('p', {}, `Idade ${f.idade || '—'} · Peso ${f.peso || '—'} · Tamanho ${f.altura || '—'}`), h('p', {}, `Instinto: ${f.instinto || '—'}`),
         h('p', {}, `Humanidade ${f.humanidade.max} · Sanidade ${f.sanidade.max} · PV ${f.pv.max}`)),
-      h('section', { class: 'bloco' }, h('h3', {}, 'Atributos'), h('ul', {}, sis.atributos.map(a => h('li', {}, `${a.nome}: ${f.atributos[a.nome]}`)))),
-      h('section', { class: 'bloco' }, h('h3', {}, 'Perícias'), h('ul', {}, sis.pericias.filter(x => f.pericias[x.nome]).map(x => h('li', {}, `${x.nome}: ${f.pericias[x.nome]}`)))),
-      h('section', { class: 'bloco' }, h('h3', {}, 'Vantagens e itens'), h('p', {}, f.vantagens.join(', ') || 'Nenhuma vantagem'), h('p', {}, f.itens.map(i => i.nome).join(', ') || 'Nenhum item'), h('p', {}, `Dinheiro restante: ${f.dinheiro}`))));
+      h('section', { class: 'bloco' }, titulo('Atributos', 'zap'), h('ul', {}, sis.atributos.map(a => h('li', {}, `${a.nome}: ${f.atributos[a.nome]}`)))),
+      h('section', { class: 'bloco' }, titulo('Perícias', 'target'), h('ul', {}, sis.pericias.filter(x => f.pericias[x.nome]).map(x => h('li', {}, `${x.nome}: ${f.pericias[x.nome]}`)))),
+      h('section', { class: 'bloco' }, titulo('Vantagens e itens', 'sparkles'), h('p', {}, f.vantagens.join(', ') || 'Nenhuma vantagem'), h('p', {}, f.itens.map(i => i.nome).join(', ') || 'Nenhum item'), h('p', {}, `Dinheiro restante: ${f.dinheiro}`))));
 }
 
 const VIEWS = [passoPontos, passoIdentidade, passoClasse, passoVantagens, () => passoValores('atributos', estado.sistema.atributos), () => passoValores('pericias', estado.sistema.pericias), passoItens, passoMental, passoBackground, passoRevisao];
@@ -218,13 +219,15 @@ export function criacaoView() {
   const ultimo = cr.passo === PASSOS.length - 1;
   return h('div', { class: 'criacao' },
     h('div', { class: 'barra' },
-      h('h2', {}, 'Criar personagem'), h('span', { class: 'espaco' }),
-      botao('Cancelar', async () => { if (await confirmar('Descartar esta ficha em criação?')) cancelarCriacao(); }, { class: 'perigo' })),
-    h('ol', { class: 'passos' }, PASSOS.map((p, i) => h('li', { class: i === cr.passo ? 'atual' : i < cr.passo ? 'feito' : '' },
-      h('button', { type: 'button', onclick: () => ir(i) }, `${i + 1}. ${p}`)))),
-    h('section', { class: 'bloco passo' }, h('h3', {}, PASSOS[cr.passo]), VIEWS[cr.passo]()),
-    h('div', { class: 'barra' },
-      cr.passo > 0 ? h('button', { type: 'button', onclick: () => ir(cr.passo - 1) }, '← Voltar') : null,
+      titulo('Criar personagem', 'feather', 'h2'), h('span', { class: 'espaco' }),
+      botao('Cancelar', async () => { if (await confirmar('Descartar esta ficha em criação?')) cancelarCriacao(); }, { class: 'perigo', icone: 'x' })),
+    h('div', { class: 'progresso', role: 'progressbar', 'aria-valuemin': 1, 'aria-valuemax': PASSOS.length, 'aria-valuenow': cr.passo + 1, 'aria-label': 'Progresso da criação' },
+      h('i', { style: { width: `${(100 * (cr.passo + 1)) / PASSOS.length}%` } })),
+    h('ol', { class: 'passos', 'data-rolagem-x': 'passos' }, PASSOS.map((p, i) => h('li', { class: i === cr.passo ? 'atual' : i < cr.passo ? 'feito' : '' },
+      h('button', { type: 'button', 'aria-current': i === cr.passo ? 'step' : null, onclick: () => ir(i) }, icone(i < cr.passo ? 'check' : ICONES_PASSOS[i]), `${i + 1}. ${p}`)))),
+    h('section', { class: 'bloco passo' }, titulo(`Passo ${cr.passo + 1} de ${PASSOS.length} · ${PASSOS[cr.passo]}`, ICONES_PASSOS[cr.passo]), VIEWS[cr.passo]()),
+    h('div', { class: 'barra navegacao-passos' },
+      cr.passo > 0 ? h('button', { type: 'button', onclick: () => ir(cr.passo - 1) }, icone('arrow-left'), 'Voltar') : null,
       h('span', { class: 'espaco' }),
       ultimo
         ? botao('Criar personagem', async () => {
@@ -234,6 +237,6 @@ export function criacaoView() {
           try { localStorage.removeItem(chaveRascunho()); } catch { /* ignore */ }
           aviso('Personagem criado! Agora você pode enviar a foto na ficha.');
           mudar({ criacao: null, aba: 'ficha', sel: { ...estado.sel, personagem: id } });
-        }, { class: 'primario' })
-        : h('button', { type: 'button', class: 'primario', onclick: () => ir(cr.passo + 1) }, 'Avançar →')));
+        }, { class: 'primario', icone: 'check' })
+        : h('button', { type: 'button', class: 'primario', onclick: () => ir(cr.passo + 1) }, 'Avançar', icone('arrow-left', 'gira'))));
 }

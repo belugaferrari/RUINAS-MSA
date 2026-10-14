@@ -1,7 +1,9 @@
-import { h, campo, botao, selecao, aviso, confirmar, pedirTexto, formatarData, vazio } from '../ui.js';
+import { h, campo, botao, selecao, aviso, confirmar, pedirTexto, formatarData, vazio, icone, titulo, tabela } from '../ui.js';
 import { estado, render } from '../estado.js';
 import { acao, enviarArquivo } from '../api.js';
 import { derivados, slotsOcupados } from '/shared/regras.js';
+
+export const ICONE_TIPO = { arma: 'sword', defesa: 'shield', vestimenta: 'shirt', joia: 'gem', armadilha: 'crosshair', geral: 'backpack' };
 
 const atualizar = (p, patch) => acao('personagem.atualizar', { id: p.id, patch });
 
@@ -18,18 +20,18 @@ export function fichaView(p, { mestre = false } = {}) {
   return h('div', { class: 'ficha' },
     cabecalho(p, mestre),
     h('div', { class: 'ficha-grade' },
-      h('section', { class: 'bloco' }, h('h3', {}, 'Identidade'), identidade(p)),
-      h('section', { class: 'bloco' }, h('h3', {}, 'Estado'), trilhas(p, mestre)),
-      h('section', { class: 'bloco' }, h('h3', {}, 'Atributos'), valores(p, 'atributos', sis.atributos, d.atributos, d.bonus, mestre)),
-      h('section', { class: 'bloco' }, h('h3', {}, 'Perícias'), valores(p, 'pericias', sis.pericias, d.pericias, d.bonus, mestre)),
-      h('section', { class: 'bloco largo' }, h('h3', {}, 'Teste'), painelTeste(p)),
-      h('section', { class: 'bloco' }, h('h3', {}, 'Classe e vantagens'), classeVantagens(p, mestre)),
-      h('section', { class: 'bloco' }, h('h3', {}, `Equipamento · Defesa ${d.defesa} · Carga ${d.carga.toFixed(1)}`), equipamento(p, mestre)),
-      h('section', { class: 'bloco largo' }, h('h3', {}, 'Anotações'),
+      h('section', { class: 'bloco' }, titulo('Identidade', 'user'), identidade(p)),
+      h('section', { class: 'bloco' }, titulo('Estado', 'heart-pulse'), trilhas(p, mestre)),
+      h('section', { class: 'bloco' }, titulo('Atributos', 'zap'), valores(p, 'atributos', sis.atributos, d.atributos, d.bonus, mestre)),
+      h('section', { class: 'bloco' }, titulo('Perícias', 'target'), valores(p, 'pericias', sis.pericias, d.pericias, d.bonus, mestre)),
+      h('section', { class: 'bloco largo' }, titulo('Teste', 'dices'), painelTeste(p)),
+      h('section', { class: 'bloco' }, titulo('Classe e vantagens', 'shield'), classeVantagens(p, mestre)),
+      h('section', { class: 'bloco largo' }, titulo(`Equipamento · Defesa ${d.defesa} · Carga ${d.carga.toFixed(1)}`, 'backpack'), equipamento(p, mestre)),
+      h('section', { class: 'bloco largo' }, titulo('Anotações', 'notebook-pen'),
         campo(`${p.id}:anotacoes`, p.anotacoes, v => atualizar(p, { anotacoes: v }), { multilinha: true, rows: 5, placeholder: 'Suas anotações…' })),
-      h('section', { class: 'bloco largo' }, h('h3', {}, 'Background'),
+      h('section', { class: 'bloco largo' }, titulo('Background', 'scroll'),
         campo(`${p.id}:background`, p.background, v => atualizar(p, { background: v }), { multilinha: true, rows: 6 })),
-      mestre ? h('section', { class: 'bloco largo' }, h('h3', {}, 'Controle do mestre'), controleMestre(p)) : null));
+      mestre ? h('section', { class: 'bloco largo' }, titulo('Controle do mestre', 'crown'), controleMestre(p)) : null));
 }
 
 function cabecalho(p, mestre) {
@@ -50,7 +52,7 @@ function cabecalho(p, mestre) {
   });
   return h('header', { class: 'ficha-topo' },
     h('button', { class: 'foto', title: 'Trocar foto', onclick: () => arquivo.click() },
-      p.foto ? h('img', { src: p.foto, alt: p.nome }) : h('span', {}, '📷')),
+      p.foto ? h('img', { src: p.foto, alt: p.nome }) : h('span', { class: 'foto-vazia' }, icone('camera'), h('small', {}, 'Foto'))),
     arquivo,
     h('div', { class: 'ficha-titulo' },
       campo(`${p.id}:nome`, p.nome, v => atualizar(p, { nome: v }), { class: 'nome-grande' }),
@@ -81,9 +83,9 @@ function trilha(p, chave, rotulo) {
   return h('div', { class: 'trilha' },
     h('div', { class: 'trilha-topo' },
       h('strong', {}, rotulo),
-      botao('−', () => atualizar(p, { [chave]: { ...t, atual: t.atual - 1 } }), { class: 'pequeno' }),
+      botao('', () => atualizar(p, { [chave]: { ...t, atual: t.atual - 1 } }), { class: 'pequeno', icone: 'minus', title: `Diminuir ${rotulo}` }),
       h('span', { class: `valor ${t.atual <= 0 ? 'perigo' : ''}` }, `${t.atual} / ${t.max}`),
-      botao('+', () => atualizar(p, { [chave]: { ...t, atual: Math.min(t.max, t.atual + 1) } }), { class: 'pequeno' })),
+      botao('', () => atualizar(p, { [chave]: { ...t, atual: Math.min(t.max, t.atual + 1) } }), { class: 'pequeno', icone: 'plus', title: `Aumentar ${rotulo}` })),
     h('div', { class: 'caixas' }, caixas));
 }
 
@@ -102,8 +104,8 @@ function trilhas(p, mestre) {
     h('div', { class: 'marcadores' },
       h('strong', {}, 'Marcadores: '),
       (p.marcadores || []).map((m, i) => h('span', { class: 'etiqueta' }, m,
-        h('button', { class: 'x', title: 'Remover', onclick: () => atualizar(p, { marcadores: p.marcadores.filter((_, j) => j !== i) }) }, '×'))),
-      botao('+ marcador', novoMarcador, { class: 'pequeno' })));
+        botao('', () => atualizar(p, { marcadores: p.marcadores.filter((_, j) => j !== i) }), { class: 'x', icone: 'x', title: `Remover marcador ${m}` }))),
+      botao('Marcador', novoMarcador, { class: 'pequeno', icone: 'tag' })));
 }
 
 function valores(p, chave, lista, finais, bonus, mestre) {
@@ -141,13 +143,13 @@ function painelTeste(p) {
     h('p', { class: 'dica' }, sel.length ? `Somando: ${componentes.map(c => `${c.nome} (${c.valor})`).join(' + ')}` : 'Marque atributos e perícias acima para somar no teste.'),
     h('div', { class: 'barra' },
       rotulo, dado, onde,
-      botao('🎲 Rolar', async () => {
+      botao('Rolar', async () => {
         const r = await acao('rolar', { id: p.id, sala: onde.value || null, rotulo: rotulo.value || componentes.map(c => c.nome).join(' + ') || 'Teste', componentes, dado: dado.value });
         aviso(`${r.rotulo}: ${r.total} (dados ${r.dados.join(', ')})`);
         marcados(p.id).clear();
         render();
-      }, { class: 'primario' }),
-      sel.length ? botao('Limpar', () => { marcados(p.id).clear(); render(); }) : null),
+      }, { class: 'primario', icone: 'dices' }),
+      sel.length ? botao('Limpar', () => { marcados(p.id).clear(); render(); }, { icone: 'x' }) : null),
     h('p', { class: 'dica' }, sis.teste.descricao),
     ultimo ? h('p', {}, 'Último teste geral: ', linhaRolagem(ultimo)) : null);
 }
@@ -169,7 +171,7 @@ function classeVantagens(p, mestre) {
     h('p', {}, h('strong', {}, 'Vantagens: ')),
     (p.vantagens || []).length
       ? h('ul', {}, p.vantagens.map(v => h('li', { title: sis.vantagens.find(x => x.nome === v)?.descricao }, v,
-        mestre ? h('button', { class: 'x', onclick: () => atualizar(p, { vantagens: p.vantagens.filter(x => x !== v) }) }, '×') : null)))
+        mestre ? botao('', () => atualizar(p, { vantagens: p.vantagens.filter(x => x !== v) }), { class: 'x', icone: 'x', title: `Remover ${v}` }) : null)))
       : vazio('Nenhuma.'),
     mestre ? selecao([{ valor: '', rotulo: '+ adicionar vantagem' }, ...sis.vantagens.filter(v => !p.vantagens?.includes(v.nome)).map(v => ({ valor: v.nome, rotulo: `${v.nome} (${v.custo})` }))], '',
       v => v && atualizar(p, { vantagens: [...(p.vantagens || []), v] })) : null);
@@ -181,25 +183,28 @@ export function equipamento(p, mestre, filtro = null) {
   const itens = (p.itens || []).filter(i => !filtro || filtro(i));
   return h('div', {},
     filtro ? null : h('div', { class: 'slots' }, sis.slots.map(s => h('span', { class: `selo ${(uso[s.id] || 0) >= s.capacidade ? 'cheio' : ''}` }, `${s.nome} ${uso[s.id] || 0}/${s.capacidade}`))),
-    itens.length ? h('table', { class: 'tabela' },
-      h('thead', {}, h('tr', {}, h('th', {}, 'Item'), h('th', {}, 'Slot'), h('th', {}, 'Durab.'), h('th', {}, 'Dano/Def.'), h('th', {}, 'Bônus'), h('th', {}, 'Venda'), h('th', {}))),
-      h('tbody', {}, itens.map(i => h('tr', { class: i.equipado ? 'equipado' : '' },
-        h('td', {}, i.nome),
-        h('td', {}, sis.slots.find(s => s.id === i.slot)?.nome || '—', i.ocupa > 1 ? ` (${i.ocupa})` : ''),
-        h('td', {}, mestre
-          ? campo(`${p.id}:dur:${i.uid}`, i.durabilidadeAtual ?? i.durabilidade, v => acao('item.durabilidade', { id: p.id, uid: i.uid, valor: v }), { tipo: 'number', class: 'num' })
-          : `${i.durabilidadeAtual ?? i.durabilidade}/${i.durabilidade}`),
-        h('td', {}, [i.dano, i.defesa ? `Def ${i.defesa}` : null].filter(Boolean).join(' · ') || '—'),
-        h('td', {}, Object.entries(i.bonus || {}).map(([k, v]) => `${k} ${v > 0 ? '+' : ''}${v}`).join(', ') || '—'),
-        h('td', {}, i.venda ?? '—'),
-        h('td', { class: 'acoes' },
-          i.slot ? botao(i.equipado ? 'Desequipar' : 'Equipar', () => acao('item.equipar', { id: p.id, uid: i.uid, equipar: !i.equipado }), { class: i.equipado ? '' : 'primario pequeno' }) : null,
+    itens.length ? tabela(['Item', 'Slot', 'Durab.', 'Dano/Def.', 'Bônus', 'Venda', ''], itens.map(i => ({
+      class: i.equipado ? 'equipado' : null,
+      celulas: [
+        h('span', { class: 'item-nome' }, icone(ICONE_TIPO[i.tipo] || 'tag'), i.nome, i.equipado ? h('span', { class: 'selo ok' }, 'equipado') : null),
+        [sis.slots.find(s => s.id === i.slot)?.nome || '—', i.ocupa > 1 ? ` (${i.ocupa})` : ''],
+        mestre
+          ? campo(`${p.id}:dur:${i.uid}`, i.durabilidadeAtual ?? i.durabilidade, v => acao('item.durabilidade', { id: p.id, uid: i.uid, valor: v }), { tipo: 'number', class: 'num', 'aria-label': `Durabilidade de ${i.nome}` })
+          : `${i.durabilidadeAtual ?? i.durabilidade}/${i.durabilidade}`,
+        [i.dano, i.defesa ? `Def ${i.defesa}` : null].filter(Boolean).join(' · ') || '—',
+        Object.entries(i.bonus || {}).map(([k, v]) => `${k} ${v > 0 ? '+' : ''}${v}`).join(', ') || '—',
+        h('span', { class: 'moeda' }, icone('coins'), i.venda ?? '—'),
+        [
+          i.slot ? botao(i.equipado ? 'Desequipar' : 'Equipar', () => acao('item.equipar', { id: p.id, uid: i.uid, equipar: !i.equipado }), { class: i.equipado ? 'pequeno' : 'primario pequeno', icone: i.equipado ? 'x' : 'shirt' }) : null,
           (mestre || estado.campanha.lojaAberta) ? botao('Vender', async () => {
             if (await confirmar(`Vender ${i.nome} por ${i.venda ?? 0}?`)) await acao('item.vender', { id: p.id, uid: i.uid });
-          }, { class: 'pequeno' }) : null,
-          botao('×', async () => {
+          }, { class: 'pequeno', icone: 'coins' }) : null,
+          botao('', async () => {
             if (await confirmar(`Descartar ${i.nome}?`)) await acao('item.remover', { id: p.id, uid: i.uid });
-          }, { class: 'pequeno perigo', title: 'Descartar' })))))) : vazio('Nenhum item.'),
+          }, { class: 'pequeno perigo', icone: 'trash-2', title: `Descartar ${i.nome}` }),
+        ],
+      ],
+    }))) : vazio('Nenhum item.', 'backpack'),
     mestre && !filtro ? selecao([{ valor: '', rotulo: '+ dar item do catálogo' }, ...sis.itens.map(i => ({ valor: i.id, rotulo: i.nome }))], '',
       v => v && acao('item.adicionar', { id: p.id, itemId: v }).catch(e => aviso(e.message, 'erro'))) : null);
 }
@@ -208,23 +213,23 @@ function controleMestre(p) {
   const xp = h('input', { type: 'number', value: 10, class: 'curto' });
   return h('div', {},
     h('div', { class: 'barra' },
-      h('span', {}, 'Dar XP:'), xp, botao('Dar', () => acao('xp.dar', { id: p.id, qtd: xp.value })),
+      h('span', {}, 'Dar XP:'), xp, botao('Dar', () => acao('xp.dar', { id: p.id, qtd: xp.value }), { icone: 'sparkles' }),
       h('label', { class: 'mini' }, 'Dinheiro', campo(`${p.id}:dinheiro`, p.dinheiro, v => atualizar(p, { dinheiro: v }), { tipo: 'number', class: 'num' })),
       p.tipo === 'pj' && p.donoId ? botao('Liberar do jogador', async () => {
         if (await confirmar(`Tirar ${p.nome} do controle de ${p.dono}?`)) await acao('personagem.liberar', { id: p.id });
-      }) : null,
-      botao('Duplicar', () => acao('personagem.duplicar', { id: p.id })),
+      }, { icone: 'user-round-x' }) : null,
+      botao('Duplicar', () => acao('personagem.duplicar', { id: p.id }), { icone: 'copy' }),
       botao('Apagar ficha', async () => {
         if (await confirmar(`Apagar a ficha de ${p.nome}?`)) {
           await acao('personagem.remover', { id: p.id });
           estado.sel.personagem = null;
         }
-      }, { class: 'perigo' })),
-    h('h4', {}, 'Backups (feitos ao evoluir)'),
+      }, { class: 'perigo', icone: 'trash-2' })),
+    titulo('Backups (feitos ao evoluir)', 'save', 'h4'),
     (p.backups || []).length
       ? h('ul', {}, [...p.backups].reverse().map(b => h('li', {}, `${formatarData(b.em)} — nível ${b.ficha.nivel}, XP ${b.ficha.xp} `,
         botao('Restaurar', async () => {
           if (await confirmar('Restaurar este backup? A ficha atual será substituída.')) await acao('backup.restaurar', { id: p.id, backupId: b.id });
-        }, { class: 'pequeno' }))))
-      : vazio('Nenhum backup ainda.'));
+        }, { class: 'pequeno', icone: 'refresh-cw' }))))
+      : vazio('Nenhum backup ainda.', 'save'));
 }

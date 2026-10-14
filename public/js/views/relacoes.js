@@ -1,4 +1,4 @@
-import { h, campo, selecao, botao, vazio } from '../ui.js';
+import { h, campo, selecao, botao, vazio, tabela, titulo, icone } from '../ui.js';
 import { estado, render, personagemPorId } from '../estado.js';
 import { acao } from '../api.js';
 
@@ -59,14 +59,13 @@ function editorRelacoes(de, alvos) {
   const conhecidos = alvos.filter(p => rel[p.id]);
   const outros = alvos.filter(p => !rel[p.id]);
   return h('div', {},
-    conhecidos.length ? h('table', { class: 'tabela' },
-      h('thead', {}, h('tr', {}, h('th', {}, 'Personagem'), h('th', {}, `Como ${de.nome} o(a) vê`), h('th', {}, 'Anotações'), h('th', {}))),
-      h('tbody', {}, conhecidos.map(p => h('tr', {},
-        h('td', {}, p.foto ? h('img', { class: 'mini-foto', src: p.foto, alt: '' }) : null, p.nome, h('small', {}, p.tipo === 'npc' ? ' (NPC)' : ' (PJ)')),
-        h('td', {}, selecao(tipos.map(t => ({ valor: t, rotulo: t })), rel[p.id].tipo, v => acao('relacao.definir', { de: de.id, para: p.id, tipo: v }),
-          { style: { borderColor: CORES[rel[p.id].tipo] } })),
-        h('td', {}, campo(`rel:${de.id}:${p.id}`, rel[p.id].nota, v => acao('relacao.definir', { de: de.id, para: p.id, nota: v }), { multilinha: true, rows: 2 })),
-        h('td', {}, botao('×', () => acao('relacao.remover', { de: de.id, para: p.id }), { class: 'pequeno perigo', title: 'Remover' })))))) : vazio('Nenhuma relação registrada.'),
+    conhecidos.length ? tabela(['Personagem', `Como ${de.nome} o(a) vê`, 'Anotações', ''], conhecidos.map(p => [
+      h('span', { class: 'item-nome' }, p.foto ? h('img', { class: 'mini-foto', src: p.foto, alt: '' }) : icone(p.tipo === 'npc' ? 'ghost' : 'user'), p.nome, h('small', {}, p.tipo === 'npc' ? ' (NPC)' : ' (PJ)')),
+      selecao(tipos.map(t => ({ valor: t, rotulo: t })), rel[p.id].tipo, v => acao('relacao.definir', { de: de.id, para: p.id, tipo: v }),
+        { style: { borderColor: CORES[rel[p.id].tipo], borderLeftWidth: '6px' }, 'aria-label': `Relação com ${p.nome}` }),
+      campo(`rel:${de.id}:${p.id}`, rel[p.id].nota, v => acao('relacao.definir', { de: de.id, para: p.id, nota: v }), { multilinha: true, rows: 2, 'aria-label': `Anotações sobre ${p.nome}` }),
+      botao('', () => acao('relacao.remover', { de: de.id, para: p.id }), { class: 'pequeno perigo', icone: 'trash-2', title: `Remover ${p.nome}` }),
+    ]), 'relacoes-tabela') : vazio('Nenhuma relação registrada.', 'network'),
     outros.length ? selecao([{ valor: '', rotulo: '+ adicionar personagem conhecido' }, ...outros.map(p => ({ valor: p.id, rotulo: p.nome }))], '',
       v => v && acao('relacao.definir', { de: de.id, para: v, tipo: 'Neutro' })) : null);
 }
@@ -94,5 +93,5 @@ export function redesSociaisView(p) {
   const conhecidos = [p, ...visiveis.filter(x => rel[x.id])];
   return h('div', { class: 'relacoes' },
     h('div', {}, legenda(), grafo(conhecidos, { [p.id]: rel }, () => {}, p.id)),
-    h('div', {}, h('h2', {}, `Redes sociais de ${p.nome}`), editorRelacoes(p, visiveis)));
+    h('div', {}, titulo(`Redes sociais de ${p.nome}`, 'network', 'h2'), editorRelacoes(p, visiveis)));
 }

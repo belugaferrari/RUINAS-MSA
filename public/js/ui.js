@@ -1,4 +1,7 @@
 // Mini-biblioteca de interface: cria elementos, campos com rascunho, avisos e janelas.
+import { icone } from './icones.js';
+
+export { icone };
 
 export function h(tag, props, ...filhos) {
   const el = document.createElement(tag);
@@ -52,9 +55,13 @@ export function selecao(opcoes, valor, aoMudar, props = {}) {
     opcoes.map(o => (typeof o === 'string' ? h('option', { value: o }, o) : h('option', { value: o.valor, disabled: o.desabilitado }, o.rotulo))));
 }
 
+// Botão com ícone opcional. Sem rótulo, vira botão só de ícone e usa o "title" como nome acessível.
 export function botao(rotulo, aoClicar, props = {}) {
+  const { icone: ic, ...resto } = props;
+  if (!rotulo && resto.title) resto['aria-label'] = resto.title;
+  if (!rotulo) resto.class = `${resto.class || ''} so-icone`.trim();
   return h('button', {
-    type: 'button', ...props,
+    type: 'button', ...resto,
     onclick: async e => {
       const b = e.currentTarget;
       b.disabled = true;
@@ -66,7 +73,7 @@ export function botao(rotulo, aoClicar, props = {}) {
         b.disabled = false;
       }
     },
-  }, rotulo);
+  }, ic ? icone(ic) : null, rotulo ? h('span', {}, rotulo) : null);
 }
 
 export function aviso(texto, tipo = 'ok') {
@@ -81,7 +88,7 @@ export function janela(titulo, conteudo, acoes = []) {
   const fechar = () => raiz.replaceChildren();
   raiz.replaceChildren(h('div', { class: 'fundo', onclick: e => e.target === e.currentTarget && fechar() },
     h('div', { class: 'janela' },
-      h('header', {}, h('h3', {}, titulo), h('button', { class: 'fechar', onclick: fechar, 'aria-label': 'Fechar' }, '×')),
+      h('header', {}, h('h3', {}, titulo), h('button', { class: 'fechar so-icone', onclick: fechar, 'aria-label': 'Fechar' }, icone('x'))),
       h('div', { class: 'corpo' }, conteudo),
       acoes.length ? h('footer', {}, acoes.map(([rot, fn, cls]) => botao(rot, async () => { if ((await fn()) !== false) fechar(); }, { class: cls }))) : null)));
   raiz.querySelector('input, select, textarea')?.focus();
@@ -101,15 +108,40 @@ export function pedirTexto(titulo, rotulo, inicial = '') {
   });
 }
 
-export function abas(lista, atual, aoTrocar) {
-  return h('nav', { class: 'abas' }, lista.map(([id, rotulo]) =>
-    h('button', { type: 'button', class: id === atual ? 'ativa' : '', onclick: () => aoTrocar(id) }, rotulo)));
+// Abas com ícone; a aba ativa é rolada para ficar visível (no celular a barra rola de lado).
+export function abas(lista, atual, aoTrocar, classe = '') {
+  const nav = h('nav', { class: `abas ${classe}`.trim(), 'data-rolagem-x': `abas-${lista[0][0]}` }, lista.map(([id, rotulo, ic]) =>
+    h('button', { type: 'button', class: id === atual ? 'ativa' : '', 'aria-current': id === atual ? 'page' : null, onclick: () => aoTrocar(id) },
+      ic ? icone(ic) : null, h('span', {}, rotulo))));
+  requestAnimationFrame(() => {
+    const a = nav.querySelector('.ativa');
+    if (a && (a.offsetLeft < nav.scrollLeft || a.offsetLeft + a.offsetWidth > nav.scrollLeft + nav.clientWidth)) {
+      nav.scrollLeft = a.offsetLeft - (nav.clientWidth - a.offsetWidth) / 2;
+    }
+  });
+  return nav;
 }
 
-export function vazio(texto) {
-  return h('p', { class: 'vazio' }, texto);
+export function vazio(texto, ic = 'feather') {
+  return h('p', { class: 'vazio' }, icone(ic), texto);
 }
 
 export function formatarData(ms) {
   return new Date(ms).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+}
+
+// Título com ícone (h2/h3/h4).
+export function titulo(texto, ic, tag = 'h3') {
+  return h(tag, { class: 'com-icone' }, ic ? icone(ic) : null, texto);
+}
+
+// Tabela que vira "cartões" no celular: cada célula leva o nome da coluna (data-rotulo).
+// Coluna com título vazio é a de ações e ocupa a linha inteira no celular.
+export function tabela(colunas, linhas, classe = '') {
+  return h('table', { class: `tabela responsiva ${classe}`.trim() },
+    h('thead', {}, h('tr', {}, colunas.map(c => h('th', {}, c)))),
+    h('tbody', {}, linhas.map(l => {
+      const { celulas, ...props } = Array.isArray(l) ? { celulas: l } : l;
+      return h('tr', props, celulas.map((cel, i) => h('td', { 'data-rotulo': colunas[i] || null, class: colunas[i] ? null : 'acoes' }, cel)));
+    })));
 }

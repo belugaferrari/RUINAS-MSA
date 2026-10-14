@@ -37,6 +37,11 @@ Para jogar pela internet (sem estar na mesma Wi‑Fi), o mesmo app pode ser publ
 
 **Planilha de NPCs**: `modelos/modelo_npcs.xlsx` (ou o botão "Planilha modelo" na aba NPCs). As colunas acompanham os atributos e perícias de `sistema.json`; rode `npm run modelo` para regenerar depois de mudar as regras.
 
+## Visual e celular
+
+- Ícones [Lucide](https://lucide.dev) (licença ISC), servidos pelo próprio app em `/icones.svg` — funcionam sem internet. Para usar um ícone novo, adicione o nome em `public/js/icones.js` (o teste `npm test` avisa se faltar).
+- No celular: abas com ícone, tabelas viram cartões, listas e fichas aparecem uma de cada vez, e os botões têm área de toque de pelo menos 40px.
+
 ## Onde ficam as regras
 
 | Arquivo | O que tem |

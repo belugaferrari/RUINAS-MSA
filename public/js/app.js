@@ -14,6 +14,7 @@ function desenhar() {
   const chave = ativo?.dataset?.key;
   const cursor = chave && 'selectionStart' in ativo ? [ativo.selectionStart, ativo.selectionEnd] : null;
   const rolagens = [...raiz.querySelectorAll('[data-rolagem]')].map(el => [el.dataset.rolagem, el.scrollTop]);
+  const rolagensX = [...raiz.querySelectorAll('[data-rolagem-x]')].map(el => [el.dataset.rolagemX, el.scrollLeft]);
   const rolagemJanela = window.scrollY;
 
   raiz.replaceChildren(tela());
@@ -21,6 +22,10 @@ function desenhar() {
   for (const [id, top] of rolagens) {
     const el = raiz.querySelector(`[data-rolagem="${id}"]`);
     if (el) el.scrollTop = top;
+  }
+  for (const [id, left] of rolagensX) {
+    const el = raiz.querySelector(`[data-rolagem-x="${id}"]`);
+    if (el) el.scrollLeft = left;
   }
   window.scrollTo(0, rolagemJanela);
   if (chave) {
