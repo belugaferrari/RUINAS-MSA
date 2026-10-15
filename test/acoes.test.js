@@ -52,8 +52,14 @@ test('fluxo básico de campanha e permissões', () => {
   assert.equal(visaoPara(c, ana, 'jogador').anotacoes, undefined);
 
   // Evoluir guarda backup.
-  executar(c, 'xp.dar', { id, qtd: 5 }, { user: mestre, mestre: true });
-  executar(c, 'personagem.evoluir', { id, patch: { nivel: 3 }, xpGasto: 5 }, { user: ana, mestre: false });
+  // Subir de nível exige o XP do nível (provisório: nível × 1000) e desconta.
+  executar(c, 'xp.dar', { id, qtd: 1500 }, { user: mestre, mestre: true });
+  assert.throws(() => executar(c, 'personagem.evoluir', { id, patch: { nivel: 3 } }, { user: ana, mestre: false }), /XP insuficiente/);
+  assert.throws(() => executar(c, 'personagem.atualizar', { id, patch: { nivel: 3 } }, { user: mestre, mestre: true }), /faltam XP/, 'nem o mestre pula sem XP');
+  executar(c, 'xp.dar', { id, qtd: 600 }, { user: mestre, mestre: true });
+  assert.throws(() => executar(c, 'personagem.evoluir', { id, patch: { nivel: 4 } }, { user: ana, mestre: false }), /um nível de cada vez/);
+  executar(c, 'personagem.evoluir', { id, patch: { nivel: 3 } }, { user: ana, mestre: false });
+  assert.equal(lia.xp, 100);
   assert.equal(lia.nivel, 3);
   assert.equal(lia.backups.length, 1);
   assert.equal(lia.backups[0].ficha.nivel, 2);
@@ -136,7 +142,9 @@ test('evoluir: o jogador só gasta os pontos que o nível dá', () => {
   // Nível 1 → 2: +2 de atributo (80 gastos de 88) e +1 vantagem.
   const atributos = { ...p.atributos, FOR: 14, CONS: 14 };
   assert.throws(() => executar(c, 'personagem.evoluir', { id, patch: { nivel: 1, atributos }, xpGasto: 0 }, { user: j, mestre: false }), /Atributos/);
+  executar(c, 'xp.dar', { id, qtd: 1000 }, { user: m, mestre: true });
   executar(c, 'personagem.evoluir', { id, patch: { nivel: 2, atributos: { ...p.atributos, FOR: 14, CONS: 14 } }, xpGasto: 0 }, { user: j, mestre: false });
+  assert.equal(p.xp, 0);
   assert.equal(p.nivel, 2);
   assert.equal(p.atributos.FOR, 14);
   assert.throws(() => executar(c, 'personagem.evoluir', { id, patch: { nivel: 1 }, xpGasto: 0 }, { user: j, mestre: false }), /diminuir/);
@@ -144,4 +152,34 @@ test('evoluir: o jogador só gasta os pontos que o nível dá', () => {
   const quatro = sis.vantagens.slice(0, 4).map(v => v.id);
   executar(c, 'personagem.evoluir', { id, patch: { vantagens: quatro }, xpGasto: 0 }, { user: j, mestre: false });
   assert.throws(() => executar(c, 'personagem.evoluir', { id, patch: { vantagens: sis.vantagens.slice(0, 5).map(v => v.id) }, xpGasto: 0 }, { user: j, mestre: false }), /Vantagens/);
+});
+
+test('mestre: travas na ficha de jogador, PV recalculado e Humanidade', () => {
+  const m = { id: 'm5', name: 'Mestre 5' };
+  const j = { id: 'j5', name: 'Bia' };
+  const c = novaCampanha(m, { nome: 'Travas', maxJogadores: 1, nivel: 1, padraoMSA: true });
+  const ctxM = { user: m, mestre: true };
+  const { id } = executar(c, 'personagem.criar', { tipo: 'pj', ficha: { nome: 'Rafa' } }, ctxM);
+  const p = c.personagens.find(x => x.id === id);
+  // PV segue a fórmula quando o mestre mexe nos atributos.
+  const pv0 = p.pv.max;
+  executar(c, 'personagem.atualizar', { id, patch: { atributos: { ...p.atributos, FOR: 12, CONS: 12 } } }, ctxM);
+  assert.equal(p.pv.max, pv0 + 2);
+  // Passar dos pontos de atributo é recusado (e desfeito).
+  assert.throws(() => executar(c, 'personagem.atualizar', { id, patch: { atributos: { ...p.atributos, FOR: 14, CONS: 14, AGI: 14, DES: 14 } } }, ctxM), /Atributos/);
+  assert.equal(p.atributos.FOR, 12);
+  // Edição livre desliga as travas.
+  executar(c, 'campanha.atualizar', { edicaoLivre: true }, ctxM);
+  executar(c, 'personagem.atualizar', { id, patch: { atributos: { ...p.atributos, FOR: 14, CONS: 14, AGI: 14, DES: 14 } } }, ctxM);
+  assert.equal(p.atributos.AGI, 14);
+  // Criação pelo assistente valida também para o mestre.
+  assert.throws(() => executar(c, 'personagem.criar', { tipo: 'pj', validar: true, ficha: { nome: 'Sem profissão', defeitos: [sis.defeitos[0].id] } }, ctxM), /profissão/);
+  // NPC do mestre não tem trava, mas o PV segue a fórmula.
+  const npc = executar(c, 'personagem.criar', { tipo: 'npc', grupoId: 'encontros', ficha: { nome: 'Brutamontes', atributos: { ...p.atributos, FOR: 20, CONS: 20 } } }, ctxM);
+  const n = c.personagens.find(x => x.id === npc.id);
+  assert.equal(n.pv.max, 5 + 5 + 20);
+  // Humanidade abaixo de 1: o jogador perde o controle.
+  p.donoId = j.id;
+  p.humanidade.atual = 0;
+  assert.throws(() => executar(c, 'personagem.atualizar', { id, patch: { anotacoes: 'x' } }, { user: j, mestre: false }), /perdeu a Humanidade/);
 });

@@ -56,7 +56,6 @@ Ligados por `modulos.combate` / `modulos.social` em `mss.json`; no MSA ficam só
 **Ainda provisório — conferir**
 - **+2 da Esquiva** entra antes do IP (soma ao dano bruto).
 - **Defesa armada** só com armas brancas (Toque e Chicote não servem); arma de fogo empunhada não defende corpo a corpo.
-- **R.MNP**: em 14/10 o autor disse "Manipulação (perícia base) + 50 + modificadores" e depois "o certo é CAR%". O app usa a perícia base Manipulação (que já soma o bônus pericial de CAR). Confirmar se é CAR% + 50, Manipulação + 50, ou os dois somados.
 - **Evasão bem-sucedida** contra ataque em área: metade do dano (texto do livro).
 - **Efeito de dano**: marcador quando o ataque acerta e o DS ≤ "efeitoDano" da arma (sem o campo, 3). Corte = Sangramento, Perfuração = Ferida aberta, Concussão/Elétrico = Aturdido, Calor/Frio/Ácido = Queimadura, desarmado = Dor. Sangramento, Ferida aberta e Dor ainda são descontados à mão.
 - **Vantagem automática**: surpresa, terreno elevado, alvo caído (corpo a corpo), alvo Aturdido/Imobilizado, atacante Enojado. **Desvantagem**: atacante caído ou aturdido, atacante Amedrontado.
@@ -69,3 +68,20 @@ Ligados por `modulos.combate` / `modulos.social` em `mss.json`; no MSA ficam só
 
 **Aguardando o texto**
 - **Humores Raivoso e Sereno**: já aparecem na Roda do Humor, sem efeito, até chegar a descrição.
+
+## Ficha, criação e evolução (15/10)
+**Confirmado pelo autor**
+- **R.MNP** = Manipulação (perícia base) + 50 + modificadores. CAR% é só para testes genéricos de Carisma.
+- **Humanidade** vai de 1 a 100; abaixo de 1 o jogador perde o controle do personagem (o app só deixa o mestre agir por ele). Inicial: o jogador escolhe de 51 até 50 + 2×CAR + 2×PER.
+- **Instintos** são fixos e pré-estipulados (mais voltados ao MSA).
+- **Vantagens de classe**: abrem quando a classe é escolhida (nível 3); numa "Vantagem Extra" escolhe-se entre as gerais e as da classe (livro, cap. 4).
+- **Nível** só sobe depois de distribuir o XP necessário.
+
+**Provisório — conferir**
+- **Lista de instintos**: só Sobrevivente, Protetor, Altruísta e Dominador (+ "Outro" com texto). Falta a lista completa com descrições.
+- **Tabela de XP**: subir do nível n para n+1 custa n × 1000 XP (regras.xp em base.json). Falta a tabela do livro.
+- **Humanidade depois da criação**: pode subir até 100 (o limite 50 + 2×CAR + 2×PER vale só para o valor inicial).
+- **Custo das vantagens de classe**: 1 ponto, como as gerais.
+- **Mestre**: edita fichas de jogador com as mesmas travas de pontos e de XP; a opção "Edição livre das fichas de jogador" (aba Campanha) desliga as travas para correções. NPCs não têm trava.
+- **Munição**: cada ataque com arma de fogo gasta 1 bala (cadência natural); arma nova vem carregada; recarregar usa as caixas de munição do mesmo tipo do inventário. Cadência maior que 1 (Rifle de Assalto) ainda não gasta mais balas.
+

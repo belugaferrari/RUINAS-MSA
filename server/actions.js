@@ -1,7 +1,7 @@
 import { db, save, uid } from './db.js';
 import { sistema, idSistema } from './sistema.js';
 import { resolverAtaque, aplicarAtaque, armasDisponiveis, opcoesDefesa, sobrevida, rolarIniciativa, resolverManipulacao, modHumorTestes, humorDe } from '../shared/combate.js';
-import { novaFicha, podeEquipar, rolarDado, rolarAtributosCriacao, testeDMil, gerarEncontro, derivados, problemasFicha, LIMITE_SALA } from '../shared/regras.js';
+import { xpParaSubir, novaFicha, podeEquipar, rolarDado, rolarAtributosCriacao, testeDMil, gerarEncontro, derivados, problemasFicha, LIMITE_SALA } from '../shared/regras.js';
 
 const GRUPO_ENCONTROS = 'encontros';
 const MAX_LOG = 100;
@@ -117,6 +117,21 @@ function exigirMestre(ctx) {
 
 function exigirDonoOuMestre(ctx, p) {
   if (!ctx.mestre && p.donoId !== ctx.user.id) throw erro('Este personagem não é seu.');
+  // Humanidade abaixo de 1: o jogador perde o controle do personagem (só o mestre age por ele).
+  if (!ctx.mestre && p.humanidade && p.humanidade.atual < 1) throw erro(`${p.nome} perdeu a Humanidade: agora só o mestre controla este personagem.`);
+}
+
+// PV, Sanidade e Humanidade máximos seguem as fórmulas; o valor atual acompanha a diferença (o dano sofrido continua).
+const CAMPOS_FORMULA = ['atributos', 'nivel', 'profissao', 'itens'];
+function recalcularMaximos(p, sis) {
+  const d = derivados(p, sis);
+  for (const [k, novo] of [['pv', d.pvMax], ['sanidade', d.sanidadeMax], ['humanidade', d.humanidadeMax]]) {
+    const t = p[k];
+    if (!t) { p[k] = { max: novo, atual: novo }; continue; }
+    if (t.max === novo) continue;
+    t.atual = k === 'humanidade' ? Math.min(novo, t.atual) : t.atual + (novo - t.max);
+    t.max = novo;
+  }
 }
 
 function sala(c, nome) {
@@ -133,7 +148,9 @@ function registrar(lista, entrada) {
 function itemDoCatalogo(itemId, sis) {
   const it = sis.itens.find(i => i.id === itemId);
   if (!it) throw erro('Item não existe no catálogo.');
-  return { ...structuredClone(it), uid: uid(), itemId: it.id, equipado: false, durabilidadeAtual: it.durabilidade };
+  const novo = { ...structuredClone(it), uid: uid(), itemId: it.id, equipado: false, durabilidadeAtual: it.durabilidade };
+  if (it.capacidade) novo.carregada = it.capacidade; // arma de fogo vem carregada
+  return novo;
 }
 
 // O jogador não pode passar dos limites definidos pelo mestre (as mesmas regras da tela de criação).
@@ -152,7 +169,9 @@ function validarCriacao(c, p, sis) {
   const d = derivados(p, sis);
   p.pv = { max: d.pvMax, atual: d.pvMax };
   p.sanidade = { max: d.sanidadeMax, atual: d.sanidadeMax };
-  p.humanidade = { max: d.humanidadeMax, atual: d.humanidadeMax };
+  // Humanidade inicial escolhida pelo jogador entre 51 e o limite (já conferido em problemasFicha).
+  const hum = parseInt(p.humanidade?.atual, 10);
+  p.humanidade = { max: d.humanidadeMax, atual: Number.isFinite(hum) ? Math.max(d.humanidadeMinInicial, Math.min(d.humanidadeLimite, hum)) : d.humanidadeLimite };
   p.xp = 0;
   p.marcadores = [];
 }
@@ -258,7 +277,7 @@ const fmtMod = v => (v > 0 ? `+${v}` : `${v}`);
 export const acoes = {
   'campanha.atualizar'(c, d, ctx) {
     exigirMestre(ctx);
-    for (const k of ['aberta', 'lojaAberta']) if (k in d) c[k] = !!d[k];
+    for (const k of ['aberta', 'lojaAberta', 'edicaoLivre']) if (k in d) c[k] = !!d[k];
     for (const k of ['anotacoes', 'anotacoesResumo']) if (k in d) c[k] = nomeStr(d[k]);
     if ('nome' in d && String(d.nome).trim()) c.nome = String(d.nome).trim();
     // Trocar o sistema no meio da campanha: as fichas continuam; cálculos e regras passam a seguir o novo sistema.
@@ -312,7 +331,7 @@ export const acoes = {
     c.grupos = c.grupos.filter(g => g.id !== id);
   },
 
-  'personagem.criar'(c, { tipo, grupoId, ficha }, ctx) {
+  'personagem.criar'(c, { tipo, grupoId, ficha, validar }, ctx) {
     const sis = sistema(c.sistema);
     const base = novaFicha(sis, c);
     if (!ctx.mestre) tipo = 'pj';
@@ -326,7 +345,9 @@ export const acoes = {
       backups: [],
     };
     p.nome = String(p.nome || '').trim() || (tipo === 'npc' ? 'NPC sem nome' : 'Personagem sem nome');
-    if (!ctx.mestre) validarCriacao(c, p, sis);
+    // Jogador sempre passa pelas travas; o mestre também, quando cria pelo assistente.
+    if (!ctx.mestre || (tipo === 'pj' && validar)) validarCriacao(c, p, sis);
+    else recalcularMaximos(p, sis);
     // Itens vindos do catálogo ganham identificador próprio.
     p.itens = (p.itens || []).map(i => ({ ...i, uid: i.uid || uid(), equipado: false }));
     c.personagens.push(p);
@@ -336,11 +357,27 @@ export const acoes = {
   'personagem.atualizar'(c, { id, patch }, ctx) {
     const p = personagem(c, id);
     exigirDonoOuMestre(ctx, p);
+    const sis = sistema(c.sistema);
+    const antes = structuredClone(p);
     for (const [k, v] of Object.entries(patch || {})) {
       if (CAMPOS_PROTEGIDOS.has(k)) continue;
       if (!ctx.mestre && !CAMPOS_JOGADOR.has(k)) continue;
-      p[k] = v;
+      p[k] = k === 'nivel' ? Math.max(1, Math.min(20, parseInt(v, 10) || 1)) : v;
     }
+    // Ficha de jogador editada pelo mestre: mesmas travas de pontos da criação, a não ser na "edição livre" da campanha.
+    if (ctx.mestre && p.tipo === 'pj' && !c.edicaoLivre) {
+      const desfazer = msg => { Object.assign(p, antes); throw erro(msg); };
+      if (p.nivel > antes.nivel && (antes.xp || 0) < xpParaSubir(antes.nivel, sis)) {
+        desfazer(`Para subir de nível faltam XP (precisa de ${xpParaSubir(antes.nivel, sis)}). Dê XP e use "Evoluir", ou ligue a edição livre na aba Campanha.`);
+      }
+      if (p.nivel > antes.nivel + 1) desfazer('Suba um nível de cada vez.');
+      const problemas = problemasFicha(p, sis, c, { apenasPontos: true });
+      if (problemas.length && JSON.stringify(problemas) !== JSON.stringify(problemasFicha(antes, sis, c, { apenasPontos: true }))) desfazer(problemas[0]);
+      if (p.nivel > antes.nivel) p.xp = (antes.xp || 0) - xpParaSubir(antes.nivel, sis);
+    }
+    // Explicitamente editado (ex.: "PV máx." pelo mestre) não é recalculado.
+    const explicitos = new Set(Object.keys(patch || {}));
+    if (CAMPOS_FORMULA.some(k => explicitos.has(k)) && !['pv', 'sanidade', 'humanidade'].some(k => explicitos.has(k))) recalcularMaximos(p, sis);
   },
 
   'personagem.duplicar'(c, { id }, ctx) {
@@ -374,23 +411,35 @@ export const acoes = {
     personagem(c, id).donoId = null;
   },
 
-  'xp.dar'(c, { id, qtd }, ctx) {
+  // XP para um personagem ({ id }) ou vários ({ ids }), com registro no histórico da campanha.
+  'xp.dar'(c, { id, ids, qtd, motivo }, ctx) {
     exigirMestre(ctx);
-    const p = personagem(c, id);
-    p.xp = Math.max(0, (p.xp || 0) + (parseInt(qtd, 10) || 0));
+    const n = parseInt(qtd, 10) || 0;
+    const alvos = (ids || [id]).filter(Boolean).map(x => personagem(c, x));
+    if (!alvos.length || !n) throw erro('Escolha quem recebe e quanto XP.');
+    for (const p of alvos) p.xp = Math.max(0, (p.xp || 0) + n);
+    registrar(c.log, { autor: 'Mestre', rotulo: `${n > 0 ? '+' : ''}${n} XP${motivo ? ` (${String(motivo).slice(0, 60)})` : ''}`, texto: alvos.map(p => `${p.nome}: ${p.xp}`).join(' · ') });
   },
 
   // Evoluir: salva um backup da ficha antiga e aplica a nova.
-  'personagem.evoluir'(c, { id, patch, xpGasto }, ctx) {
+  'personagem.evoluir'(c, { id, patch }, ctx) {
     const p = personagem(c, id);
     exigirDonoOuMestre(ctx, p);
-    const gasto = Math.max(0, parseInt(xpGasto, 10) || 0);
-    if (gasto > (p.xp || 0)) throw erro('XP insuficiente.');
+    const sis = sistema(c.sistema);
+    // Subir de nível só com o XP necessário, um nível por vez; o XP é descontado aqui.
+    const novoNivel = 'nivel' in (patch || {}) ? parseInt(patch.nivel, 10) || p.nivel : p.nivel;
+    let gasto = 0;
+    if (novoNivel > p.nivel) {
+      if (novoNivel > p.nivel + 1) throw erro('Suba um nível de cada vez.');
+      gasto = xpParaSubir(p.nivel, sis);
+      if ((p.xp || 0) < gasto && !(ctx.mestre && c.edicaoLivre)) throw erro(`XP insuficiente: precisa de ${gasto} XP para o nível ${novoNivel} (tem ${p.xp || 0}).`);
+      if ((p.xp || 0) < gasto) gasto = p.xp || 0;
+    }
     // Jogador: confere os pontos do novo nível (Tabela de Progressão) antes de aplicar.
     if (!ctx.mestre) {
       const nova = { ...p, ...Object.fromEntries(Object.entries(patch || {}).filter(([k]) => ['nivel', 'atributos', 'pericias', 'subpericias', 'vantagens', 'defeitos'].includes(k))) };
       if (nova.nivel < p.nivel) throw erro('O nível não pode diminuir.');
-      const problemas = problemasFicha(nova, sistema(c.sistema), c, { apenasPontos: true });
+      const problemas = problemasFicha(nova, sis, c, { apenasPontos: true });
       if (problemas.length) throw erro(problemas[0]);
     }
     const { backups, ...semBackups } = p;
@@ -398,7 +447,9 @@ export const acoes = {
     for (const k of ['nivel', 'classe', 'especializacao', 'escolhasClasse', 'atributos', 'pericias', 'subpericias', 'vantagens', 'defeitos', 'pv', 'sanidade', 'humanidade']) {
       if (k in (patch || {})) p[k] = patch[k];
     }
-    p.xp -= gasto;
+    recalcularMaximos(p, sis);
+    p.xp = (p.xp || 0) - gasto;
+    return { gasto };
   },
 
   'backup.restaurar'(c, { id, backupId }, ctx) {
@@ -419,6 +470,40 @@ export const acoes = {
     const p = personagem(c, id);
     exigirDonoOuMestre(ctx, p);
     p.itens = p.itens.filter(i => i.uid !== itemUid);
+  },
+
+  // Recarrega a arma com a munição do mesmo tipo que o personagem carrega (as caixas vazias somem).
+  'item.recarregar'(c, { id, uid: itemUid }, ctx) {
+    const p = personagem(c, id);
+    exigirDonoOuMestre(ctx, p);
+    const arma = p.itens.find(i => i.uid === itemUid);
+    if (!arma?.capacidade) throw erro('Esta arma não usa munição.');
+    let falta = arma.capacidade - (arma.carregada || 0);
+    if (falta <= 0) throw erro('A arma já está cheia.');
+    const caixas = p.itens.filter(i => i.tipo === 'municao' && i.municao === arma.municao && (i.quantidade || 0) > 0);
+    if (!caixas.length) throw erro(`Sem munição de ${arma.municao} no inventário.`);
+    let colocou = 0;
+    for (const cx of caixas) {
+      const n = Math.min(falta, cx.quantidade);
+      cx.quantidade -= n; falta -= n; colocou += n;
+      if (!falta) break;
+    }
+    arma.carregada = (arma.carregada || 0) + colocou;
+    p.itens = p.itens.filter(i => !(i.tipo === 'municao' && i.quantidade <= 0));
+    return { colocou, carregada: arma.carregada };
+  },
+
+  // Ajuste manual: tiro fora do combate automático (−1) ou correção do mestre.
+  'item.municao'(c, { id, uid: itemUid, delta }, ctx) {
+    const p = personagem(c, id);
+    exigirDonoOuMestre(ctx, p);
+    const it = p.itens.find(i => i.uid === itemUid);
+    if (!it) throw erro('Item não encontrado.');
+    const n = parseInt(delta, 10) || 0;
+    if (!ctx.mestre && n > 0) throw erro('Para pôr munição na arma, use Recarregar.');
+    if (it.capacidade) it.carregada = Math.max(0, Math.min(it.capacidade, (it.carregada || 0) + n));
+    else if (it.tipo === 'municao') it.quantidade = Math.max(0, (it.quantidade || 0) + n);
+    else throw erro('Este item não usa munição.');
   },
 
   'item.durabilidade'(c, { id, uid: itemUid, valor }, ctx) {
@@ -570,10 +655,10 @@ export const acoes = {
   },
 
   // ---------- Combate automático (MSS) ----------
+  // Controle de turno (iniciativa, rodadas e vez) vale em qualquer sistema; o ataque automático só no MSS.
   'combate.iniciar'(c, d, ctx) {
     exigirMestre(ctx);
     const sis = sistema(c.sistema);
-    exigirModulo(sis, 'combate');
     const s = c.salas.batalha;
     const vivos = s.participantes.map(id => c.personagens.find(p => p.id === id)).filter(Boolean);
     if (vivos.length < 2) throw erro('Coloque ao menos dois participantes no Campo de Batalha.');
@@ -643,10 +728,16 @@ export const acoes = {
     if (!ctx.mestre) { delete op.vantagem; delete op.desvantagem; delete op.danoLivre; }
     const arma = armasDisponiveis(a, sis).find(x => x.uid === (op.armaUid || 'desarmado'));
     if (!arma) throw erro('Arma não equipada.');
+    // Munição: cada ataque com arma de fogo gasta 1 (cadência natural).
+    const itemArma = (a.itens || []).find(i => i.uid === arma.uid);
+    if (itemArma?.capacidade) {
+      if ((itemArma.carregada || 0) < 1) throw erro(`${itemArma.nome} está sem munição. Recarregue antes de atirar.`);
+      itemArma.carregada -= 1;
+    }
     if (op.danoLivre) {
       try { rolarDado(op.danoLivre); } catch { throw erro(`Dano inválido: ${op.danoLivre}`); }
     }
-    const pend = { id: uid(), atacante: a.id, alvo: b.id, opcoes: op, arma: arma.nome, alcance: arma.alcance, area: !!op.area, em: Date.now() };
+    const pend = { id: uid(), atacante: a.id, alvo: b.id, opcoes: op, arma: arma.nome, alcance: arma.alcance, area: !!op.area, em: Date.now(), municao: itemArma?.capacidade ? itemArma.uid : null };
     // Contra tiro não há defesa a escolher: resolve na hora.
     if (opcoesDefesa(b, arma, sis, { area: pend.area }).length === 1) return resolverPendente(c, s, pend, 'nenhuma', sis);
     (s.pendentes ||= []).push(pend);
@@ -669,8 +760,12 @@ export const acoes = {
     const s = c.salas.batalha;
     const pend = (s.pendentes || []).find(x => x.id === id);
     if (!pend) return;
-    if (!ctx.mestre && personagem(c, pend.atacante).donoId !== ctx.user.id) throw erro('Só quem atacou (ou o mestre) cancela.');
+    const a = personagem(c, pend.atacante);
+    if (!ctx.mestre && a.donoId !== ctx.user.id) throw erro('Só quem atacou (ou o mestre) cancela.');
     s.pendentes = s.pendentes.filter(x => x.id !== id);
+    // Ataque cancelado devolve a bala.
+    const arma = pend.municao && a.itens.find(i => i.uid === pend.municao);
+    if (arma) arma.carregada = Math.min(arma.capacidade, (arma.carregada || 0) + 1);
   },
 
   'combate.ip'(c, { id, ipExtra, rmnpExtra }, ctx) {

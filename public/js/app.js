@@ -75,7 +75,12 @@ export function iniciarSessao(s) {
       if (estado.campanha?.id !== c.id) return;
       const anterior = estado.sistema?.id;
       if (await sincronizarSistema(c) && anterior) aviso(`Agora a campanha usa o ${estado.sistema.nome} (${estado.sistema.nomeCompleto}).`);
+      const vezAntes = vezDe(estado.campanha);
       if (estado.campanha?.id === c.id) mudar({ campanha: c });
+      // Avisa o jogador quando chega a vez de um personagem dele no Campo de Batalha.
+      const vez = vezDe(c);
+      const p = vez && c.personagens.find(x => x.id === vez.id);
+      if (vez && vez.chave !== vezAntes?.chave && p?.donoId === estado.usuario?.id && c.papel !== 'mestre') aviso(`Sua vez: ${p.nome} (rodada ${vez.rodada}).`);
     },
     expulso: msg => {
       aviso(msg, 'erro');
@@ -112,3 +117,9 @@ async function iniciar() {
 }
 
 iniciar();
+
+function vezDe(c) {
+  const cb = c?.salas?.batalha?.combate;
+  const id = cb?.ordem?.[cb.vez]?.id;
+  return id ? { id, rodada: cb.rodada, chave: `${cb.rodada}:${cb.vez}:${id}` } : null;
+}

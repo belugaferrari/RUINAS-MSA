@@ -3,7 +3,7 @@ import { estado, personagemPorId, meusPersonagens, render } from '../estado.js';
 import { acao } from '../api.js';
 import { derivados, LIMITE_SALA } from '/shared/regras.js';
 import { linhaRolagem } from './ficha.js';
-import { combateView, humorCartao, manipulacaoView, rodaDoHumor, ajustesMestre } from './combate.js';
+import { combateView, humorCartao, manipulacaoView, rodaDoHumor, ajustesMestre, xpDaSala } from './combate.js';
 
 const TITULOS = { social: 'Sala Social', batalha: 'Campo de Batalha' };
 const ICONES_SALA = { social: 'drama', batalha: 'swords' };
@@ -31,6 +31,7 @@ export function salaView(nome) {
     mestre && nome === 'batalha' ? encontroAleatorio() : null,
     nome === 'batalha' ? combateView(participantes, mestre) : null,
     nome === 'social' ? rodaDoHumor() : null,
+    nome === 'social' && mestre ? h('div', { class: 'bloco' }, xpDaSala(participantes)) : null,
     h('div', { class: 'sala-grade' },
       h('div', { class: 'participantes' },
         participantes.length ? participantes.map((p, i) => cartaoParticipante(nome, s, p, i, participantes.length, mestre)) : vazio('Ninguém na sala ainda.', ICONES_SALA[nome])),
@@ -71,6 +72,11 @@ function cartaoParticipante(nome, s, p, i, total, mestre) {
     h('div', { class: 'acoes' },
       veStats && p.pv ? botao('PV', () => acao('pv.alterar', { id: p.id, delta: -1 }), { class: 'pequeno', icone: 'minus', title: `Tirar 1 PV de ${p.nome}`, 'aria-label': `Tirar 1 PV de ${p.nome}` }) : null,
       veStats && p.pv ? botao('PV', () => acao('pv.alterar', { id: p.id, delta: 1 }), { class: 'pequeno', icone: 'plus', title: `Dar 1 PV a ${p.nome}`, 'aria-label': `Dar 1 PV a ${p.nome}` }) : null,
+      veStats && p.atributos ? botao('Testar', () => {
+        estado.sel[`rolar-${nome}`] = { ...(estado.sel[`rolar-${nome}`] || { dif: '1', valor: 50 }), quem: p.id, acao: '' };
+        render();
+        document.querySelector('[aria-label="O que testar"]')?.focus();
+      }, { class: 'pequeno', icone: 'dices', title: `Rolar um teste de ${p.nome}` }) : null,
       nome === 'batalha' && veStats ? botao(caido(p) ? 'Levantar' : 'Caído', () => alternarCaido(p), { class: 'pequeno', icone: 'arrow-left-right', title: caido(p) ? `${p.nome} se levanta` : `${p.nome} fica caído` }) : null,
       mestre ? botao(s.ativo === p.id ? 'Desacionar' : 'Acionar', () => acao('sala.acionar', { sala: nome, id: p.id }), { class: 'pequeno primario', icone: 'zap' }) : null,
       mestre ? botao('', () => acao('sala.ordenar', { sala: nome, id: p.id, direcao: -1 }), { class: 'pequeno', icone: 'chevron-up', disabled: i === 0, title: `Subir ${p.nome} na ordem` }) : null,

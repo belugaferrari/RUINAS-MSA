@@ -106,6 +106,10 @@
     "vantagemNiveisPares": 1
    },
    "valeParaTodos": true
+  },
+  "xp": {
+   "porNivel": 1000,
+   "descricao": "Provisório: para subir do nível n para o n+1 são necessários n × 1000 XP (o livro ainda não traz a tabela)."
   }
  },
  "teste": {
@@ -389,7 +393,9 @@
    "pericia": "armas-de-fogo.pistolas",
    "tipoDano": "Perfuração",
    "efeitoDano": 3,
-   "alcance": "distancia"
+   "alcance": "distancia",
+   "capacidade": 6,
+   "municao": "pistola"
   },
   {
    "id": "escudo",
@@ -496,6 +502,20 @@
    "durabilidade": 15,
    "peso": 1,
    "bonus": {}
+  },
+  {
+   "id": "municao_pistola",
+   "nome": "Munição de pistola (caixa com 12)",
+   "tipo": "municao",
+   "municao": "pistola",
+   "quantidade": 12,
+   "slot": null,
+   "ocupa": 0,
+   "preco": 24,
+   "venda": 12,
+   "durabilidade": 1,
+   "peso": 0.2,
+   "bonus": {}
   }
  ],
  "monstros": [
@@ -534,7 +554,7 @@
  ],
  "humanidade": {
   "revisao": true,
-  "formula": "50 + 2 × CAR + 2 × PER (máximo natural 100)",
+  "formula": "Vai de 1 a 100. Inicial: de 51 até 50 + 2 × CAR + 2 × PER (o jogador escolhe). Abaixo de 1 o jogador perde o controle do personagem.",
   "descricao": "Mede a conexão do personagem com sua própria essência, sua empatia e seu valor pela vida. Varia de 0 a 100. Cai com implantes e mutações (−5 a −25 cada) e com atos que quebram a bússola moral da faixa atual ou de faixas inferiores.",
   "notaEfeitos": "Os efeitos de Combate e Social de cada estágio são do sistema MSS e ainda serão redefinidos para o MSA: o app só mostra o texto.",
   "estagios": [
@@ -670,6 +690,27 @@
    }
   ],
   "recuperacaoIntro": "A Humanidade só pode ser restaurada através de grandes gestos em jogo (a critério do Mestre).",
-  "calculo": "padrao"
- }
+  "calculo": "padrao",
+  "maximo": 100,
+  "minimoInicial": 51
+ },
+ "instintos": [
+  {
+   "id": "sobrevivente",
+   "nome": "Sobrevivente"
+  },
+  {
+   "id": "protetor",
+   "nome": "Protetor"
+  },
+  {
+   "id": "altruista",
+   "nome": "Altruísta"
+  },
+  {
+   "id": "dominador",
+   "nome": "Dominador"
+  }
+ ],
+ "_avisoInstintos": "Lista parcial (o autor citou estes 4); falta a lista completa com descrições."
 }

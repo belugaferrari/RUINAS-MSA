@@ -1,10 +1,10 @@
 import { h, abas, botao, selecao, aviso, confirmar, vazio, formatarData, icone, titulo, passador } from '../ui.js';
-import { derivados, ganhosDeClasse, pontosGastos, pontosPericiaTotal, pontosDoNivel, pontosVantagemExtra, problemasFicha } from '/shared/regras.js';
+import { derivados, ganhosDeClasse, pontosGastos, pontosPericiaTotal, pontosDoNivel, pontosVantagemExtra, problemasFicha, vantagensDisponiveis, acharVantagem, xpParaSubir } from '/shared/regras.js';
 import { painelPericias } from './pericias.js';
 import { estado, mudar, render, personagemPorId, meusPersonagens } from '../estado.js';
 import { acao, emitir } from '../api.js';
 import { topo, carregarSaguao } from './saguao.js';
-import { fichaView, equipamento, nomeClasse } from './ficha.js';
+import { fichaView, equipamento, nomeClasse, barraXp } from './ficha.js';
 import { salaView } from './salas.js';
 import { lojaView, markdown, referenciaView } from './livros.js';
 import { redesSociaisView } from './relacoes.js';
@@ -102,7 +102,8 @@ function imagensMostradas() {
 
 // ---------- Evoluir ----------
 
-const CAMPOS_EVOLUCAO = ['nivel', 'classe', 'especializacao', 'atributos', 'pericias', 'subpericias', 'vantagens', 'defeitos', 'pv', 'sanidade', 'humanidade'];
+// PV, Sanidade e Humanidade máximos são recalculados pelo servidor.
+const CAMPOS_EVOLUCAO = ['nivel', 'classe', 'especializacao', 'atributos', 'pericias', 'subpericias', 'vantagens', 'defeitos'];
 
 function evoluirView(p) {
   const sis = estado.sistema;
@@ -125,17 +126,21 @@ function evoluirView(p) {
   const muda = fn => { fn(f); render(); };
   const classe = sis.classes.find(c => c.id === f.classe);
   const novosGanhos = ganhosDeClasse(f, sis).filter(g => g.nivel > p.nivel);
+  // Só sobe um nível por vez, e só com o XP necessário (descontado ao confirmar).
+  const custoXp = xpParaSubir(p.nivel, sis);
+  const podeSubir = (p.xp || 0) >= custoXp && p.nivel < 20;
 
   return h('div', { class: 'evoluir' },
     h('div', { class: 'barra' },
       titulo(`Evoluir ${p.nome}`, 'trending-up', 'h2'),
-      h('span', { class: 'selo ok' }, icone('sparkles'), `XP disponível: ${p.xp || 0}`),
+      barraXp(p),
       h('span', { class: 'espaco' }),
       botao('Desfazer mudanças', () => { estado.sel.evolucao = null; render(); }, { icone: 'refresh-cw' })),
-    h('p', { class: 'dica' }, 'Os pontos de cada nível seguem a Tabela de Progressão. O custo em XP ainda não está no livro: informe o XP gasto e combine com o mestre. Ao confirmar, a ficha antiga vira backup.'),
+    h('p', { class: 'dica' }, `Os pontos de cada nível seguem a Tabela de Progressão. Para subir para o nível ${p.nivel + 1} são necessários ${custoXp} XP (tabela provisória), descontados ao confirmar. Ao confirmar, a ficha antiga vira backup.`),
     h('div', { class: 'ficha-grade' },
       h('section', { class: 'bloco' }, titulo('Nível, classe e especialização', 'crown'),
-        h('div', { class: 'valor-linha' }, h('span', {}, 'Nível'), h('small', {}, `atual ${p.nivel}`), passador(f.nivel, p.nivel, 20, v => muda(x => { x.nivel = v; }), 'nível')),
+        h('div', { class: 'valor-linha' }, h('span', {}, 'Nível'), h('small', {}, `atual ${p.nivel}`), passador(f.nivel, p.nivel, podeSubir ? p.nivel + 1 : p.nivel, v => muda(x => { x.nivel = v; }), 'nível')),
+        podeSubir ? null : h('p', { class: 'dica' }, icone('hourglass'), ` Faltam ${custoXp - (p.xp || 0)} XP para o nível ${p.nivel + 1}.`),
         d.temClasse ? h('label', {}, 'Classe', p.classe
           ? h('strong', {}, sis.classes.find(c => c.id === p.classe)?.nome)
           : selecao([{ valor: '', rotulo: '— escolher —' }, ...sis.classes.map(c => ({ valor: c.id, rotulo: c.nome }))], f.classe, v => muda(x => { x.classe = v; x.especializacao = ''; }))) : h('p', { class: 'dica' }, `Classe no nível ${sis.regras.nivelClasse}.`),
@@ -144,7 +149,7 @@ function evoluirView(p) {
           : selecao([{ valor: '', rotulo: '— escolher —' }, ...classe.especializacoes.map(e => ({ valor: e.id, rotulo: e.nome }))], f.especializacao, v => muda(x => { x.especializacao = v; }))) : null,
         novosGanhos.length ? h('div', {}, titulo('Você ganha', 'sparkles', 'h4'),
           h('ul', { class: 'ganhos' }, novosGanhos.map(g => h('li', { title: g.descricao }, h('span', { class: 'selo' }, `nv ${g.nivel}`), ' ', g.nome)))) : null,
-        h('p', { class: 'meta' }, `PV máx. ${p.pv.max} → ${d.pvMax} · Sanidade máx. ${p.sanidade.max} → ${d.sanidadeMax} · Humanidade máx. ${p.humanidade?.max ?? '—'} → ${d.humanidadeMax}`)),
+        h('p', { class: 'meta' }, `PV máx. ${p.pv.max} → ${d.pvMax} · Sanidade máx. ${p.sanidade.max} → ${d.sanidadeMax}`)),
       ganhoNivel > 0 ? h('section', { class: 'bloco largo' }, titulo(`Subindo ${ganhoNivel} nível${ganhoNivel > 1 ? 'is' : ''}`, 'trending-up'),
         h('p', {}, `Pela Tabela de Progressão: +${ptsNivel.atributos - pontosDoNivel(p.nivel, sis, estado.campanha).atributos} de atributo, `,
           `+${pontosPericiaTotal(f, sis) - pontosPericiaTotal({ ...f, nivel: p.nivel }, sis)} de perícia, `,
@@ -169,23 +174,20 @@ function evoluirView(p) {
         })),
       h('section', { class: 'bloco largo' }, titulo('Novas vantagens', 'sparkles'),
         h('div', { class: `contador ${vantRestam < 0 ? 'perigo' : vantRestam === 0 ? 'ok' : ''}` }, `Pontos de vantagem: ${gastos.vantagens} de ${vantTotal} · restam ${vantRestam}`),
-        h('p', { class: 'dica' }, 'Nos níveis marcados como "Vantagem Extra" na tabela da classe você ganha uma vantagem.'),
-        vantRestam <= 0 ? h('p', { class: 'dica' }, 'Sem pontos de vantagem sobrando neste nível.') : selecao([{ valor: '', rotulo: '+ adicionar vantagem' }, ...sis.vantagens.filter(v => !f.vantagens.includes(v.id)).map(v => ({ valor: v.id, rotulo: v.nome + (v.requisito ? ` [${v.requisito}]` : '') }))], '',
+        h('p', { class: 'dica' }, 'Nos níveis marcados como "Vantagem Extra" na tabela da classe você escolhe entre as vantagens gerais e as da sua classe.'),
+        vantRestam <= 0 ? h('p', { class: 'dica' }, 'Sem pontos de vantagem sobrando neste nível.') : selecao([{ valor: '', rotulo: '+ adicionar vantagem' }, ...vantagensDisponiveis(f, sis).filter(v => !f.vantagens.includes(v.id)).map(v => ({ valor: v.id, rotulo: v.nome + (v.requisito ? ` [${v.requisito}]` : '') + (v.origem !== 'Geral' ? ` — ${v.origem}` : '') }))], '',
           v => v && muda(x => { x.vantagens = [...x.vantagens, v]; })),
-        h('ul', { class: 'lista-inline' }, f.vantagens.filter(id => !p.vantagens.includes(id)).map(id => h('li', {}, sis.vantagens.find(v => v.id === id)?.nome,
+        h('ul', { class: 'lista-inline' }, f.vantagens.filter(id => !p.vantagens.includes(id)).map(id => h('li', {}, acharVantagem(id, sis)?.nome,
           h('button', { type: 'button', class: 'x so-icone', 'aria-label': 'Remover', onclick: () => muda(x => { x.vantagens = x.vantagens.filter(y => y !== id); }) }, icone('x'))))))),
     h('div', { class: 'barra' },
-      h('label', { class: 'linha' }, 'XP gasto nesta evolução',
-        h('input', { type: 'number', min: 0, max: p.xp || 0, value: ev.xpGasto, class: 'curto', onchange: e => { ev.xpGasto = parseInt(e.target.value, 10) || 0; } })),
       botao('Confirmar evolução', async () => {
         const problemas = problemasFicha(f, sis, estado.campanha, { apenasPontos: true });
         if (problemas.length) throw new Error(problemas[0]);
-        // PV e Sanidade máximos seguem as fórmulas; o atual acompanha o ganho.
-        for (const [k, novo] of [['pv', d.pvMax], ['sanidade', d.sanidadeMax], ['humanidade', d.humanidadeMax]]) f[k] = { max: novo, atual: p[k].atual + (novo - p[k].max) };
         const patch = Object.fromEntries(CAMPOS_EVOLUCAO.filter(mudou).map(k => [k, f[k]]));
         if (!Object.keys(patch).length) throw new Error('Nada foi alterado.');
-        if (!(await confirmar(`Confirmar evolução gastando ${ev.xpGasto} XP? Um backup da ficha atual será salvo.`))) return;
-        await acao('personagem.evoluir', { id: p.id, patch, xpGasto: ev.xpGasto });
+        const gasto = f.nivel > p.nivel ? custoXp : 0;
+        if (!(await confirmar(`Confirmar evolução${gasto ? ` para o nível ${f.nivel} gastando ${gasto} XP` : ''}? Um backup da ficha atual será salvo.`))) return;
+        await acao('personagem.evoluir', { id: p.id, patch });
         estado.sel.evolucao = null;
         aviso('Evolução salva!');
       }, { class: 'primario', icone: 'check' })),

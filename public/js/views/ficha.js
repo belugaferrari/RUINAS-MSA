@@ -1,7 +1,7 @@
-import { h, campo, botao, selecao, aviso, confirmar, pedirTexto, formatarData, vazio, icone, titulo, tabela, seloRevisao } from '../ui.js';
+import { h, campo, botao, selecao, aviso, confirmar, pedirTexto, formatarData, vazio, icone, titulo, tabela, seloRevisao, escolhaComOutra } from '../ui.js';
 import { estado, render } from '../estado.js';
 import { acao, enviarArquivo } from '../api.js';
-import { derivados, slotsOcupados, ganhosDeClasse, pontosGastos, pontosPericiaTotal } from '/shared/regras.js';
+import { derivados, slotsOcupados, ganhosDeClasse, pontosGastos, pontosPericiaTotal, vantagensDisponiveis, acharVantagem, xpParaSubir } from '/shared/regras.js';
 import { painelPericias } from './pericias.js';
 
 export const ICONE_TIPO = { arma: 'sword', defesa: 'shield', vestimenta: 'shirt', joia: 'gem', armadilha: 'crosshair', geral: 'backpack' };
@@ -40,11 +40,14 @@ export function fichaView(p, { mestre = false } = {}) {
       mestre ? h('section', { class: 'bloco largo' }, titulo('Controle do mestre', 'crown'), controleMestre(p)) : null));
 }
 
-// O mestre ajusta pontos de perícia direto na ficha (sem travar nos limites, só avisando).
+// O mestre ajusta pontos de perícia direto na ficha. Ficha de jogador segue os limites do nível
+// (o servidor confere também), a não ser com a "edição livre" ligada na aba Campanha.
 function editorMestre(p) {
+  const sis = estado.sistema;
+  const livre = p.tipo !== 'pj' || estado.campanha.edicaoLivre;
   return {
-    limite: 99,
-    maxRestante: () => 99,
+    limite: livre ? 99 : derivados(p, sis).limitePericia,
+    maxRestante: () => (livre ? 99 : pontosPericiaTotal(p, sis, estado.campanha) - pontosGastos(p, sis).pericias),
     base: (id, v) => atualizar(p, { pericias: { ...p.pericias, [id]: v } }),
     sub: (id, v) => atualizar(p, { subpericias: { ...p.subpericias, [id]: v } }),
   };
@@ -73,10 +76,23 @@ function cabecalho(p, mestre) {
     h('div', { class: 'ficha-titulo' },
       campo(`${p.id}:nome`, p.nome, v => atualizar(p, { nome: v }), { class: 'nome-grande' }),
       h('p', { class: 'meta' },
-        `${p.tipo === 'npc' ? 'NPC' : 'Personagem-jogador'} · ${nomeProfissao(p) || 'Sem profissão'} · ${nomeClasse(p)} · Nível ${p.nivel} · XP ${p.xp || 0} · ${p.dinheiro ?? 0} ${estado.sistema.moeda || 'créditos'}`,
-        p.tipo === 'pj' ? ` · Jogador: ${p.dono || 'livre'}` : null)),
+        `${p.tipo === 'npc' ? 'NPC' : 'Personagem-jogador'} · ${nomeProfissao(p) || 'Sem profissão'} · ${nomeClasse(p)} · Nível ${p.nivel} · ${p.dinheiro ?? 0} ${estado.sistema.moeda || 'créditos'}`,
+        p.tipo === 'pj' ? ` · Jogador: ${p.dono || 'livre'}` : null),
+      p.tipo === 'pj' ? barraXp(p) : null),
     mestre ? h('label', { class: 'mini' }, 'Nível',
       campo(`${p.id}:nivel`, p.nivel, v => atualizar(p, { nivel: v }), { tipo: 'number', min: 1, max: 20 })) : null);
+}
+
+// XP acumulado × XP para o próximo nível (a evolução só libera o nível quando a barra enche).
+export function barraXp(p) {
+  const falta = xpParaSubir(p.nivel, estado.sistema);
+  const xp = p.xp || 0;
+  const pronto = xp >= falta && p.nivel < 20;
+  return h('div', { class: `barra-xp ${pronto ? 'pronto' : ''}`, title: `XP para o nível ${p.nivel + 1}` },
+    h('span', {}, icone('sparkles'), ` XP ${xp} / ${falta}`),
+    h('div', { class: 'barra-trilha', role: 'meter', 'aria-valuemin': 0, 'aria-valuemax': falta, 'aria-valuenow': Math.min(xp, falta), 'aria-label': `XP de ${p.nome}` },
+      h('i', { style: { width: `${Math.min(100, (100 * xp) / (falta || 1))}%` } })),
+    pronto ? h('span', { class: 'selo ok' }, `pode subir para o nível ${p.nivel + 1}`) : null);
 }
 
 function identidade(p) {
@@ -86,8 +102,10 @@ function identidade(p) {
     h('div', { class: 'grade3' }, linha('Idade', 'idade'), linha('Peso', 'peso'), linha('Tamanho', 'altura')),
     h('div', { class: 'grade2' },
       h('label', {}, 'Origem', selecao([{ valor: '', rotulo: '—' }, ...sis.origens.map(o => o.nome)], p.origem, v => atualizar(p, { origem: v }))),
-      h('label', {}, 'Motivação', selecao([{ valor: '', rotulo: '—' }, ...sis.motivacoes], p.motivacao, v => atualizar(p, { motivacao: v })))),
-    linha('Instinto', 'instinto'),
+      h('label', {}, 'Motivação', escolhaComOutra(`${p.id}:motivacao`, sis.motivacoes, p.motivacao, v => atualizar(p, { motivacao: v }),
+        { rotuloOutra: 'Outra…', placeholder: 'Qual a motivação?', props: { 'aria-label': 'Motivação' }, redesenhar: render }))),
+    h('label', {}, 'Instinto', escolhaComOutra(`${p.id}:instinto`, (sis.instintos || []).map(x => x.nome), p.instinto, v => atualizar(p, { instinto: v }),
+      { rotuloOutra: 'Outro…', placeholder: 'Qual o instinto?', props: { 'aria-label': 'Instinto' }, redesenhar: render })),
     h('label', {}, 'Características', campo(`${p.id}:caracteristicas`, p.caracteristicas, v => atualizar(p, { caracteristicas: v }), { multilinha: true, rows: 2 })));
 }
 
@@ -122,9 +140,10 @@ function trilhas(p, mestre) {
     trilha(p, 'sanidade', 'Sanidade'),
     h('p', { class: 'meta' }, icone('brain'), ` Estado mental: ${derivados(p, estado.sistema).estadoSanidade}`),
     trilha(p, 'humanidade', 'Humanidade'),
+    p.humanidade && p.humanidade.atual < 1 ? h('p', { class: 'alerta perigo' }, icone('circle-alert'), ' Humanidade abaixo de 1: o jogador perdeu o controle deste personagem (só o mestre age por ele).') : null,
     estagioHumanidade(p),
     mestre ? h('div', { class: 'grade3 mini' },
-      ...['pv', 'sanidade', 'humanidade'].map(k => h('label', {}, `${k === 'pv' ? 'PV' : k[0].toUpperCase() + k.slice(1)} máx.`,
+      ...['pv', 'sanidade'].map(k => h('label', {}, `${k === 'pv' ? 'PV' : k[0].toUpperCase() + k.slice(1)} máx.`,
         campo(`${p.id}:${k}:max`, p[k]?.max, v => atualizar(p, { [k]: { ...p[k], max: v } }), { tipo: 'number', min: 0 })))) : null,
     h('div', { class: 'marcadores' },
       h('strong', {}, 'Marcadores: '),
@@ -261,15 +280,15 @@ function vantagensView(p, d, mestre) {
   const sis = estado.sistema;
   const item = (lista, id) => lista.find(x => x.id === id);
   const linhaItem = (x, campoLista) => h('li', { title: x.descricao },
-    h('strong', {}, x.nome), x.requisito ? h('small', {}, ` [${x.requisito}]`) : null, x.tipo ? h('span', { class: `selo ${x.tipo === 'normal' ? 'perigo' : ''}` }, x.tipo) : null, seloRevisao(x.revisao),
+    h('strong', {}, x.nome), x.origem && x.origem !== 'Geral' ? h('span', { class: 'selo ok' }, `classe: ${x.origem}`) : null, x.requisito ? h('small', {}, ` [${x.requisito}]`) : null, x.tipo ? h('span', { class: `selo ${x.tipo === 'normal' ? 'perigo' : ''}` }, x.tipo) : null, seloRevisao(x.revisao),
     h('small', { class: 'bloco-texto' }, x.descricao),
     mestre ? botao('', () => atualizar(p, { [campoLista]: p[campoLista].filter(y => y !== x.id) }), { class: 'x', icone: 'x', title: `Remover ${x.nome}` }) : null);
   const adicionar = (lista, campoLista, rot) => mestre ? selecao([{ valor: '', rotulo: `+ ${rot}` }, ...lista.filter(x => !(p[campoLista] || []).includes(x.id)).map(x => ({ valor: x.id, rotulo: x.nome + (x.tipo ? ` (${x.tipo})` : '') }))], '',
     v => v && atualizar(p, { [campoLista]: [...(p[campoLista] || []), v] })) : null;
   return h('div', {},
     titulo('Vantagens', 'sparkles', 'h4'),
-    (p.vantagens || []).length ? h('ul', { class: 'lista-regras' }, p.vantagens.map(id => item(sis.vantagens, id)).filter(Boolean).map(x => linhaItem(x, 'vantagens'))) : vazio('Nenhuma.'),
-    adicionar(sis.vantagens, 'vantagens', 'adicionar vantagem'),
+    (p.vantagens || []).length ? h('ul', { class: 'lista-regras' }, p.vantagens.map(id => acharVantagem(id, sis)).filter(Boolean).map(x => linhaItem(x, 'vantagens'))) : vazio('Nenhuma.'),
+    adicionar(vantagensDisponiveis(p, sis).map(v => ({ ...v, nome: v.origem === 'Geral' ? v.nome : `${v.nome} — ${v.origem}` })), 'vantagens', 'adicionar vantagem'),
     titulo('Defeitos', 'skull', 'h4'),
     (p.defeitos || []).length ? h('ul', { class: 'lista-regras' }, p.defeitos.map(id => item(sis.defeitos, id)).filter(Boolean).map(x => linhaItem(x, 'defeitos'))) : vazio('Nenhum.'),
     adicionar(sis.defeitos, 'defeitos', 'adicionar defeito'),
@@ -297,7 +316,7 @@ export function equipamento(p, mestre, filtro = null) {
         mestre
           ? campo(`${p.id}:dur:${i.uid}`, i.durabilidadeAtual ?? i.durabilidade, v => acao('item.durabilidade', { id: p.id, uid: i.uid, valor: v }), { tipo: 'number', class: 'num', 'aria-label': `Durabilidade de ${i.nome}` })
           : `${i.durabilidadeAtual ?? i.durabilidade}/${i.durabilidade}`,
-        [i.dano, i.defesa ? `Def ${i.defesa}` : null].filter(Boolean).join(' · ') || '—',
+        [[i.dano, i.defesa ? `Def ${i.defesa}` : null].filter(Boolean).join(' · ') || '—', municaoView(p, i, mestre)],
         Object.entries(i.bonus || {}).map(([k, v]) => `${k} ${v > 0 ? '+' : ''}${v}`).join(', ') || '—',
         h('span', { class: 'moeda' }, icone('coins'), i.venda ?? '—'),
         [
@@ -313,6 +332,21 @@ export function equipamento(p, mestre, filtro = null) {
     }))) : vazio('Nenhum item.', 'backpack'),
     mestre && !filtro ? selecao([{ valor: '', rotulo: '+ dar item do catálogo' }, ...sis.itens.map(i => ({ valor: i.id, rotulo: i.nome }))], '',
       v => v && acao('item.adicionar', { id: p.id, itemId: v }).catch(e => aviso(e.message, 'erro'))) : null);
+}
+
+// Munição: armas com "capacidade" mostram as balas carregadas; caixas de munição mostram a quantidade.
+function municaoView(p, i, mestre) {
+  if (i.capacidade) {
+    const vazia = (i.carregada || 0) <= 0;
+    return h('div', { class: 'municao' },
+      h('span', { class: `selo ${vazia ? 'perigo' : ''}` }, `Munição ${i.carregada || 0}/${i.capacidade}`),
+      botao('', () => acao('item.municao', { id: p.id, uid: i.uid, delta: -1 }), { class: 'pequeno', icone: 'minus', title: `Gastar 1 bala de ${i.nome}`, disabled: vazia }),
+      mestre ? botao('', () => acao('item.municao', { id: p.id, uid: i.uid, delta: 1 }), { class: 'pequeno', icone: 'plus', title: `Pôr 1 bala em ${i.nome}` }) : null,
+      botao('Recarregar', () => acao('item.recarregar', { id: p.id, uid: i.uid }).then(r => aviso(`${i.nome}: +${r.colocou} (${r.carregada}/${i.capacidade})`)),
+        { class: 'pequeno', icone: 'refresh-cw', disabled: (i.carregada || 0) >= i.capacidade }));
+  }
+  if (i.tipo === 'municao') return h('span', { class: 'selo' }, `${i.quantidade || 0} balas (${i.municao})`);
+  return null;
 }
 
 function controleMestre(p) {

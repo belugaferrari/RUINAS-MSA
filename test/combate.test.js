@@ -211,9 +211,47 @@ test('ações de combate e humor no servidor (MSS) e bloqueio no MSA', () => {
   if (!m.sucesso) assert.deepEqual(lia.humorOpcoes, ['desmotivado']);
   else assert.equal(lia.humor, 'motivado');
 
-  // No MSA o combate automático fica desligado.
+  // No MSA o turno funciona, mas o ataque automático fica desligado.
   executar(c, 'campanha.atualizar', { sistema: 'msa' }, ctxM);
-  assert.throws(() => executar(c, 'combate.iniciar', {}, ctxM), /ainda não existem no MSA/);
+  executar(c, 'combate.iniciar', {}, ctxM);
+  assert.equal(c.salas.batalha.combate.ordem.length, 2);
+  executar(c, 'combate.proximo', {}, ctxM);
+  assert.throws(() => executar(c, 'combate.atacar', { atacante: ids[1], alvo: ids[0] }, ctxM), /ainda não existem no MSA/);
+  executar(c, 'combate.encerrar', {}, ctxM);
   assert.throws(() => executar(c, 'social.manipular', { autor: ids[1], alvo: ids[0], sub: 'manipulacao.labia', humor: 'confiante' }, ctxM), /ainda não existem/);
   assert.equal(msa.modulos.combate, false);
+});
+
+test('munição: tiro gasta, recarrega da caixa, cancelar devolve', () => {
+  const c = novaCampanha(mestre, { nome: 'Tiros', maxJogadores: 1, nivel: 1, padraoMSA: true, sistema: 'mss' });
+  const [a, b] = ['Atiradora', 'Alvo'].map(nome => executar(c, 'personagem.criar', { tipo: 'npc', grupoId: 'encontros', ficha: { nome } }, ctxM).id);
+  for (const id of [a, b]) executar(c, 'sala.adicionar', { sala: 'batalha', id }, ctxM);
+  executar(c, 'item.adicionar', { id: a, itemId: 'revolver' }, ctxM);
+  executar(c, 'item.adicionar', { id: a, itemId: 'municao_pistola' }, ctxM);
+  const pa = c.personagens.find(p => p.id === a);
+  const arma = pa.itens.find(i => i.itemId === 'revolver');
+  assert.equal(arma.carregada, 6, 'vem carregada');
+  executar(c, 'item.equipar', { id: a, uid: arma.uid, equipar: true }, ctxM);
+  executar(c, 'combate.atacar', { atacante: a, alvo: b, opcoes: { armaUid: arma.uid } }, ctxM);
+  assert.equal(arma.carregada, 5);
+  // Ataque em área fica esperando a defesa; cancelar devolve a bala.
+  const pend = executar(c, 'combate.atacar', { atacante: a, alvo: b, opcoes: { armaUid: arma.uid, area: true } }, ctxM);
+  assert.equal(arma.carregada, 4);
+  executar(c, 'combate.cancelar', { id: pend.id }, ctxM);
+  assert.equal(arma.carregada, 5);
+  arma.carregada = 0;
+  assert.throws(() => executar(c, 'combate.atacar', { atacante: a, alvo: b, opcoes: { armaUid: arma.uid } }, ctxM), /sem munição/);
+  const r = executar(c, 'item.recarregar', { id: a, uid: arma.uid }, ctxM);
+  assert.equal(r.carregada, 6);
+  assert.equal(pa.itens.find(i => i.tipo === 'municao').quantidade, 6);
+  executar(c, 'item.municao', { id: a, uid: arma.uid, delta: -1 }, ctxM);
+  assert.equal(arma.carregada, 5);
+});
+
+test('XP para vários personagens de uma vez', () => {
+  const c = novaCampanha(mestre, { nome: 'XP', maxJogadores: 1, nivel: 1, padraoMSA: true });
+  const ids = ['A', 'B'].map(nome => executar(c, 'personagem.criar', { tipo: 'pj', ficha: { nome } }, ctxM).id);
+  executar(c, 'xp.dar', { ids, qtd: 150, motivo: 'sessão 1' }, ctxM);
+  assert.deepEqual(c.personagens.map(p => p.xp), [150, 150]);
+  assert.match(c.log.at(-1).rotulo, /\+150 XP \(sessão 1\)/);
 });

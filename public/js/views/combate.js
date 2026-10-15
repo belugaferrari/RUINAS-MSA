@@ -1,4 +1,5 @@
-// Combate automático no Campo de Batalha e Roda do Humor na Sala Social (só nos sistemas com esses módulos: hoje, o MSS).
+// Campo de Batalha: controle de turno (qualquer sistema) e combate automático; Sala Social: Roda do Humor.
+// O ataque automático e a Roda do Humor só ligam nos sistemas com esses módulos (hoje, o MSS).
 import { h, botao, selecao, aviso, icone, titulo } from '../ui.js';
 import { estado, personagemPorId, render } from '../estado.js';
 import { acao } from '../api.js';
@@ -14,18 +15,52 @@ const caixa = (sel, chave, rotulo) => h('label', { class: 'linha' },
 
 export function combateView(participantes, mestre) {
   const sis = estado.sistema;
-  if (!sis.modulos?.combate) {
-    return h('p', { class: 'dica' }, icone('info'),
-      ` O combate automático ainda não existe no ${sis.nome}: use os testes, a iniciativa e os PV abaixo. Ele liga sozinho quando a campanha está no MSS.`);
-  }
+  const auto = !!sis.modulos?.combate;
   const cb = estado.campanha.salas.batalha.combate;
   return h('div', { class: 'bloco combate' },
-    titulo(`Combate (${sis.nome})`, 'swords'),
+    titulo(`Turnos${auto ? ` e combate (${sis.nome})` : ''}`, 'swords'),
     cb ? ordemView(cb, mestre) : h('div', { class: 'barra' },
-      h('p', { class: 'dica' }, 'Iniciativa = AGI + 1d10 (Corajoso, Amedrontado e Enojado rolam com vantagem). A ordem vai do maior para o menor.'),
+      h('p', { class: 'dica' }, `Iniciativa = AGI + 1d10${auto ? ' (Corajoso, Amedrontado e Enojado rolam com vantagem)' : ''}. A ordem vai do maior para o menor.`),
       mestre ? botao('Iniciar combate', () => acao('combate.iniciar'), { class: 'primario', icone: 'play', disabled: participantes.length < 2 }) : null),
-    pendentesView(mestre),
-    ataqueView(participantes, mestre, cb));
+    cb ? painelVez(cb, mestre) : null,
+    auto ? pendentesView(mestre) : null,
+    auto ? ataqueView(participantes, mestre, cb)
+      : h('p', { class: 'dica' }, icone('info'), ` No ${sis.nome} o ataque ainda é resolvido com os testes da sala e os PV à mão; o ataque automático liga quando a campanha está no MSS.`),
+    mestre ? xpDaSala(participantes) : null);
+}
+
+// Quem está na vez: atalhos para o dono (ou o mestre) agir sem procurar na tela.
+function painelVez(cb, mestre) {
+  const p = personagemPorId(cb.ordem[cb.vez]?.id);
+  if (!p) return null;
+  const meu = p.donoId === estado.usuario.id;
+  if (!meu && !mestre) return h('p', { class: 'vez-de' }, icone('hourglass'), ` Vez de ${p.nome}.`);
+  const armas = (p.itens || []).filter(i => i.equipado && i.capacidade);
+  return h('div', { class: `painel-vez ${meu ? 'minha' : ''}` },
+    h('strong', {}, icone('zap'), meu ? ` Sua vez: ${p.nome}` : ` Vez de ${p.nome}`),
+    p.pv ? h('span', { class: 'selo' }, icone('heart'), `${p.pv.atual}/${p.pv.max}`) : null,
+    armas.map(i => h('span', { class: 'municao' },
+      h('span', { class: `selo ${(i.carregada || 0) <= 0 ? 'perigo' : ''}` }, `${i.nome}: ${i.carregada || 0}/${i.capacidade}`),
+      botao('', () => acao('item.municao', { id: p.id, uid: i.uid, delta: -1 }), { class: 'pequeno', icone: 'minus', title: `Gastar 1 bala de ${i.nome}`, disabled: (i.carregada || 0) <= 0 }),
+      botao('Recarregar', () => acao('item.recarregar', { id: p.id, uid: i.uid }), { class: 'pequeno', icone: 'refresh-cw', disabled: (i.carregada || 0) >= i.capacidade }))),
+    h('span', { class: 'espaco' }),
+    botao('Rolar teste', () => { estado.sel['rolar-batalha'] = { ...(estado.sel['rolar-batalha'] || { dif: '1', valor: 50 }), quem: p.id, acao: '' }; render();
+      document.querySelector('[aria-label="O que testar"]')?.focus(); }, { class: 'pequeno', icone: 'dices' }),
+    botao('Passar a vez', () => acao('combate.proximo'), { class: 'pequeno primario', icone: 'skip-forward' }));
+}
+
+// O mestre dá XP de uma vez a todos os personagens-jogador da sala.
+export function xpDaSala(participantes) {
+  const pjs = participantes.filter(p => p.tipo === 'pj');
+  if (!pjs.length) return null;
+  const qtd = h('input', { type: 'number', class: 'curto', value: 100, 'aria-label': 'XP para cada PJ' });
+  const motivo = h('input', { class: 'curto', placeholder: 'motivo (opcional)', 'aria-label': 'Motivo do XP' });
+  return h('div', { class: 'barra xp-sala' },
+    icone('sparkles'), h('span', {}, `XP para os ${pjs.length} PJs da sala:`), qtd, motivo,
+    botao('Dar XP', async () => {
+      await acao('xp.dar', { ids: pjs.map(p => p.id), qtd: qtd.value, motivo: motivo.value });
+      aviso(`+${qtd.value} XP para ${pjs.map(p => p.nome).join(', ')}`);
+    }, { class: 'pequeno', icone: 'sparkles' }));
 }
 
 // Ataques declarados esperando a defesa. Quem controla o alvo (ou o mestre) escolhe; os valores só aparecem para quem escolhe.

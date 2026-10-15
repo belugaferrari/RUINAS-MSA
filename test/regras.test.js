@@ -102,14 +102,41 @@ test('encontro aleatório não passa do limite', () => {
   for (let i = 0; i < 50; i++) assert.ok(R.gerarEncontro(sis.monstros, 7).soma <= 7);
 });
 
-test('humanidade: 50 + 2×CAR + 2×PER e estágio', () => {
+test('humanidade: de 1 a 100, inicial de 51 até 50 + 2×CAR + 2×PER, e estágio', () => {
   const f = R.novaFicha(sis, { nivel: 1 });
-  assert.equal(f.humanidade.max, 90);
+  assert.equal(f.humanidade.max, 100);
+  assert.equal(f.humanidade.atual, 90, 'começa no limite');
+  assert.equal(R.derivados(f, sis).humanidadeLimite, 90);
   assert.equal(R.derivados(f, sis).estagioHumanidade.nome, 'Compassivo');
   f.humanidade.atual = 45;
   assert.match(R.derivados(f, sis).estagioHumanidade.nome, /Calculista/);
   f.atributos.CAR = 20; f.atributos.PER = 20;
-  assert.equal(R.derivados(f, sis).humanidadeMax, 100, 'máximo natural 100');
+  assert.equal(R.derivados(f, sis).humanidadeLimite, 100, 'limite máximo 100');
+  const g = R.novaFicha(sis, { nivel: 1 });
+  g.humanidade.atual = 50;
+  assert.ok(R.problemasFicha(g, sis).some(x => /Humanidade inicial/.test(x)), 'abaixo de 51 não vale');
+  g.humanidade.atual = 91;
+  assert.ok(R.problemasFicha(g, sis).some(x => /Humanidade inicial/.test(x)), 'acima do limite não vale');
+  g.humanidade.atual = 51;
+  assert.ok(!R.problemasFicha(g, sis).some(x => /Humanidade inicial/.test(x)));
+});
+
+test('vantagens de classe abrem quando a classe é escolhida (nível 3)', () => {
+  const f = R.novaFicha(sis, { nivel: 3 });
+  const classe = sis.classes[0];
+  const deClasse = `${classe.id}/${classe.vantagens[0].id}`;
+  assert.ok(!R.vantagensDisponiveis(f, sis).some(v => v.id === deClasse), 'sem classe, só as gerais');
+  f.classe = classe.id;
+  assert.ok(R.vantagensDisponiveis(f, sis).some(v => v.id === deClasse && v.origem === classe.nome));
+  f.vantagens = [deClasse];
+  assert.equal(R.pontosGastos(f, sis).vantagens, 1);
+  f.nivel = 2;
+  assert.ok(!R.vantagensDisponiveis(f, sis).some(v => v.id === deClasse), 'abaixo do nível 3 não abre');
+});
+
+test('XP para subir de nível (tabela provisória)', () => {
+  assert.equal(R.xpParaSubir(1, sis), 1000);
+  assert.equal(R.xpParaSubir(4, sis), 4000);
 });
 
 test('rolagem de atributos da criação respeita a soma 70–102', () => {
@@ -134,7 +161,7 @@ test('MSS: carrega o próprio conteúdo e as diferenças para o MSA', () => {
   for (const c of mss.classes) for (const e of c.especializacoes) assert.equal(e.progressao?.length, 18, `${c.nome} › ${e.nome}`);
   // Humanidade: mesma fórmula e mesmos estágios nos dois sistemas.
   const f = R.novaFicha(mss, { nivel: 1 });
-  assert.equal(f.humanidade.max, 90);
+  assert.equal(f.humanidade.atual, 90);
   assert.equal(R.derivados(f, mss).estagioHumanidade.nome, R.derivados(f, sis).estagioHumanidade.nome);
   assert.ok(sistema('xyz').id === 'msa', 'id desconhecido cai no padrão');
 });

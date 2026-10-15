@@ -65,7 +65,7 @@ export function novaFicha(sistema, campanha) {
   const d = derivados(ficha, sistema);
   ficha.pv = { max: d.pvMax, atual: d.pvMax };
   ficha.sanidade = { max: d.sanidadeMax, atual: d.sanidadeMax };
-  ficha.humanidade = { max: d.humanidadeMax, atual: d.humanidadeMax };
+  ficha.humanidade = { max: d.humanidadeMax, atual: d.humanidadeLimite };
   return ficha;
 }
 
@@ -111,9 +111,35 @@ export const custoPericiaBase = (pericia, sistema) => {
   return pericia.combate ? (p.custoBaseCombate ?? 6) : (p.custoBase ?? 3);
 };
 
+// Vantagens que a ficha pode escolher: as gerais e, depois de escolher a classe (nível 3), as da própria classe.
+// As de classe usam o id "<classe>/<vantagem>" para não colidir com as gerais.
+export function vantagensDisponiveis(ficha, sistema) {
+  const gerais = sistema.vantagens.map(v => ({ ...v, origem: 'Geral' }));
+  const classe = sistema.classes?.find(c => c.id === ficha.classe);
+  if (!classe || (ficha.nivel || 1) < (regras(sistema).nivelClasse ?? 3)) return gerais;
+  return [...gerais, ...(classe.vantagens || []).map(v => ({ ...v, id: `${classe.id}/${v.id}`, custo: v.custo ?? 1, origem: classe.nome }))];
+}
+
+// Acha uma vantagem (geral ou de classe) pelo id, mesmo que a ficha não possa mais escolhê-la.
+export function acharVantagem(id, sistema) {
+  const geral = sistema.vantagens.find(v => v.id === id);
+  if (geral) return { ...geral, origem: 'Geral' };
+  const [cid, vid] = String(id).split('/');
+  const classe = sistema.classes?.find(c => c.id === cid);
+  const v = classe?.vantagens?.find(x => x.id === vid);
+  return v ? { ...v, id, custo: v.custo ?? 1, origem: classe.nome } : null;
+}
+
+// XP para subir do nível n para n+1 (tabela provisória em regras.xp até chegar a do livro).
+export function xpParaSubir(nivel, sistema) {
+  const x = regras(sistema).xp || {};
+  if (Array.isArray(x.tabela) && x.tabela[nivel - 1] != null) return x.tabela[nivel - 1];
+  return (x.porNivel ?? 1000) * (nivel || 1);
+}
+
 export function pontosGastos(ficha, sistema) {
   const atributos = sistema.atributos.reduce((s, a) => s + (ficha.atributos?.[a.sigla] ?? 0), 0);
-  const vantagens = (ficha.vantagens || []).reduce((s, id) => s + (sistema.vantagens.find(v => v.id === id)?.custo ?? 1), 0);
+  const vantagens = (ficha.vantagens || []).reduce((s, id) => s + (acharVantagem(id, sistema)?.custo ?? 1), 0);
   let pericias = 0;
   for (const p of sistema.pericias) {
     pericias += (ficha.pericias?.[p.id] ?? 0) * custoPericiaBase(p, sistema);
@@ -187,16 +213,17 @@ export function derivados(ficha, sistema) {
   const sanidadeMax = (ficha.atributos?.INT ?? 0) + (ficha.atributos?.WILL ?? 0) + 10;
   const san = ficha.sanidade?.atual ?? sanidadeMax;
   const estadoSanidade = [...(sistema.sanidade?.estados || [])].reverse().find(e => san < e.abaixoDe)?.nome || 'Lúcido';
-  // MSA: Humanidade calculada. MSS: valor anotado à mão (o livro ainda não define).
-  const humanidadeMax = sistema.humanidade?.calculo
-    ? Math.min(100, 50 + 2 * (ficha.atributos?.CAR ?? 0) + 2 * (ficha.atributos?.PER ?? 0))
-    : Math.max(0, Math.min(100, ficha.humanidade?.max ?? sistema.humanidade?.inicial ?? 50));
-  const hum = ficha.humanidade?.atual ?? humanidadeMax;
+  // Humanidade vai de 1 a 100 (abaixo de 1 o jogador perde o controle do personagem).
+  // Limite inicial = 50 + 2×CAR + 2×PER: o personagem novo começa com um valor de 51 até esse limite, à escolha do jogador.
+  const humanidadeMax = sistema.humanidade?.maximo ?? 100;
+  const humanidadeLimite = Math.min(humanidadeMax, 50 + 2 * (ficha.atributos?.CAR ?? 0) + 2 * (ficha.atributos?.PER ?? 0));
+  const humanidadeMinInicial = Math.min(humanidadeLimite, sistema.humanidade?.minimoInicial ?? 51);
+  const hum = ficha.humanidade?.atual ?? humanidadeLimite;
   const estagioHumanidade = (sistema.humanidade?.estagios || []).find(e => hum >= e.min && hum <= e.max) || null;
   const equipados = (ficha.itens || []).filter(i => i.equipado);
   return {
     bonus, atributos, percentual, bonusPericial, mod, pericias, subpericias, bonusProfissao,
-    pvMax, sanidadeMax, estadoSanidade, humanidadeMax, estagioHumanidade,
+    pvMax, sanidadeMax, estadoSanidade, humanidadeMax, humanidadeLimite, humanidadeMinInicial, estagioHumanidade,
     iniciativa: atributos.AGI ?? 0,
     linguasExtras: Math.max(0, mod.INT ?? 0),
     defesa: equipados.reduce((s, i) => s + (i.defesa || 0), 0) + (bonus.Defesa || 0),
@@ -258,6 +285,13 @@ export function problemasFicha(ficha, sistema, campanha, { apenasPontos = false 
   if (!ficha.profissao) lista.push('Escolha uma profissão.');
   if (ficha.classe && ficha.nivel < (r.nivelClasse ?? 3)) lista.push(`Classe só a partir do nível ${r.nivelClasse}.`);
   if (ficha.especializacao && ficha.nivel < (r.nivelEspecializacao ?? 5)) lista.push(`Especialização só a partir do nível ${r.nivelEspecializacao}.`);
+  const disp = new Set(vantagensDisponiveis(ficha, sistema).map(v => v.id));
+  for (const id of ficha.vantagens || []) if (!disp.has(id)) lista.push(`A vantagem "${acharVantagem(id, sistema)?.nome || id}" não está disponível para esta ficha.`);
+  const d = derivados(ficha, sistema);
+  const hum = ficha.humanidade?.atual;
+  if (hum != null && (hum < d.humanidadeMinInicial || hum > d.humanidadeLimite)) {
+    lista.push(`Humanidade inicial deve ficar entre ${d.humanidadeMinInicial} e ${d.humanidadeLimite} (50 + 2×CAR + 2×PER).`);
+  }
   return lista;
 }
 

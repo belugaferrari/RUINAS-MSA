@@ -534,3 +534,14 @@ mark.revisao { background: #5a4510; color: #ffe7a8; border-bottom: 1px dashed va
 .pendente > button { align-self: flex-start; }
 .participante label.ajuste { display: flex; flex-direction: row; align-items: center; flex-wrap: wrap; }
 .participante .ajuste input { width: 5em; flex: none; }
+
+/* Turno, XP e munição */
+.painel-vez { display: flex; flex-wrap: wrap; align-items: center; gap: .5em; margin: .6em 0; padding: .5em .7em; border: 1px solid var(--borda); border-radius: var(--raio); background: var(--painel); }
+.painel-vez.minha { border-color: var(--ouro); box-shadow: 0 0 0 2px var(--ouro); }
+.vez-de { margin: .5em 0; opacity: .85; }
+.municao { display: inline-flex; flex-wrap: wrap; align-items: center; gap: .3em; }
+.barra-xp { display: flex; flex-wrap: wrap; align-items: center; gap: .5em; margin-top: .3em; font-size: .9em; }
+.barra-xp .barra-trilha { flex: 1 1 120px; max-width: 260px; }
+.barra-xp.pronto .barra-trilha i { background: var(--ok, #6c6); }
+.xp-sala { margin-top: .6em; }
+.escolha-outra { display: flex; flex-direction: column; gap: .3em; }

@@ -8,6 +8,7 @@ import { livroView, monstrosView, lojaView, markdown, referenciaView } from './l
 import { mapaRelacoesView } from './relacoes.js';
 import { painelDados, dadosAberto } from './dados.js';
 import { confrontoView } from './confronto.js';
+import { criacaoView, iniciarCriacao } from './criacao.js';
 
 const ABAS = [
   ['jogadores', 'Jogadores', 'users'], ['npcs', 'NPCs', 'ghost'], ['imagens', 'Imagens', 'image'], ['social', 'Sala Social', 'drama'],
@@ -32,7 +33,7 @@ export function telaMestre() {
         icone(c.aberta ? 'lock-open' : 'lock'), h('span', {}, c.aberta ? 'Aberta' : 'Fechada'))),
     abas(ABAS, aba, id => mudar({ aba: id })),
     h('div', { class: `area-campanha ${dadosAberto() ? 'com-dados' : ''}` },
-      h('main', { class: 'conteudo' }, conteudoAba(aba)),
+      h('main', { class: 'conteudo' }, estado.criacao ? criacaoView() : conteudoAba(aba)),
       painelDados()));
 }
 
@@ -84,13 +85,15 @@ function abaJogadores() {
         botao('', async () => { if (await confirmar(`Remover ${c.jogadoresNomes[i]} da campanha?`)) await acao('jogador.remover', { userId: id }); },
           { class: 'x', icone: 'user-round-x', title: `Remover ${c.jogadoresNomes[i]}` })))) : vazio(c.aberta ? 'Ninguém entrou ainda.' : 'Abra a campanha para os jogadores poderem entrar.')),
     listaComFicha('Personagens-jogador', pjs,
-      botao('Criar personagem-jogador', async () => {
+      // O assistente é o mesmo do jogador, com as mesmas travas de pontos (conferidas no servidor).
+      [botao('Criar com o assistente', iniciarCriacao, { class: 'primario pequeno', icone: 'feather' }),
+      botao('Ficha em branco', async () => {
         const nome = await pedirTexto('Novo personagem-jogador', 'Nome (um jogador poderá assumir depois)');
         if (!nome) return;
         const { id } = await acao('personagem.criar', { tipo: 'pj', ficha: { nome } });
         estado.sel.personagem = id;
         render();
-      }, { class: 'primario pequeno', icone: 'user-plus' })));
+      }, { class: 'pequeno', icone: 'user-plus', title: 'Cria só com o nome; os pontos continuam travados pelo nível' })]));
 }
 
 function abaNpcs() {
@@ -268,7 +271,10 @@ function abaCampanha() {
         h('p', {}, `Nível inicial: ${c.nivel === 'Variavel' ? 'Variável' : c.nivel}`),
         h('p', {}, c.padraoMSA ? 'Início padrão do livro' : `Pontos: atributos ${c.pontos.atributos}, vantagens ${c.pontos.vantagens}, perícias ${c.pontos.pericias}`),
         h('label', { class: 'linha' }, h('input', { type: 'checkbox', checked: c.aberta, onchange: e => acao('campanha.atualizar', { aberta: e.target.checked }) }), 'Campanha aberta para jogadores'),
-        h('label', { class: 'linha' }, h('input', { type: 'checkbox', checked: c.lojaAberta, onchange: e => acao('campanha.atualizar', { lojaAberta: e.target.checked }) }), 'Loja liberada'))),
+        h('label', { class: 'linha' }, h('input', { type: 'checkbox', checked: c.lojaAberta, onchange: e => acao('campanha.atualizar', { lojaAberta: e.target.checked }) }), 'Loja liberada'),
+        h('label', { class: 'linha' }, h('input', { type: 'checkbox', checked: !!c.edicaoLivre, onchange: e => acao('campanha.atualizar', { edicaoLivre: e.target.checked }) }),
+          'Edição livre das fichas de jogador'),
+        h('p', { class: 'dica' }, 'Desligada (padrão): ao editar fichas de jogador, o mestre segue os mesmos limites de pontos da criação e só sobe o nível com o XP necessário. Ligue só para corrigir fichas.'))),
     h('section', { class: 'bloco' },
       titulo('Anotações da campanha', 'notebook-pen'),
       h('p', { class: 'dica' }, 'Só você vê este texto.'),

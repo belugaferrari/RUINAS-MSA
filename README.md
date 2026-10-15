@@ -45,6 +45,12 @@ Para jogar pela internet (sem estar na mesma Wi‑Fi), o mesmo app pode ser publ
 - **Confronto** (aba própria, fora do combate): o mestre cria Ação × Ação passiva (regra do livro) ou disputa (provisória); cada jogador rola o lado do próprio personagem; resultado em tempo real.
 - **Livro de Regras**: gerado do .docx com índice, busca, imagens e grifos destacados. Combate e regras sociais do MSS ficam de fora.
 
+## Turnos, XP e munição (qualquer sistema)
+
+- **Campo de Batalha**: o mestre inicia o combate (iniciativa de todos), o app mostra a rodada, de quem é a vez e um painel com os atalhos de quem está na vez (rolar teste, munição, passar a vez). O jogador recebe um aviso quando chega a vez dele.
+- **XP**: barra de XP na ficha e na tela Evoluir; o nível só sobe com o XP necessário (descontado ao confirmar). O mestre dá XP para um personagem ou para todos os PJs da sala de uma vez.
+- **Munição**: armas de fogo mostram as balas carregadas, gastam 1 por tiro e recarregam com as caixas de munição do inventário.
+
 ## Combate e social automáticos (campanhas no MSS)
 
 - **Campo de Batalha**: o mestre inicia o combate e o app rola a iniciativa de todos (AGI + 1d10; humores Corajoso, Amedrontado e Enojado rolam com vantagem). Mostra rodada e de quem é a vez; quem entra no meio rola na hora. Cada um declara o ataque com a arma equipada (ou desarmado) e quem controla o alvo escolhe a defesa (Esquiva, Defesa desarmada, Defesa armada ou Evasão em área): vantagem/desvantagem automáticas (surpresa, alvo caído, terreno elevado…), ataque localizado, duas armas, Sacrifício, crítico (+1 dado), dano − IP aplicado direto nos PV, efeito de dano pelo DS e sobrevida abaixo de 0 PV.

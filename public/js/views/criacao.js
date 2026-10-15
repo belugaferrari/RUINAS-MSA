@@ -1,7 +1,7 @@
-import { h, botao, aviso, vazio, confirmar, icone, titulo, tabela, passador, seloRevisao, selecao } from '../ui.js';
+import { h, botao, aviso, vazio, confirmar, icone, titulo, tabela, passador, seloRevisao, escolhaComOutra } from '../ui.js';
 import { estado, render, mudar } from '../estado.js';
 import { acao } from '../api.js';
-import { novaFicha, pontosDoNivel, pontosGastos, pontosPericiaTotal, pontosVantagemExtra, derivados, problemasFicha, custoPericiaBase } from '/shared/regras.js';
+import { novaFicha, pontosDoNivel, pontosGastos, pontosPericiaTotal, pontosVantagemExtra, derivados, problemasFicha, custoPericiaBase, vantagensDisponiveis, acharVantagem } from '/shared/regras.js';
 import { ICONE_TIPO } from './ficha.js';
 import { painelPericias } from './pericias.js';
 
@@ -84,8 +84,10 @@ function passoIdentidade() {
     titulo('De onde você veio?', 'compass', 'h4'),
     h('div', { class: 'cartoes' }, sis.origens.map(o => cartaoEscolha(f.origem === o.nome, () => alterar(x => { x.origem = o.nome; }), h('strong', {}, o.nome), h('p', {}, o.descricao)))),
     h('label', {}, 'Família (quem te criou?)', h('textarea', { rows: 2, 'data-key': 'cr:familia', value: f.familia, oninput: e => { f.familia = e.target.value; salvarRascunho(); } })),
-    h('label', {}, 'O que te motiva?', selecao([{ valor: '', rotulo: '—' }, ...sis.motivacoes], f.motivacao, v => alterar(x => { x.motivacao = v; }))),
-    h('label', {}, 'Instinto', input('instinto')),
+    h('label', {}, 'O que te motiva?', escolhaComOutra('cr:motivacao', sis.motivacoes, f.motivacao, v => alterar(x => { x.motivacao = v; }),
+      { rotuloOutra: 'Outra…', placeholder: 'Qual a motivação?', props: { 'aria-label': 'Motivação' }, redesenhar: render })),
+    h('label', {}, 'Instinto', escolhaComOutra('cr:instinto', (sis.instintos || []).map(x => x.nome), f.instinto, v => alterar(x => { x.instinto = v; }),
+      { rotuloOutra: 'Outro…', placeholder: 'Qual o instinto?', props: { 'aria-label': 'Instinto' }, redesenhar: render })),
     h('label', {}, 'Aparência e jeito de agir',
       h('textarea', { rows: 3, 'data-key': 'cr:caracteristicas', value: f.caracteristicas, oninput: e => { f.caracteristicas = e.target.value; salvarRascunho(); } })),
     h('p', { class: 'dica' }, 'A foto do personagem é enviada depois, na própria ficha.'));
@@ -169,6 +171,8 @@ function passoVantagens() {
   const busca = (estado.sel.buscaVant || '').toLowerCase();
   const filtra = l => l.filter(x => !busca || x.nome.toLowerCase().includes(busca) || x.descricao.toLowerCase().includes(busca));
   const alternar = (campo, id, marcar) => alterar(x => { x[campo] = marcar ? [...x[campo], id] : x[campo].filter(y => y !== id); });
+  // Escolhida a classe (nível 3+), as vantagens dela entram na lista.
+  const deClasse = vantagensDisponiveis(f, sis).filter(v => v.origem !== 'Geral');
   const linha = (x, campo, desabilitar) => {
     const tem = f[campo].includes(x.id);
     return h('label', { class: `cartao escolha ${tem ? 'escolhido' : ''}` },
@@ -185,7 +189,9 @@ function passoVantagens() {
     titulo(`Defeitos (${f.defeitos.length} escolhido${f.defeitos.length === 1 ? '' : 's'})`, 'skull', 'h4'),
     h('div', { class: 'cartoes' }, filtra(sis.defeitos).map(x => linha(x, 'defeitos', false))),
     titulo('Vantagens gerais', 'sparkles', 'h4'),
-    h('div', { class: 'cartoes' }, filtra(sis.vantagens).map(x => linha(x, 'vantagens', gasto + (x.custo ?? 1) > total))));
+    h('div', { class: 'cartoes' }, filtra(sis.vantagens).map(x => linha(x, 'vantagens', gasto + (x.custo ?? 1) > total))),
+    deClasse.length ? titulo(`Vantagens da classe ${deClasse[0].origem}`, 'shield', 'h4') : null,
+    deClasse.length ? h('div', { class: 'cartoes' }, filtra(deClasse).map(x => linha(x, 'vantagens', gasto + (x.custo ?? 1) > total))) : null);
 }
 
 function passoItens() {
@@ -217,15 +223,22 @@ function passoMental() {
     h('div', { class: 'cartao' }, titulo(`Sanidade: ${d.sanidadeMax}`, 'brain'), h('p', {}, `Calculada por ${sis.regras.formulas.sanidade} (INT ${f.atributos.INT} + WILL ${f.atributos.WILL} + 10).`),
       h('p', { class: 'dica' }, sis.sanidade.estados.map(e => `${e.nome} abaixo de ${e.abaixoDe}`).join(' · '))),
     h('div', { class: 'cartao' }, titulo(`PV: ${d.pvMax}`, 'heart'), h('p', {}, sis.regras.formulas.pv), seloRevisao(true, 'fórmula em revisão')),
-    sis.humanidade.calculo
-      ? h('div', { class: 'cartao' }, titulo(`Humanidade: ${d.humanidadeMax} — ${d.estagioHumanidade?.nome || ''}`, 'hand-heart'), seloRevisao(true),
-        h('p', {}, `Calculada por ${sis.humanidade.formula} (CAR ${f.atributos.CAR}, PER ${f.atributos.PER}).`),
-        h('p', {}, d.estagioHumanidade?.descricao || ''),
-        h('p', { class: 'dica' }, 'O livro também diz que é possível escolher valores melhores até um limite no 1º nível — regra ainda em revisão.'))
-      : h('div', { class: 'cartao' }, titulo('Humanidade', 'hand-heart'), seloRevisao(true),
-        h('p', {}, sis.humanidade.descricao),
-        h('label', {}, 'Valor inicial (combine com o mestre)',
-          h('input', { type: 'number', min: 0, max: 100, value: f.humanidade.max, onchange: e => alterar(x => { const n = Math.max(0, Math.min(100, parseInt(e.target.value, 10) || 0)); x.humanidade = { max: n, atual: n }; }) }))));
+    humanidadeInicial(f, d));
+}
+
+// Humanidade vai de 1 a 100. O jogador escolhe o valor inicial entre 51 e o limite 50 + 2×CAR + 2×PER.
+function humanidadeInicial(f, d) {
+  const sis = estado.sistema;
+  const atual = Math.max(d.humanidadeMinInicial, Math.min(d.humanidadeLimite, f.humanidade?.atual ?? d.humanidadeLimite));
+  if (f.humanidade?.atual !== atual) f.humanidade = { max: d.humanidadeMax, atual };
+  return h('div', { class: 'cartao' }, titulo(`Humanidade: ${atual} — ${d.estagioHumanidade?.nome || ''}`, 'hand-heart'),
+    h('p', {}, `Vai de 1 a 100. Você escolhe o valor inicial entre ${d.humanidadeMinInicial} e ${d.humanidadeLimite} (50 + 2×CAR ${f.atributos.CAR} + 2×PER ${f.atributos.PER}). Abaixo de 1, você perde o controle do personagem.`),
+    h('div', { class: 'valor-linha' }, h('span', {}, 'Humanidade inicial'),
+      passador(atual, d.humanidadeMinInicial, d.humanidadeLimite, v => alterar(x => { x.humanidade = { max: d.humanidadeMax, atual: v }; }), 'Humanidade inicial')),
+    h('input', { type: 'range', min: d.humanidadeMinInicial, max: d.humanidadeLimite, value: atual, 'aria-label': 'Humanidade inicial (deslizar)',
+      onchange: e => alterar(x => { x.humanidade = { max: d.humanidadeMax, atual: parseInt(e.target.value, 10) }; }) }),
+    h('p', {}, d.estagioHumanidade?.descricao || ''),
+    h('p', { class: 'dica' }, sis.humanidade.notaEfeitos || ''));
 }
 
 function passoBackground() {
@@ -256,11 +269,12 @@ function passoRevisao() {
       h('section', { class: 'bloco' }, titulo(f.nome || '(sem nome)', 'user'),
         h('p', {}, `Nível ${f.nivel} · ${nome(sis.profissoes, f.profissao) || 'sem profissão'}${f.classe ? ` · ${nome(sis.classes, f.classe)}` : ''}`),
         h('p', {}, `${f.origem || 'Origem não definida'} · ${f.motivacao || 'Motivação não definida'}`),
-        h('p', {}, `PV ${d.pvMax} · Sanidade ${d.sanidadeMax} · Humanidade ${d.humanidadeMax} · Iniciativa AGI ${d.iniciativa} + 1d10`)),
+        h('p', {}, `PV ${d.pvMax} · Sanidade ${d.sanidadeMax} · Humanidade ${f.humanidade?.atual ?? d.humanidadeLimite} · Iniciativa AGI ${d.iniciativa} + 1d10`),
+        f.instinto ? h('p', {}, `Instinto: ${f.instinto}`) : null),
       h('section', { class: 'bloco' }, titulo('Atributos', 'zap'), h('p', {}, sis.atributos.map(a => `${a.sigla} ${f.atributos[a.sigla]}`).join(' · '))),
       h('section', { class: 'bloco' }, titulo('Perícias treinadas', 'target'), h('p', {}, treinadas.join(' · ') || 'Nenhuma')),
       h('section', { class: 'bloco' }, titulo('Vantagens, defeitos e itens', 'sparkles'),
-        h('p', {}, h('strong', {}, 'Vantagens: '), f.vantagens.map(id => nome(sis.vantagens, id)).join(', ') || '—'),
+        h('p', {}, h('strong', {}, 'Vantagens: '), f.vantagens.map(id => acharVantagem(id, sis)?.nome || id).join(', ') || '—'),
         h('p', {}, h('strong', {}, 'Defeitos: '), f.defeitos.map(id => nome(sis.defeitos, id)).join(', ') || '—'),
         h('p', {}, h('strong', {}, 'Itens: '), f.itens.map(i => i.nome).join(', ') || '—', ` · ${f.dinheiro} ${sis.moeda}`))));
 }
@@ -287,10 +301,10 @@ export function criacaoView() {
         ? botao('Criar personagem', async () => {
           const erros = problemasFicha(cr.ficha, estado.sistema, estado.campanha);
           if (erros.length) throw new Error(erros[0]);
-          const { id } = await acao('personagem.criar', { tipo: 'pj', ficha: cr.ficha });
+          const { id } = await acao('personagem.criar', { tipo: 'pj', ficha: cr.ficha, validar: true });
           try { localStorage.removeItem(chaveRascunho()); } catch { /* ignore */ }
           aviso('Personagem criado! Agora você pode enviar a foto na ficha.');
-          mudar({ criacao: null, aba: 'ficha', sel: { ...estado.sel, personagem: id } });
+          mudar({ criacao: null, aba: estado.campanha.papel === 'mestre' ? 'jogadores' : 'ficha', sel: { ...estado.sel, personagem: id } });
         }, { class: 'primario', icone: 'check' })
         : h('button', { type: 'button', class: 'primario', onclick: () => ir(cr.passo + 1) }, 'Avançar', icone('arrow-left', 'gira'))));
 }

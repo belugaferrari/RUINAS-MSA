@@ -159,3 +159,18 @@ export function passador(valor, min, max, aoMudar, rotulo = '') {
     h('strong', {}, valor),
     h('button', { type: 'button', 'aria-label': `Aumentar ${rotulo}`.trim(), disabled: valor >= max, onclick: () => aoMudar(valor + 1) }, icone('plus')));
 }
+
+// Lista fechada com a opção "Outra": ao escolher "Outra", aparece um campo para digitar.
+// opcoes: nomes (strings); valor: texto salvo; salvar(texto). "chave" guarda o estado "Outra escolhida" e o rascunho.
+export function escolhaComOutra(chave, opcoes, valor, salvar, { rotuloOutra = 'Outra…', placeholder = 'Digite…', props = {}, redesenhar = () => {} } = {}) {
+  const naLista = opcoes.includes(valor);
+  const outra = (!!valor && !naLista) || estadoOutra.has(chave);
+  return h('div', { class: 'escolha-outra' },
+    selecao([{ valor: '', rotulo: '—' }, ...opcoes, { valor: '__outra', rotulo: rotuloOutra }], outra ? '__outra' : (valor || ''), v => {
+      if (v === '__outra') { estadoOutra.add(chave); if (naLista) salvar(''); else redesenhar(); return; }
+      estadoOutra.delete(chave);
+      salvar(v);
+    }, props),
+    outra ? campo(`${chave}:outra`, naLista ? '' : valor, v => salvar(String(v).trim()), { placeholder, 'aria-label': `${props['aria-label'] || 'Valor'} (outra)` }) : null);
+}
+const estadoOutra = new Set();

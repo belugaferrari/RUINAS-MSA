@@ -4,9 +4,12 @@ import { custoPericiaBase } from '/shared/regras.js';
 
 // Painel das 20 perícias base com suas subperícias.
 // opts: { d (derivados), editar: { base(id,v), sub(id,v), minBase, minSub, maxRestante, limite }, rolar(ref, nome) }
+// Fora da edição, cada perícia base mostra só as subperícias treinadas (com pontos gastos); "Todas" abre a lista completa.
 export function painelPericias(ficha, opts) {
   const sis = estado.sistema;
   const { d, editar, rolar, chave = 'pericias' } = opts;
+  const chaveModo = `${chave}:soTreinadas`;
+  const soTreinadas = estado.sel[chaveModo] ?? !editar;
   const busca = (estado.sel[`${chave}:busca`] || '').toLowerCase().trim();
   const lista = sis.pericias.filter(p => !busca || p.nome.toLowerCase().includes(busca) || p.subpericias.some(s => s.nome.toLowerCase().includes(busca)));
   return h('div', { class: 'pericias' },
@@ -15,12 +18,14 @@ export function painelPericias(ficha, opts) {
         type: 'search', placeholder: 'Buscar perícia ou subperícia…', 'data-key': `${chave}:busca`, value: estado.sel[`${chave}:busca`] || '',
         oninput: e => { estado.sel[`${chave}:busca`] = e.target.value; render(); },
       })),
+      h('button', { type: 'button', class: `pequeno ${soTreinadas ? 'primario' : ''}`, 'aria-pressed': soTreinadas,
+        onclick: () => { estado.sel[chaveModo] = !soTreinadas; render(); } }, icone('target'), soTreinadas ? 'Só treinadas' : 'Todas as subperícias'),
       h('button', { type: 'button', class: 'pequeno', onclick: () => { for (const p of sis.pericias) estado.sel[`${chave}:${p.id}`] = true; render(); } }, icone('chevron-down'), 'Abrir todas'),
       h('button', { type: 'button', class: 'pequeno', onclick: () => { for (const p of sis.pericias) estado.sel[`${chave}:${p.id}`] = false; render(); } }, icone('chevron-up'), 'Fechar')),
-    lista.map(p => grupo(ficha, p, d, editar, rolar, chave, !!busca)));
+    lista.map(p => grupo(ficha, p, d, editar, rolar, chave, !!busca, soTreinadas)));
 }
 
-function grupo(ficha, p, d, editar, rolar, chave, forcarAberto) {
+function grupo(ficha, p, d, editar, rolar, chave, forcarAberto, soTreinadas) {
   const sis = estado.sistema;
   const base = ficha.pericias?.[p.id] ?? 0;
   const gastoSubs = p.subpericias.reduce((s, x) => s + (ficha.subpericias?.[x.id] ?? 0), 0);
@@ -39,9 +44,9 @@ function grupo(ficha, p, d, editar, rolar, chave, forcarAberto) {
         passador(base, editar.minBase?.(p.id) ?? 0, Math.min(editar.limite, base + Math.floor(editar.maxRestante() / custo)), v => editar.base(p.id, v), `${p.nome} base`)) : null,
       h('span', { class: 'valor-final', title: 'Valor da perícia base (pontos + bônus pericial)' }, `${d.pericias[p.id]}%`),
       rolar ? h('button', { type: 'button', class: 'so-icone pequeno', title: `Testar ${p.nome}`, 'aria-label': `Testar ${p.nome}`, onclick: () => rolar(`per:${p.id}`, p.nome) }, icone('dices')) : null),
-    aberto ? h('div', { class: 'subpericias' },
-      h('p', { class: 'dica' }, p.descricao),
-      p.subpericias.map(s => {
+    aberto || (soTreinadas && gastoSubs > 0) ? h('div', { class: 'subpericias' },
+      aberto ? h('p', { class: 'dica' }, p.descricao) : null,
+      p.subpericias.filter(s => aberto || (ficha.subpericias?.[s.id] ?? 0) > 0).map(s => {
         const pts = ficha.subpericias?.[s.id] ?? 0;
         const prof = d.bonusProfissao[s.id];
         return h('div', { class: `subpericia ${pts ? 'treinada' : ''}`, title: s.descricao },
