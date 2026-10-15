@@ -31,12 +31,12 @@ Depois desta instalação **não precisa mais baixar o ZIP**. Toda vez que você
 2. se houver, baixa e troca só os arquivos do app — **a pasta `data` (contas, campanhas, fichas, imagens) nunca é apagada**;
 3. abre o app normalmente.
 
-Sem internet, ele só abre a versão que já está no PC.
+Sem internet, ele só abre a versão que já está no PC. A janela preta mostra "Procurando atualizações…" e depois "O app já está na versão mais nova" ou "Atualizado!".
 
-**Com o app já aberto**: na área do Mestre, aba **Campanha → Versão do app → Procurar atualização**. Se houver versão nova, **Atualizar agora** baixa, reinicia o app sozinho (a janela preta continua aberta) e recarrega a página de todos. Atualizar só a página do navegador **não** traz a versão nova. A janela preta mostra "Procurando atualizações…" e depois "O app já está na versão mais nova" ou "Atualizado!".
+**Com o app já aberto**: na área do Mestre, aba **Campanha → Versão do app → Procurar atualização**. Se houver versão nova, **Atualizar agora** baixa, reinicia o app sozinho (a janela preta continua aberta) e recarrega a página de todos. Atualizar só a página do navegador **não** traz a versão nova.
 
 > Se você já tinha uma pasta de uma versão antiga: baixe o ZIP **uma última vez**, extraia **por cima da pasta antiga** (assim a `data` continua lá) e abra o `iniciar-windows.bat`. A partir daí é automático.
-> Se o app já estiver aberto quando sair uma versão nova, feche a janela preta e abra de novo.
+> Se o app já estiver aberto quando sair uma versão nova, use **Atualizar agora** (ou feche a janela preta e abra de novo).
 
 **Faça backup da pasta `data` de vez em quando** (copie para um pen drive ou para a nuvem).
 
