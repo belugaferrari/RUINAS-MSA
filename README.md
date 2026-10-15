@@ -6,7 +6,7 @@ Aplicativo de apoio ao RPG **Ilhas das Ruínas MSA**: o Mestre e até 9 jogadore
 
 ## Como rodar (no PC do Mestre)
 
-> Passo a passo para quem não programa: **[INSTALAR.md](INSTALAR.md)** — no Windows é só dar dois cliques em `iniciar-windows.bat`.
+> Passo a passo para quem não programa: **[INSTALAR.md](INSTALAR.md)** — no Windows é só dar dois cliques em `iniciar-windows.bat`. Ele se atualiza sozinho pelo GitHub a cada abertura (`iniciar.ps1` / `atualizar.ps1`), sem mexer na pasta `data`.
 
 1. Instale o [Node.js](https://nodejs.org) (versão 20 ou mais nova).
 2. Na pasta do projeto:

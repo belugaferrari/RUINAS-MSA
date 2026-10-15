@@ -26,9 +26,18 @@ O navegador abre sozinho em `http://localhost:3000`. **Enquanto a janela preta e
 2. Para ser também um jogador, abra **outra janela anônima** do navegador (Ctrl+Shift+N), entre em `http://localhost:3000`, crie outra conta e vá na **Área do Jogador**.
 3. Celulares na mesma Wi‑Fi: use o endereço que aparece na janela preta em "Na mesma Wi‑Fi" (algo como `http://192.168.0.10:3000`).
 
-## Atualizar para a versão mais nova
-Baixe o ZIP de novo e extraia por cima da pasta antiga (ou numa pasta nova).
-**Os dados ficam na pasta `data`** (contas, campanhas, fichas, imagens): se usar uma pasta nova, copie a `data` da antiga para ela.
+## Atualizações: automáticas
+Depois desta instalação **não precisa mais baixar o ZIP**. Toda vez que você abre o `iniciar-windows.bat` (ou o `iniciar-mac.command`), ele:
+1. confere no GitHub se há versão nova;
+2. se houver, baixa e troca só os arquivos do app — **a pasta `data` (contas, campanhas, fichas, imagens) nunca é apagada**;
+3. abre o app normalmente.
+
+Sem internet, ele só abre a versão que já está no PC. A janela preta mostra "Procurando atualizações…" e depois "O app já está na versão mais nova" ou "Atualizado!".
+
+> Se você já tinha uma pasta de uma versão antiga: baixe o ZIP **uma última vez**, extraia **por cima da pasta antiga** (assim a `data` continua lá) e abra o `iniciar-windows.bat`. A partir daí é automático.
+> Se o app já estiver aberto quando sair uma versão nova, feche a janela preta e abra de novo.
+
+**Faça backup da pasta `data` de vez em quando** (copie para um pen drive ou para a nuvem).
 
 ## Problemas comuns
 - **"O Node.js não está instalado"** — instale (passo 1) e abra o `iniciar-windows.bat` de novo. Se já instalou, reinicie o PC.
