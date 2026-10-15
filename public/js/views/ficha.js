@@ -3,6 +3,7 @@ import { estado, render } from '../estado.js';
 import { acao, enviarArquivo } from '../api.js';
 import { derivados, slotsOcupados, ganhosDeClasse, pontosGastos, pontosPericiaTotal, vantagensDisponiveis, acharVantagem, xpParaSubir } from '/shared/regras.js';
 import { painelPericias } from './pericias.js';
+import { bonecoView } from './boneco.js';
 
 export const ICONE_TIPO = { arma: 'sword', defesa: 'shield', vestimenta: 'shirt', joia: 'gem', armadilha: 'crosshair', geral: 'backpack' };
 
@@ -32,7 +33,8 @@ export function fichaView(p, { mestre = false } = {}) {
         painelPericias(p, { d, rolar, chave: `ficha:${p.id}`, editar: mestre ? editorMestre(p) : null })),
       h('section', { class: 'bloco' }, titulo('Profissão e classe', 'shield'), profissaoClasse(p, mestre)),
       h('section', { class: 'bloco' }, titulo('Vantagens, defeitos e capacidades', 'sparkles'), vantagensView(p, d, mestre)),
-      h('section', { class: 'bloco largo' }, titulo(`Equipamento · Defesa ${d.defesa} · Carga ${d.carga.toFixed(1)} kg`, 'backpack'), equipamento(p, mestre)),
+      h('section', { class: 'bloco' }, titulo('Equipado no corpo', 'shirt'), bonecoView(p, { mestre })),
+      h('section', { class: 'bloco largo', id: 'equipamento' }, titulo(`Equipamento · Defesa ${d.defesa} · Carga ${d.carga.toFixed(1)} kg`, 'backpack'), equipamento(p, mestre)),
       h('section', { class: 'bloco largo' }, titulo('Anotações', 'notebook-pen'),
         campo(`${p.id}:anotacoes`, p.anotacoes, v => atualizar(p, { anotacoes: v }), { multilinha: true, rows: 5, placeholder: 'Suas anotações…' })),
       h('section', { class: 'bloco largo' }, titulo('Background', 'scroll'),

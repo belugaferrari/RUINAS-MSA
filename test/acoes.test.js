@@ -52,14 +52,14 @@ test('fluxo básico de campanha e permissões', () => {
   assert.equal(visaoPara(c, ana, 'jogador').anotacoes, undefined);
 
   // Evoluir guarda backup.
-  // Subir de nível exige o XP do nível (provisório: nível × 1000) e desconta.
-  executar(c, 'xp.dar', { id, qtd: 1500 }, { user: mestre, mestre: true });
+  // Subir de nível exige 100 XP por nível e desconta.
+  executar(c, 'xp.dar', { id, qtd: 50 }, { user: mestre, mestre: true });
   assert.throws(() => executar(c, 'personagem.evoluir', { id, patch: { nivel: 3 } }, { user: ana, mestre: false }), /XP insuficiente/);
   assert.throws(() => executar(c, 'personagem.atualizar', { id, patch: { nivel: 3 } }, { user: mestre, mestre: true }), /faltam XP/, 'nem o mestre pula sem XP');
-  executar(c, 'xp.dar', { id, qtd: 600 }, { user: mestre, mestre: true });
+  executar(c, 'xp.dar', { id, qtd: 60 }, { user: mestre, mestre: true });
   assert.throws(() => executar(c, 'personagem.evoluir', { id, patch: { nivel: 4 } }, { user: ana, mestre: false }), /um nível de cada vez/);
   executar(c, 'personagem.evoluir', { id, patch: { nivel: 3 } }, { user: ana, mestre: false });
-  assert.equal(lia.xp, 100);
+  assert.equal(lia.xp, 10);
   assert.equal(lia.nivel, 3);
   assert.equal(lia.backups.length, 1);
   assert.equal(lia.backups[0].ficha.nivel, 2);
@@ -142,7 +142,7 @@ test('evoluir: o jogador só gasta os pontos que o nível dá', () => {
   // Nível 1 → 2: +2 de atributo (80 gastos de 88) e +1 vantagem.
   const atributos = { ...p.atributos, FOR: 14, CONS: 14 };
   assert.throws(() => executar(c, 'personagem.evoluir', { id, patch: { nivel: 1, atributos }, xpGasto: 0 }, { user: j, mestre: false }), /Atributos/);
-  executar(c, 'xp.dar', { id, qtd: 1000 }, { user: m, mestre: true });
+  executar(c, 'xp.dar', { id, qtd: 100 }, { user: m, mestre: true });
   executar(c, 'personagem.evoluir', { id, patch: { nivel: 2, atributos: { ...p.atributos, FOR: 14, CONS: 14 } }, xpGasto: 0 }, { user: j, mestre: false });
   assert.equal(p.xp, 0);
   assert.equal(p.nivel, 2);

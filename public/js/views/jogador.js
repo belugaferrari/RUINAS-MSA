@@ -5,6 +5,7 @@ import { estado, mudar, render, personagemPorId, meusPersonagens } from '../esta
 import { acao, emitir } from '../api.js';
 import { topo, carregarSaguao } from './saguao.js';
 import { fichaView, equipamento, nomeClasse, barraXp } from './ficha.js';
+import { bonecoView } from './boneco.js';
 import { salaView } from './salas.js';
 import { lojaView, markdown, referenciaView } from './livros.js';
 import { redesSociaisView } from './relacoes.js';
@@ -75,7 +76,9 @@ function conteudoAba(aba, p) {
       titulo('Sessões', 'bookmark', 'h2'),
       c.lore.sessoes.length ? [...c.lore.sessoes].reverse().map(s => h('article', { class: 'sessao' }, h('h3', {}, `${s.titulo} — ${s.data}`), markdown(s.texto))) : vazio('Nenhuma sessão registrada ainda.', 'bookmark'));
     case 'redes': return redesSociaisView(p);
-    case 'itens': return h('div', {}, h('div', { class: 'barra' }, titulo(`Itens de ${p.nome}`, 'backpack', 'h2'), h('span', { class: 'selo moeda' }, icone('coins'), p.dinheiro ?? 0)), equipamento(p, false));
+    case 'itens': return h('div', {}, h('div', { class: 'barra' }, titulo(`Itens de ${p.nome}`, 'backpack', 'h2'), h('span', { class: 'selo moeda' }, icone('coins'), p.dinheiro ?? 0)),
+      h('div', { class: 'itens-com-boneco' }, h('section', { class: 'bloco' }, titulo('Equipado no corpo', 'shirt'), bonecoView(p, { linkGuardados: false })),
+        h('section', { class: 'bloco', id: 'equipamento' }, titulo('Inventário', 'backpack'), equipamento(p, false))));
     case 'armas': return h('div', {},
       titulo('Armas e armadilhas', 'axe', 'h2'),
       equipamento(p, false, i => ['arma', 'armadilha', 'defesa'].includes(i.tipo)),

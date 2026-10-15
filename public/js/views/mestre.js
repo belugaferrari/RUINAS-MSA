@@ -274,6 +274,8 @@ function abaCampanha() {
         h('label', { class: 'linha' }, h('input', { type: 'checkbox', checked: c.lojaAberta, onchange: e => acao('campanha.atualizar', { lojaAberta: e.target.checked }) }), 'Loja liberada'),
         h('label', { class: 'linha' }, h('input', { type: 'checkbox', checked: !!c.edicaoLivre, onchange: e => acao('campanha.atualizar', { edicaoLivre: e.target.checked }) }),
           'Edição livre das fichas de jogador'),
+        h('label', { class: 'linha' }, h('input', { type: 'checkbox', checked: c.dadosNaTela !== false, onchange: e => acao('campanha.atualizar', { dadosNaTela: e.target.checked }) }),
+          'Mostrar as rolagens (D-MIL) na tela de todos'),
         h('p', { class: 'dica' }, 'Desligada (padrão): ao editar fichas de jogador, o mestre segue os mesmos limites de pontos da criação e só sobe o nível com o XP necessário. Ligue só para corrigir fichas.'))),
     h('section', { class: 'bloco' },
       titulo('Anotações da campanha', 'notebook-pen'),

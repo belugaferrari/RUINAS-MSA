@@ -134,9 +134,9 @@ test('vantagens de classe abrem quando a classe é escolhida (nível 3)', () => 
   assert.ok(!R.vantagensDisponiveis(f, sis).some(v => v.id === deClasse), 'abaixo do nível 3 não abre');
 });
 
-test('XP para subir de nível (tabela provisória)', () => {
-  assert.equal(R.xpParaSubir(1, sis), 1000);
-  assert.equal(R.xpParaSubir(4, sis), 4000);
+test('XP para subir de nível: 100 por nível', () => {
+  assert.equal(R.xpParaSubir(1, sis), 100);
+  assert.equal(R.xpParaSubir(4, sis), 100);
 });
 
 test('rolagem de atributos da criação respeita a soma 70–102', () => {

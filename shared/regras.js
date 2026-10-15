@@ -130,11 +130,11 @@ export function acharVantagem(id, sistema) {
   return v ? { ...v, id, custo: v.custo ?? 1, origem: classe.nome } : null;
 }
 
-// XP para subir do nível n para n+1 (tabela provisória em regras.xp até chegar a do livro).
+// XP para subir do nível n para n+1: regras.xp.porNivel (100 por nível); "crescente" multiplica pelo nível; "tabela" define nível a nível.
 export function xpParaSubir(nivel, sistema) {
   const x = regras(sistema).xp || {};
   if (Array.isArray(x.tabela) && x.tabela[nivel - 1] != null) return x.tabela[nivel - 1];
-  return (x.porNivel ?? 1000) * (nivel || 1);
+  return (x.porNivel ?? 100) * (x.crescente ? (nivel || 1) : 1);
 }
 
 export function pontosGastos(ficha, sistema) {

@@ -108,8 +108,9 @@
    "valeParaTodos": true
   },
   "xp": {
-   "porNivel": 1000,
-   "descricao": "Provisório: para subir do nível n para o n+1 são necessários n × 1000 XP (o livro ainda não traz a tabela)."
+   "porNivel": 100,
+   "crescente": false,
+   "descricao": "100 XP para subir cada nível."
   }
  },
  "teste": {

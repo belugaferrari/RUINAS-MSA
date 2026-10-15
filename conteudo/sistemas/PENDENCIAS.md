@@ -72,15 +72,13 @@ Ligados por `modulos.combate` / `modulos.social` em `mss.json`; no MSA ficam só
 ## Ficha, criação e evolução (15/10)
 **Confirmado pelo autor**
 - **R.MNP** = Manipulação (perícia base) + 50 + modificadores. CAR% é só para testes genéricos de Carisma.
-- **Humanidade** vai de 1 a 100; abaixo de 1 o jogador perde o controle do personagem (o app só deixa o mestre agir por ele). Inicial: o jogador escolhe de 51 até 50 + 2×CAR + 2×PER.
+- **Humanidade** vai de 1 a 100 (o limite depois da criação é 100; 50 + 2×CAR + 2×PER vale só para o valor inicial); abaixo de 1 o jogador perde o controle do personagem (o app só deixa o mestre agir por ele). Inicial: o jogador escolhe de 51 até 50 + 2×CAR + 2×PER.
 - **Instintos** são fixos e pré-estipulados (mais voltados ao MSA).
 - **Vantagens de classe**: abrem quando a classe é escolhida (nível 3); numa "Vantagem Extra" escolhe-se entre as gerais e as da classe (livro, cap. 4).
-- **Nível** só sobe depois de distribuir o XP necessário.
+- **Nível** só sobe depois de distribuir o XP necessário: 100 XP por nível (regras.xp em base.json).
 
 **Provisório — conferir**
 - **Lista de instintos**: só Sobrevivente, Protetor, Altruísta e Dominador (+ "Outro" com texto). Falta a lista completa com descrições.
-- **Tabela de XP**: subir do nível n para n+1 custa n × 1000 XP (regras.xp em base.json). Falta a tabela do livro.
-- **Humanidade depois da criação**: pode subir até 100 (o limite 50 + 2×CAR + 2×PER vale só para o valor inicial).
 - **Custo das vantagens de classe**: 1 ponto, como as gerais.
 - **Mestre**: edita fichas de jogador com as mesmas travas de pontos e de XP; a opção "Edição livre das fichas de jogador" (aba Campanha) desliga as travas para correções. NPCs não têm trava.
 - **Munição**: cada ataque com arma de fogo gasta 1 bala (cadência natural); arma nova vem carregada; recarregar usa as caixas de munição do mesmo tipo do inventário. Cadência maior que 1 (Rifle de Assalto) ainda não gasta mais balas.

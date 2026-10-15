@@ -1,5 +1,6 @@
 import { h, aviso } from './ui.js';
 import { estado, definirRender, mudar, carregarSistema, sincronizarSistema } from './estado.js';
+import { observarRolagens } from './views/animacao.js';
 import { sessao, get, conectar, emitir } from './api.js';
 import { telaLogin } from './views/login.js';
 import { telaSaguao, carregarSaguao } from './views/saguao.js';
@@ -57,6 +58,7 @@ export function iniciarSessao(s) {
       if (estado.tela === 'campanha' && estado.campanha) {
         try {
           estado.campanha = await emitir('campanha:entrar', { id: estado.campanha.id, area: estado.area });
+          observarRolagens(estado.campanha);
           await sincronizarSistema(estado.campanha);
         } catch (e) {
           aviso(e.message, 'erro');
@@ -77,6 +79,7 @@ export function iniciarSessao(s) {
       if (await sincronizarSistema(c) && anterior) aviso(`Agora a campanha usa o ${estado.sistema.nome} (${estado.sistema.nomeCompleto}).`);
       const vezAntes = vezDe(estado.campanha);
       if (estado.campanha?.id === c.id) mudar({ campanha: c });
+      observarRolagens(c);
       // Avisa o jogador quando chega a vez de um personagem dele no Campo de Batalha.
       const vez = vezDe(c);
       const p = vez && c.personagens.find(x => x.id === vez.id);

@@ -26,7 +26,7 @@ export function novaCampanha(user, dados) {
   };
   const c = {
     id: uid(), nome, mestreId: user.id, maxJogadores, nivel, padraoMSA, pontos, sistema: idSistema(dados.sistema),
-    aberta: false, lojaAberta: false, criadaEm: Date.now(),
+    aberta: false, lojaAberta: false, dadosNaTela: true, criadaEm: Date.now(),
     jogadores: [],
     lore: { background: '', sessoes: [] },
     anotacoes: '', anotacoesResumo: '',
@@ -78,7 +78,7 @@ export function visaoPara(c, user, area) {
 
   return {
     id: c.id, nome: c.nome, nivel: c.nivel, padraoMSA: c.padraoMSA, pontos: c.pontos, aberta: c.aberta, sistema: idSistema(c.sistema),
-    lojaAberta: c.lojaAberta, maxJogadores: c.maxJogadores, papel: 'jogador',
+    lojaAberta: c.lojaAberta, dadosNaTela: c.dadosNaTela !== false, maxJogadores: c.maxJogadores, papel: 'jogador',
     lore: c.lore,
     personagens,
     relacoes: Object.fromEntries([...meus].map(id => [id, c.relacoes[id] || {}])),
@@ -265,6 +265,8 @@ function resolverPendente(c, s, pend, defesa, sis) {
     texto: `${r.sucesso ? 'ACERTOU' : 'ERROU'}${r.critico ? ` (crítico de ${r.critico})` : ''}${danoTxt}${notas.length ? ` · ${notas.join(', ')}` : ''}${notaDefesa}`
       + `${r.perdaSacrificio ? ` · Sacrifício: ${a.nome} perde ${r.perdaSacrificio} PV` : ''}`,
     detalhe: `d100 ${r.dp} + ação ${r.acao}${mods ? ` (${mods})` : ''} = ${r.total} contra defesa ${r.nd} (${def})${modo} · DS ${r.ds}`,
+    // Números dos dados para a animação na tela de todos.
+    dp: r.dp, dados: r.dados, ds: r.ds, total: r.total, nd: r.nd, dano: r.dano, danoDados: r.danoPartes.filter(x => x.dados).map(x => ({ nome: x.nome, expr: x.expr, dados: x.dados })),
   };
   registrar(s.log, entrada);
   return entrada;
@@ -277,7 +279,7 @@ const fmtMod = v => (v > 0 ? `+${v}` : `${v}`);
 export const acoes = {
   'campanha.atualizar'(c, d, ctx) {
     exigirMestre(ctx);
-    for (const k of ['aberta', 'lojaAberta', 'edicaoLivre']) if (k in d) c[k] = !!d[k];
+    for (const k of ['aberta', 'lojaAberta', 'edicaoLivre', 'dadosNaTela']) if (k in d) c[k] = !!d[k];
     for (const k of ['anotacoes', 'anotacoesResumo']) if (k in d) c[k] = nomeStr(d[k]);
     if ('nome' in d && String(d.nome).trim()) c.nome = String(d.nome).trim();
     // Trocar o sistema no meio da campanha: as fichas continuam; cálculos e regras passam a seguir o novo sistema.
@@ -828,6 +830,7 @@ export const acoes = {
       tipo: 'manipulacao', autor: a.nome, rotulo: `${nomeSub} em ${b.nome} (quer ${nomeH(humor)})`, sucesso: r.sucesso, critico: r.critico,
       texto: `${resultado}${r.critico ? ` (crítico de ${r.critico})` : ''}`,
       detalhe: `d100 ${r.dp}${r.modo ? ` (vantagem [${r.dados.join(', ')}])` : ''} + ${r.acao}${mods ? ` (${mods})` : ''} = ${r.total} contra R.MNP ${r.nd} · DS ${r.ds}`,
+      dp: r.dp, dados: r.dados, ds: r.ds, total: r.total, nd: r.nd,
     };
     registrar(c.salas.social.log, entrada);
     return entrada;

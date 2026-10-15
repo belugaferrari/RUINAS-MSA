@@ -48,12 +48,15 @@ Para jogar pela internet (sem estar na mesma Wi‑Fi), o mesmo app pode ser publ
 ## Turnos, XP e munição (qualquer sistema)
 
 - **Campo de Batalha**: o mestre inicia o combate (iniciativa de todos), o app mostra a rodada, de quem é a vez e um painel com os atalhos de quem está na vez (rolar teste, munição, passar a vez). O jogador recebe um aviso quando chega a vez dele.
-- **XP**: barra de XP na ficha e na tela Evoluir; o nível só sobe com o XP necessário (descontado ao confirmar). O mestre dá XP para um personagem ou para todos os PJs da sala de uma vez.
+- **XP**: barra de XP na ficha e na tela Evoluir; o nível só sobe com o XP necessário (100 XP por nível, descontado ao confirmar). O mestre dá XP para um personagem ou para todos os PJs da sala de uma vez.
 - **Munição**: armas de fogo mostram as balas carregadas, gastam 1 por tiro e recarregam com as caixas de munição do inventário.
+- **Boneco do personagem** (ficha e aba Itens): cabeça, corpo, mãos, vestimenta, joias e costas com o que está equipado; tocar numa parte mostra o que serve ali para equipar ou trocar, e o link leva ao inventário.
+- **Dados na tela de todos**: cada D-MIL (teste, ataque ou manipulação) aparece para todos com o DP (d100) branco, o DS (d10) vermelho e os dados de dano. O mestre desliga em Campanha → "Mostrar as rolagens na tela de todos"; rolagens secretas nunca aparecem.
 
 ## Combate e social automáticos (campanhas no MSS)
 
 - **Campo de Batalha**: o mestre inicia o combate e o app rola a iniciativa de todos (AGI + 1d10; humores Corajoso, Amedrontado e Enojado rolam com vantagem). Mostra rodada e de quem é a vez; quem entra no meio rola na hora. Cada um declara o ataque com a arma equipada (ou desarmado) e quem controla o alvo escolhe a defesa (Esquiva, Defesa desarmada, Defesa armada ou Evasão em área): vantagem/desvantagem automáticas (surpresa, alvo caído, terreno elevado…), ataque localizado, duas armas, Sacrifício, crítico (+1 dado), dano − IP aplicado direto nos PV, efeito de dano pelo DS e sobrevida abaixo de 0 PV.
+- **Ação no cartão**: cada personagem tem, no próprio cartão, o alvo, a arma (ou a subperícia de manipulação) e o botão "Atacar"/"Manipular". Clicar no cartão de outro personagem marca o alvo para todos os seus.
 - **Sala Social**: humor de cada personagem (Roda do Humor) com os efeitos, e manipulação: escolha a subperícia e o humor desejado; o teste é contra a Resistência à Manipulação do alvo (perícia base Manipulação + 50 + modificadores).
 - No MSA essas partes ficam desligadas até as regras do MSA chegarem. Escolhas provisórias em `PENDENCIAS.md`.
 

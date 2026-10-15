@@ -2,6 +2,7 @@ import { h, botao, aviso, janela, confirmar, vazio, icone } from '../ui.js';
 import { estado, mudar, render, sincronizarSistema } from '../estado.js';
 import { emitir, get } from '../api.js';
 import { sairDaConta } from '../app.js';
+import { observarRolagens } from './animacao.js';
 
 export async function carregarSaguao() {
   if (!estado.area) return;
@@ -22,6 +23,7 @@ export async function listaSistemas() {
 export async function abrirCampanha(id) {
   const c = await emitir('campanha:entrar', { id, area: estado.area });
   await sincronizarSistema(c);
+  observarRolagens(c);
   mudar({ tela: 'campanha', campanha: c, aba: null, sel: {} });
 }
 

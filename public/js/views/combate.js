@@ -134,8 +134,8 @@ function ataqueView(participantes, mestre, cb) {
         .map(o => `${o.nome} ${defesaDoAlvo(b, arma, sis, { escolha: o.id, cobertura: sel.cobertura, area: sel.area }).total}`))
     : null;
   const pericia = arma.pericia || 'briga.ataque-desarmado';
-  return h('details', { class: 'ataque', open: estado.sel.ataqueAberto ?? true, ontoggle: e => { estado.sel.ataqueAberto = e.target.open; } },
-    h('summary', {}, icone('crosshair'), 'Atacar'),
+  return h('details', { class: 'ataque', open: estado.sel.ataqueAberto ?? false, ontoggle: e => { estado.sel.ataqueAberto = e.target.open; } },
+    h('summary', {}, icone('crosshair'), 'Opções do ataque (valem também para os botões "Atacar" dos cartões)'),
     h('div', { class: 'barra' },
       selecao(opcoesPersonagens(meus), sel.atacante, v => { sel.atacante = v; render(); }, { 'aria-label': 'Atacante' }),
       h('span', {}, '→'),
@@ -226,8 +226,8 @@ export function manipulacaoView(participantes, mestre) {
   const d = derivados(a, sis);
   const b = personagemPorId(sel.alvo);
   const rmnp = mestre && b?.atributos ? resistenciaManipulacao(b, sis) : null;
-  return h('div', { class: 'bloco' },
-    titulo('Manipulação', 'drama'),
+  return h('details', { class: 'bloco', open: !!estado.sel.manipAberta, ontoggle: e => { estado.sel.manipAberta = e.target.open; } },
+    h('summary', {}, icone('drama'), 'Manipulação detalhada (ou use o botão "Manipular" no cartão de cada personagem)'),
     h('div', { class: 'barra' },
       selecao(opcoesPersonagens(meus), sel.autor, v => { sel.autor = v; render(); }, { 'aria-label': 'Quem manipula' }),
       h('span', {}, '→'),
@@ -255,4 +255,86 @@ export function ajustesMestre(p, nome) {
     h('input', { type: 'number', class: 'curto', value: p[chave] || 0, 'aria-label': `${nome === 'batalha' ? 'IP de habilidades' : 'Modificador de R.MNP'} de ${p.nome}`,
       onchange: e => acao('combate.ip', { id: p.id, [chave]: e.target.value }) }),
     h('small', {}, total));
+}
+
+// ---------- Ações no cartão de cada personagem ----------
+// Cada personagem que você controla tem, no próprio cartão, quem ele ataca/manipula e o botão da ação.
+// Clicar no cartão de outro personagem marca esse personagem como alvo de todos os seus.
+
+export const alvoMarcado = sala => estado.sel[`alvo:${sala}`] || null;
+
+export function marcarAlvo(sala, id) {
+  estado.sel[`alvo:${sala}`] = alvoMarcado(sala) === id ? null : id;
+  // O clique vale para todos os cartões: apaga as escolhas feitas em cada um.
+  for (const k of Object.keys(estado.sel)) if (k.startsWith(`alvoDe:${sala}:`)) delete estado.sel[k];
+  render();
+}
+
+function alvoDe(p, sala, participantes) {
+  const outros = participantes.filter(x => x.id !== p.id);
+  const valido = id => id && outros.some(x => x.id === id);
+  const proprio = estado.sel[`alvoDe:${sala}:${p.id}`];
+  if (valido(proprio)) return proprio;
+  const marcado = alvoMarcado(sala);
+  if (valido(marcado)) return marcado;
+  // Sem alvo marcado: o primeiro que não é do mesmo lado (PJ × NPC), senão o primeiro da sala.
+  return (outros.find(x => x.tipo !== p.tipo) || outros[0])?.id || '';
+}
+
+// Opções do formulário "Opções do ataque" (surpresa, localizado…) valem para os botões dos cartões.
+function opcoesGerais(p, mestre) {
+  const sel = estado.sel.ataque || {};
+  const op = { localizado: sel.localizado, surpresa: sel.surpresa, elevado: sel.elevado, cobertura: sel.cobertura, area: sel.area, duasArmas: sel.duasArmas || null };
+  if (p.tipo === 'pj') op.sacrificio = sel.sacrificio;
+  if (mestre) Object.assign(op, { vantagem: sel.vantagem, desvantagem: sel.desvantagem, mod: sel.mod, danoLivre: sel.danoLivre || null });
+  return op;
+}
+
+export function acoesCartaoBatalha(p, participantes, mestre) {
+  const sis = estado.sistema;
+  if (!sis.modulos?.combate || !meuOuMestre(p, mestre) || !p.atributos) return null;
+  const outros = participantes.filter(x => x.id !== p.id);
+  if (!outros.length) return null;
+  const alvo = alvoDe(p, 'batalha', participantes);
+  const armas = armasDisponiveis(p, sis);
+  const chaveArma = `armaDe:${p.id}`;
+  if (!armas.some(x => x.uid === estado.sel[chaveArma])) estado.sel[chaveArma] = (armas.find(x => x.uid !== 'desarmado') || armas[0]).uid;
+  const item = (p.itens || []).find(i => i.uid === estado.sel[chaveArma]);
+  return h('div', { class: 'acao-cartao' },
+    icone('crosshair'),
+    selecao(opcoesPersonagens(outros), alvo, v => { estado.sel[`alvoDe:batalha:${p.id}`] = v; render(); }, { 'aria-label': `Alvo de ${p.nome}` }),
+    selecao(armas.map(x => {
+      const it = (p.itens || []).find(i => i.uid === x.uid);
+      return { valor: x.uid, rotulo: `${x.nome} (${x.dano}${it?.capacidade ? ` · ${it.carregada || 0}/${it.capacidade}` : ''})` };
+    }), estado.sel[chaveArma], v => { estado.sel[chaveArma] = v; render(); }, { 'aria-label': `Arma de ${p.nome}` }),
+    botao('Atacar', async () => {
+      const r = await acao('combate.atacar', { atacante: p.id, alvo, opcoes: { ...opcoesGerais(p, mestre), armaUid: estado.sel[chaveArma] } });
+      if (estado.sel.ataque) estado.sel.ataque.sacrificio = false;
+      if (r.tipo === 'ataque') aviso(`${r.autor} ${r.rotulo}: ${r.texto}`, r.sucesso ? 'ok' : 'erro');
+      else aviso(`${p.nome} ataca: aguardando a defesa.`);
+    }, { class: 'pequeno primario', icone: 'swords', title: `${p.nome} ataca`, disabled: item?.capacidade && (item.carregada || 0) <= 0 }));
+}
+
+export function acoesCartaoSocial(p, participantes, mestre) {
+  const sis = estado.sistema;
+  if (!sis.modulos?.social || !meuOuMestre(p, mestre) || !p.atributos) return null;
+  const outros = participantes.filter(x => x.id !== p.id);
+  if (!outros.length) return null;
+  const alvo = alvoDe(p, 'social', participantes);
+  const regras = sis.social.manipulacoes;
+  const d = derivados(p, sis);
+  const chaveSub = `subDe:${p.id}`;
+  if (!regras[estado.sel[chaveSub]]) estado.sel[chaveSub] = 'manipulacao.labia';
+  const regra = regras[estado.sel[chaveSub]];
+  const chaveHumor = `humorDe:${p.id}`;
+  if (!regra.causa.includes(estado.sel[chaveHumor])) estado.sel[chaveHumor] = regra.causa[0];
+  return h('div', { class: 'acao-cartao' },
+    icone('drama'),
+    selecao(opcoesPersonagens(outros), alvo, v => { estado.sel[`alvoDe:social:${p.id}`] = v; render(); }, { 'aria-label': `Alvo de ${p.nome}` }),
+    selecao(Object.keys(regras).map(id => ({ valor: id, rotulo: `${nomeSub(id)} ${d.subpericias[id] ?? 0}%` })), estado.sel[chaveSub], v => { estado.sel[chaveSub] = v; render(); }, { 'aria-label': `Subperícia de ${p.nome}` }),
+    selecao(regra.causa.map(id => ({ valor: id, rotulo: `→ ${nomeHumor(id)}` })), estado.sel[chaveHumor], v => { estado.sel[chaveHumor] = v; }, { 'aria-label': `Humor que ${p.nome} quer causar` }),
+    botao('Manipular', async () => {
+      const r = await acao('social.manipular', { autor: p.id, alvo, sub: estado.sel[chaveSub], humor: estado.sel[chaveHumor], mod: mestre ? estado.sel.manipular?.mod : 0 });
+      aviso(`${r.autor}: ${r.texto}`, r.sucesso ? 'ok' : 'erro');
+    }, { class: 'pequeno primario', icone: 'drama', title: `${p.nome} manipula` }));
 }

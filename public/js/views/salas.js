@@ -3,7 +3,7 @@ import { estado, personagemPorId, meusPersonagens, render } from '../estado.js';
 import { acao } from '../api.js';
 import { derivados, LIMITE_SALA } from '/shared/regras.js';
 import { linhaRolagem } from './ficha.js';
-import { combateView, humorCartao, manipulacaoView, rodaDoHumor, ajustesMestre, xpDaSala } from './combate.js';
+import { combateView, humorCartao, manipulacaoView, rodaDoHumor, ajustesMestre, xpDaSala, acoesCartaoBatalha, acoesCartaoSocial, alvoMarcado, marcarAlvo } from './combate.js';
 
 const TITULOS = { social: 'Sala Social', batalha: 'Campo de Batalha' };
 const ICONES_SALA = { social: 'drama', batalha: 'swords' };
@@ -34,7 +34,7 @@ export function salaView(nome) {
     nome === 'social' && mestre ? h('div', { class: 'bloco' }, xpDaSala(participantes)) : null,
     h('div', { class: 'sala-grade' },
       h('div', { class: 'participantes' },
-        participantes.length ? participantes.map((p, i) => cartaoParticipante(nome, s, p, i, participantes.length, mestre)) : vazio('Ninguém na sala ainda.', ICONES_SALA[nome])),
+        participantes.length ? participantes.map((p, i) => cartaoParticipante(nome, s, p, i, participantes.length, mestre, participantes)) : vazio('Ninguém na sala ainda.', ICONES_SALA[nome])),
       h('div', { class: 'registro' },
         nome === 'social' ? manipulacaoView(participantes, mestre) : null,
       rolagemRapida(nome, participantes, mestre),
@@ -52,10 +52,18 @@ function adicionar(nome, s, mestre) {
   return selecao(opcoes, '', v => v && acao('sala.adicionar', { sala: nome, id: v }).catch(e => aviso(e.message, 'erro')));
 }
 
-function cartaoParticipante(nome, s, p, i, total, mestre) {
+function cartaoParticipante(nome, s, p, i, total, mestre, participantes) {
   const meu = p.donoId === estado.usuario.id;
   const veStats = mestre || meu;
-  return h('div', { class: `participante ${s.ativo === p.id ? 'ativo' : ''} ${p.tipo}` },
+  const sis = estado.sistema;
+  const automatico = nome === 'batalha' ? sis.modulos?.combate : sis.modulos?.social;
+  // Clicar no cartão marca o personagem como alvo (o jogador não marca o próprio personagem).
+  const marcavel = automatico && (mestre || (!meu && participantes.some(x => x.donoId === estado.usuario.id)));
+  const alvo = alvoMarcado(nome) === p.id;
+  return h('div', {
+    class: `participante ${s.ativo === p.id ? 'ativo' : ''} ${p.tipo} ${alvo ? 'alvo' : ''} ${marcavel ? 'marcavel' : ''}`,
+    onclick: marcavel ? e => { if (!e.target.closest('button, select, input, label, a, summary')) marcarAlvo(nome, p.id); } : null,
+  },
     h('div', { class: 'avatar' }, p.foto ? h('img', { src: p.foto, alt: '' }) : p.nome.slice(0, 1)),
     h('div', { class: 'info' },
       h('strong', {}, p.nome), s.ativo === p.id ? h('span', { class: 'selo ok' }, mestre ? 'acionado' : 'em cena') : null,
@@ -68,8 +76,10 @@ function cartaoParticipante(nome, s, p, i, total, mestre) {
         h('span', {}, icone('hand-heart'), p.humanidade?.atual ?? '-')) : null,
       veStats && p.marcadores?.length ? h('div', { class: 'marcadores' }, p.marcadores.map(m => h('span', { class: 'etiqueta' }, m))) : null,
       nome === 'social' ? humorCartao(p, mestre || meu, mestre) : null,
-      mestre ? ajustesMestre(p, nome) : null),
+      mestre ? ajustesMestre(p, nome) : null,
+      nome === 'batalha' ? acoesCartaoBatalha(p, participantes, mestre) : acoesCartaoSocial(p, participantes, mestre)),
     h('div', { class: 'acoes' },
+      marcavel ? botao(alvo ? 'Alvo' : '', () => marcarAlvo(nome, p.id), { class: `pequeno ${alvo ? 'perigo' : ''}`, icone: 'crosshair', title: alvo ? `Desmarcar ${p.nome} como alvo` : `Marcar ${p.nome} como alvo`, 'aria-pressed': alvo }) : null,
       veStats && p.pv ? botao('PV', () => acao('pv.alterar', { id: p.id, delta: -1 }), { class: 'pequeno', icone: 'minus', title: `Tirar 1 PV de ${p.nome}`, 'aria-label': `Tirar 1 PV de ${p.nome}` }) : null,
       veStats && p.pv ? botao('PV', () => acao('pv.alterar', { id: p.id, delta: 1 }), { class: 'pequeno', icone: 'plus', title: `Dar 1 PV a ${p.nome}`, 'aria-label': `Dar 1 PV a ${p.nome}` }) : null,
       veStats && p.atributos ? botao('Testar', () => {
