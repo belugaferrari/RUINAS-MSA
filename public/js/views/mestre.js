@@ -9,6 +9,7 @@ import { mapaRelacoesView } from './relacoes.js';
 import { painelDados, dadosAberto } from './dados.js';
 import { confrontoView } from './confronto.js';
 import { criacaoView, iniciarCriacao } from './criacao.js';
+import { versaoApp } from './versao.js';
 
 const ABAS = [
   ['jogadores', 'Jogadores', 'users'], ['npcs', 'NPCs', 'ghost'], ['imagens', 'Imagens', 'image'], ['social', 'Sala Social', 'drama'],
@@ -274,39 +275,12 @@ function abaCampanha() {
         h('label', { class: 'linha' }, h('input', { type: 'checkbox', checked: c.lojaAberta, onchange: e => acao('campanha.atualizar', { lojaAberta: e.target.checked }) }), 'Loja liberada'),
         h('label', { class: 'linha' }, h('input', { type: 'checkbox', checked: !!c.edicaoLivre, onchange: e => acao('campanha.atualizar', { edicaoLivre: e.target.checked }) }),
           'Edição livre das fichas de jogador'),
+        h('p', { class: 'dica' }, 'Edição livre desligada (padrão): ao editar fichas de jogador, o mestre segue os mesmos limites de pontos da criação e só sobe o nível com o XP necessário. Ligue só para corrigir fichas.'),
         h('label', { class: 'linha' }, h('input', { type: 'checkbox', checked: c.dadosNaTela !== false, onchange: e => acao('campanha.atualizar', { dadosNaTela: e.target.checked }) }),
-          'Mostrar as rolagens (D-MIL) na tela de todos'),
-        h('p', { class: 'dica' }, 'Desligada (padrão): ao editar fichas de jogador, o mestre segue os mesmos limites de pontos da criação e só sobe o nível com o XP necessário. Ligue só para corrigir fichas.'))),
+          'Mostrar as rolagens (D-MIL) na tela de todos'))),
     versaoApp(),
     h('section', { class: 'bloco' },
       titulo('Anotações da campanha', 'notebook-pen'),
       h('p', { class: 'dica' }, 'Só você vê este texto.'),
       campo('c:notas', c.anotacoes, v => acao('campanha.atualizar', { anotacoes: v }), { multilinha: true, rows: 22 })));
 }
-
-// Versão do app e o botão "Atualizar agora" (baixa do GitHub, reinicia e recarrega a página de todos).
-function versaoApp() {
-  const v = estado.sel.versaoApp;
-  const verificar = async () => {
-    estado.sel.versaoApp = { ...(v || {}), verificando: true };
-    render();
-    try { estado.sel.versaoApp = await get('/api/versao?verificar=1'); } catch (e) { estado.sel.versaoApp = { aviso: e.message }; }
-    render();
-  };
-  return h('section', { class: 'bloco' },
-    titulo('Versão do app', 'refresh-cw'),
-    v?.atual ? h('p', { class: 'meta' }, `Versão em uso: ${v.atual.slice(0, 7)}`) : null,
-    v?.verificando ? h('p', { class: 'dica' }, 'Procurando no GitHub…')
-      : v?.haNova ? h('p', { class: 'alerta' }, icone('sparkles'), ' Há uma versão nova do app.')
-        : v?.nova ? h('p', { class: 'dica' }, icone('check'), ' O app está na versão mais nova.') : null,
-    v?.aviso ? h('p', { class: 'dica' }, v.aviso) : null,
-    h('div', { class: 'barra' },
-      botao('Procurar atualização', verificar, { icone: 'search' }),
-      v?.haNova ? botao('Atualizar agora', async () => {
-        if (!v.podeReiniciar) throw new Error('Feche a janela preta e abra o iniciar-windows.bat de novo para atualizar.');
-        if (!(await confirmar('Baixar a versão nova e reiniciar o app? Todos ficam alguns segundos desconectados e a página recarrega sozinha.'))) return;
-        await post('/api/atualizar', {});
-      }, { class: 'primario', icone: 'download' }) : null),
-    h('p', { class: 'dica' }, 'O app também se atualiza sozinho toda vez que o iniciar-windows.bat é aberto.'));
-}
-

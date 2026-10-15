@@ -24,7 +24,7 @@ const DESENHO = `<svg viewBox="0 0 200 300" aria-hidden="true" class="silhueta">
   <path d="M60 150 L72 282 L94 282 L98 170 L102 170 L106 282 L128 282 L140 150 Q100 162 60 150 Z"/>
 </svg>`;
 
-export function bonecoView(p, { mestre = false, linkGuardados = true } = {}) {
+export function bonecoView(p, { mestre = false, linkGuardados = true, compacto = false } = {}) {
   const sis = estado.sistema;
   const equipados = slot => (p.itens || []).filter(i => i.equipado && i.slot === slot);
   const chave = `boneco:${p.id}`;
@@ -50,9 +50,9 @@ export function bonecoView(p, { mestre = false, linkGuardados = true } = {}) {
     }, h('small', {}, pt.rotulo), h('span', {}, itens.map(i => i.nome).join(', ') || '—')));
   }
   const guardados = (p.itens || []).filter(i => !i.equipado);
-  return h('div', { class: 'boneco' },
+  return h('div', { class: `boneco ${compacto ? 'compacto' : ''}` },
     figura,
-    aberto ? painelSlot(p, aberto, mestre) : h('p', { class: 'dica' }, icone('info'), ' Toque numa parte do corpo para ver, equipar ou trocar.'),
+    aberto ? painelSlot(p, aberto, mestre) : compacto ? null : h('p', { class: 'dica' }, icone('info'), ' Toque numa parte do corpo para ver, equipar ou trocar.'),
     linkGuardados ? h('p', { class: 'boneco-guardados' }, icone('backpack'), ` Guardados: ${guardados.length} ${guardados.length === 1 ? 'item' : 'itens'} `,
       botao('Ver inventário', () => irParaInventario(mestre), { class: 'pequeno link', icone: 'backpack' })) : null);
 }

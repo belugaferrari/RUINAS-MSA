@@ -631,3 +631,12 @@ mark.revisao { background: #5a4510; color: #ffe7a8; border-bottom: 1px dashed va
 .lista-condicoes ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .3em; }
 .lista-condicoes li { display: grid; grid-template-columns: auto 1fr; gap: .5em; align-items: start; }
 .lista-condicoes .bloco-texto { display: block; opacity: .8; }
+
+/* Ficha do jogador: Estado | Atributos | Equipado lado a lado, mesma altura. */
+.ficha-topo-tres { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1em; align-items: stretch; margin-bottom: 1em; }
+.ficha-topo-tres > .bloco { margin: 0; }
+.boneco.compacto .boneco-figura { max-width: 230px; }
+.boneco.compacto .boneco-ponto { min-width: 60px; max-width: 86px; font-size: .72em; padding: .15em .3em; }
+.boneco.compacto .boneco-guardados { justify-content: center; font-size: .9em; margin: 0; }
+@media (max-width: 1100px) { .ficha-topo-tres { grid-template-columns: 1fr 1fr; } .ficha-topo-tres > .boneco-compacto { grid-column: 1 / -1; } }
+@media (max-width: 700px) { .ficha-topo-tres { grid-template-columns: 1fr; } }

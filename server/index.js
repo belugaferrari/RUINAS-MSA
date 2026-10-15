@@ -265,9 +265,12 @@ io.on('connection', socket => {
     return visaoPara(c, user, socket.data.area);
   }));
 
-  socket.on('campanha:sair', () => {
+  // Responde ao navegador (sem a resposta, o botão "Campanhas" ficava esperando até dar erro de conexão).
+  socket.on('campanha:sair', (...args) => {
     for (const r of socket.rooms) if (r !== socket.id) socket.leave(r);
     socket.data.campanhaId = null;
+    const ack = args.find(a => typeof a === 'function');
+    ack?.({ ok: true, dados: null });
   });
 
   socket.on('acao', ({ tipo, dados }, ack) => responder(ack, () => {

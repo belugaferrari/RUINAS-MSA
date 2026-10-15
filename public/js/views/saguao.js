@@ -3,6 +3,7 @@ import { estado, mudar, render, sincronizarSistema } from '../estado.js';
 import { emitir, get } from '../api.js';
 import { sairDaConta } from '../app.js';
 import { observarRolagens } from './animacao.js';
+import { versaoApp } from './versao.js';
 
 export async function carregarSaguao() {
   if (!estado.area) return;
@@ -61,7 +62,8 @@ export function telaSaguao() {
         mestre ? botao('Nova campanha', novaCampanha, { class: 'primario', icone: 'plus' }) : null),
       mestre ? null : h('p', { class: 'dica' }, 'Aparecem aqui as campanhas abertas pelos mestres e as que você já participa. Campanhas fechadas não podem ser acessadas.'),
       lista.length ? h('div', { class: 'lista-campanhas' }, lista.map(c => cartaoCampanha(c, mestre)))
-        : vazio(mestre ? 'Nenhuma campanha ainda. Crie a primeira!' : 'Nenhuma campanha aberta no momento.', 'map')));
+        : vazio(mestre ? 'Nenhuma campanha ainda. Crie a primeira!' : 'Nenhuma campanha aberta no momento.', 'map'),
+      mestre ? versaoApp() : null));
 }
 
 function cartaoCampanha(c, mestre) {
