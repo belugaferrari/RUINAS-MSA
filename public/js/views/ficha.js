@@ -4,6 +4,7 @@ import { acao, enviarArquivo } from '../api.js';
 import { derivados, slotsOcupados, ganhosDeClasse, pontosGastos, pontosPericiaTotal, vantagensDisponiveis, acharVantagem, xpParaSubir } from '/shared/regras.js';
 import { painelPericias } from './pericias.js';
 import { bonecoView } from './boneco.js';
+import { prepararTeste } from './dados.js';
 
 export const ICONE_TIPO = {
   arma: 'sword', defesa: 'shield', vestimenta: 'shirt', joia: 'gem', armadilha: 'crosshair', geral: 'backpack', municao: 'target', cibernetico: 'cpu',
@@ -21,6 +22,7 @@ export function nomeClasse(p) {
 }
 
 export function fichaView(p, { mestre = false } = {}) {
+  if (!mestre) return fichaJogador(p);
   const sis = estado.sistema;
   const d = derivados(p, sis);
   const rolar = (acaoRef, nome) => rolarTeste(p, acaoRef, nome);
@@ -43,6 +45,97 @@ export function fichaView(p, { mestre = false } = {}) {
       h('section', { class: 'bloco largo' }, titulo('Background', 'scroll'),
         campo(`${p.id}:background`, p.background, v => atualizar(p, { background: v }), { multilinha: true, rows: 6 })),
       mestre ? h('section', { class: 'bloco largo' }, titulo('Controle do mestre', 'crown'), controleMestre(p)) : null));
+}
+
+// ---------- Ficha do jogador (enxuta) ----------
+// Estado e atributos compactos, perícias base com as subperícias treinadas, identidade no fim.
+// O teste D-MIL fica no rolador lateral: os botões de dado só preparam o teste lá.
+function fichaJogador(p) {
+  const sis = estado.sistema;
+  const d = derivados(p, sis);
+  const testar = ref => prepararTeste(p.id, ref);
+  return h('div', { class: 'ficha ficha-jogador' },
+    cabecalho(p, false),
+    h('div', { class: 'ficha-grade' },
+      h('section', { class: 'bloco' }, titulo('Estado', 'heart-pulse'), estadoCompacto(p, d)),
+      h('section', { class: 'bloco' }, titulo('Atributos', 'zap'), atributosCompactos(p, d, testar)),
+      h('section', { class: 'bloco largo' }, titulo(`Perícias · limite ${d.limitePericia}`, 'target'), periciasCompactas(p, d, testar)),
+      h('section', { class: 'bloco' }, titulo('Profissão e classe', 'shield'), profissaoClasse(p, false)),
+      h('section', { class: 'bloco' }, titulo('Vantagens, defeitos e capacidades', 'sparkles'), vantagensView(p, d, false)),
+      h('section', { class: 'bloco' }, titulo('Equipado no corpo', 'shirt'), bonecoView(p, {})),
+      h('section', { class: 'bloco largo', id: 'equipamento' }, titulo(`Equipamento · IP ${d.defesa} · Carga ${d.carga.toFixed(1)} kg`, 'backpack'), equipamento(p, false)),
+      h('section', { class: 'bloco largo' }, titulo('Anotações', 'notebook-pen'),
+        campo(`${p.id}:anotacoes`, p.anotacoes, v => atualizar(p, { anotacoes: v }), { multilinha: true, rows: 5, placeholder: 'Suas anotações…' })),
+      h('section', { class: 'bloco largo' }, titulo('Background', 'scroll'),
+        campo(`${p.id}:background`, p.background, v => atualizar(p, { background: v }), { multilinha: true, rows: 6 })),
+      h('section', { class: 'bloco largo' }, titulo('Identidade', 'user'), identidade(p))));
+}
+
+// Uma linha por trilha: nome, −, barra com o valor, +.
+function trilhaCompacta(p, chave, rotulo, ic, extra = null) {
+  const t = p[chave] || { max: 0, atual: 0 };
+  const pct = Math.max(0, Math.min(100, (100 * t.atual) / (t.max || 1)));
+  return h('div', { class: `trilha-compacta ${chave}` },
+    h('span', { class: 'rotulo' }, icone(ic), rotulo),
+    botao('', () => atualizar(p, { [chave]: { ...t, atual: t.atual - 1 } }), { class: 'pequeno', icone: 'minus', title: `Diminuir ${rotulo}` }),
+    h('div', { class: 'barra-trilha', role: 'meter', 'aria-valuemin': 0, 'aria-valuemax': t.max, 'aria-valuenow': t.atual, 'aria-label': rotulo },
+      h('i', { style: { width: `${pct}%` } }), h('span', { class: `valor ${t.atual <= 0 ? 'perigo' : ''}` }, `${t.atual} / ${t.max}`)),
+    botao('', () => atualizar(p, { [chave]: { ...t, atual: Math.min(t.max, t.atual + 1) } }), { class: 'pequeno', icone: 'plus', title: `Aumentar ${rotulo}` }),
+    extra ? h('small', { class: 'extra' }, extra) : null);
+}
+
+function estadoCompacto(p, d) {
+  const novoMarcador = async () => {
+    const t = await pedirTexto('Novo marcador', `Ex.: ${estado.sistema.estados.slice(0, 4).join(', ')}`);
+    if (t) await atualizar(p, { marcadores: [...(p.marcadores || []), t] });
+  };
+  return h('div', { class: 'estado-compacto' },
+    trilhaCompacta(p, 'pv', 'PV', 'heart'),
+    trilhaCompacta(p, 'sanidade', 'Sanidade', 'brain', d.estadoSanidade),
+    trilhaCompacta(p, 'humanidade', 'Humanidade', 'hand-heart', d.estagioHumanidade?.nome || ''),
+    p.humanidade && p.humanidade.atual < 1 ? h('p', { class: 'alerta perigo' }, icone('circle-alert'), ' Humanidade abaixo de 1: só o mestre controla este personagem.') : null,
+    h('div', { class: 'marcadores' },
+      (p.marcadores || []).map((m, i) => h('span', { class: 'etiqueta' }, m,
+        botao('', () => atualizar(p, { marcadores: p.marcadores.filter((_, j) => j !== i) }), { class: 'x', icone: 'x', title: `Remover marcador ${m}` }))),
+      botao('Marcador', novoMarcador, { class: 'pequeno', icone: 'tag' })));
+}
+
+function atributosCompactos(p, d, testar) {
+  const sis = estado.sistema;
+  return h('div', {},
+    tabela(['', 'Base', '%', ''], sis.atributos.map(a => {
+      const item = d.bonus[a.sigla] || 0;
+      return [
+        h('strong', { title: a.nome }, a.sigla),
+        [p.atributos?.[a.sigla] ?? 0, item ? h('span', { class: `bonus ${item > 0 ? 'ok' : 'perigo'}`, title: 'Itens equipados' }, ` ${item > 0 ? '+' : ''}${item}`) : null],
+        h('strong', { class: 'valor-final' }, `${d.percentual[a.sigla]}%`),
+        botao('', () => testar(`atr:${a.sigla}`), { class: 'pequeno', icone: 'dices', title: `Testar ${a.nome}` }),
+      ];
+    }), 'tabela-atributos compacta mini'),
+    h('p', { class: 'meta' }, icone('zap'), ` Iniciativa: AGI ${d.iniciativa} + 1d10`));
+}
+
+// Perícias base (nome, %, testar) e uma seta que abre só as subperícias treinadas.
+function periciasCompactas(p, d, testar) {
+  const sis = estado.sistema;
+  return h('ul', { class: 'pericias-compactas' }, sis.pericias.map(per => {
+    const treinadas = per.subpericias.filter(s => (p.subpericias?.[s.id] ?? 0) > 0);
+    const chave = `pc:${p.id}:${per.id}`;
+    const aberto = !!estado.sel[chave];
+    return h('li', { class: (p.pericias?.[per.id] ?? 0) > 0 || treinadas.length ? 'treinada' : '' },
+      h('div', { class: 'linha-pericia' },
+        treinadas.length
+          ? h('button', { type: 'button', class: 'so-icone pequeno seta', 'aria-expanded': aberto, title: aberto ? 'Esconder subperícias treinadas' : 'Mostrar subperícias treinadas',
+            'aria-label': `${aberto ? 'Esconder' : 'Mostrar'} subperícias treinadas de ${per.nome}`, onclick: () => { estado.sel[chave] = !aberto; render(); } }, icone(aberto ? 'chevron-down' : 'chevron-up'))
+          : h('span', { class: 'seta-vazia' }),
+        h('span', { class: 'nome', title: per.descricao }, per.nome, h('small', {}, ` ${per.atributo}`), treinadas.length ? h('small', { class: 'selo' }, `${treinadas.length}`) : null),
+        h('strong', { class: 'valor-final' }, `${d.pericias[per.id]}%`),
+        botao('', () => testar(`per:${per.id}`), { class: 'pequeno', icone: 'dices', title: `Testar ${per.nome}` })),
+      aberto ? h('ul', { class: 'subs-treinadas' }, treinadas.map(s => h('li', { title: s.descricao },
+        h('span', { class: 'nome' }, s.nome, d.bonusProfissao[s.id] ? h('small', { class: 'selo ok' }, `+${d.bonusProfissao[s.id]} prof.`) : null),
+        h('strong', { class: 'valor-final' }, `${d.subpericias[s.id]}%`),
+        botao('', () => testar(`sub:${s.id}`), { class: 'pequeno', icone: 'dices', title: `Testar ${s.nome}` })))) : null);
+  }));
 }
 
 // O mestre ajusta pontos de perícia direto na ficha. Ficha de jogador segue os limites do nível

@@ -198,3 +198,17 @@ function historico() {
     h('summary', {}, icone('scroll'), ' Últimas rolagens'),
     todas.length ? h('ol', { class: 'log' }, todas.map(e => h('li', {}, h('small', {}, formatarData(e.em)), ' ', linhaRolagem(e)))) : h('p', { class: 'dica' }, 'Nenhuma rolagem ainda.'));
 }
+
+// Botões de dado da ficha: abrem o rolador lateral já com o personagem e a ação escolhidos.
+// O jogador só confere a dificuldade e rola.
+export function prepararTeste(personagemId, acaoRef) {
+  const s = cfg();
+  Object.assign(s, { quem: personagemId, acao: acaoRef, secao: 'teste' });
+  estado.sel.dadosAberto = true;
+  render();
+  setTimeout(() => {
+    const b = [...document.querySelectorAll('.painel-dados button')].find(x => /Rolar D-MIL/.test(x.textContent));
+    b?.focus();
+    b?.scrollIntoView({ block: 'nearest' });
+  }, 0);
+}

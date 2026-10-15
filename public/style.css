@@ -589,3 +589,24 @@ mark.revisao { background: #5a4510; color: #ffe7a8; border-bottom: 1px dashed va
 @keyframes dado-para { 0% { transform: scale(1.25); } 100% { transform: scale(1); } }
 @keyframes dados-entra { from { opacity: 0; } to { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .dados-na-tela, .dados-na-tela .dado { animation: none !important; } }
+
+/* Ficha do jogador enxuta */
+.estado-compacto { display: flex; flex-direction: column; gap: .35em; }
+.trilha-compacta { display: grid; grid-template-columns: 7.5em auto 1fr auto; align-items: center; gap: .35em; }
+.trilha-compacta .rotulo { display: inline-flex; align-items: center; gap: .3em; font-weight: 600; font-size: .92em; }
+.trilha-compacta .barra-trilha { position: relative; height: 22px; margin: 0; border-radius: 6px; }
+.trilha-compacta .barra-trilha .valor { position: absolute; inset: 0; display: grid; place-items: center; font-size: .82em; font-weight: 700; text-shadow: 0 1px 2px rgba(0, 0, 0, .8); }
+.trilha-compacta.pv .barra-trilha i { background: linear-gradient(90deg, #8e2b22, #d9534f); }
+.trilha-compacta.sanidade .barra-trilha i { background: linear-gradient(90deg, #2d4f7c, #5b8bd0); }
+.trilha-compacta .extra { grid-column: 2 / -1; opacity: .75; margin-top: -.2em; }
+.tabela-atributos.mini td { padding-top: .15em; padding-bottom: .15em; }
+.pericias-compactas, .subs-treinadas { list-style: none; margin: 0; padding: 0; }
+.pericias-compactas { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: .1em 1em; }
+.pericias-compactas > li { border-bottom: 1px solid var(--borda); padding: .1em 0; }
+.pericias-compactas > li.treinada .nome { color: var(--ouro-claro, var(--ouro)); }
+.linha-pericia, .subs-treinadas li { display: grid; grid-template-columns: 34px 1fr auto auto; align-items: center; gap: .3em; }
+.subs-treinadas li { grid-template-columns: 34px 1fr auto auto; padding-left: 1.2em; font-size: .93em; }
+.subs-treinadas li::before { content: ''; }
+.seta-vazia { width: 34px; }
+.linha-pericia .nome small.selo { margin-left: .3em; }
+@media (max-width: 560px) { .trilha-compacta { grid-template-columns: 6.2em auto 1fr auto; } }

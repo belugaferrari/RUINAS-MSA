@@ -219,8 +219,20 @@ export function resistenciaManipulacao(p, sistema) {
   return base + (sistema.teste.passiva?.soma ?? 50) + (h?.rmnp || 0) + (parseInt(p.rmnpExtra, 10) || 0);
 }
 
-// Teste de manipulação: subperícia de Manipulação contra a R.MNP do alvo. Sucesso muda o humor do alvo.
-export function resolverManipulacao(autor, alvo, sub, humorDesejado, sistema, { mod = 0, rng = Math.random } = {}) {
+// Espectro do relacionamento (como o alvo vê quem manipula): A Aliado/Amigável, B Desconhecido, C Rival/Inimigo.
+export function espectroDe(relacao, sistema) {
+  const esp = sistema.social?.espectros || {};
+  for (const [k, v] of Object.entries(esp)) if (relacao && v.relacoes.includes(relacao)) return k;
+  return 'B';
+}
+
+// Humor que o alvo mostra para a sala (a máscara), ou o real quando não há máscara.
+export const humorAparente = p => p?.humorAparente || p?.humor || 'neutro';
+
+// Teste de manipulação: subperícia de Manipulação contra a R.MNP do alvo.
+// Sucesso: o alvo fica com o humor desejado ("ler", na Empatia, revela o humor real a quem testou).
+// Falha (rebote): o alvo vai para um humor reativo, conforme o espectro do relacionamento.
+export function resolverManipulacao(autor, alvo, sub, humorDesejado, sistema, { mod = 0, rng = Math.random, espectro = 'B' } = {}) {
   const regra = sistema.social.manipulacoes[sub];
   if (!regra) throw new Error('Escolha uma subperícia de Manipulação.');
   if (!regra.causa.includes(humorDesejado)) throw new Error('Essa subperícia não causa esse humor.');
@@ -238,5 +250,11 @@ export function resolverManipulacao(autor, alvo, sub, humorDesejado, sistema, { 
   const modo = hA?.vantagemManipulacao ? 'vantagem' : null;
   const nd = resistenciaManipulacao(alvo, sistema);
   const teste = testeContra(acao, nd, sistema, { modo, rng });
-  return { ...teste, mods, sub, humorDesejado, opcoesFalha: teste.sucesso ? [] : regra.falha };
+  let rebote = null;
+  if (!teste.sucesso) {
+    const opcoes = (Array.isArray(regra.falha) ? regra.falha : regra.falha?.[espectro]) || [];
+    // Uma opção: vai direto. Duas: sorteio (o rebote é forçado).
+    if (opcoes.length) rebote = opcoes[Math.floor(rng() * opcoes.length)];
+  }
+  return { ...teste, mods, sub, humorDesejado, espectro, rebote, ler: humorDesejado === 'ler' };
 }

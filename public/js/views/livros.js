@@ -2,6 +2,7 @@ import { h, botao, selecao, aviso, vazio, icone, titulo, tabela, abas, seloRevis
 import { ICONE_TIPO } from './ficha.js';
 import { estado, render, personagemPorId, meusPersonagens } from '../estado.js';
 import { acao, get, enviarArquivo, baixarArquivo } from '../api.js';
+import { itemVisivel, itemAberto } from '/shared/regras.js';
 import { marked } from '/vendor/marked.js';
 
 const cacheLivros = {};
@@ -201,12 +202,14 @@ export function lojaView({ titulo: tituloLoja = 'Loja', tipos = null } = {}) {
   const q = busca('loja');
   const tipoSel = estado.sel.lojaTipo || '';
   const raridadeSel = estado.sel.lojaRaridade || '';
-  const todos = sis.itens.filter(i => (!tipos || tipos.includes(i.tipo)) && (!tipoSel || i.tipo === tipoSel) && (!raridadeSel || i.raridade === raridadeSel)
+  // Jogadores: só Mundano, Comum e Incomum, mais o que o mestre liberou.
+  const todos = sis.itens.filter(i => (mestre || itemVisivel(i, c)) && (!tipos || tipos.includes(i.tipo)) && (!tipoSel || i.tipo === tipoSel) && (!raridadeSel || i.raridade === raridadeSel)
     && (!q || i.nome.toLowerCase().includes(q) || (i.descricao || '').toLowerCase().includes(q)));
   // O catálogo tem mais de mil itens: mostra uma página por vez.
   const limite = estado.sel.lojaLimite || POR_PAGINA;
   const itens = todos.slice(0, limite);
-  const raridades = [...new Set(sis.itens.map(i => i.raridade).filter(Boolean))];
+  const raridades = [...new Set(sis.itens.filter(i => mestre || itemVisivel(i, c)).map(i => i.raridade).filter(Boolean))];
+  const liberado = i => (c.itensLiberados || []).includes(i.id);
   const compradores = mestre ? c.personagens.filter(p => p.tipo === 'pj') : meusPersonagens();
   const compradorId = estado.sel.comprador || estado.sel.personagem || compradores[0]?.id || '';
   const comprador = personagemPorId(compradorId);
@@ -229,6 +232,8 @@ export function lojaView({ titulo: tituloLoja = 'Loja', tipos = null } = {}) {
       selecao(compradores.map(p => ({ valor: p.id, rotulo: p.nome })), compradorId, v => { estado.sel.comprador = v; render(); }),
       comprador ? h('span', { class: 'selo moeda' }, icone('coins'), `${comprador.dinheiro ?? 0}`) : null) : null,
     mestre && !tipos ? catalogoMestre() : null,
+    mestre ? h('label', { class: 'linha' }, h('input', { type: 'checkbox', checked: !!c.itensRarosVisiveis, onchange: e => acao('campanha.atualizar', { itensRarosVisiveis: e.target.checked }) }),
+      'Jogadores veem todos os itens (sem isso, só Mundanos, Comuns, Incomuns e os que você liberar)') : null,
     h('p', { class: 'dica' }, `${todos.length} ${todos.length === 1 ? 'item' : 'itens'}${todos.length > itens.length ? ` (mostrando ${itens.length})` : ''}.`),
     itens.length ? tabela(['Item', 'Tipo', 'Slot', 'Preço', 'Venda', 'Durab.', 'Peso', 'Dano/IP', 'Bônus', ''], itens.map(i => [
       h('span', { class: 'item-nome', title: [i.descricao, i.aparencia, i.efeitos, i.observacoes, i.requisitos ? `Requisitos: ${i.requisitos}` : ''].filter(Boolean).join(' · ') },
@@ -242,6 +247,8 @@ export function lojaView({ titulo: tituloLoja = 'Loja', tipos = null } = {}) {
           await acao('item.comprar', { id: comprador.id, itemId: i.id });
           aviso(`${i.nome} comprado para ${comprador.nome}.`);
         }, { class: 'pequeno primario', icone: 'coins' }) : null,
+        mestre && !itemAberto(i) ? botao(liberado(i) ? 'Esconder' : 'Liberar', () => acao('item.liberar', { itemId: i.id, liberar: !liberado(i) }),
+          { class: `pequeno ${liberado(i) ? 'perigo' : ''}`, icone: liberado(i) ? 'eye-off' : 'eye', title: liberado(i) ? `Esconder ${i.nome} dos jogadores` : `Mostrar ${i.nome} aos jogadores` }) : null,
         mestre && comprador ? botao('Dar', async () => {
           await acao('item.adicionar', { id: comprador.id, itemId: i.id });
           aviso(`${i.nome} entregue a ${comprador.nome}.`);

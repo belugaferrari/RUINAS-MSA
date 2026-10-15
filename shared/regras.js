@@ -3,6 +3,13 @@
 
 export const LIMITE_SALA = 20;
 
+// Os jogadores veem abertamente só itens Mundanos, Comuns e Incomuns; os outros, só se o mestre liberar
+// (todos de uma vez na campanha, ou item a item).
+const RARIDADES_ABERTAS = ['', 'mundano', 'comum', 'incomum'];
+const semAcento = s => String(s || '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+export const itemAberto = item => RARIDADES_ABERTAS.includes(semAcento(item?.raridade));
+export const itemVisivel = (item, campanha) => itemAberto(item) || !!campanha?.itensRarosVisiveis || (campanha?.itensLiberados || []).includes(item?.id);
+
 // Aceita "2d6", "1d8+2", "1d6+1d4", "+1d4", "3" (somas e subtrações de dados e números).
 export function rolarDado(expr, rng = Math.random) {
   const limpo = String(expr ?? '').replace(/\s/g, '').toLowerCase();

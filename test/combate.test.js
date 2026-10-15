@@ -8,7 +8,7 @@ process.env.ITENS_EXEMPLO = '1'; // testes usam a lista curta de itens de exempl
 process.env.DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'msa-'));
 const { novaCampanha, executar, visaoPara } = await import('../server/actions.js');
 const { sistema } = await import('../server/sistema.js');
-const { resolverAtaque, aplicarAtaque, d6Atual, modoRolagem, rolarDP, defesaDoAlvo, opcoesDefesa, ipDe, resistenciaManipulacao, resolverManipulacao, sobrevida } = await import('../shared/combate.js');
+const { resolverAtaque, aplicarAtaque, d6Atual, modoRolagem, rolarDP, defesaDoAlvo, opcoesDefesa, ipDe, espectroDe, resistenciaManipulacao, resolverManipulacao, sobrevida } = await import('../shared/combate.js');
 const { novaFicha } = await import('../shared/regras.js');
 
 const mss = sistema('mss');
@@ -139,7 +139,7 @@ test('desmaio, morte com PV negativo e sobrevida', () => {
   assert.ok(b.marcadores.includes('Morto'));
 });
 
-test('manipulação: R.MNP pelo humor, sucesso muda humor, falha dá opções', () => {
+test('manipulação: R.MNP pelo humor, sucesso muda humor, falha dá o rebote do espectro', () => {
   const a = lutador('A', { subpericias: { 'manipulacao.intimidacao': 20 } });
   const b = lutador('B');
   const base = resistenciaManipulacao(b, mss);
@@ -154,9 +154,16 @@ test('manipulação: R.MNP pelo humor, sucesso muda humor, falha dá opções', 
   assert.equal(resistenciaManipulacao(b, mss), base - 30);
   b.humor = 'neutro';
   assert.throws(() => resolverManipulacao(a, b, 'manipulacao.intimidacao', 'atraido', mss), /não causa/);
-  const falha = resolverManipulacao(a, b, 'manipulacao.intimidacao', 'amedrontado', mss, { rng: seq(d100(10), d10(1)) });
-  assert.equal(falha.sucesso, false);
-  assert.deepEqual(falha.opcoesFalha, ['corajoso']);
+  // Intimidação falhando: A → Indisposto/Apático, B → Desconfiado/Corajoso, C → Corajoso/Raivoso.
+  const rebote = esp => resolverManipulacao(a, b, 'manipulacao.intimidacao', 'amedrontado', mss, { espectro: esp, rng: seq(d100(10), d10(1), 0.99) });
+  assert.equal(rebote('A').rebote, 'apatico');
+  assert.equal(rebote('B').rebote, 'corajoso');
+  assert.equal(rebote('C').rebote, 'raivoso');
+  assert.equal(rebote('B').sucesso, false);
+  assert.equal(resolverManipulacao(a, b, 'manipulacao.lideranca', 'sereno', mss, { espectro: 'A', rng: seq(d100(10), d10(1)) }).rebote, 'desmotivado');
+  assert.equal(espectroDe('Inimigo', mss), 'C');
+  assert.equal(espectroDe('Amigável', mss), 'A');
+  assert.equal(espectroDe(undefined, mss), 'B');
   a.humor = 'apatico';
   assert.throws(() => resolverManipulacao(a, b, 'manipulacao.intimidacao', 'amedrontado', mss), /não pode manipular/);
 });
@@ -200,17 +207,50 @@ test('ações de combate e humor no servidor (MSS) e bloqueio no MSA', () => {
   executar(c, 'combate.encerrar', {}, ctxM);
   assert.equal(c.salas.batalha.combate, null);
 
-  // Humor: o jogador só escolhe os humores livres; Apático custa Humanidade.
+  // Humor: o jogador só escolhe os humores livres, sem custo quando nada foi imposto.
   assert.throws(() => executar(c, 'humor.definir', { id: ids[0], humor: 'corajoso' }, { user: ana, mestre: false }), /só escolhe/);
-  const hum = lia.humanidade.atual;
+  const san = lia.sanidade.atual;
   executar(c, 'humor.definir', { id: ids[0], humor: 'apatico' }, { user: ana, mestre: false });
-  assert.ok(lia.humanidade.atual < hum);
-  assert.equal(visaoPara(c, { id: 'x' }, 'jogador').personagens.find(p => p.id === ids[0]).humor, 'apatico');
+  assert.equal(lia.sanidade.atual, san);
+  // Máscara: a sala vê o humor aparente; o real fica com o dono e o mestre.
+  executar(c, 'humor.definir', { id: ids[0], humor: 'corajoso', camada: 'aparente' }, { user: ana, mestre: false });
+  const outro = { id: 'x' };
+  assert.equal(visaoPara(c, outro, 'jogador').personagens.find(p => p.id === ids[0]).humor, 'corajoso');
+  assert.equal(visaoPara(c, ana, 'jogador').personagens.find(p => p.id === ids[0]).humor, 'apatico');
+  assert.ok(!visaoPara(c, outro, 'jogador').salas.social.log.some(e => /Máscara/.test(e.rotulo)), 'a troca de máscara é privada');
+  // Empatia "ler": revela o humor real só para quem testou.
+  const rato = c.personagens.find(p => p.id === ids[1]);
+  rato.subpericias = { 'manipulacao.empatia': 200 };
+  let leitura;
+  do {
+    Object.assign(lia, { humor: 'apatico', humorAparente: 'corajoso', humorImposto: false }); // (um erro crítico daria rebote)
+    leitura = executar(c, 'social.manipular', { autor: ids[1], alvo: ids[0], sub: 'manipulacao.empatia', humor: 'ler' }, ctxM);
+  } while (!leitura.sucesso);
+  assert.match(leitura.revelado, /A máscara caiu.*Corajoso.*Apático/);
+  // Manipulação imposta + jogador quebrando o humor = dano de Sanidade (dissonância).
+  executar(c, 'humor.definir', { id: ids[0], humor: 'motivado' }, ctxM);
+  assert.equal(lia.humorImposto, true);
   executar(c, 'humor.definir', { id: ids[0], humor: 'neutro' }, { user: ana, mestre: false });
-  const m = executar(c, 'social.manipular', { autor: ids[1], alvo: ids[0], sub: 'manipulacao.lideranca', humor: 'motivado' }, ctxM);
-  assert.equal(m.tipo, 'manipulacao');
-  if (!m.sucesso) assert.deepEqual(lia.humorOpcoes, ['desmotivado']);
-  else assert.equal(lia.humor, 'motivado');
+  assert.ok(lia.sanidade.atual < san, 'quebrar o humor imposto custa Sanidade');
+  // Rebote pelo relacionamento: Lia vê o Rato como Inimigo (espectro C).
+  executar(c, 'relacao.definir', { de: ids[0], para: ids[1], tipo: 'Inimigo' }, ctxM);
+  rato.subpericias = {};
+  // (repete se sair acerto crítico, que sempre passa)
+  let m;
+  do m = executar(c, 'social.manipular', { autor: ids[1], alvo: ids[0], sub: 'manipulacao.empatia', humor: 'sereno', mod: -200 }, ctxM);
+  while (m.sucesso);
+  assert.equal(lia.humor, 'raivoso');
+  assert.match(m.texto, /Rival \/ Inimigo/);
+  // Agressão súbita: atacar um humano que está na conversa custa Humanidade (uma vez).
+  executar(c, 'sala.adicionar', { sala: 'social', id: ids[0] }, ctxM);
+  executar(c, 'sala.adicionar', { sala: 'social', id: ids[1] }, ctxM);
+  const hum = rato.humanidade.atual;
+  executar(c, 'social.agredir', { atacante: ids[1], alvo: ids[0] }, ctxM);
+  assert.ok(rato.humanidade.atual < hum);
+  const hum2 = rato.humanidade.atual;
+  executar(c, 'combate.atacar', { atacante: ids[1], alvo: ids[0] }, ctxM);
+  assert.equal(rato.humanidade.atual, hum2, 'só cobra uma vez por cena');
+  c.salas.batalha.pendentes = [];
 
   // No MSA o turno funciona, mas o ataque automático fica desligado.
   executar(c, 'campanha.atualizar', { sistema: 'msa' }, ctxM);
@@ -219,8 +259,10 @@ test('ações de combate e humor no servidor (MSS) e bloqueio no MSA', () => {
   executar(c, 'combate.proximo', {}, ctxM);
   assert.throws(() => executar(c, 'combate.atacar', { atacante: ids[1], alvo: ids[0] }, ctxM), /ainda não existem no MSA/);
   executar(c, 'combate.encerrar', {}, ctxM);
-  assert.throws(() => executar(c, 'social.manipular', { autor: ids[1], alvo: ids[0], sub: 'manipulacao.labia', humor: 'confiante' }, ctxM), /ainda não existem/);
+  // A Sala Social vale igual no MSA.
+  assert.equal(executar(c, 'social.manipular', { autor: ids[1], alvo: ids[0], sub: 'manipulacao.labia', humor: 'confiante' }, ctxM).tipo, 'manipulacao');
   assert.equal(msa.modulos.combate, false);
+  assert.equal(msa.modulos.social, true);
 });
 
 test('munição: tiro gasta, recarrega da caixa, cancelar devolve', () => {

@@ -33,6 +33,6 @@
  },
  "modulos": {
   "combate": false,
-  "social": false
+  "social": true
  }
 }

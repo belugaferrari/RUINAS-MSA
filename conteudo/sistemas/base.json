@@ -713,5 +713,276 @@
    "nome": "Dominador"
   }
  ],
- "_avisoInstintos": "Lista parcial (o autor citou estes 4); falta a lista completa com descrições."
+ "_avisoInstintos": "Lista parcial (o autor citou estes 4); falta a lista completa com descrições.",
+ "social": {
+  "_aviso": "Sala Social (padrão enviado pelo autor em 15/10, vale para MSA e MSS). Valores marcados como provisórios em PENDENCIAS.md.",
+  "resistenciaBase": "manipulacao",
+  "humores": [
+   {
+    "id": "neutro",
+    "nome": "Neutro",
+    "efeitos": "Nenhum efeito social.",
+    "escolha": true
+   },
+   {
+    "id": "amigavel",
+    "nome": "Amigável",
+    "efeitos": "Manipulação feita por você ou contra você: +10%.",
+    "manipulacao": 10,
+    "escolha": true
+   },
+   {
+    "id": "indisposto",
+    "nome": "Indisposto",
+    "efeitos": "Manipulação feita por você ou contra você: −10%.",
+    "manipulacao": -10,
+    "escolha": true
+   },
+   {
+    "id": "apatico",
+    "nome": "Apático",
+    "efeitos": "−5% nos testes; não pode manipular.",
+    "testes": -5,
+    "semManipular": true,
+    "escolha": true
+   },
+   {
+    "id": "atraido",
+    "nome": "Atraído",
+    "efeitos": "R.MNP −15; Vantagem em manipulação; Percepção em Desvantagem.",
+    "rmnp": -15,
+    "vantagemManipulacao": true
+   },
+   {
+    "id": "enojado",
+    "nome": "Enojado",
+    "efeitos": "Desvantagem em testes mentais; Vantagem em ataques e iniciativa.",
+    "vantagemAtaque": true,
+    "vantagemIniciativa": true
+   },
+   {
+    "id": "motivado",
+    "nome": "Motivado",
+    "efeitos": "+5% nos testes ligados à motivação; −5% nos demais (aplique como modificador)."
+   },
+   {
+    "id": "desmotivado",
+    "nome": "Desmotivado",
+    "efeitos": "Vantagem contra Medo; −5% nos testes.",
+    "testes": -5
+   },
+   {
+    "id": "corajoso",
+    "nome": "Corajoso",
+    "efeitos": "Vantagem contra Medo e na iniciativa; Desvantagem em testes de Inteligência.",
+    "vantagemIniciativa": true
+   },
+   {
+    "id": "amedrontado",
+    "nome": "Amedrontado",
+    "efeitos": "Vantagem em Percepção e iniciativa; Desvantagem em ataques; R.MNP −30.",
+    "vantagemIniciativa": true,
+    "desvantagemAtaque": true,
+    "rmnp": -30
+   },
+   {
+    "id": "confiante",
+    "nome": "Confiante",
+    "efeitos": "R.MNP −30; defesas −5%; +5% nos demais testes.",
+    "rmnp": -30,
+    "defesa": -5,
+    "testes": 5
+   },
+   {
+    "id": "desconfiado",
+    "nome": "Desconfiado",
+    "efeitos": "R.MNP +20; −5% nos testes.",
+    "rmnp": 20,
+    "testes": -5
+   },
+   {
+    "id": "raivoso",
+    "nome": "Raivoso",
+    "efeitos": "Efeitos ainda não definidos (aguardando o texto).",
+    "revisao": true
+   },
+   {
+    "id": "sereno",
+    "nome": "Sereno",
+    "efeitos": "Efeitos ainda não definidos (aguardando o texto).",
+    "revisao": true
+   }
+  ],
+  "manipulacoes": {
+   "manipulacao.labia": {
+    "causa": [
+     "motivado",
+     "desmotivado",
+     "confiante",
+     "desconfiado"
+    ],
+    "falha": {
+     "A": [
+      "desconfiado"
+     ],
+     "B": [
+      "indisposto",
+      "desconfiado"
+     ],
+     "C": [
+      "raivoso",
+      "enojado"
+     ]
+    }
+   },
+   "manipulacao.empatia": {
+    "causa": [
+     "ler",
+     "sereno",
+     "motivado",
+     "confiante"
+    ],
+    "falha": {
+     "A": [],
+     "B": [
+      "desconfiado"
+     ],
+     "C": [
+      "raivoso"
+     ]
+    }
+   },
+   "manipulacao.seducao": {
+    "causa": [
+     "corajoso",
+     "atraido",
+     "confiante"
+    ],
+    "falha": {
+     "A": [
+      "neutro",
+      "amigavel"
+     ],
+     "B": [
+      "indisposto"
+     ],
+     "C": [
+      "desconfiado",
+      "enojado"
+     ]
+    }
+   },
+   "manipulacao.lideranca": {
+    "causa": [
+     "confiante",
+     "corajoso",
+     "motivado",
+     "sereno"
+    ],
+    "falha": {
+     "A": [
+      "desmotivado"
+     ],
+     "B": [
+      "indisposto"
+     ],
+     "C": [
+      "corajoso"
+     ]
+    }
+   },
+   "manipulacao.intimidacao": {
+    "causa": [
+     "amedrontado",
+     "raivoso"
+    ],
+    "falha": {
+     "A": [
+      "indisposto",
+      "apatico"
+     ],
+     "B": [
+      "desconfiado",
+      "corajoso"
+     ],
+     "C": [
+      "corajoso",
+      "raivoso"
+     ]
+    }
+   },
+   "manipulacao.impressionar": {
+    "causa": [
+     "atraido",
+     "enojado"
+    ],
+    "falha": {
+     "A": [],
+     "B": [],
+     "C": []
+    }
+   },
+   "manipulacao.interrogatorio": {
+    "causa": [
+     "confiante"
+    ],
+    "falha": {
+     "A": [],
+     "B": [],
+     "C": []
+    }
+   },
+   "manipulacao.tortura": {
+    "causa": [
+     "enojado",
+     "amedrontado"
+    ],
+    "falha": {
+     "A": [],
+     "B": [],
+     "C": []
+    }
+   },
+   "manipulacao.etiqueta": {
+    "causa": [
+     "enojado"
+    ],
+    "falha": {
+     "A": [],
+     "B": [],
+     "C": []
+    }
+   }
+  },
+  "espectros": {
+   "A": {
+    "nome": "Aliado / Amigável",
+    "relacoes": [
+     "Aliado",
+     "Amigável"
+    ]
+   },
+   "B": {
+    "nome": "Desconhecido",
+    "relacoes": [
+     "Neutro"
+    ]
+   },
+   "C": {
+    "nome": "Rival / Inimigo",
+    "relacoes": [
+     "Rival",
+     "Inimigo"
+    ]
+   }
+  },
+  "dissonancia": {
+   "dano": "1d6",
+   "descricao": "Agir contra o humor imposto: dano de Sanidade."
+  },
+  "agressao": {
+   "dano": "1d6",
+   "descricao": "Atacar um humano no meio do diálogo: dano de Humanidade."
+  }
+ }
 }

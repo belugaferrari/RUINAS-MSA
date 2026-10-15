@@ -1,6 +1,6 @@
 // Campo de Batalha: controle de turno (qualquer sistema) e combate automático; Sala Social: Roda do Humor.
 // O ataque automático e a Roda do Humor só ligam nos sistemas com esses módulos (hoje, o MSS).
-import { h, botao, selecao, aviso, icone, titulo } from '../ui.js';
+import { h, botao, selecao, aviso, icone, titulo, confirmar } from '../ui.js';
 import { estado, personagemPorId, render } from '../estado.js';
 import { acao } from '../api.js';
 import { derivados } from '/shared/regras.js';
@@ -175,20 +175,33 @@ function ataqueView(participantes, mestre, cb) {
 // ---------- Sala Social ----------
 
 const humores = () => estado.sistema.social?.humores || [];
+// Texto do rebote por espectro (A Aliado/Amigável, B Desconhecido, C Rival/Inimigo).
+const reboteTexto = regra => Object.entries(regra.falha || {}).map(([k, l]) => `${k}: ${l.length ? l.map(id => nomeHumorLer(id)).join(' ou ') : 'sem efeito'}`).join(' · ');
+const nomeHumorLer = id => (id === 'ler' ? 'ler o humor real' : nomeHumor(id));
 const nomeHumor = id => humores().find(x => x.id === (id || 'neutro'))?.nome || 'Neutro';
 
 // Selo do humor no cartão do participante; quem controla o personagem pode trocar.
+// Humor no cartão. Quem controla vê e muda as duas camadas: o humor real (dá os efeitos) e a máscara (o que a sala vê).
+// Os outros veem só o humor aparente.
 export function humorCartao(p, controla, mestre) {
   if (!estado.sistema.modulos?.social) return null;
-  const atual = p.humor || 'neutro';
-  const h0 = humores().find(x => x.id === atual);
-  const permitidos = humores().filter(x => mestre || x.escolha || x.id === atual || (p.humorOpcoes || []).includes(x.id));
+  const real = p.humor || 'neutro';
+  if (!controla) return h('div', { class: 'humor' }, h('span', { class: 'selo' }, icone('smile'), nomeHumor(real)));
+  const hReal = humores().find(x => x.id === real);
+  const permitidos = humores().filter(x => mestre || x.escolha || x.id === real);
+  const mudarReal = async v => {
+    if (!mestre && p.humorImposto && v !== real && !(await confirmar(`${nomeHumor(real)} foi imposto. Agir contra ele (dissonância) custa ${estado.sistema.social?.dissonancia?.dano || '1d6'} de Sanidade. Mudar mesmo assim?`))) return render();
+    acao('humor.definir', { id: p.id, humor: v }).catch(e => aviso(e.message, 'erro'));
+  };
   return h('div', { class: 'humor' },
-    controla
-      ? h('label', { class: 'linha' }, icone('smile'), selecao(permitidos.map(x => ({ valor: x.id, rotulo: (p.humorOpcoes || []).includes(x.id) ? `${x.nome} (pode escolher)` : x.nome })), atual,
-        v => acao('humor.definir', { id: p.id, humor: v }).catch(e => aviso(e.message, 'erro')), { 'aria-label': `Humor de ${p.nome}` }))
-      : h('span', { class: 'selo' }, icone('smile'), nomeHumor(atual)),
-    h0 && h0.id !== 'neutro' ? h('small', { class: 'dica' }, ` ${h0.efeitos}`) : null);
+    h('label', { class: 'linha' }, icone('smile'), h('small', {}, 'Real'),
+      selecao(permitidos.map(x => ({ valor: x.id, rotulo: x.nome })), real, mudarReal, { 'aria-label': `Humor real de ${p.nome}` })),
+    h('label', { class: 'linha' }, icone('drama'), h('small', {}, 'Máscara'),
+      selecao([{ valor: '', rotulo: 'sem máscara' }, ...humores().filter(x => x.id !== real).map(x => ({ valor: x.id, rotulo: x.nome }))], p.humorAparente || '',
+        v => acao('humor.definir', { id: p.id, humor: v || null, camada: 'aparente' }).catch(e => aviso(e.message, 'erro')), { 'aria-label': `Máscara (humor aparente) de ${p.nome}` })),
+    p.humorImposto ? h('span', { class: 'selo perigo', title: 'Mudar o humor real agora causa dano de Sanidade (dissonância)' }, 'imposto') : null,
+    p.humorAparente ? h('small', { class: 'dica' }, ` A sala vê ${nomeHumor(p.humorAparente)}.`) : null,
+    hReal && hReal.id !== 'neutro' ? h('small', { class: 'dica' }, ` ${hReal.efeitos}`) : null);
 }
 
 export function rodaDoHumor() {
@@ -198,7 +211,12 @@ export function rodaDoHumor() {
   }
   return h('details', { class: 'bloco', open: !!estado.sel.rodaAberta, ontoggle: e => { estado.sel.rodaAberta = e.target.open; } },
     h('summary', {}, icone('drama'), 'Roda do Humor'),
-    h('p', { class: 'dica' }, 'Antes de interagir com quem não é aliado, cada um escolhe Amigável, Indisposto ou Neutro. Resistir a um humor imposto deixa o personagem Apático (−1D6 de Humanidade). Os demais humores vêm de manipulação ou do mestre.'),
+    h('ul', { class: 'dica lista-humores' },
+      h('li', {}, 'Cada um escolhe Neutro, Amigável, Indisposto ou Apático. Os demais humores vêm de manipulação ou do mestre.'),
+      h('li', {}, h('strong', {}, 'Máscara: '), 'o humor real (oculto) dá os efeitos; a máscara é o que a sala vê. Empatia → "ler o humor real" revela a máscara só para quem testou.'),
+      h('li', {}, h('strong', {}, 'Rebote: '), 'falhar na manipulação joga o alvo num humor reativo, conforme o relacionamento (A Aliado/Amigável · B Desconhecido · C Rival/Inimigo, pelo mapa de relacionamento).'),
+      h('li', {}, h('strong', {}, 'Dissonância: '), `agir contra um humor imposto custa ${sis.social.dissonancia?.dano || '1d6'} de Sanidade.`),
+      h('li', {}, h('strong', {}, 'Agressão súbita: '), `atacar um humano no meio do diálogo custa ${sis.social.agressao?.dano || '1d6'} de Humanidade.`)),
     h('ul', { class: 'lista-humores' }, humores().map(x => {
       const causas = Object.entries(sis.social.manipulacoes).filter(([, r]) => r.causa.includes(x.id)).map(([id]) => nomeSub(id));
       return h('li', {}, h('strong', {}, x.nome), ` — ${x.efeitos}`, causas.length ? h('small', {}, ` Causado por: ${causas.join(', ')}.`) : null);
@@ -233,15 +251,15 @@ export function manipulacaoView(participantes, mestre) {
       h('span', {}, '→'),
       alvos.length ? selecao(opcoesPersonagens(alvos), sel.alvo, v => { sel.alvo = v; render(); }, { 'aria-label': 'Alvo da manipulação' }) : h('em', {}, 'sem alvos'),
       selecao(Object.keys(regras).map(id => ({ valor: id, rotulo: `${nomeSub(id)} (${d.subpericias[id] ?? 0}%)` })), sel.sub, v => { sel.sub = v; render(); }, { 'aria-label': 'Subperícia' }),
-      selecao(regra.causa.map(id => ({ valor: id, rotulo: `para ${nomeHumor(id)}` })), sel.humor, v => { sel.humor = v; }, { 'aria-label': 'Humor desejado' }),
+      selecao(regra.causa.map(id => ({ valor: id, rotulo: id === 'ler' ? 'ler o humor real' : `para ${nomeHumor(id)}` })), sel.humor, v => { sel.humor = v; }, { 'aria-label': 'Humor desejado' }),
       mestre ? h('label', { class: 'linha' }, 'Mod. %', h('input', { type: 'number', class: 'curto', value: sel.mod || 0, onchange: e => { sel.mod = e.target.value; } })) : null,
       botao('Manipular', async () => {
         if (!sel.alvo) throw new Error('Escolha o alvo.');
         const r = await acao('social.manipular', { autor: sel.autor, alvo: sel.alvo, sub: sel.sub, humor: sel.humor, mod: sel.mod });
-        aviso(`${r.autor}: ${r.texto}`, r.sucesso ? 'ok' : 'erro');
+        aviso(r.revelado || `${r.autor}: ${r.texto}`, r.sucesso ? 'ok' : 'erro');
       }, { class: 'primario', icone: 'drama', disabled: !alvos.length })),
     h('p', { class: 'dica' }, `Teste contra a Resistência à Manipulação do alvo (perícia Manipulação + 50 + modificadores)${rmnp != null ? ` — R.MNP de ${b.nome}: ${rmnp}` : ''}.`,
-      regra.falha.length ? ` Se falhar, o alvo pode escolher ficar ${regra.falha.map(nomeHumor).join(' ou ')}.` : ''));
+      ` Se falhar: ${reboteTexto(regra)}.`));
 }
 
 // Campos que só o mestre ajusta no cartão do participante: IP de habilidades (batalha) e modificador de R.MNP (social).
@@ -332,9 +350,17 @@ export function acoesCartaoSocial(p, participantes, mestre) {
     icone('drama'),
     selecao(opcoesPersonagens(outros), alvo, v => { estado.sel[`alvoDe:social:${p.id}`] = v; render(); }, { 'aria-label': `Alvo de ${p.nome}` }),
     selecao(Object.keys(regras).map(id => ({ valor: id, rotulo: `${nomeSub(id)} ${d.subpericias[id] ?? 0}%` })), estado.sel[chaveSub], v => { estado.sel[chaveSub] = v; render(); }, { 'aria-label': `Subperícia de ${p.nome}` }),
-    selecao(regra.causa.map(id => ({ valor: id, rotulo: `→ ${nomeHumor(id)}` })), estado.sel[chaveHumor], v => { estado.sel[chaveHumor] = v; }, { 'aria-label': `Humor que ${p.nome} quer causar` }),
+    selecao(regra.causa.map(id => ({ valor: id, rotulo: id === 'ler' ? '→ ler o humor real' : `→ ${nomeHumor(id)}` })), estado.sel[chaveHumor], v => { estado.sel[chaveHumor] = v; }, { 'aria-label': `Humor que ${p.nome} quer causar` }),
     botao('Manipular', async () => {
       const r = await acao('social.manipular', { autor: p.id, alvo, sub: estado.sel[chaveSub], humor: estado.sel[chaveHumor], mod: mestre ? estado.sel.manipular?.mod : 0 });
-      aviso(`${r.autor}: ${r.texto}`, r.sucesso ? 'ok' : 'erro');
-    }, { class: 'pequeno primario', icone: 'drama', title: `${p.nome} manipula` }));
+      aviso(r.revelado || `${r.autor}: ${r.texto}`, r.sucesso ? 'ok' : 'erro');
+    }, { class: 'pequeno primario', icone: 'drama', title: `${p.nome} manipula` }),
+    // Da conversa para a briga: leva os dois ao Campo de Batalha; atacar um humano no meio do diálogo custa Humanidade.
+    botao('Agredir', async () => {
+      const b = personagemPorId(alvo);
+      const custo = estado.sistema.social?.agressao?.dano || '1d6';
+      if (!(await confirmar(`${p.nome} parte para a agressão contra ${b?.nome}? Atacar um humano no meio do diálogo custa ${custo} de Humanidade. Os dois vão para o Campo de Batalha.`))) return;
+      const r = await acao('social.agredir', { atacante: p.id, alvo });
+      aviso(r.texto || `${p.nome} e ${b?.nome} foram para o Campo de Batalha.`, 'erro');
+    }, { class: 'pequeno perigo', icone: 'swords', title: `${p.nome} parte para a agressão` }));
 }

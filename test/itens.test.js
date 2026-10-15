@@ -66,3 +66,26 @@ test('catálogo real carregado das planilhas do autor', () => {
   assert.ok(sis.itens.every(i => !i.planilha), 'colunas originais não vão para o navegador');
   for (const i of sis.itens.filter(x => x.dano)) assert.doesNotThrow(() => rolarDado(i.dano), i.nome);
 });
+
+test('visibilidade: jogador vê só Mundano/Comum/Incomum, o resto só liberado', async () => {
+  const { itemVisivel } = await import('../shared/regras.js');
+  const raro = { id: 'r1', raridade: 'Raro' };
+  assert.equal(itemVisivel({ raridade: 'Incomum' }, {}), true);
+  assert.equal(itemVisivel({ raridade: 'Mundano' }, {}), true);
+  assert.equal(itemVisivel(raro, {}), false);
+  assert.equal(itemVisivel(raro, { itensLiberados: ['r1'] }), true);
+  assert.equal(itemVisivel({ id: 'x', raridade: 'Lendário' }, { itensRarosVisiveis: true }), true);
+  // No servidor: o jogador não compra item escondido; depois de liberado, compra.
+  const { novaCampanha, executar, entrarNaCampanha } = await import('../server/actions.js');
+  const m = { id: 'mv', name: 'Mestre V' }; const j = { id: 'jv', name: 'Jo' };
+  const c = novaCampanha(m, { nome: 'Vis', maxJogadores: 1, nivel: 1, padraoMSA: true });
+  executar(c, 'campanha.atualizar', { aberta: true, lojaAberta: true }, { user: m, mestre: true });
+  entrarNaCampanha(c, j, 'jogador');
+  const { id } = executar(c, 'personagem.criar', { tipo: 'pj', ficha: { nome: 'Jo' } }, { user: m, mestre: true });
+  c.personagens.find(p => p.id === id).donoId = j.id;
+  c.personagens.find(p => p.id === id).dinheiro = 1e9;
+  const item = sis.itens.find(i => i.raridade === 'Raro');
+  assert.throws(() => executar(c, 'item.comprar', { id, itemId: item.id }, { user: j, mestre: false }), /não está à venda/);
+  executar(c, 'item.liberar', { itemId: item.id, liberar: true }, { user: m, mestre: true });
+  executar(c, 'item.comprar', { id, itemId: item.id }, { user: j, mestre: false });
+});

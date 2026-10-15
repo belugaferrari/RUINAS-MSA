@@ -104,3 +104,21 @@ Regra combinada: **o livro é mais atual**; das planilhas só entra o que o livr
 **Armadilhas** (planilha lida; ainda não automatizadas)
 - 7 armadilhas prontas (Alarme de Latas, Buraco de Estacas, Pêndulo de Sucata, Garra Enferrujada, Chicote de Espinhos, Rede de Queda, Mina Química Improvisada), tabelas de gatilho, área, progressão de dano e efeitos com modificador de ND.
 
+## Sala Social (padrão do autor, 15/10) — vale para MSA e MSS
+**Confirmado pelo autor**
+- **Rebote** (falha na manipulação) pelo espectro do relacionamento — como o alvo vê quem manipula no mapa de relacionamento: A Aliado/Amigável, B Desconhecido (Neutro ou sem relação), C Rival/Inimigo. Matriz de Lábia, Sedução, Intimidação, Liderança e Empatia conforme o texto do autor; sucessos novos dessas cinco.
+- **Máscara**: humor real (oculto; dá os bônus/ônus) × humor aparente (o que a sala vê). Empatia → "ler o humor real": no sucesso, só quem testou vê "A máscara caiu…".
+- **Dissonância**: agir contra o humor imposto = dano de Sanidade. **Agressão súbita**: atacar um humano no meio do diálogo = dano de Humanidade.
+
+**Provisório — conferir**
+- Quando o rebote tem duas opções ("Indisposto ou Desconfiado"), o app sorteia uma. "Neutro" no rebote = sem efeito.
+- Dano da dissonância e da agressão: 1d6 (o texto não dá o valor).
+- Dissonância: só quando o jogador muda o humor real que foi imposto (por manipulação ou pelo mestre). A máscara não conta como quebra.
+- Apático deixou de custar 1D6 de Humanidade (regra do livro MSS): agora quebrar um humor imposto custa Sanidade. Confirmar se ficam as duas.
+- Agressão súbita: vale quando atacante e alvo estão os dois na Sala Social; uma vez por agressor até a sala ser esvaziada; criaturas do Livro dos Monstros não são humanas.
+- O rebote e a manipulação bem-sucedida tiram a máscara do alvo (a reação aparece para todos).
+- Impressionar, Interrogatório, Tortura e Etiqueta mantêm os humores do livro e ficam sem rebote até chegar a matriz delas.
+
+## Itens: o que os jogadores veem
+- Jogadores veem Mundano, Comum e Incomum. Acima disso só com o mestre liberando: todos de uma vez (Loja → "Jogadores veem todos os itens") ou item a item (botão "Liberar"). O servidor também não deixa comprar item escondido.
+

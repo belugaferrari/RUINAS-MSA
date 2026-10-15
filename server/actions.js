@@ -1,7 +1,7 @@
 import { db, save, uid } from './db.js';
 import { sistema, idSistema } from './sistema.js';
-import { resolverAtaque, aplicarAtaque, armasDisponiveis, opcoesDefesa, sobrevida, rolarIniciativa, resolverManipulacao, modHumorTestes, humorDe } from '../shared/combate.js';
-import { xpParaSubir, novaFicha, podeEquipar, rolarDado, rolarAtributosCriacao, testeDMil, gerarEncontro, derivados, problemasFicha, LIMITE_SALA } from '../shared/regras.js';
+import { resolverAtaque, aplicarAtaque, armasDisponiveis, opcoesDefesa, sobrevida, rolarIniciativa, resolverManipulacao, modHumorTestes, humorDe, espectroDe, humorAparente } from '../shared/combate.js';
+import { itemVisivel, xpParaSubir, novaFicha, podeEquipar, rolarDado, rolarAtributosCriacao, testeDMil, gerarEncontro, derivados, problemasFicha, LIMITE_SALA } from '../shared/regras.js';
 
 const GRUPO_ENCONTROS = 'encontros';
 const MAX_LOG = 100;
@@ -58,7 +58,7 @@ export function resumoCampanha(c) {
 const nomeUsuario = id => db.users.find(u => u.id === id)?.name ?? null;
 
 function fichaPublica(p) {
-  return { id: p.id, tipo: p.tipo, nome: p.nome, classe: p.classe, especializacao: p.especializacao, profissao: p.profissao, nivel: p.nivel, foto: p.foto, humor: p.humor || null, donoId: p.donoId, dono: nomeUsuario(p.donoId) };
+  return { id: p.id, tipo: p.tipo, nome: p.nome, classe: p.classe, especializacao: p.especializacao, profissao: p.profissao, nivel: p.nivel, foto: p.foto, humor: humorAparente(p), criatura: !!p.criatura, donoId: p.donoId, dono: nomeUsuario(p.donoId) };
 }
 
 // O que cada pessoa enxerga da campanha. O mestre vê tudo; o jogador só o que é dele ou público.
@@ -78,12 +78,12 @@ export function visaoPara(c, user, area) {
 
   return {
     id: c.id, nome: c.nome, nivel: c.nivel, padraoMSA: c.padraoMSA, pontos: c.pontos, aberta: c.aberta, sistema: idSistema(c.sistema),
-    lojaAberta: c.lojaAberta, dadosNaTela: c.dadosNaTela !== false, maxJogadores: c.maxJogadores, papel: 'jogador',
+    lojaAberta: c.lojaAberta, dadosNaTela: c.dadosNaTela !== false, itensRarosVisiveis: !!c.itensRarosVisiveis, itensLiberados: c.itensLiberados || [], maxJogadores: c.maxJogadores, papel: 'jogador',
     lore: c.lore,
     personagens,
     relacoes: Object.fromEntries([...meus].map(id => [id, c.relacoes[id] || {}])),
     imagens: c.imagens.filter(i => i.mostrando),
-    salas: Object.fromEntries(Object.entries(c.salas).map(([k, s]) => [k, { ...s, log: s.log.filter(e => !e.secreta) }])),
+    salas: Object.fromEntries(Object.entries(c.salas).map(([k, s]) => [k, { ...s, log: s.log.filter(e => !e.secreta && (!e.privadoPara || e.privadoPara === user.id)) }])),
     log: c.log.filter(e => !e.secreta),
     confrontos: (c.confrontos || []).filter(x => !x.secreto),
   };
@@ -195,7 +195,7 @@ function valorAcao(p, ref, sis) {
 function npcDeMonstro(c, m) {
   return {
     ...novaFicha(sistema(c.sistema), c), id: uid(), tipo: 'npc', grupoId: GRUPO_ENCONTROS, donoId: null,
-    nome: m.nome, dificuldade: m.dificuldade, pv: { max: m.pv, atual: m.pv },
+    nome: m.nome, dificuldade: m.dificuldade, pv: { max: m.pv, atual: m.pv }, criatura: true,
     anotacoes: `Ataque: ${m.ataque}\nDefesa: ${m.defesa}\n${m.descricao}`,
   };
 }
@@ -275,6 +275,20 @@ function resolverPendente(c, s, pend, defesa, sis) {
   return entrada;
 }
 
+// Agressão súbita (escalada): atacar um humano no meio do diálogo custa Humanidade (uma vez por cena, por agressor).
+function agressaoSubita(c, a, b, sis) {
+  const soc = c.salas.social;
+  if (!soc.participantes.includes(a.id) || !soc.participantes.includes(b.id) || b.criatura || !a.humanidade) return null;
+  soc.agressores ||= [];
+  if (soc.agressores.includes(a.id)) return null;
+  soc.agressores.push(a.id);
+  const r = rolarDado(sis.social?.agressao?.dano || '1d6');
+  a.humanidade.atual = Math.max(0, a.humanidade.atual - r.total);
+  const texto = `${a.nome} partiu para a agressão contra ${b.nome} no meio do diálogo: perde ${r.total} de Humanidade (${a.humanidade.atual}).`;
+  registrar(soc.log, { autor: a.nome, rotulo: 'Agressão súbita', texto });
+  return texto;
+}
+
 const fmtMod = v => (v > 0 ? `+${v}` : `${v}`);
 
 // ---------- ações ----------
@@ -282,7 +296,7 @@ const fmtMod = v => (v > 0 ? `+${v}` : `${v}`);
 export const acoes = {
   'campanha.atualizar'(c, d, ctx) {
     exigirMestre(ctx);
-    for (const k of ['aberta', 'lojaAberta', 'edicaoLivre', 'dadosNaTela']) if (k in d) c[k] = !!d[k];
+    for (const k of ['aberta', 'lojaAberta', 'edicaoLivre', 'dadosNaTela', 'itensRarosVisiveis']) if (k in d) c[k] = !!d[k];
     for (const k of ['anotacoes', 'anotacoesResumo']) if (k in d) c[k] = nomeStr(d[k]);
     if ('nome' in d && String(d.nome).trim()) c.nome = String(d.nome).trim();
     // Trocar o sistema no meio da campanha: as fichas continuam; cálculos e regras passam a seguir o novo sistema.
@@ -534,9 +548,18 @@ export const acoes = {
     exigirDonoOuMestre(ctx, p);
     if (!ctx.mestre && !c.lojaAberta) throw erro('A loja está fechada pelo mestre.');
     const it = itemDoCatalogo(itemId, sistema(c.sistema));
+    if (!ctx.mestre && !itemVisivel(it, c)) throw erro('Este item não está à venda para os jogadores.');
     if ((p.dinheiro || 0) < it.preco) throw erro('Dinheiro insuficiente.');
     p.dinheiro -= it.preco;
     p.itens.push(it);
+  },
+
+  // O mestre mostra (ou esconde) um item raro para os jogadores.
+  'item.liberar'(c, { itemId, liberar }, ctx) {
+    exigirMestre(ctx);
+    const lista = new Set(c.itensLiberados || []);
+    if (liberar) lista.add(String(itemId)); else lista.delete(String(itemId));
+    c.itensLiberados = [...lista];
   },
 
   'item.vender'(c, { id, uid: itemUid }, ctx) {
@@ -731,6 +754,7 @@ export const acoes = {
     if (!a.pv || !b.pv) throw erro('Os dois precisam ter PV na ficha.');
     const op = { ...(opcoes || {}) };
     if (!ctx.mestre) { delete op.vantagem; delete op.desvantagem; delete op.danoLivre; }
+    agressaoSubita(c, a, b, sis);
     const arma = armasDisponiveis(a, sis).find(x => x.uid === (op.armaUid || 'desarmado'));
     if (!arma) throw erro('Arma não equipada.');
     // Munição: cada ataque com arma de fogo gasta 1 (cadência natural).
@@ -780,27 +804,57 @@ export const acoes = {
     if (rmnpExtra !== undefined) p.rmnpExtra = Math.max(-100, Math.min(100, parseInt(rmnpExtra, 10) || 0));
   },
 
-  // ---------- Humor (Roda do Humor, MSS) ----------
-  'humor.definir'(c, { id, humor }, ctx) {
+  // ---------- Humor (Roda do Humor) e Máscara ----------
+  // camada "real": o humor verdadeiro (dá os bônus e ônus). camada "aparente": a máscara que a sala vê (null = igual ao real).
+  'humor.definir'(c, { id, humor, camada = 'real' }, ctx) {
     const sis = sistema(c.sistema);
     exigirModulo(sis, 'social');
     const p = personagem(c, id);
     exigirDonoOuMestre(ctx, p);
+    const nomeH = hid => sis.social.humores.find(x => x.id === hid)?.nome || 'Neutro';
+    if (camada === 'aparente') {
+      if (humor && !sis.social.humores.some(x => x.id === humor)) throw erro('Humor desconhecido.');
+      p.humorAparente = humor && humor !== (p.humor || 'neutro') ? humor : null;
+      // A máscara é segredo: o registro público não conta que mudou.
+      registrar(c.salas.social.log, { autor: p.nome, rotulo: `Máscara de ${p.nome}`, texto: p.humorAparente ? `mostrando ${nomeH(p.humorAparente)}` : 'sem máscara', privadoPara: ctx.user.id });
+      return;
+    }
     const h = sis.social.humores.find(x => x.id === humor);
     if (!h) throw erro('Humor desconhecido.');
-    if (!ctx.mestre && !h.escolha && !(p.humorOpcoes || []).includes(h.id)) {
+    if (!ctx.mestre && !h.escolha) {
       throw erro('Você só escolhe Neutro, Amigável, Indisposto ou Apático; os outros humores vêm de manipulação ou do mestre.');
     }
     if ((p.humor || 'neutro') === h.id) return;
-    p.humor = h.id;
-    p.humorOpcoes = [];
     let texto = h.nome;
-    if (h.danoHumanidade && p.humanidade) {
-      const r = rolarDado(h.danoHumanidade);
-      p.humanidade.atual = Math.max(0, p.humanidade.atual - r.total);
-      texto += ` — perde ${r.total} de Humanidade (${p.humanidade.atual})`;
+    // Dissonância: o jogador age contra um humor imposto (manipulação ou mestre) — a mente racha: dano de Sanidade.
+    if (!ctx.mestre && p.humorImposto && p.sanidade) {
+      const r = rolarDado(sis.social.dissonancia?.dano || '1d6');
+      p.sanidade.atual = Math.max(0, p.sanidade.atual - r.total);
+      texto += ` — quebrou o humor imposto (${nomeH(p.humor)}): perde ${r.total} de Sanidade (${p.sanidade.atual})`;
     }
-    registrar(c.salas.social.log, { autor: p.nome, rotulo: `Humor de ${p.nome}`, texto });
+    p.humor = h.id;
+    p.humorImposto = ctx.mestre && h.id !== 'neutro';
+    if (p.humorAparente === p.humor) p.humorAparente = null;
+    registrar(c.salas.social.log, { autor: p.nome, rotulo: `Humor de ${p.nome}`, texto: p.humorAparente ? `${texto} (por trás da máscara)` : texto, privadoPara: p.humorAparente ? (p.donoId || ctx.user.id) : null });
+  },
+
+  // Da conversa para a briga: leva os dois ao Campo de Batalha e cobra a agressão súbita.
+  'social.agredir'(c, { atacante, alvo }, ctx) {
+    const sis = sistema(c.sistema);
+    const a = personagem(c, atacante);
+    const b = personagem(c, alvo);
+    exigirDonoOuMestre(ctx, a);
+    if (a.id === b.id) throw erro('Escolha outro alvo.');
+    const bat = c.salas.batalha;
+    for (const p of [a, b]) {
+      if (bat.participantes.includes(p.id)) continue;
+      if (bat.participantes.length >= LIMITE_SALA) throw erro('O Campo de Batalha está cheio.');
+      bat.participantes.push(p.id);
+      if (bat.combate) entrarNoCombate(c, bat, p);
+    }
+    const texto = agressaoSubita(c, a, b, sis);
+    registrar(bat.log, { autor: a.nome, rotulo: 'Escalada', texto: `${a.nome} parte para cima de ${b.nome} (vindo da Sala Social).` });
+    return { texto };
   },
 
   'social.manipular'(c, { autor, alvo, sub, humor, mod }, ctx) {
@@ -810,33 +864,45 @@ export const acoes = {
     const b = personagem(c, alvo);
     exigirDonoOuMestre(ctx, a);
     if (a.id === b.id) throw erro('Escolha outro alvo.');
+    // Espectro: como o alvo enxerga quem manipula (mapa de relacionamento).
+    const espectro = espectroDe(c.relacoes[b.id]?.[a.id]?.tipo, sis);
     let r;
     try {
-      r = resolverManipulacao(a, b, sub, humor, sis, { mod: ctx.mestre ? mod : 0 });
+      r = resolverManipulacao(a, b, sub, humor, sis, { mod: ctx.mestre ? mod : 0, espectro });
     } catch (e) {
       throw erro(e.message);
     }
     const nomeH = id => humorDe({ humor: id }, sis)?.nome || id;
     const per = sis.pericias.find(x => x.id === 'manipulacao');
     const nomeSub = per?.subpericias.find(x => x.id === sub)?.nome || sub;
+    const nomeEsp = sis.social.espectros?.[espectro]?.nome || espectro;
+    const mudar = novo => { b.humor = novo; b.humorAparente = null; b.humorImposto = novo !== 'neutro'; };
     let resultado;
-    if (r.sucesso) {
-      b.humor = humor;
-      b.humorOpcoes = [];
+    if (r.sucesso && r.ler) {
+      // A quebra da máscara: só quem testou vê o humor real.
+      resultado = `SUCESSO — ${a.nome} lê ${b.nome}`;
+      const real = nomeH(b.humor || 'neutro');
+      const texto = b.humorAparente ? `A máscara caiu. O humor aparente é ${nomeH(b.humorAparente)}, mas o humor real é ${real}.` : `Sem máscara: o humor real de ${b.nome} é ${real}.`;
+      registrar(c.salas.social.log, { autor: a.nome, rotulo: `Leitura de ${b.nome}`, texto, privadoPara: ctx.user.id });
+      r.revelado = texto;
+    } else if (r.sucesso) {
+      mudar(humor);
       resultado = `SUCESSO — ${b.nome} fica ${nomeH(humor)}`;
+    } else if (r.rebote && r.rebote !== 'neutro') {
+      mudar(r.rebote);
+      resultado = `FALHOU — rebote (${nomeEsp}): ${b.nome} fica ${nomeH(r.rebote)}`;
     } else {
-      b.humorOpcoes = r.opcoesFalha;
-      resultado = `FALHOU${r.opcoesFalha.length ? ` — ${b.nome} pode escolher ficar ${r.opcoesFalha.map(nomeH).join(' ou ')}` : ''}`;
+      resultado = 'FALHOU — sem efeito';
     }
     const mods = r.mods.map(m => `${m.nome} ${fmtMod(m.valor)}`).join(', ');
     const entrada = {
-      tipo: 'manipulacao', autor: a.nome, rotulo: `${nomeSub} em ${b.nome} (quer ${nomeH(humor)})`, sucesso: r.sucesso, critico: r.critico,
+      tipo: 'manipulacao', autor: a.nome, rotulo: `${nomeSub} em ${b.nome} (${r.ler ? 'ler o humor real' : `quer ${nomeH(humor)}`})`, sucesso: r.sucesso, critico: r.critico,
       texto: `${resultado}${r.critico ? ` (crítico de ${r.critico})` : ''}`,
-      detalhe: `d100 ${r.dp}${r.modo ? ` (vantagem [${r.dados.join(', ')}])` : ''} + ${r.acao}${mods ? ` (${mods})` : ''} = ${r.total} contra R.MNP ${r.nd} · DS ${r.ds}`,
+      detalhe: `d100 ${r.dp}${r.modo ? ` (vantagem [${r.dados.join(', ')}])` : ''} + ${r.acao}${mods ? ` (${mods})` : ''} = ${r.total} contra R.MNP ${r.nd} · espectro ${nomeEsp} · DS ${r.ds}`,
       dp: r.dp, dados: r.dados, ds: r.ds, total: r.total, nd: r.nd,
     };
     registrar(c.salas.social.log, entrada);
-    return entrada;
+    return { ...entrada, revelado: r.revelado || null };
   },
 
   // ---------- Confronto (Ação × Ação, fora do combate) ----------
