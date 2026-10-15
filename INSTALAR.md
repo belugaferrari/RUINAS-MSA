@@ -17,7 +17,6 @@ Leva uns 10 minutos na primeira vez. Depois é só dar dois cliques.
   - Se aparecer "O Windows protegeu o computador", clique em **Mais informações → Executar assim mesmo**.
   - Na primeira vez ele instala o que precisa (1 a 2 minutos, com internet).
   - Se o Firewall do Windows perguntar, clique em **Permitir** (é o que deixa os celulares da mesma Wi‑Fi entrarem).
-- **Mac:** botão direito em **`iniciar-mac.command`** → **Abrir** (só na primeira vez; depois, dois cliques).
 
 O navegador abre sozinho em `http://localhost:3000`. **Enquanto a janela preta estiver aberta, o app está ligado.** Para desligar, feche essa janela.
 
@@ -27,7 +26,7 @@ O navegador abre sozinho em `http://localhost:3000`. **Enquanto a janela preta e
 3. Celulares na mesma Wi‑Fi: use o endereço que aparece na janela preta em "Na mesma Wi‑Fi" (algo como `http://192.168.0.10:3000`).
 
 ## Atualizações: automáticas
-Depois desta instalação **não precisa mais baixar o ZIP**. Toda vez que você abre o `iniciar-windows.bat` (ou o `iniciar-mac.command`), ele:
+Depois desta instalação **não precisa mais baixar o ZIP**. Toda vez que você abre o `iniciar-windows.bat`, ele:
 1. confere no GitHub se há versão nova;
 2. se houver, baixa e troca só os arquivos do app — **a pasta `data` (contas, campanhas, fichas, imagens) nunca é apagada**;
 3. abre o app normalmente.
