@@ -16,7 +16,7 @@ export const COLUNAS = [
 export const COLUNAS_APP = [
   ['App: tipo', 'tipo'], ['App: slot', 'slot'], ['App: mãos/espaços', 'ocupa'], ['App: IP', 'defesa'], ['App: bônus', 'bonus'],
   ['App: alcance', 'alcance'], ['App: capacidade (balas)', 'capacidade'], ['App: munição (tipo)', 'municao'], ['App: quantidade', 'quantidade'],
-  ['App: efeito de dano (DS ≤)', 'efeitoDano'], ['App: em revisão', 'revisao'],
+  ['App: efeito de dano (DS ≤)', 'efeitoDano'], ['App: cadência', 'cadencia'], ['App: em revisão', 'revisao'],
 ];
 
 export const ARQ_PADRAO = path.join(CONTEUDO, 'sistemas', 'itens.json');
@@ -156,6 +156,7 @@ export function converterLinha(l, sis, { revisao = false } = {}) {
   if (num(app.capacidade)) { item.capacidade = num(app.capacidade); item.municao = app.municao ? String(app.municao).trim() : sem(l['Pericia - Subgrupo']); }
   if (tipo === 'municao') { item.municao = app.municao ? String(app.municao).trim() : sem(l['Pericia - Subgrupo'] || l.Item); item.quantidade = num(app.quantidade) ?? 1; }
   if (num(app.efeitoDano)) item.efeitoDano = num(app.efeitoDano);
+  if (num(app.cadencia)) item.cadencia = num(app.cadencia);
   return item;
 }
 

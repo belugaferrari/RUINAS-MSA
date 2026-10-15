@@ -71,6 +71,20 @@ function fichaJogador(p) {
       h('section', { class: 'bloco largo' }, titulo('Identidade', 'user'), identidade(p))));
 }
 
+// Dano temporário de Sanidade/Humanidade e o teste de Consciência (WILL%, ND 100) no descanso longo.
+function temporarios(p) {
+  const san = p.sanidade?.temporario || 0;
+  const hum = p.humanidade?.temporario || 0;
+  if (!san && !hum) return null;
+  return h('div', { class: 'temporarios' },
+    h('span', {}, icone('hourglass'), ` Temporário: ${[san ? `−${san} Sanidade` : null, hum ? `−${hum} Humanidade` : null].filter(Boolean).join(' · ')}`),
+    botao('Teste de Consciência', async () => {
+      if (!(await confirmar('Teste de Consciência (WILL%, ND 100), feito no descanso longo. Sucesso recupera o temporário; falha deixa a perda permanente. Rolar agora?'))) return;
+      const r = await acao('consciencia.testar', { id: p.id });
+      aviso(`Consciência: ${r.total} contra ND 100 — ${r.sucesso ? 'SUCESSO' : 'FALHA'} (${r.consciencia})`, r.sucesso ? 'ok' : 'erro');
+    }, { class: 'pequeno', icone: 'brain', title: 'Recuperar Sanidade e Humanidade temporárias' }));
+}
+
 // Uma linha por trilha: nome, −, barra com o valor, +.
 function trilhaCompacta(p, chave, rotulo, ic, extra = null) {
   const t = p[chave] || { max: 0, atual: 0 };
@@ -94,6 +108,7 @@ function estadoCompacto(p, d) {
     trilhaCompacta(p, 'sanidade', 'Sanidade', 'brain', d.estadoSanidade),
     trilhaCompacta(p, 'humanidade', 'Humanidade', 'hand-heart', d.estagioHumanidade?.nome || ''),
     p.humanidade && p.humanidade.atual < 1 ? h('p', { class: 'alerta perigo' }, icone('circle-alert'), ' Humanidade abaixo de 1: só o mestre controla este personagem.') : null,
+    temporarios(p),
     h('div', { class: 'marcadores' },
       (p.marcadores || []).map((m, i) => h('span', { class: 'etiqueta' }, m,
         botao('', () => atualizar(p, { marcadores: p.marcadores.filter((_, j) => j !== i) }), { class: 'x', icone: 'x', title: `Remover marcador ${m}` }))),
@@ -181,6 +196,12 @@ function cabecalho(p, mestre) {
       campo(`${p.id}:nivel`, p.nivel, v => atualizar(p, { nivel: v }), { tipo: 'number', min: 1, max: 20 })) : null);
 }
 
+// O instinto guia o mestre quando o personagem perde o controle.
+export function descInstinto(nome) {
+  const i = (estado.sistema.instintos || []).find(x => x.nome === nome);
+  return i?.descricao ? h('p', { class: 'dica' }, icone('info'), ` ${i.descricao}`) : null;
+}
+
 // XP acumulado × XP para o próximo nível (a evolução só libera o nível quando a barra enche).
 export function barraXp(p) {
   const falta = xpParaSubir(p.nivel, estado.sistema);
@@ -204,6 +225,7 @@ function identidade(p) {
         { rotuloOutra: 'Outra…', placeholder: 'Qual a motivação?', props: { 'aria-label': 'Motivação' }, redesenhar: render }))),
     h('label', {}, 'Instinto', escolhaComOutra(`${p.id}:instinto`, (sis.instintos || []).map(x => x.nome), p.instinto, v => atualizar(p, { instinto: v }),
       { rotuloOutra: 'Outro…', placeholder: 'Qual o instinto?', props: { 'aria-label': 'Instinto' }, redesenhar: render })),
+    descInstinto(p.instinto),
     h('label', {}, 'Características', campo(`${p.id}:caracteristicas`, p.caracteristicas, v => atualizar(p, { caracteristicas: v }), { multilinha: true, rows: 2 })));
 }
 
@@ -238,6 +260,7 @@ function trilhas(p, mestre) {
     trilha(p, 'sanidade', 'Sanidade'),
     h('p', { class: 'meta' }, icone('brain'), ` Estado mental: ${derivados(p, estado.sistema).estadoSanidade}`),
     trilha(p, 'humanidade', 'Humanidade'),
+    temporarios(p),
     p.humanidade && p.humanidade.atual < 1 ? h('p', { class: 'alerta perigo' }, icone('circle-alert'), ' Humanidade abaixo de 1: o jogador perdeu o controle deste personagem (só o mestre age por ele).') : null,
     estagioHumanidade(p),
     mestre ? h('div', { class: 'grade3 mini' },

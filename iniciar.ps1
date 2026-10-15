@@ -12,17 +12,28 @@ if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
   exit 1
 }
 
-Write-Host ' Procurando atualizacoes...'
-& powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $pasta 'atualizar.ps1')
-$atualizou = $LASTEXITCODE -eq 10
+# O botao "Atualizar agora" (Mestre) fecha o servidor com o codigo 75: atualiza e abre de novo, sem fechar esta janela.
+$env:ILHAS_INICIADOR = '1'
+$primeira = $true
+do {
+  Write-Host ' Procurando atualizacoes...'
+  & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $pasta 'atualizar.ps1')
+  $atualizou = $LASTEXITCODE -eq 10
 
-if ($atualizou -or -not (Test-Path (Join-Path $pasta 'node_modules'))) {
-  Write-Host ' Instalando as dependencias, aguarde 1 a 2 minutos...'
-  & npm.cmd install --omit=dev --no-audit --no-fund
-  if ($LASTEXITCODE -ne 0) { Write-Host ' Nao foi possivel instalar. Confira a internet e tente de novo.'; exit 1 }
-}
+  if ($atualizou -or -not (Test-Path (Join-Path $pasta 'node_modules'))) {
+    Write-Host ' Instalando as dependencias, aguarde 1 a 2 minutos...'
+    & npm.cmd install --omit=dev --no-audit --no-fund
+    if ($LASTEXITCODE -ne 0) { Write-Host ' Nao foi possivel instalar. Confira a internet e tente de novo.'; exit 1 }
+  }
 
-Write-Host ''
-Write-Host ' Abrindo o navegador... Para desligar o app, feche esta janela.'
-Start-Process cmd.exe -ArgumentList '/c timeout /t 3 >nul & start http://localhost:3000' -WindowStyle Hidden
-& node server/index.js
+  Write-Host ''
+  if ($primeira) {
+    Write-Host ' Abrindo o navegador... Para desligar o app, feche esta janela.'
+    Start-Process cmd.exe -ArgumentList '/c timeout /t 3 >nul & start http://localhost:3000' -WindowStyle Hidden
+    $primeira = $false
+  } else {
+    Write-Host ' App atualizado e aberto de novo. As paginas recarregam sozinhas.'
+  }
+  & node server/index.js
+  $codigo = $LASTEXITCODE
+} while ($codigo -eq 75)

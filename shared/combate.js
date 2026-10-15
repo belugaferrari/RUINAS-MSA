@@ -44,6 +44,8 @@ export function armasDisponiveis(p, sistema) {
   const armas = (p.itens || []).filter(i => i.equipado && i.tipo === 'arma' && i.dano).map(i => ({
     uid: i.uid, nome: i.nome, dano: i.dano, pericia: i.pericia || null, tipoDano: i.tipoDano || 'Físico',
     efeitoDano: i.efeitoDano ?? cfg.chancePorTipo?.[i.tipoDano] ?? cfg.efeitoPadrao, penetracao: i.penetracao || 0, alcance: i.alcance || (i.pericia?.startsWith('armas-de-fogo') ? 'distancia' : 'corpo'),
+    // Cadência: quantos disparos (balas e danos) por ataque — da arma ou da subperícia (ex.: Rifle de Assalto 2).
+    cadencia: Math.max(1, i.cadencia ?? cfg.cadencia?.[i.pericia] ?? 1),
   }));
   return [{ uid: 'desarmado', efeitoDano: cfg.efeitoPadrao, ...cfg.desarmado }, ...armas];
 }
@@ -149,22 +151,33 @@ export function resolverAtaque(atacante, alvo, sistema, op = {}, defesaId = 'nen
   // Ataque em área: quem passa na Evasão recebe só metade do dano.
   if (!teste.sucesso && !(op.area && defesa.id === 'evasao')) return r;
 
-  const partes = [];
-  const rolar = (nome, expr) => { const x = rolarDado(expr, rng); partes.push({ nome, expr, dados: x.dados, total: x.total }); };
-  rolar(arma.nome, arma.dano);
-  if (teste.critico === 'acerto') {
-    const m = /d(\d+)/i.exec(arma.dano);
-    if (m) rolar('crítico', `1d${m[1]}`);
-  }
-  if (op.localizado) rolar('localizado', cfg.localizado.dano);
-  if (teste.sucesso && defesa.id === 'esquiva' && arma.uid !== 'desarmado') partes.push({ nome: 'esquiva contra arma', total: cfg.esquivaArmada });
-  if (arma.alcance === 'corpo' && da.mod.FOR) partes.push({ nome: 'MOD FOR', total: da.mod.FOR });
-  if (r.perdaSacrificio) partes.push({ nome: 'Sacrifício', total: r.perdaSacrificio });
-  r.danoPartes = partes;
-  r.danoBruto = partes.reduce((s, p) => s + p.total, 0);
   // Penetração ignora até N pontos de IP do alvo.
   r.ip = cfg.ignoramIP.includes(arma.tipoDano) ? 0 : Math.max(0, ipDe(alvo, sistema) - (arma.penetracao || 0));
-  r.dano = Math.max(cfg.danoMinimo, r.danoBruto - r.ip);
+  // Cada disparo (cadência) é um dano separado, cada um descontando o IP. Crítico, localizado e bônus entram no primeiro.
+  const disparos = Math.max(1, Math.min(arma.cadencia || 1, op.disparos || arma.cadencia || 1));
+  const partes = [];
+  r.disparos = [];
+  for (let n = 0; n < disparos; n++) {
+    const doDisparo = [];
+    const rolar = (nome, expr) => { const x = rolarDado(expr, rng); doDisparo.push({ nome, expr, dados: x.dados, total: x.total }); };
+    rolar(disparos > 1 ? `${arma.nome} (${n + 1}º)` : arma.nome, arma.dano);
+    if (n === 0) {
+      if (teste.critico === 'acerto') {
+        const m = /d(\d+)/i.exec(arma.dano);
+        if (m) rolar('crítico', `1d${m[1]}`);
+      }
+      if (op.localizado) rolar('localizado', cfg.localizado.dano);
+      if (teste.sucesso && defesa.id === 'esquiva' && arma.uid !== 'desarmado') doDisparo.push({ nome: 'esquiva contra arma', total: cfg.esquivaArmada });
+      if (arma.alcance === 'corpo' && da.mod.FOR) doDisparo.push({ nome: 'MOD FOR', total: da.mod.FOR });
+      if (r.perdaSacrificio) doDisparo.push({ nome: 'Sacrifício', total: r.perdaSacrificio });
+    }
+    const bruto = doDisparo.reduce((s, p) => s + p.total, 0);
+    r.disparos.push({ bruto, dano: Math.max(cfg.danoMinimo, bruto - r.ip) });
+    partes.push(...doDisparo);
+  }
+  r.danoPartes = partes;
+  r.danoBruto = partes.reduce((s, p) => s + p.total, 0);
+  r.dano = r.disparos.reduce((s, x) => s + x.dano, 0);
   if (!teste.sucesso) { r.dano = Math.floor(r.dano / 2); r.metadeEvasao = true; }
   if (tem(alvo, 'Queimadura')) { r.dano += 1; r.queimadura = true; }
   const efeito = cfg.efeitosPorTipo[arma.tipoDano];
@@ -251,10 +264,12 @@ export function resolverManipulacao(autor, alvo, sub, humorDesejado, sistema, { 
   const nd = resistenciaManipulacao(alvo, sistema);
   const teste = testeContra(acao, nd, sistema, { modo, rng });
   let rebote = null;
+  let opcoesRebote = [];
   if (!teste.sucesso) {
-    const opcoes = (Array.isArray(regra.falha) ? regra.falha : regra.falha?.[espectro]) || [];
-    // Uma opção: vai direto. Duas: sorteio (o rebote é forçado).
-    if (opcoes.length) rebote = opcoes[Math.floor(rng() * opcoes.length)];
+    const opcoes = ((Array.isArray(regra.falha) ? regra.falha : regra.falha?.[espectro]) || []).filter(x => x !== 'neutro' || regra.falha?.[espectro]?.length > 1);
+    // Uma opção: vai direto. Duas: o alvo escolhe entre elas.
+    if (opcoes.length === 1) rebote = opcoes[0];
+    else opcoesRebote = opcoes;
   }
-  return { ...teste, mods, sub, humorDesejado, espectro, rebote, ler: humorDesejado === 'ler' };
+  return { ...teste, mods, sub, humorDesejado, espectro, rebote, opcoesRebote, ler: humorDesejado === 'ler' };
 }

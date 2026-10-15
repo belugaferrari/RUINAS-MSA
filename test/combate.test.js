@@ -155,10 +155,12 @@ test('manipulação: R.MNP pelo humor, sucesso muda humor, falha dá o rebote do
   b.humor = 'neutro';
   assert.throws(() => resolverManipulacao(a, b, 'manipulacao.intimidacao', 'atraido', mss), /não causa/);
   // Intimidação falhando: A → Indisposto/Apático, B → Desconfiado/Corajoso, C → Corajoso/Raivoso.
-  const rebote = esp => resolverManipulacao(a, b, 'manipulacao.intimidacao', 'amedrontado', mss, { espectro: esp, rng: seq(d100(10), d10(1), 0.99) });
-  assert.equal(rebote('A').rebote, 'apatico');
-  assert.equal(rebote('B').rebote, 'corajoso');
-  assert.equal(rebote('C').rebote, 'raivoso');
+  // Com duas opções, o alvo escolhe (nada é sorteado).
+  const rebote = esp => resolverManipulacao(a, b, 'manipulacao.intimidacao', 'amedrontado', mss, { espectro: esp, rng: seq(d100(10), d10(1)) });
+  assert.deepEqual(rebote('A').opcoesRebote, ['indisposto', 'apatico']);
+  assert.deepEqual(rebote('B').opcoesRebote, ['desconfiado', 'corajoso']);
+  assert.deepEqual(rebote('C').opcoesRebote, ['corajoso', 'raivoso']);
+  assert.equal(rebote('B').rebote, null);
   assert.equal(rebote('B').sucesso, false);
   assert.equal(resolverManipulacao(a, b, 'manipulacao.lideranca', 'sereno', mss, { espectro: 'A', rng: seq(d100(10), d10(1)) }).rebote, 'desmotivado');
   assert.equal(espectroDe('Inimigo', mss), 'C');
@@ -207,11 +209,14 @@ test('ações de combate e humor no servidor (MSS) e bloqueio no MSA', () => {
   executar(c, 'combate.encerrar', {}, ctxM);
   assert.equal(c.salas.batalha.combate, null);
 
-  // Humor: o jogador só escolhe os humores livres, sem custo quando nada foi imposto.
+  // Humor: o jogador só escolhe os humores livres. Apático custa só Humanidade (temporária).
   assert.throws(() => executar(c, 'humor.definir', { id: ids[0], humor: 'corajoso' }, { user: ana, mestre: false }), /só escolhe/);
   const san = lia.sanidade.atual;
+  const hum0 = lia.humanidade.atual;
   executar(c, 'humor.definir', { id: ids[0], humor: 'apatico' }, { user: ana, mestre: false });
   assert.equal(lia.sanidade.atual, san);
+  assert.ok(lia.humanidade.atual < hum0);
+  assert.equal(lia.humanidade.temporario, hum0 - lia.humanidade.atual);
   // Máscara: a sala vê o humor aparente; o real fica com o dono e o mestre.
   executar(c, 'humor.definir', { id: ids[0], humor: 'corajoso', camada: 'aparente' }, { user: ana, mestre: false });
   const outro = { id: 'x' };
@@ -232,6 +237,20 @@ test('ações de combate e humor no servidor (MSS) e bloqueio no MSA', () => {
   assert.equal(lia.humorImposto, true);
   executar(c, 'humor.definir', { id: ids[0], humor: 'neutro' }, { user: ana, mestre: false });
   assert.ok(lia.sanidade.atual < san, 'quebrar o humor imposto custa Sanidade');
+  assert.equal(lia.sanidade.temporario, san - lia.sanidade.atual, 'dano temporário');
+  // Teste de Consciência: sucesso devolve o temporário, falha torna permanente; zera o temporário.
+  const cons = executar(c, 'consciencia.testar', { id: ids[0] }, { user: ana, mestre: false });
+  assert.equal(lia.sanidade.temporario, 0);
+  assert.equal(lia.humanidade.temporario, 0);
+  if (cons.sucesso) assert.equal(lia.sanidade.atual, san);
+  assert.throws(() => executar(c, 'consciencia.testar', { id: ids[0] }, { user: ana, mestre: false }), /Não há dano temporário/);
+  // Rebote com duas opções: o alvo escolhe (sem custo de dissonância).
+  lia.humorOpcoes = ['indisposto', 'desconfiado'];
+  const san2 = lia.sanidade.atual;
+  executar(c, 'humor.definir', { id: ids[0], humor: 'desconfiado' }, { user: ana, mestre: false });
+  assert.equal(lia.humor, 'desconfiado');
+  assert.equal(lia.sanidade.atual, san2);
+  assert.deepEqual(lia.humorOpcoes, []);
   // Rebote pelo relacionamento: Lia vê o Rato como Inimigo (espectro C).
   executar(c, 'relacao.definir', { de: ids[0], para: ids[1], tipo: 'Inimigo' }, ctxM);
   rato.subpericias = {};
@@ -297,4 +316,16 @@ test('XP para vários personagens de uma vez', () => {
   executar(c, 'xp.dar', { ids, qtd: 150, motivo: 'sessão 1' }, ctxM);
   assert.deepEqual(c.personagens.map(p => p.xp), [150, 150]);
   assert.match(c.log.at(-1).rotulo, /\+150 XP \(sessão 1\)/);
+});
+
+test('cadência: Rifle de Assalto dispara 2 vezes (2 danos, cada um menos o IP)', () => {
+  const a = lutador('A');
+  a.itens = [{ uid: 'r', nome: 'Fuzil', tipo: 'arma', equipado: true, dano: '1d6', pericia: 'armas-de-fogo.rifle-de-assalto', tipoDano: 'Perfuração', alcance: 'distancia' }];
+  const b = lutador('B');
+  b.itens = [{ uid: 'g', nome: 'Colete', tipo: 'defesa', equipado: true, defesa: 2 }];
+  const r = resolverAtaque(a, b, mss, { armaUid: 'r' }, 'nenhuma', seq(d100(90), d10(9), 0.99, 0.99));
+  assert.equal(r.disparos.length, 2);
+  assert.equal(r.dano, (6 - 2) * 2);
+  const um = resolverAtaque(a, b, mss, { armaUid: 'r', disparos: 1 }, 'nenhuma', seq(d100(90), d10(9), 0.99));
+  assert.equal(um.disparos.length, 1, 'com 1 bala só, 1 disparo');
 });

@@ -275,6 +275,14 @@ function resolverPendente(c, s, pend, defesa, sis) {
   return entrada;
 }
 
+// Dano temporário de Sanidade/Humanidade: sai do valor atual e fica anotado; no descanso longo,
+// o teste de Consciência (WILL%, ND 100) devolve o que for temporário.
+function danoTemporario(p, chave, n) {
+  if (!p[chave] || !n) return;
+  p[chave].atual = Math.max(0, p[chave].atual - n);
+  p[chave].temporario = (p[chave].temporario || 0) + n;
+}
+
 // Agressão súbita (escalada): atacar um humano no meio do diálogo custa Humanidade (uma vez por cena, por agressor).
 function agressaoSubita(c, a, b, sis) {
   const soc = c.salas.social;
@@ -283,8 +291,8 @@ function agressaoSubita(c, a, b, sis) {
   if (soc.agressores.includes(a.id)) return null;
   soc.agressores.push(a.id);
   const r = rolarDado(sis.social?.agressao?.dano || '1d6');
-  a.humanidade.atual = Math.max(0, a.humanidade.atual - r.total);
-  const texto = `${a.nome} partiu para a agressão contra ${b.nome} no meio do diálogo: perde ${r.total} de Humanidade (${a.humanidade.atual}).`;
+  danoTemporario(a, 'humanidade', r.total);
+  const texto = `${a.nome} partiu para a agressão contra ${b.nome} no meio do diálogo: perde ${r.total} de Humanidade temporária (${a.humanidade.atual}).`;
   registrar(soc.log, { autor: a.nome, rotulo: 'Agressão súbita', texto });
   return texto;
 }
@@ -759,9 +767,12 @@ export const acoes = {
     if (!arma) throw erro('Arma não equipada.');
     // Munição: cada ataque com arma de fogo gasta 1 (cadência natural).
     const itemArma = (a.itens || []).find(i => i.uid === arma.uid);
+    // Cadência: a arma dispara "cadência" balas por ataque (com menos balas, dispara as que tiver).
+    op.disparos = arma.cadencia || 1;
     if (itemArma?.capacidade) {
       if ((itemArma.carregada || 0) < 1) throw erro(`${itemArma.nome} está sem munição. Recarregue antes de atirar.`);
-      itemArma.carregada -= 1;
+      op.disparos = Math.min(op.disparos, itemArma.carregada);
+      itemArma.carregada -= op.disparos;
     }
     if (op.danoLivre) {
       try { rolarDado(op.danoLivre); } catch { throw erro(`Dano inválido: ${op.danoLivre}`); }
@@ -794,7 +805,7 @@ export const acoes = {
     s.pendentes = s.pendentes.filter(x => x.id !== id);
     // Ataque cancelado devolve a bala.
     const arma = pend.municao && a.itens.find(i => i.uid === pend.municao);
-    if (arma) arma.carregada = Math.min(arma.capacidade, (arma.carregada || 0) + 1);
+    if (arma) arma.carregada = Math.min(arma.capacidade, (arma.carregada || 0) + (pend.opcoes?.disparos || 1));
   },
 
   'combate.ip'(c, { id, ipExtra, rmnpExtra }, ctx) {
@@ -821,21 +832,55 @@ export const acoes = {
     }
     const h = sis.social.humores.find(x => x.id === humor);
     if (!h) throw erro('Humor desconhecido.');
-    if (!ctx.mestre && !h.escolha) {
+    // Rebote: o alvo escolhe entre as opções da matriz (sem custo; o humor fica imposto).
+    const doRebote = (p.humorOpcoes || []).includes(h.id);
+    if (!ctx.mestre && !h.escolha && !doRebote) {
       throw erro('Você só escolhe Neutro, Amigável, Indisposto ou Apático; os outros humores vêm de manipulação ou do mestre.');
     }
-    if ((p.humor || 'neutro') === h.id) return;
+    if ((p.humor || 'neutro') === h.id && !doRebote) return;
     let texto = h.nome;
-    // Dissonância: o jogador age contra um humor imposto (manipulação ou mestre) — a mente racha: dano de Sanidade.
-    if (!ctx.mestre && p.humorImposto && p.sanidade) {
+    if (doRebote) {
+      texto += ' (rebote)';
+    } else if (!ctx.mestre && h.id === 'apatico') {
+      // Apático: resistir a um efeito social custa só Humanidade (temporária).
+      const r = rolarDado(h.danoHumanidade || '1d6');
+      danoTemporario(p, 'humanidade', r.total);
+      texto += ` — perde ${r.total} de Humanidade temporária (${p.humanidade?.atual ?? '-'})`;
+    } else if (!ctx.mestre && p.humorImposto && p.sanidade) {
+      // Dissonância: agir contra o humor imposto — a mente racha: dano de Sanidade temporária.
       const r = rolarDado(sis.social.dissonancia?.dano || '1d6');
-      p.sanidade.atual = Math.max(0, p.sanidade.atual - r.total);
-      texto += ` — quebrou o humor imposto (${nomeH(p.humor)}): perde ${r.total} de Sanidade (${p.sanidade.atual})`;
+      danoTemporario(p, 'sanidade', r.total);
+      texto += ` — quebrou o humor imposto (${nomeH(p.humor)}): perde ${r.total} de Sanidade temporária (${p.sanidade.atual})`;
     }
     p.humor = h.id;
-    p.humorImposto = ctx.mestre && h.id !== 'neutro';
+    p.humorOpcoes = [];
+    p.humorImposto = doRebote || (ctx.mestre && h.id !== 'neutro');
     if (p.humorAparente === p.humor) p.humorAparente = null;
     registrar(c.salas.social.log, { autor: p.nome, rotulo: `Humor de ${p.nome}`, texto: p.humorAparente ? `${texto} (por trás da máscara)` : texto, privadoPara: p.humorAparente ? (p.donoId || ctx.user.id) : null });
+  },
+
+  // Teste de Consciência (descanso longo): WILL% contra ND 100. Sucesso devolve a Sanidade e a Humanidade temporárias;
+  // falha deixa a perda permanente. Uma tentativa por descanso.
+  'consciencia.testar'(c, { id }, ctx) {
+    const sis = sistema(c.sistema);
+    const p = personagem(c, id);
+    exigirDonoOuMestre(ctx, p);
+    const san = p.sanidade?.temporario || 0;
+    const hum = p.humanidade?.temporario || 0;
+    if (!san && !hum) throw erro('Não há dano temporário de Sanidade ou Humanidade.');
+    const r = testeDMil(derivados(p, sis).percentual.WILL ?? 0, 100, sis);
+    const partes = [san ? `${san} de Sanidade` : null, hum ? `${hum} de Humanidade` : null].filter(Boolean).join(' e ');
+    if (r.sucesso) {
+      if (san) p.sanidade.atual = Math.min(p.sanidade.max, p.sanidade.atual + san);
+      if (hum) p.humanidade.atual = Math.min(p.humanidade.max, p.humanidade.atual + hum);
+    }
+    if (p.sanidade) p.sanidade.temporario = 0;
+    if (p.humanidade) p.humanidade.temporario = 0;
+    const entrada = { tipo: 'dmil', autor: p.nome, rotulo: 'Teste de Consciência (WILL%)', acaoNome: 'Consciência', mod: 0, ...r,
+      texto: undefined, consciencia: r.sucesso ? `recupera ${partes}` : `a perda de ${partes} fica permanente` };
+    registrar(c.log, entrada);
+    registrar(c.log, { autor: p.nome, rotulo: 'Consciência', texto: r.sucesso ? `${p.nome} recupera ${partes}.` : `${p.nome} não recupera: a perda de ${partes} fica permanente.` });
+    return entrada;
   },
 
   // Da conversa para a briga: leva os dois ao Campo de Batalha e cobra a agressão súbita.
@@ -876,7 +921,7 @@ export const acoes = {
     const per = sis.pericias.find(x => x.id === 'manipulacao');
     const nomeSub = per?.subpericias.find(x => x.id === sub)?.nome || sub;
     const nomeEsp = sis.social.espectros?.[espectro]?.nome || espectro;
-    const mudar = novo => { b.humor = novo; b.humorAparente = null; b.humorImposto = novo !== 'neutro'; };
+    const mudar = novo => { b.humor = novo; b.humorAparente = null; b.humorImposto = novo !== 'neutro'; b.humorOpcoes = []; };
     let resultado;
     if (r.sucesso && r.ler) {
       // A quebra da máscara: só quem testou vê o humor real.
@@ -891,6 +936,11 @@ export const acoes = {
     } else if (r.rebote && r.rebote !== 'neutro') {
       mudar(r.rebote);
       resultado = `FALHOU — rebote (${nomeEsp}): ${b.nome} fica ${nomeH(r.rebote)}`;
+    } else if (r.opcoesRebote.length) {
+      // Duas opções: quem controla o alvo escolhe (o humor fica pendente até a escolha).
+      b.humorOpcoes = r.opcoesRebote;
+      b.humorAparente = null;
+      resultado = `FALHOU — rebote (${nomeEsp}): ${b.nome} escolhe ficar ${r.opcoesRebote.map(nomeH).join(' ou ')}`;
     } else {
       resultado = 'FALHOU — sem efeito';
     }

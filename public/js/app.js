@@ -49,10 +49,14 @@ function tela() {
 
 definirRender(desenhar);
 
+let reiniciando = false;
+
 export function iniciarSessao(s) {
   estado.usuario = s.user;
   conectar(s.token, {
     connect: async () => {
+      // Voltou depois do "Atualizar agora": recarrega a página para pegar a versão nova.
+      if (reiniciando) { location.reload(); return; }
       estado.conectado = true;
       // Reconexão: volta para a campanha em que estava.
       if (estado.tela === 'campanha' && estado.campanha) {
@@ -84,6 +88,10 @@ export function iniciarSessao(s) {
       const vez = vezDe(c);
       const p = vez && c.personagens.find(x => x.id === vez.id);
       if (vez && vez.chave !== vezAntes?.chave && p?.donoId === estado.usuario?.id && c.papel !== 'mestre') aviso(`Sua vez: ${p.nome} (rodada ${vez.rodada}).`);
+    },
+    'app:reiniciando': () => {
+      reiniciando = true;
+      aviso('O app está sendo atualizado. A página recarrega sozinha em alguns segundos.');
     },
     'sistema:atualizado': () => recarregarSistema().then(() => aviso('O catálogo de itens foi atualizado.')),
     expulso: msg => {

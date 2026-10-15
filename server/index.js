@@ -5,7 +5,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import multer from 'multer';
 import { Server } from 'socket.io';
-import { db, save, uid, RAIZ, UPLOADS } from './db.js';
+import { db, save, flush, uid, RAIZ, UPLOADS } from './db.js';
+import { execSync } from 'node:child_process';
 import { registrar, entrar, usuarioDoToken, sair } from './auth.js';
 import { sistema, listaSistemas, CONTEUDO } from './sistema.js';
 import { novaCampanha, resumoCampanha, visaoPara, entrarNaCampanha, executar, acoes } from './actions.js';
@@ -160,6 +161,43 @@ app.post('/api/itens/padrao', rota(req => {
   voltarCatalogoPadrao();
   io.emit('sistema:atualizado');
   return origemCatalogo();
+}));
+
+// ---------- versão e atualização do app ----------
+// O iniciar-windows.bat (iniciar.ps1) baixa a versão nova do GitHub ao abrir. O botão "Atualizar agora" fecha o servidor
+// com o código 75; o iniciar.ps1 então atualiza e abre de novo, e as páginas recarregam sozinhas.
+const REPO = 'belugaferrari/RUINAS-MSA';
+function versaoAtual() {
+  try { return fs.readFileSync(path.join(RAIZ, 'versao.txt'), 'utf8').trim(); } catch { /* sem versao.txt */ }
+  try { return execSync('git rev-parse HEAD', { cwd: RAIZ, stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim(); } catch { return null; }
+}
+let ultimaConsulta = { em: 0, sha: null };
+async function versaoNova() {
+  if (Date.now() - ultimaConsulta.em < 5 * 60 * 1000) return ultimaConsulta.sha;
+  const r = await fetch(`https://api.github.com/repos/${REPO}/commits/HEAD`, { headers: { Accept: 'application/vnd.github.sha', 'User-Agent': 'ilhas-das-ruinas' }, signal: AbortSignal.timeout(15000) });
+  if (!r.ok) throw new Error('Não foi possível consultar o GitHub agora.');
+  ultimaConsulta = { em: Date.now(), sha: (await r.text()).trim() };
+  return ultimaConsulta.sha;
+}
+const VERSAO_INICIAL = versaoAtual();
+
+app.get('/api/versao', rota(async req => {
+  autenticado(req);
+  const atual = VERSAO_INICIAL;
+  let nova = null; let aviso = null;
+  if (req.query.verificar) {
+    try { nova = await versaoNova(); } catch (e) { aviso = e.message; }
+  }
+  return { atual, nova, haNova: !!(nova && atual && nova !== atual), podeReiniciar: !!process.env.ILHAS_INICIADOR, aviso };
+}));
+
+app.post('/api/atualizar', rota(req => {
+  exigirAlgumMestre(req);
+  if (!process.env.ILHAS_INICIADOR) throw new Error('Este app não foi aberto pelo iniciar-windows.bat: feche a janela preta e abra o iniciar-windows.bat de novo para atualizar.');
+  io.emit('app:reiniciando');
+  flush();
+  setTimeout(() => process.exit(75), 800);
+  return { ok: true };
 }));
 
 // ---------- tempo real ----------

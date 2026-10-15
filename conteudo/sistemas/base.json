@@ -698,22 +698,26 @@
  "instintos": [
   {
    "id": "sobrevivente",
-   "nome": "Sobrevivente"
+   "nome": "Sobrevivente",
+   "descricao": "Quando perde o controle, foge do perigo e procura abrigo. Abandona objetivos, itens pesados e até aliados se isso garantir mais um dia de vida; só luta encurralado."
   },
   {
    "id": "protetor",
-   "nome": "Protetor"
+   "nome": "Protetor",
+   "descricao": "Quando perde o controle, se coloca entre o perigo e quem considera seu (família, grupo, os mais fracos). Avança contra a ameaça mais próxima desses e não recua enquanto eles estiverem em risco."
   },
   {
    "id": "altruista",
-   "nome": "Altruísta"
+   "nome": "Altruísta",
+   "descricao": "Quando perde o controle, corre para ajudar quem está sofrendo, mesmo desconhecidos ou inimigos feridos, ignorando o próprio risco e as ordens do grupo."
   },
   {
    "id": "dominador",
-   "nome": "Dominador"
+   "nome": "Dominador",
+   "descricao": "Quando perde o controle, tenta impor a própria vontade: dá ordens, ameaça, toma o que quer e ataca quem o desafia ou desobedece. Não aceita parecer fraco."
   }
  ],
- "_avisoInstintos": "Lista parcial (o autor citou estes 4); falta a lista completa com descrições.",
+ "_avisoInstintos": "Os instintos guiam o mestre quando o personagem perde o controle (parte do inconsciente). Sem regra mecânica; descrições escritas pelo app a partir do exemplo do autor.",
  "social": {
   "_aviso": "Sala Social (padrão enviado pelo autor em 15/10, vale para MSA e MSS). Valores marcados como provisórios em PENDENCIAS.md.",
   "resistenciaBase": "manipulacao",

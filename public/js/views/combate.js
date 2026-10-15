@@ -193,7 +193,10 @@ export function humorCartao(p, controla, mestre) {
     if (!mestre && p.humorImposto && v !== real && !(await confirmar(`${nomeHumor(real)} foi imposto. Agir contra ele (dissonância) custa ${estado.sistema.social?.dissonancia?.dano || '1d6'} de Sanidade. Mudar mesmo assim?`))) return render();
     acao('humor.definir', { id: p.id, humor: v }).catch(e => aviso(e.message, 'erro'));
   };
+  const rebote = p.humorOpcoes || [];
   return h('div', { class: 'humor' },
+    rebote.length ? h('div', { class: 'rebote' }, h('strong', {}, icone('circle-alert'), ' Rebote: escolha o humor de ', p.nome, ' '),
+      rebote.map(id => botao(nomeHumor(id), () => acao('humor.definir', { id: p.id, humor: id }), { class: 'pequeno primario', title: `${p.nome} fica ${nomeHumor(id)}` }))) : null,
     h('label', { class: 'linha' }, icone('smile'), h('small', {}, 'Real'),
       selecao(permitidos.map(x => ({ valor: x.id, rotulo: x.nome })), real, mudarReal, { 'aria-label': `Humor real de ${p.nome}` })),
     h('label', { class: 'linha' }, icone('drama'), h('small', {}, 'Máscara'),

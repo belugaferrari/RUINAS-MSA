@@ -1,6 +1,6 @@
 import { h, abas, botao, campo, selecao, aviso, confirmar, pedirTexto, janela, vazio, icone, titulo } from '../ui.js';
 import { estado, mudar, render, personagemPorId } from '../estado.js';
-import { acao, emitir, enviarArquivo } from '../api.js';
+import { acao, emitir, enviarArquivo, get, post } from '../api.js';
 import { topo, carregarSaguao, listaSistemas } from './saguao.js';
 import { fichaView } from './ficha.js';
 import { salaView } from './salas.js';
@@ -277,8 +277,36 @@ function abaCampanha() {
         h('label', { class: 'linha' }, h('input', { type: 'checkbox', checked: c.dadosNaTela !== false, onchange: e => acao('campanha.atualizar', { dadosNaTela: e.target.checked }) }),
           'Mostrar as rolagens (D-MIL) na tela de todos'),
         h('p', { class: 'dica' }, 'Desligada (padrão): ao editar fichas de jogador, o mestre segue os mesmos limites de pontos da criação e só sobe o nível com o XP necessário. Ligue só para corrigir fichas.'))),
+    versaoApp(),
     h('section', { class: 'bloco' },
       titulo('Anotações da campanha', 'notebook-pen'),
       h('p', { class: 'dica' }, 'Só você vê este texto.'),
       campo('c:notas', c.anotacoes, v => acao('campanha.atualizar', { anotacoes: v }), { multilinha: true, rows: 22 })));
 }
+
+// Versão do app e o botão "Atualizar agora" (baixa do GitHub, reinicia e recarrega a página de todos).
+function versaoApp() {
+  const v = estado.sel.versaoApp;
+  const verificar = async () => {
+    estado.sel.versaoApp = { ...(v || {}), verificando: true };
+    render();
+    try { estado.sel.versaoApp = await get('/api/versao?verificar=1'); } catch (e) { estado.sel.versaoApp = { aviso: e.message }; }
+    render();
+  };
+  return h('section', { class: 'bloco' },
+    titulo('Versão do app', 'refresh-cw'),
+    v?.atual ? h('p', { class: 'meta' }, `Versão em uso: ${v.atual.slice(0, 7)}`) : null,
+    v?.verificando ? h('p', { class: 'dica' }, 'Procurando no GitHub…')
+      : v?.haNova ? h('p', { class: 'alerta' }, icone('sparkles'), ' Há uma versão nova do app.')
+        : v?.nova ? h('p', { class: 'dica' }, icone('check'), ' O app está na versão mais nova.') : null,
+    v?.aviso ? h('p', { class: 'dica' }, v.aviso) : null,
+    h('div', { class: 'barra' },
+      botao('Procurar atualização', verificar, { icone: 'search' }),
+      v?.haNova ? botao('Atualizar agora', async () => {
+        if (!v.podeReiniciar) throw new Error('Feche a janela preta e abra o iniciar-windows.bat de novo para atualizar.');
+        if (!(await confirmar('Baixar a versão nova e reiniciar o app? Todos ficam alguns segundos desconectados e a página recarrega sozinha.'))) return;
+        await post('/api/atualizar', {});
+      }, { class: 'primario', icone: 'download' }) : null),
+    h('p', { class: 'dica' }, 'O app também se atualiza sozinho toda vez que o iniciar-windows.bat é aberto.'));
+}
+

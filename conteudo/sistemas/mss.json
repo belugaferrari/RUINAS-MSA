@@ -78,6 +78,9 @@
    "Ácido": 8,
    "Radiação": 10
   },
-  "_avisoChance": "Margem do efeito de dano por tipo (DS ≤ valor), da planilha 'regras gerais'. Item com 'App: efeito de dano' usa o próprio valor."
+  "_avisoChance": "Margem do efeito de dano por tipo (DS ≤ valor), da planilha 'regras gerais'. Item com 'App: efeito de dano' usa o próprio valor.",
+  "cadencia": {
+   "armas-de-fogo.rifle-de-assalto": 2
+  }
  }
 }

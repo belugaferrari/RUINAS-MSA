@@ -110,15 +110,25 @@ Regra combinada: **o livro é mais atual**; das planilhas só entra o que o livr
 - **Máscara**: humor real (oculto; dá os bônus/ônus) × humor aparente (o que a sala vê). Empatia → "ler o humor real": no sucesso, só quem testou vê "A máscara caiu…".
 - **Dissonância**: agir contra o humor imposto = dano de Sanidade. **Agressão súbita**: atacar um humano no meio do diálogo = dano de Humanidade.
 
+- **Rebote com duas opções**: o alvo escolhe (botões no cartão dele).
+- **Dano temporário**: dissonância (Sanidade), agressão súbita e Apático (Humanidade) são temporários; no descanso longo, teste de **Consciência** (WILL%, ND 100) recupera.
+- **Apático** custa só Humanidade (1D6 temporária); quebrar outro humor imposto custa Sanidade.
+
 **Provisório — conferir**
-- Quando o rebote tem duas opções ("Indisposto ou Desconfiado"), o app sorteia uma. "Neutro" no rebote = sem efeito.
-- Dano da dissonância e da agressão: 1d6 (o texto não dá o valor).
+- "Neutro" sozinho no rebote = sem efeito.
+- Dano da dissonância e da agressão: 1d6 temporário (valor ainda não definido pelo autor).
+- Teste de Consciência que falha: a perda temporária vira permanente (uma tentativa por descanso longo).
 - Dissonância: só quando o jogador muda o humor real que foi imposto (por manipulação ou pelo mestre). A máscara não conta como quebra.
-- Apático deixou de custar 1D6 de Humanidade (regra do livro MSS): agora quebrar um humor imposto custa Sanidade. Confirmar se ficam as duas.
 - Agressão súbita: vale quando atacante e alvo estão os dois na Sala Social; uma vez por agressor até a sala ser esvaziada; criaturas do Livro dos Monstros não são humanas.
 - O rebote e a manipulação bem-sucedida tiram a máscara do alvo (a reação aparece para todos).
 - Impressionar, Interrogatório, Tortura e Etiqueta mantêm os humores do livro e ficam sem rebote até chegar a matriz delas.
 
 ## Itens: o que os jogadores veem
 - Jogadores veem Mundano, Comum e Incomum. Acima disso só com o mestre liberando: todos de uma vez (Loja → "Jogadores veem todos os itens") ou item a item (botão "Liberar"). O servidor também não deixa comprar item escondido.
+
+## Respostas do autor (15/10, fim do dia)
+- **Instintos**: guiam o mestre quando o personagem perde o controle (inconsciente), sem regra mecânica. O app traz uma descrição para Sobrevivente, Protetor, Altruísta e Dominador.
+- **Cadência**: como no livro — cadência 2 (Rifle de Assalto) gasta 2 balas por ataque e dá 2 danos (cada um desconta o IP; crítico, localizado e bônus entram no primeiro). Coluna opcional "App: cadência" nos itens.
+- **Humanidade 51**: limite mínimo só na criação; durante o jogo pode cair abaixo.
+- **Lembrar o autor**: rebote de Impressionar, Interrogatório, Tortura e Etiqueta ("nem toda manipulação causa rebote").
 

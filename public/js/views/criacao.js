@@ -3,7 +3,7 @@ import { TIPOS } from './livros.js';
 import { estado, render, mudar } from '../estado.js';
 import { acao } from '../api.js';
 import { novaFicha, pontosDoNivel, pontosGastos, pontosPericiaTotal, pontosVantagemExtra, derivados, problemasFicha, custoPericiaBase, vantagensDisponiveis, acharVantagem } from '/shared/regras.js';
-import { ICONE_TIPO } from './ficha.js';
+import { ICONE_TIPO, descInstinto } from './ficha.js';
 import { painelPericias } from './pericias.js';
 
 const PASSOS = [
@@ -89,6 +89,8 @@ function passoIdentidade() {
       { rotuloOutra: 'Outra…', placeholder: 'Qual a motivação?', props: { 'aria-label': 'Motivação' }, redesenhar: render })),
     h('label', {}, 'Instinto', escolhaComOutra('cr:instinto', (sis.instintos || []).map(x => x.nome), f.instinto, v => alterar(x => { x.instinto = v; }),
       { rotuloOutra: 'Outro…', placeholder: 'Qual o instinto?', props: { 'aria-label': 'Instinto' }, redesenhar: render })),
+    descInstinto(f.instinto),
+    h('p', { class: 'dica' }, 'O instinto é o inconsciente do personagem: guia o mestre quando ele perde o controle.'),
     h('label', {}, 'Aparência e jeito de agir',
       h('textarea', { rows: 3, 'data-key': 'cr:caracteristicas', value: f.caracteristicas, oninput: e => { f.caracteristicas = e.target.value; salvarRascunho(); } })),
     h('p', { class: 'dica' }, 'A foto do personagem é enviada depois, na própria ficha.'));

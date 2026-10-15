@@ -610,3 +610,5 @@ mark.revisao { background: #5a4510; color: #ffe7a8; border-bottom: 1px dashed va
 .seta-vazia { width: 34px; }
 .linha-pericia .nome small.selo { margin-left: .3em; }
 @media (max-width: 560px) { .trilha-compacta { grid-template-columns: 6.2em auto 1fr auto; } }
+.rebote { display: flex; flex-wrap: wrap; align-items: center; gap: .3em; padding: .3em .5em; border: 1px dashed #c0392b; border-radius: 8px; width: 100%; }
+.temporarios { display: flex; flex-wrap: wrap; align-items: center; gap: .5em; font-size: .9em; padding: .25em .5em; border-left: 3px solid var(--ouro); background: var(--painel); }
