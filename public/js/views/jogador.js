@@ -119,7 +119,7 @@ function evoluirView(p) {
   const mudou = k => JSON.stringify(f[k]) !== JSON.stringify(p[k]);
   const ppTotal = pontosPericiaTotal(f, sis);
   // Tabela de Progressão por Nível: +2 de atributo por nível e +1 vantagem nos níveis pares.
-  const ptsNivel = pontosDoNivel(f.nivel, sis, estado.campanha);
+  const ptsNivel = pontosDoNivel(f.nivel, sis, estado.campanha, f);
   const gastos = pontosGastos(f, sis);
   const atrRestam = ptsNivel.atributos - gastos.atributos;
   const vantTotal = ptsNivel.vantagens + pontosVantagemExtra(f, sis);
@@ -154,9 +154,9 @@ function evoluirView(p) {
           h('ul', { class: 'ganhos' }, novosGanhos.map(g => h('li', { title: g.descricao }, h('span', { class: 'selo' }, `nv ${g.nivel}`), ' ', g.nome)))) : null,
         h('p', { class: 'meta' }, `PV máx. ${p.pv.max} → ${d.pvMax} · Sanidade máx. ${p.sanidade.max} → ${d.sanidadeMax}`)),
       ganhoNivel > 0 ? h('section', { class: 'bloco largo' }, titulo(`Subindo ${ganhoNivel} nível${ganhoNivel > 1 ? 'is' : ''}`, 'trending-up'),
-        h('p', {}, `Pela Tabela de Progressão: +${ptsNivel.atributos - pontosDoNivel(p.nivel, sis, estado.campanha).atributos} de atributo, `,
+        h('p', {}, `Pela Tabela de Progressão: +${ptsNivel.atributos - pontosDoNivel(p.nivel, sis, estado.campanha, p).atributos} de atributo, `,
           `+${pontosPericiaTotal(f, sis) - pontosPericiaTotal({ ...f, nivel: p.nivel }, sis)} de perícia, `,
-          `+${ptsNivel.vantagens - pontosDoNivel(p.nivel, sis, estado.campanha).vantagens} de vantagem e +${(sis.regras.progressao?.porNivel?.pv ?? 5) * ganhoNivel} de PV.`)) : null,
+          `+${ptsNivel.vantagens - pontosDoNivel(p.nivel, sis, estado.campanha, p).vantagens} de vantagem e +${(sis.regras.progressao?.porNivel?.pv ?? 5) * ganhoNivel} de PV.`)) : null,
       h('section', { class: 'bloco' }, titulo(`Atributos (máx. ${d.atributoMax} no nível ${f.nivel})`, 'zap'),
         h('div', { class: `contador ${atrRestam < 0 ? 'perigo' : atrRestam === 0 ? 'ok' : ''}` }, `Pontos de atributo: ${gastos.atributos} de ${ptsNivel.atributos} · restam ${atrRestam}`),
         h('div', { class: 'valores' }, sis.atributos.map(a => h('div', { class: `valor-linha ${f.atributos[a.sigla] !== p.atributos[a.sigla] ? 'marcado' : ''}` },
@@ -177,7 +177,9 @@ function evoluirView(p) {
         })),
       h('section', { class: 'bloco largo' }, titulo('Novas vantagens', 'sparkles'),
         h('div', { class: `contador ${vantRestam < 0 ? 'perigo' : vantRestam === 0 ? 'ok' : ''}` }, `Pontos de vantagem: ${gastos.vantagens} de ${vantTotal} · restam ${vantRestam}`),
-        h('p', { class: 'dica' }, 'Nos níveis marcados como "Vantagem Extra" na tabela da classe você escolhe entre as vantagens gerais e as da sua classe.'),
+        h('p', { class: 'dica' }, f.classe
+          ? 'Com classe, as vantagens vêm só da tabela da classe: em cada "Vantagem Extra" você escolhe uma vantagem geral ou da sua classe (o +1 dos níveis pares da Tabela de Progressão não conta mais).'
+          : 'Sem classe, a Tabela de Progressão dá +1 ponto de vantagem nos níveis pares.'),
         vantRestam <= 0 ? h('p', { class: 'dica' }, 'Sem pontos de vantagem sobrando neste nível.') : selecao([{ valor: '', rotulo: '+ adicionar vantagem' }, ...vantagensDisponiveis(f, sis).filter(v => !f.vantagens.includes(v.id)).map(v => ({ valor: v.id, rotulo: v.nome + (v.requisito ? ` [${v.requisito}]` : '') + (v.origem !== 'Geral' ? ` — ${v.origem}` : '') }))], '',
           v => v && muda(x => { x.vantagens = [...x.vantagens, v]; })),
         h('ul', { class: 'lista-inline' }, f.vantagens.filter(id => !p.vantagens.includes(id)).map(id => h('li', {}, acharVantagem(id, sis)?.nome,

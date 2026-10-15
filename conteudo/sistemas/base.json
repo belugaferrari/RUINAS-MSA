@@ -270,26 +270,44 @@
   "Psíquico"
  ],
  "estados": [
-  "Cansado (-10%)",
-  "Exausto (-20%)",
-  "Desmaiado",
-  "Confuso",
-  "Humorado – mal estar",
-  "Humorado – bem estar",
-  "Satisfeito",
-  "Alerta",
-  "Drogado",
-  "Abstinência",
+  "Fome",
+  "Sede",
+  "Sono",
+  "Doença",
+  "Friagem",
+  "Cansado",
+  "Exausto",
   "Dor",
   "Sangramento",
   "Ferida aberta",
   "Queimadura",
   "Envenenado",
-  "Enraizado",
+  "Dano a membros superiores",
+  "Dano a membros inferiores",
+  "Caído",
   "Paralisado",
-  "Aturdido",
+  "Enraizado",
   "Desorientado",
-  "Vertigem"
+  "Aturdido",
+  "Vertigem",
+  "Imobilizado",
+  "Desmaiado",
+  "Estabilizado",
+  "Confuso",
+  "Alerta",
+  "Trauma momentâneo",
+  "Trauma agudo",
+  "Trauma profundo",
+  "Humorado – mal-estar",
+  "Humorado – bem-estar",
+  "Satisfeito",
+  "Drogado",
+  "Viciado",
+  "Abstinência – fase 1",
+  "Abstinência – fase 2",
+  "Abstinência – fase 3",
+  "Marcador de vulnerabilidade",
+  "Marcador genético"
  ],
  "finalidadesItens": [
   "Alimentação",
@@ -988,5 +1006,294 @@
    "dano": "1d6",
    "descricao": "Atacar um humano no meio do diálogo: dano de Humanidade."
   }
- }
+ },
+ "condicoes": [
+  {
+   "id": "fome",
+   "nome": "Fome",
+   "grupo": "Necessidades",
+   "efeitos": "CONS −1 e −5% em todos os testes. Acumula a cada dia.",
+   "atributos": {
+    "CONS": -1
+   },
+   "testes": -5,
+   "acumula": true
+  },
+  {
+   "id": "sede",
+   "nome": "Sede",
+   "grupo": "Necessidades",
+   "efeitos": "CONS −1 e −5% em todos os testes. Acumula a cada 12h.",
+   "atributos": {
+    "CONS": -1
+   },
+   "testes": -5,
+   "acumula": true
+  },
+  {
+   "id": "sono",
+   "nome": "Sono",
+   "grupo": "Necessidades",
+   "efeitos": "PER −2, INT −2 e −10% nos testes. Acumula a cada dia.",
+   "atributos": {
+    "PER": -2,
+    "INT": -2
+   },
+   "testes": -10,
+   "acumula": true
+  },
+  {
+   "id": "doenca",
+   "nome": "Doença",
+   "grupo": "Necessidades",
+   "efeitos": "CONS −2 e −10% em todos os testes. Pode agravar (acumula).",
+   "atributos": {
+    "CONS": -2
+   },
+   "testes": -10,
+   "acumula": true
+  },
+  {
+   "id": "friagem",
+   "nome": "Friagem",
+   "grupo": "Necessidades",
+   "efeitos": "−10% em todos os testes; +1 marcador de vulnerabilidade a cada 15 min.",
+   "testes": -10
+  },
+  {
+   "id": "cansado",
+   "nome": "Cansado",
+   "grupo": "Fadiga",
+   "efeitos": "−10% em todos os testes.",
+   "testes": -10
+  },
+  {
+   "id": "exausto",
+   "nome": "Exausto",
+   "grupo": "Fadiga",
+   "efeitos": "−20% em todos os testes; não corre nem carrega acima do carregamento.",
+   "testes": -20
+  },
+  {
+   "id": "dor",
+   "nome": "Dor",
+   "grupo": "Dano",
+   "efeitos": "FOR −2 por 1D4 turnos (acumula até 3 vezes).",
+   "atributos": {
+    "FOR": -2
+   },
+   "acumula": true
+  },
+  {
+   "id": "sangramento",
+   "nome": "Sangramento",
+   "grupo": "Dano",
+   "efeitos": "1 PV a cada 1D4 turnos, até 6 PV."
+  },
+  {
+   "id": "ferida-aberta",
+   "nome": "Ferida aberta",
+   "grupo": "Dano",
+   "efeitos": "Recebe 1 PV a cada Ação Principal."
+  },
+  {
+   "id": "queimadura",
+   "nome": "Queimadura",
+   "grupo": "Dano",
+   "efeitos": "+1 de dano sempre que for acertado; marcador de vulnerabilidade."
+  },
+  {
+   "id": "envenenado",
+   "nome": "Envenenado",
+   "grupo": "Dano",
+   "efeitos": "Efeito descrito no veneno."
+  },
+  {
+   "id": "membros-superiores",
+   "nome": "Dano a membros superiores",
+   "grupo": "Dano",
+   "efeitos": "Testes com o membro ferido 20% mais difíceis (aplicar no teste)."
+  },
+  {
+   "id": "membros-inferiores",
+   "nome": "Dano a membros inferiores",
+   "grupo": "Dano",
+   "efeitos": "Deslocamento −3 m; disparada causa Dor."
+  },
+  {
+   "id": "caido",
+   "nome": "Caído",
+   "grupo": "Mobilidade",
+   "efeitos": "Ataques físicos contra ele têm vantagem; os dele, desvantagem; cobertura parcial contra tiros."
+  },
+  {
+   "id": "paralisado",
+   "nome": "Paralisado",
+   "grupo": "Mobilidade",
+   "efeitos": "Deslocamento 0; não move o corpo."
+  },
+  {
+   "id": "enraizado",
+   "nome": "Enraizado",
+   "grupo": "Mobilidade",
+   "efeitos": "Deslocamento 0; braços livres."
+  },
+  {
+   "id": "desorientado",
+   "nome": "Desorientado",
+   "grupo": "Mobilidade",
+   "efeitos": "Move-se em direção aleatória (1d8 por passo)."
+  },
+  {
+   "id": "aturdido",
+   "nome": "Aturdido",
+   "grupo": "Mobilidade",
+   "efeitos": "Desorientado; ataques dele em desvantagem e contra ele com vantagem."
+  },
+  {
+   "id": "vertigem",
+   "nome": "Vertigem",
+   "grupo": "Mobilidade",
+   "efeitos": "Aturdido; ao se mover, teste de AGI difícil ou cai."
+  },
+  {
+   "id": "imobilizado",
+   "nome": "Imobilizado",
+   "grupo": "Mobilidade",
+   "efeitos": "Não ataca; ataques contra ele têm vantagem."
+  },
+  {
+   "id": "desmaiado",
+   "nome": "Desmaiado",
+   "grupo": "Estado",
+   "efeitos": "Não pode ser controlado; perde 1 PV por turno abaixo de 0."
+  },
+  {
+   "id": "estabilizado",
+   "nome": "Estabilizado",
+   "grupo": "Estado",
+   "efeitos": "Não perde PV pela sobrevida."
+  },
+  {
+   "id": "confuso",
+   "nome": "Confuso",
+   "grupo": "Mental",
+   "efeitos": "Desvantagem no próximo teste mental (INT, CAR, PER ou WILL)."
+  },
+  {
+   "id": "alerta",
+   "nome": "Alerta",
+   "grupo": "Mental",
+   "efeitos": "+20% em PER e −20% em INT.",
+   "testesAtributos": {
+    "PER": 20,
+    "INT": -20
+   }
+  },
+  {
+   "id": "trauma-momentaneo",
+   "nome": "Trauma momentâneo",
+   "grupo": "Mental",
+   "efeitos": "−30% no combate ofensivo (Briga, Arma Branca, Armas de Fogo).",
+   "testesPericias": {
+    "briga": -30,
+    "arma-branca": -30,
+    "armas-de-fogo": -30
+   }
+  },
+  {
+   "id": "trauma-agudo",
+   "nome": "Trauma agudo",
+   "grupo": "Mental",
+   "efeitos": "INT −5, WILL −5 e −20% em todos os testes.",
+   "atributos": {
+    "INT": -5,
+    "WILL": -5
+   },
+   "testes": -20
+  },
+  {
+   "id": "trauma-profundo",
+   "nome": "Trauma profundo",
+   "grupo": "Mental",
+   "efeitos": "Volta o ônus do trauma até o próximo descanso: −20% nos testes.",
+   "testes": -20
+  },
+  {
+   "id": "mal-estar",
+   "nome": "Humorado – mal-estar",
+   "grupo": "Estado mental",
+   "efeitos": "−5% nos testes (até 1 hora).",
+   "testes": -5
+  },
+  {
+   "id": "bem-estar",
+   "nome": "Humorado – bem-estar",
+   "grupo": "Estado mental",
+   "efeitos": "+5% nos testes (até 1 hora).",
+   "testes": 5
+  },
+  {
+   "id": "satisfeito",
+   "nome": "Satisfeito",
+   "grupo": "Estado mental",
+   "efeitos": "+5% nos testes; +1D4 PV no próximo descanso.",
+   "testes": 5
+  },
+  {
+   "id": "drogado",
+   "nome": "Drogado",
+   "grupo": "Vício",
+   "efeitos": "Efeitos descritos na droga; teste de WILL para não viciar."
+  },
+  {
+   "id": "viciado",
+   "nome": "Viciado",
+   "grupo": "Vício",
+   "efeitos": "WILL −2 (suprimido até o descanso ao usar a droga).",
+   "atributos": {
+    "WILL": -2
+   }
+  },
+  {
+   "id": "abstinencia-1",
+   "nome": "Abstinência – fase 1",
+   "grupo": "Vício",
+   "efeitos": "−10% nos testes de INT, CAR e WILL.",
+   "testesAtributos": {
+    "INT": -10,
+    "CAR": -10,
+    "WILL": -10
+   }
+  },
+  {
+   "id": "abstinencia-2",
+   "nome": "Abstinência – fase 2",
+   "grupo": "Vício",
+   "efeitos": "−15% em todos os testes.",
+   "testes": -15
+  },
+  {
+   "id": "abstinencia-3",
+   "nome": "Abstinência – fase 3",
+   "grupo": "Vício",
+   "efeitos": "−20% em todos os testes; descansos não recuperam PV; 2D6 de Sanidade por dia.",
+   "testes": -20
+  },
+  {
+   "id": "vulnerabilidade",
+   "nome": "Marcador de vulnerabilidade",
+   "grupo": "Marcadores",
+   "efeitos": "Conta no teste de CONS do descanso longo (doença).",
+   "acumula": true
+  },
+  {
+   "id": "genetico",
+   "nome": "Marcador genético",
+   "grupo": "Marcadores",
+   "efeitos": "Conta no teste de CONS do descanso longo (mutação).",
+   "acumula": true
+  }
+ ],
+ "_avisoCondicoes": "Condições do Livro de Regras (efeitos de sobrevivência, dano, mobilidade, mentais e vício). Os números entram sozinhos nas estatísticas da ficha."
 }

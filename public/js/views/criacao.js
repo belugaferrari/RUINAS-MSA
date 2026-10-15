@@ -54,7 +54,7 @@ function passoNivel() {
   const c = estado.campanha;
   const f = estado.criacao.ficha;
   const sis = estado.sistema;
-  const pts = pontosDoNivel(f.nivel, sis, c);
+  const pts = pontosDoNivel(f.nivel, sis, c, f);
   const raca = sis.raca;
   return h('div', { class: 'form' },
     c.nivel === 'Variavel'
@@ -99,7 +99,7 @@ function passoIdentidade() {
 function passoAtributos() {
   const f = estado.criacao.ficha;
   const sis = estado.sistema;
-  const total = pontosDoNivel(f.nivel, sis, estado.campanha).atributos;
+  const total = pontosDoNivel(f.nivel, sis, estado.campanha, f).atributos;
   const gasto = pontosGastos(f, sis).atributos;
   const d = derivados(f, sis);
   return h('div', {},
@@ -167,7 +167,7 @@ function passoClasse() {
 function passoVantagens() {
   const f = estado.criacao.ficha;
   const sis = estado.sistema;
-  const base = pontosDoNivel(f.nivel, sis, estado.campanha).vantagens;
+  const base = pontosDoNivel(f.nivel, sis, estado.campanha, f).vantagens;
   const extra = pontosVantagemExtra(f, sis);
   const gasto = pontosGastos(f, sis).vantagens;
   const total = base + extra;
@@ -277,9 +277,9 @@ function passoRevisao() {
   const erros = problemasFicha(f, sis, estado.campanha);
   const g = pontosGastos(f, sis);
   const sobras = [
-    ['atributo', pontosDoNivel(f.nivel, sis, estado.campanha).atributos - g.atributos],
+    ['atributo', pontosDoNivel(f.nivel, sis, estado.campanha, f).atributos - g.atributos],
     ['perícia', pontosPericiaTotal(f, sis, estado.campanha) - g.pericias],
-    ['vantagem', pontosDoNivel(f.nivel, sis, estado.campanha).vantagens + pontosVantagemExtra(f, sis) - g.vantagens],
+    ['vantagem', pontosDoNivel(f.nivel, sis, estado.campanha, f).vantagens + pontosVantagemExtra(f, sis) - g.vantagens],
   ].filter(([, v]) => v > 0);
   const nome = (lista, id) => lista.find(x => x.id === id)?.nome;
   const treinadas = sis.pericias.flatMap(p => p.subpericias.filter(s => (f.pericias[p.id] || 0) + (f.subpericias[s.id] || 0) > 0).map(s => `${s.nome} ${d.subpericias[s.id]}%`));

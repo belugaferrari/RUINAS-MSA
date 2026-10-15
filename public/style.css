@@ -612,3 +612,22 @@ mark.revisao { background: #5a4510; color: #ffe7a8; border-bottom: 1px dashed va
 @media (max-width: 560px) { .trilha-compacta { grid-template-columns: 6.2em auto 1fr auto; } }
 .rebote { display: flex; flex-wrap: wrap; align-items: center; gap: .3em; padding: .3em .5em; border: 1px dashed #c0392b; border-radius: 8px; width: 100%; }
 .temporarios { display: flex; flex-wrap: wrap; align-items: center; gap: .5em; font-size: .9em; padding: .25em .5em; border-left: 3px solid var(--ouro); background: var(--painel); }
+
+/* Estado: título em cima, barra embaixo (60%), valor no centro */
+.estado-compacto { gap: .55em; }
+.trilha-compacta { display: flex; flex-direction: column; align-items: center; gap: .15em; }
+.trilha-compacta .cabeca { display: flex; align-items: baseline; justify-content: center; gap: .2em; font-size: .92em; }
+.trilha-compacta .cabeca .extra { opacity: .75; margin: 0; }
+.trilha-compacta .linha { display: flex; align-items: center; justify-content: center; gap: .35em; width: 100%; }
+.trilha-compacta .linha .barra-trilha { flex: 0 1 60%; height: 20px; }
+.estado-compacto .marcadores { justify-content: center; }
+.marcadores .etiqueta.com-efeito small { opacity: .8; }
+/* Atributos mais juntos */
+.tabela-atributos.mini { width: auto; }
+.tabela-atributos.mini th, .tabela-atributos.mini td { padding: .12em .5em; }
+/* Lista de condições */
+.lista-condicoes section + section { margin-top: .6em; }
+.lista-condicoes h4 { margin: .2em 0; }
+.lista-condicoes ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .3em; }
+.lista-condicoes li { display: grid; grid-template-columns: auto 1fr; gap: .5em; align-items: start; }
+.lista-condicoes .bloco-texto { display: block; opacity: .8; }

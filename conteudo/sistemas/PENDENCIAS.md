@@ -18,7 +18,7 @@ Pontos em que o app precisou escolher um caminho. Confira e me diga se a escolha
 ## Regras que ainda não existem no livro
 - **Custo de cada vantagem**: o app considera 1 ponto por vantagem.
 - **Custo em XP** da evolução: lançado à mão no Evoluir. Os pontos por nível já seguem a Tabela de Progressão (confirmado: vale para MSA e MSS).
-- **Vantagem Extra das classes × +1 vantagem nos níveis pares da Tabela de Progressão**: o app conta só os +1 dos níveis pares como pontos de vantagem e mostra a "Vantagem Extra" da classe como ganho de classe. Confirme se são a mesma coisa ou se somam.
+- **Vantagem Extra × +1 dos níveis pares** (confirmado): depois que o personagem escolhe a classe, o +1 dos níveis pares da Tabela de Progressão para de contar; valem só as "Vantagem Extra" da tabela da classe (não acumulam). Antes da especialização, conta a tabela da primeira especialização.
 - **Humanidade**: fórmula e estágios (a cada 10 pontos) valem para MSA e MSS (confirmado). Os efeitos de Combate e Social de cada estágio aparecem só como texto.
 - **Disputa** no Confronto (os dois lados rolam): o livro só descreve Ação × Ação passiva. A disputa é provisória — maior total vence, empate pela maior ação, acerto crítico vence quem não tirou crítico.
 - **Tabela de itens** (capítulo 5): o app ainda usa itens de exemplo.
@@ -131,4 +131,9 @@ Regra combinada: **o livro é mais atual**; das planilhas só entra o que o livr
 - **Cadência**: como no livro — cadência 2 (Rifle de Assalto) gasta 2 balas por ataque e dá 2 danos (cada um desconta o IP; crítico, localizado e bônus entram no primeiro). Coluna opcional "App: cadência" nos itens.
 - **Humanidade 51**: limite mínimo só na criação; durante o jogo pode cair abaixo.
 - **Lembrar o autor**: rebote de Impressionar, Interrogatório, Tortura e Etiqueta ("nem toda manipulação causa rebote").
+
+## Condições (marcadores)
+- A lista vem do livro (necessidades, fadiga, dano, mobilidade, mental, estado mental, vício, marcadores). Os números entram sozinhos na ficha: atributos (ex.: Fome CONS −1), % de todos os testes (Cansado −10%), % por atributo (Alerta PER +20 / INT −20) e % de perícias (Trauma momentâneo −30% em Briga, Arma Branca e Armas de Fogo). As que acumulam (Fome, Sede, Sono, Doença, Dor, marcadores) contam cada marcação.
+- PV máximo não muda com a CONS reduzida por condição (provisório).
+- Trauma profundo: −20% nos testes (planilha de regras gerais; o livro só diz "volta o ônus do trauma").
 

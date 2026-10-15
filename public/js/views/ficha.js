@@ -1,4 +1,4 @@
-import { h, campo, botao, selecao, aviso, confirmar, pedirTexto, formatarData, vazio, icone, titulo, tabela, seloRevisao, escolhaComOutra } from '../ui.js';
+import { h, campo, botao, selecao, aviso, confirmar, pedirTexto, formatarData, vazio, icone, titulo, tabela, seloRevisao, escolhaComOutra, janela } from '../ui.js';
 import { estado, render } from '../estado.js';
 import { acao, enviarArquivo } from '../api.js';
 import { derivados, slotsOcupados, ganhosDeClasse, pontosGastos, pontosPericiaTotal, vantagensDisponiveis, acharVantagem, xpParaSubir } from '/shared/regras.js';
@@ -60,10 +60,10 @@ function fichaJogador(p) {
       h('section', { class: 'bloco' }, titulo('Estado', 'heart-pulse'), estadoCompacto(p, d)),
       h('section', { class: 'bloco' }, titulo('Atributos', 'zap'), atributosCompactos(p, d, testar)),
       h('section', { class: 'bloco largo' }, titulo(`Perícias · limite ${d.limitePericia}`, 'target'), periciasCompactas(p, d, testar)),
-      h('section', { class: 'bloco' }, titulo('Profissão e classe', 'shield'), profissaoClasse(p, false)),
+      h('section', { class: 'bloco largo', id: 'equipamento' }, titulo(`Equipamento · IP ${d.defesa} · Carga ${d.carga.toFixed(1)} kg`, 'backpack'), equipamento(p, false)),
       h('section', { class: 'bloco' }, titulo('Vantagens, defeitos e capacidades', 'sparkles'), vantagensView(p, d, false)),
       h('section', { class: 'bloco' }, titulo('Equipado no corpo', 'shirt'), bonecoView(p, {})),
-      h('section', { class: 'bloco largo', id: 'equipamento' }, titulo(`Equipamento · IP ${d.defesa} · Carga ${d.carga.toFixed(1)} kg`, 'backpack'), equipamento(p, false)),
+      h('section', { class: 'bloco largo' }, titulo('Profissão e classe', 'shield'), profissaoClasse(p, false)),
       h('section', { class: 'bloco largo' }, titulo('Anotações', 'notebook-pen'),
         campo(`${p.id}:anotacoes`, p.anotacoes, v => atualizar(p, { anotacoes: v }), { multilinha: true, rows: 5, placeholder: 'Suas anotações…' })),
       h('section', { class: 'bloco largo' }, titulo('Background', 'scroll'),
@@ -85,34 +85,69 @@ function temporarios(p) {
     }, { class: 'pequeno', icone: 'brain', title: 'Recuperar Sanidade e Humanidade temporárias' }));
 }
 
-// Uma linha por trilha: nome, −, barra com o valor, +.
+// Título em cima (nome e estado), barra embaixo com o valor no centro, entre − e +.
 function trilhaCompacta(p, chave, rotulo, ic, extra = null) {
   const t = p[chave] || { max: 0, atual: 0 };
   const pct = Math.max(0, Math.min(100, (100 * t.atual) / (t.max || 1)));
   return h('div', { class: `trilha-compacta ${chave}` },
-    h('span', { class: 'rotulo' }, icone(ic), rotulo),
-    botao('', () => atualizar(p, { [chave]: { ...t, atual: t.atual - 1 } }), { class: 'pequeno', icone: 'minus', title: `Diminuir ${rotulo}` }),
-    h('div', { class: 'barra-trilha', role: 'meter', 'aria-valuemin': 0, 'aria-valuemax': t.max, 'aria-valuenow': t.atual, 'aria-label': rotulo },
-      h('i', { style: { width: `${pct}%` } }), h('span', { class: `valor ${t.atual <= 0 ? 'perigo' : ''}` }, `${t.atual} / ${t.max}`)),
-    botao('', () => atualizar(p, { [chave]: { ...t, atual: Math.min(t.max, t.atual + 1) } }), { class: 'pequeno', icone: 'plus', title: `Aumentar ${rotulo}` }),
-    extra ? h('small', { class: 'extra' }, extra) : null);
+    h('div', { class: 'cabeca' }, h('span', { class: 'rotulo' }, icone(ic), rotulo), extra ? h('small', { class: 'extra' }, ` · ${extra}`) : null),
+    h('div', { class: 'linha' },
+      botao('', () => atualizar(p, { [chave]: { ...t, atual: t.atual - 1 } }), { class: 'pequeno', icone: 'minus', title: `Diminuir ${rotulo}` }),
+      h('div', { class: 'barra-trilha', role: 'meter', 'aria-valuemin': 0, 'aria-valuemax': t.max, 'aria-valuenow': t.atual, 'aria-label': rotulo },
+        h('i', { style: { width: `${pct}%` } }), h('span', { class: `valor ${t.atual <= 0 ? 'perigo' : ''}` }, `${t.atual} / ${t.max}`)),
+      botao('', () => atualizar(p, { [chave]: { ...t, atual: Math.min(t.max, t.atual + 1) } }), { class: 'pequeno', icone: 'plus', title: `Aumentar ${rotulo}` })));
+}
+
+// Lista de condições do livro para marcar no personagem; os efeitos entram sozinhos nas estatísticas.
+export function escolherCondicao(p) {
+  const sis = estado.sistema;
+  const grupos = [...new Set((sis.condicoes || []).map(c => c.grupo))];
+  const ativas = new Set((p.marcadores || []).map(m => m.toLowerCase()));
+  let fechar = () => {};
+  const adicionar = async nome => { await atualizar(p, { marcadores: [...(p.marcadores || []), nome] }); fechar(); };
+  const outro = h('input', { placeholder: 'Outro marcador (texto livre)', 'aria-label': 'Outro marcador' });
+  fechar = janela(`Condições de ${p.nome}`, h('div', { class: 'lista-condicoes' },
+    h('div', { class: 'barra' }, outro, botao('Adicionar', () => { const t = outro.value.trim(); if (t) adicionar(t); }, { icone: 'plus' })),
+    grupos.map(g => h('section', {},
+      h('h4', {}, g),
+      h('ul', {}, (sis.condicoes || []).filter(c => c.grupo === g).map(c => {
+        const tem = ativas.has(c.nome.toLowerCase());
+        return h('li', {},
+          botao(tem && !c.acumula ? 'Já marcada' : c.acumula && tem ? '+1' : 'Marcar', () => adicionar(c.nome), { class: 'pequeno primario', disabled: tem && !c.acumula, title: `Marcar ${c.nome}` }),
+          h('div', {}, h('strong', {}, c.nome), c.acumula ? h('small', { class: 'selo' }, 'acumula') : null, h('small', { class: 'bloco-texto' }, c.efeitos)));
+      }))))));
+}
+
+// Condições ativas com o resumo do efeito; o x tira um marcador.
+function condicoesView(p, d) {
+  const marcadores = p.marcadores || [];
+  const efeito = c => [
+    ...Object.entries(c.atributos || {}).map(([k, v]) => `${k} ${v * c.qtd > 0 ? '+' : ''}${v * c.qtd}`),
+    c.testes ? `${c.testes * c.qtd > 0 ? '+' : ''}${c.testes * c.qtd}% testes` : null,
+    ...Object.entries(c.testesAtributos || {}).map(([k, v]) => `${k}% ${v > 0 ? '+' : ''}${v}`),
+  ].filter(Boolean).join(', ');
+  const doMarcador = m => d.condicoes.find(c => m.toLowerCase().startsWith(c.nome.toLowerCase()));
+  const vistos = new Set();
+  return h('div', { class: 'marcadores' },
+    marcadores.map((m, i) => {
+      const c = doMarcador(m);
+      if (c && vistos.has(c.id)) return null;
+      if (c) vistos.add(c.id);
+      return h('span', { class: `etiqueta ${c && efeito(c) ? 'com-efeito' : ''}`, title: c?.efeitos || m },
+        c ? `${c.nome}${c.qtd > 1 ? ` ×${c.qtd}` : ''}` : m, c && efeito(c) ? h('small', {}, ` ${efeito(c)}`) : null,
+        botao('', () => atualizar(p, { marcadores: marcadores.filter((_, j) => j !== i) }), { class: 'x', icone: 'x', title: `Tirar ${c?.nome || m}` }));
+    }),
+    botao('Marcador', () => escolherCondicao(p), { class: 'pequeno', icone: 'tag', title: 'Escolher uma condição' }));
 }
 
 function estadoCompacto(p, d) {
-  const novoMarcador = async () => {
-    const t = await pedirTexto('Novo marcador', `Ex.: ${estado.sistema.estados.slice(0, 4).join(', ')}`);
-    if (t) await atualizar(p, { marcadores: [...(p.marcadores || []), t] });
-  };
   return h('div', { class: 'estado-compacto' },
     trilhaCompacta(p, 'pv', 'PV', 'heart'),
     trilhaCompacta(p, 'sanidade', 'Sanidade', 'brain', d.estadoSanidade),
     trilhaCompacta(p, 'humanidade', 'Humanidade', 'hand-heart', d.estagioHumanidade?.nome || ''),
     p.humanidade && p.humanidade.atual < 1 ? h('p', { class: 'alerta perigo' }, icone('circle-alert'), ' Humanidade abaixo de 1: só o mestre controla este personagem.') : null,
     temporarios(p),
-    h('div', { class: 'marcadores' },
-      (p.marcadores || []).map((m, i) => h('span', { class: 'etiqueta' }, m,
-        botao('', () => atualizar(p, { marcadores: p.marcadores.filter((_, j) => j !== i) }), { class: 'x', icone: 'x', title: `Remover marcador ${m}` }))),
-      botao('Marcador', novoMarcador, { class: 'pequeno', icone: 'tag' })));
+    condicoesView(p, d));
 }
 
 function atributosCompactos(p, d, testar) {
@@ -251,10 +286,6 @@ function trilha(p, chave, rotulo) {
 }
 
 function trilhas(p, mestre) {
-  const novoMarcador = async () => {
-    const t = await pedirTexto('Novo marcador', `Ex.: ${estado.sistema.estados.slice(0, 4).join(', ')}`);
-    if (t) await atualizar(p, { marcadores: [...(p.marcadores || []), t] });
-  };
   return h('div', {},
     trilha(p, 'pv', 'PV'),
     trilha(p, 'sanidade', 'Sanidade'),
@@ -266,11 +297,7 @@ function trilhas(p, mestre) {
     mestre ? h('div', { class: 'grade3 mini' },
       ...['pv', 'sanidade'].map(k => h('label', {}, `${k === 'pv' ? 'PV' : k[0].toUpperCase() + k.slice(1)} máx.`,
         campo(`${p.id}:${k}:max`, p[k]?.max, v => atualizar(p, { [k]: { ...p[k], max: v } }), { tipo: 'number', min: 0 })))) : null,
-    h('div', { class: 'marcadores' },
-      h('strong', {}, 'Marcadores: '),
-      (p.marcadores || []).map((m, i) => h('span', { class: 'etiqueta' }, m,
-        botao('', () => atualizar(p, { marcadores: p.marcadores.filter((_, j) => j !== i) }), { class: 'x', icone: 'x', title: `Remover marcador ${m}` }))),
-      botao('Marcador', novoMarcador, { class: 'pequeno', icone: 'tag' })));
+    condicoesView(p, derivados(p, estado.sistema)));
 }
 
 function estagioHumanidade(p) {

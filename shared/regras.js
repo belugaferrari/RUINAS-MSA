@@ -100,13 +100,22 @@ export function pontosCampanha(campanha, sistema) {
 
 // Pontos até o nível (Tabela de Progressão por Nível): +2 de atributo por nível e +1 vantagem nos níveis pares.
 // As perícias seguem a fórmula 70 + 5×INT + 20×nível (ver pontosPericiaTotal).
-export function pontosDoNivel(nivel, sistema, campanha) {
+// Com a classe escolhida, as vantagens da Tabela de Progressão param de contar: daí em diante valem só as
+// "Vantagem Extra" da tabela da classe (não acumulam). Passe a ficha para considerar a classe.
+export function pontosDoNivel(nivel, sistema, campanha, ficha = null) {
   const base = pontosCampanha(campanha, sistema);
-  const pn = regras(sistema).progressao?.porNivel || {};
+  const r = regras(sistema);
+  const pn = r.progressao?.porNivel || {};
   const n = Math.max(1, nivel || 1);
+  const nivelClasse = r.nivelClasse ?? 3;
+  let vantagens = base.vantagens + (pn.vantagemNiveisPares ?? 0) * Math.floor(n / 2);
+  if (ficha?.classe && n >= nivelClasse) {
+    const extras = ganhosDeClasse({ ...ficha, nivel: n }, sistema).filter(g => /vantagem extra/i.test(g.nome)).length;
+    vantagens = base.vantagens + (pn.vantagemNiveisPares ?? 0) * Math.floor((nivelClasse - 1) / 2) + extras;
+  }
   return {
     atributos: base.atributos + (pn.atributos ?? 0) * (n - 1),
-    vantagens: base.vantagens + (pn.vantagemNiveisPares ?? 0) * Math.floor(n / 2),
+    vantagens,
     pericias: base.pericias,
   };
 }
@@ -205,15 +214,39 @@ export function bonusEquipados(ficha) {
   return total;
 }
 
+// Condições ativas (marcadores com o nome de uma condição do sistema). As que acumulam contam cada marcador.
+export function condicoesAtivas(ficha, sistema) {
+  const ativas = new Map();
+  for (const m of ficha.marcadores || []) {
+    const s = semAcento(m);
+    const c = (sistema.condicoes || []).find(x => s === semAcento(x.nome) || s.startsWith(semAcento(x.nome)));
+    if (!c) continue;
+    const atual = ativas.get(c.id) || { ...c, qtd: 0 };
+    atual.qtd = c.acumula ? atual.qtd + 1 : 1;
+    ativas.set(c.id, atual);
+  }
+  return [...ativas.values()];
+}
+
 export function derivados(ficha, sistema) {
   const r = regras(sistema);
   const bonus = bonusEquipados(ficha);
   const racial = sistema.raca?.modificadores || {};
+  // Condições (Fome, Cansado, Sono…): mudam atributos e somam/subtraem % nos testes.
+  const condicoes = condicoesAtivas(ficha, sistema);
+  const condAtr = {}, condTesteAtr = {}, condPericia = {};
+  let condTestes = 0;
+  for (const c of condicoes) {
+    for (const [k, v] of Object.entries(c.atributos || {})) condAtr[k] = (condAtr[k] || 0) + v * c.qtd;
+    for (const [k, v] of Object.entries(c.testesAtributos || {})) condTesteAtr[k] = (condTesteAtr[k] || 0) + v * c.qtd;
+    for (const [k, v] of Object.entries(c.testesPericias || {})) condPericia[k] = (condPericia[k] || 0) + v * c.qtd;
+    condTestes += (c.testes || 0) * c.qtd;
+  }
   const atributos = {}, percentual = {}, bonusPericial = {}, mod = {};
   for (const a of sistema.atributos) {
-    const v = (ficha.atributos?.[a.sigla] ?? 0) + (bonus[a.sigla] || 0);
+    const v = (ficha.atributos?.[a.sigla] ?? 0) + (bonus[a.sigla] || 0) + (condAtr[a.sigla] || 0);
     atributos[a.sigla] = v;
-    percentual[a.sigla] = 4 * v;
+    percentual[a.sigla] = 4 * v + condTestes + (condTesteAtr[a.sigla] || 0);
     bonusPericial[a.sigla] = Math.max(0, 2 * (v - 5));
     mod[a.sigla] = Math.floor((v - 10) / 2) + (racial[a.sigla] || 0);
   }
@@ -224,9 +257,10 @@ export function derivados(ficha, sistema) {
   for (const p of sistema.pericias || []) {
     const base = ficha.pericias?.[p.id] ?? 0;
     const bp = bonusPericial[p.atributo] ?? 0;
-    pericias[p.id] = base + bp + (bonus[p.id] || 0);
+    const cond = condTestes + (condTesteAtr[p.atributo] || 0) + (condPericia[p.id] || 0);
+    pericias[p.id] = base + bp + (bonus[p.id] || 0) + cond;
     for (const s of p.subpericias) {
-      subpericias[s.id] = base + (ficha.subpericias?.[s.id] ?? 0) + bp + (bonusProfissao[s.id] || 0) + (bonus[p.id] || 0) + (bonus[s.id] || 0);
+      subpericias[s.id] = base + (ficha.subpericias?.[s.id] ?? 0) + bp + (bonusProfissao[s.id] || 0) + (bonus[p.id] || 0) + (bonus[s.id] || 0) + cond;
     }
   }
   const nivel = ficha.nivel || 1;
@@ -244,6 +278,7 @@ export function derivados(ficha, sistema) {
   const equipados = (ficha.itens || []).filter(i => i.equipado);
   return {
     bonus, atributos, percentual, bonusPericial, mod, pericias, subpericias, bonusProfissao,
+    condicoes, condAtr, condTestes, condTesteAtr,
     pvMax, sanidadeMax, estadoSanidade, humanidadeMax, humanidadeLimite, humanidadeMinInicial, estagioHumanidade,
     iniciativa: atributos.AGI ?? 0,
     linguasExtras: Math.max(0, mod.INT ?? 0),
@@ -278,7 +313,7 @@ export function ganhosDeClasse(ficha, sistema) {
 export function problemasFicha(ficha, sistema, campanha, { apenasPontos = false } = {}) {
   const r = regras(sistema);
   const lista = [];
-  const pts = pontosDoNivel(ficha.nivel, sistema, campanha);
+  const pts = pontosDoNivel(ficha.nivel, sistema, campanha, ficha);
   const g = pontosGastos(ficha, sistema);
   const max = atributoMax(ficha.nivel, sistema);
   if (!apenasPontos && !String(ficha.nome || '').trim()) lista.push('Falta o nome do personagem.');

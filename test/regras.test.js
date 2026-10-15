@@ -183,3 +183,26 @@ test('pontos por nível (Tabela de Progressão) valem para MSA e MSS', () => {
   f.atributos.WILL = 11;
   assert.ok(R.problemasFicha(f, sis, { padraoMSA: true }, { apenasPontos: true }).some(x => /Atributos: 91 de 90/.test(x)));
 });
+
+test('vantagens: depois da classe valem só as Vantagem Extra da tabela da classe', () => {
+  const f = R.novaFicha(sis, { nivel: 6 });
+  assert.equal(R.pontosDoNivel(6, sis, null, f).vantagens, 3 + 3, 'sem classe: +1 nos níveis pares (2, 4, 6)');
+  f.classe = sis.classes[0].id; // Caçador: Vantagem Extra no nível 6 (especialização padrão)
+  const extras = R.ganhosDeClasse(f, sis).filter(g => /vantagem extra/i.test(g.nome)).length;
+  assert.equal(R.pontosDoNivel(6, sis, null, f).vantagens, 3 + 1 + extras, 'nível 2 (antes da classe) + Vantagens Extras da classe');
+  assert.equal(R.pontosDoNivel(2, sis, null, f).vantagens, 4, 'antes do nível 3 nada muda');
+});
+
+test('condições entram nas estatísticas', () => {
+  const f = R.novaFicha(sis, { nivel: 1 });
+  const antes = R.derivados(f, sis);
+  f.marcadores = ['Fome', 'Fome', 'Cansado', 'Alerta'];
+  const d = R.derivados(f, sis);
+  assert.equal(d.atributos.CONS, antes.atributos.CONS - 2, 'Fome acumula: CONS −1 duas vezes');
+  assert.equal(d.condTestes, -5 * 2 - 10);
+  assert.equal(d.percentual.PER, antes.percentual.PER - 20 + 20, 'Alerta +20 em PER compensa −20 dos testes');
+  assert.equal(d.percentual.INT, antes.percentual.INT - 20 - 20);
+  assert.equal(d.subpericias['sentidos.visao'], antes.subpericias['sentidos.visao'] - 20 + 20);
+  f.marcadores = ['Cansado (-10%)'];
+  assert.equal(R.derivados(f, sis).condTestes, -10, 'nome antigo do marcador ainda vale');
+});
