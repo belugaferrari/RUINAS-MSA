@@ -5,7 +5,10 @@ import { derivados, slotsOcupados, ganhosDeClasse, pontosGastos, pontosPericiaTo
 import { painelPericias } from './pericias.js';
 import { bonecoView } from './boneco.js';
 
-export const ICONE_TIPO = { arma: 'sword', defesa: 'shield', vestimenta: 'shirt', joia: 'gem', armadilha: 'crosshair', geral: 'backpack' };
+export const ICONE_TIPO = {
+  arma: 'sword', defesa: 'shield', vestimenta: 'shirt', joia: 'gem', armadilha: 'crosshair', geral: 'backpack', municao: 'target', cibernetico: 'cpu',
+  ferramenta: 'wrench', alimento: 'utensils', boticario: 'pill', transporte: 'car', materia: 'box', energia: 'battery-charging',
+};
 
 const atualizar = (p, patch) => acao('personagem.atualizar', { id: p.id, patch });
 

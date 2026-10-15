@@ -10,6 +10,7 @@ import { registrar, entrar, usuarioDoToken, sair } from './auth.js';
 import { sistema, listaSistemas, CONTEUDO } from './sistema.js';
 import { novaCampanha, resumoCampanha, visaoPara, entrarNaCampanha, executar, acoes } from './actions.js';
 import { modeloNpcs, lerNpcs } from './excel.js';
+import { catalogoItens, origemCatalogo, lerPlanilhaItens, planilhaDoCatalogo, salvarCatalogoMestre, voltarCatalogoPadrao } from './itens.js';
 import { montarSprite } from './icones.js';
 
 const PORTA = parseInt(process.env.PORT, 10) || 3000;
@@ -114,6 +115,51 @@ app.post('/api/campanhas/:id/importar-npcs', upload.single('arquivo'), rota(asyn
   }
   transmitir(c);
   return { importados: linhas.length };
+}));
+
+// ---------- catálogo de itens (planilha) ----------
+// Qualquer mestre de campanha pode atualizar o catálogo; vale para todas as campanhas deste PC.
+function exigirAlgumMestre(req) {
+  const user = autenticado(req);
+  if (!db.campaigns.some(c => c.mestreId === user.id)) throw Object.assign(new Error('Só quem é mestre de uma campanha pode mudar o catálogo de itens.'), { status: 403 });
+  return user;
+}
+
+app.get('/api/itens/origem', rota(req => { autenticado(req); return origemCatalogo(); }));
+
+app.get('/api/itens.xlsx', async (req, res) => {
+  try {
+    exigirAlgumMestre(req);
+    res.attachment('itens-ilhas-das-ruinas.xlsx');
+    res.send(Buffer.from(await planilhaDoCatalogo(catalogoItens() || [])));
+  } catch (e) {
+    res.status(e.status || 400).send(e.message);
+  }
+});
+
+// modo "atualizar": junta com o catálogo atual (mesmo "num ctrl" ou mesmo nome = substitui); "substituir": troca tudo.
+app.post('/api/itens', upload.single('arquivo'), rota(async req => {
+  exigirAlgumMestre(req);
+  if (!req.file) throw new Error('Envie a planilha .xlsx.');
+  const novos = await lerPlanilhaItens(req.file.buffer, sistema('mss'));
+  if (!novos.length) throw new Error('A planilha não tem itens.');
+  let itens = novos;
+  if (req.body.modo !== 'substituir') {
+    const sem = s => String(s).normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+    const nomes = new Set(novos.map(i => sem(i.nome)));
+    const ids = new Set(novos.map(i => i.id));
+    itens = [...(catalogoItens() || []).filter(i => !ids.has(i.id) && !nomes.has(sem(i.nome))), ...novos];
+  }
+  salvarCatalogoMestre(itens, req.file.originalname);
+  io.emit('sistema:atualizado');
+  return { recebidos: novos.length, total: itens.length };
+}));
+
+app.post('/api/itens/padrao', rota(req => {
+  exigirAlgumMestre(req);
+  voltarCatalogoPadrao();
+  io.emit('sistema:atualizado');
+  return origemCatalogo();
 }));
 
 // ---------- tempo real ----------

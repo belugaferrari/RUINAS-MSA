@@ -43,7 +43,7 @@ export function armasDisponiveis(p, sistema) {
   const cfg = sistema.combate;
   const armas = (p.itens || []).filter(i => i.equipado && i.tipo === 'arma' && i.dano).map(i => ({
     uid: i.uid, nome: i.nome, dano: i.dano, pericia: i.pericia || null, tipoDano: i.tipoDano || 'Físico',
-    efeitoDano: i.efeitoDano ?? cfg.efeitoPadrao, alcance: i.alcance || (i.pericia?.startsWith('armas-de-fogo') ? 'distancia' : 'corpo'),
+    efeitoDano: i.efeitoDano ?? cfg.chancePorTipo?.[i.tipoDano] ?? cfg.efeitoPadrao, penetracao: i.penetracao || 0, alcance: i.alcance || (i.pericia?.startsWith('armas-de-fogo') ? 'distancia' : 'corpo'),
   }));
   return [{ uid: 'desarmado', efeitoDano: cfg.efeitoPadrao, ...cfg.desarmado }, ...armas];
 }
@@ -162,7 +162,8 @@ export function resolverAtaque(atacante, alvo, sistema, op = {}, defesaId = 'nen
   if (r.perdaSacrificio) partes.push({ nome: 'Sacrifício', total: r.perdaSacrificio });
   r.danoPartes = partes;
   r.danoBruto = partes.reduce((s, p) => s + p.total, 0);
-  r.ip = cfg.ignoramIP.includes(arma.tipoDano) ? 0 : ipDe(alvo, sistema);
+  // Penetração ignora até N pontos de IP do alvo.
+  r.ip = cfg.ignoramIP.includes(arma.tipoDano) ? 0 : Math.max(0, ipDe(alvo, sistema) - (arma.penetracao || 0));
   r.dano = Math.max(cfg.danoMinimo, r.danoBruto - r.ip);
   if (!teste.sucesso) { r.dano = Math.floor(r.dano / 2); r.metadeEvasao = true; }
   if (tem(alvo, 'Queimadura')) { r.dano += 1; r.queimadura = true; }

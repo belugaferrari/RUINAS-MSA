@@ -1,7 +1,7 @@
 // Ícones (Lucide, licença ISC). O servidor monta /icones.svg só com os nomes desta lista,
 // então todo ícone novo precisa ser adicionado aqui.
 export const ICONES = [
-  'anchor', 'arrow-left', 'arrow-left-right', 'flag', 'axe', 'backpack', 'book', 'book-open', 'bookmark', 'brain', 'camera', 'castle', 'check',
+  'anchor', 'arrow-left', 'battery-charging', 'box', 'car', 'cpu', 'pill', 'utensils', 'wrench', 'arrow-left-right', 'flag', 'axe', 'backpack', 'book', 'book-open', 'bookmark', 'brain', 'camera', 'castle', 'check',
   'chevron-down', 'chevron-up', 'circle-alert', 'coins', 'compass', 'copy', 'crosshair', 'crown', 'dice-5', 'dices',
   'door-closed', 'door-open', 'download', 'drama', 'eye', 'eye-off', 'feather', 'file-spreadsheet', 'flame', 'gem',
   'ghost', 'hand-heart', 'heart', 'heart-pulse', 'hourglass', 'image', 'info', 'landmark', 'library', 'lock',

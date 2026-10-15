@@ -3,15 +3,29 @@
 
 export const LIMITE_SALA = 20;
 
+// Aceita "2d6", "1d8+2", "1d6+1d4", "+1d4", "3" (somas e subtrações de dados e números).
 export function rolarDado(expr, rng = Math.random) {
-  if (/^\s*\d+\s*$/.test(expr || '')) return { expr: String(expr).trim(), dados: [], mod: parseInt(expr, 10), total: parseInt(expr, 10) };
-  const m = /^\s*(\d*)d(\d+)\s*([+-]\s*\d+)?\s*$/i.exec(expr || '');
-  if (!m) throw new Error(`Dado inválido: ${expr}`);
-  const qtd = Math.min(parseInt(m[1] || '1', 10), 100);
-  const faces = parseInt(m[2], 10);
-  const mod = m[3] ? parseInt(m[3].replace(/\s/g, ''), 10) : 0;
-  const dados = Array.from({ length: qtd }, () => 1 + Math.floor(rng() * faces));
-  return { expr, dados, mod, total: dados.reduce((a, b) => a + b, 0) + mod };
+  const limpo = String(expr ?? '').replace(/\s/g, '').toLowerCase();
+  const termos = limpo.match(/[+-]?[^+-]+/g);
+  if (!limpo || !termos || termos.join('') !== limpo) throw new Error(`Dado inválido: ${expr}`);
+  let dados = [], mod = 0, total = 0;
+  for (const t of termos) {
+    const sinal = t.startsWith('-') ? -1 : 1;
+    const corpo = t.replace(/^[+-]/, '');
+    const m = /^(\d*)d(\d+)$/.exec(corpo);
+    if (m) {
+      const qtd = Math.min(parseInt(m[1] || '1', 10), 100);
+      const faces = parseInt(m[2], 10);
+      if (!faces) throw new Error(`Dado inválido: ${expr}`);
+      const rol = Array.from({ length: qtd }, () => 1 + Math.floor(rng() * faces));
+      dados = dados.concat(rol);
+      total += sinal * rol.reduce((a, b) => a + b, 0);
+    } else if (/^\d+$/.test(corpo)) {
+      mod += sinal * parseInt(corpo, 10);
+      total += sinal * parseInt(corpo, 10);
+    } else throw new Error(`Dado inválido: ${expr}`);
+  }
+  return { expr, dados, mod, total };
 }
 
 // Teste D-MIL: AÇÃO% + 1d100 ≥ ND, com 1d10 de suporte (DS).

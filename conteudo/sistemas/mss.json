@@ -53,7 +53,8 @@
    "Calor": "Queimadura",
    "Frio": "Queimadura",
    "Ácido": "Queimadura",
-   "Não letal": "Dor"
+   "Não letal": "Dor",
+   "Radiação": "Marcador genético"
   },
   "ignoramIP": [
    "Energia (Mágico)"
@@ -66,7 +67,18 @@
    "base": 50,
    "porNivel": 5
   },
-  "esquivaArmada": 2
+  "esquivaArmada": 2,
+  "chancePorTipo": {
+   "Corte": 2,
+   "Perfuração": 3,
+   "Concussão": 1,
+   "Elétrico": 2,
+   "Calor": 4,
+   "Frio": 2,
+   "Ácido": 8,
+   "Radiação": 10
+  },
+  "_avisoChance": "Margem do efeito de dano por tipo (DS ≤ valor), da planilha 'regras gerais'. Item com 'App: efeito de dano' usa o próprio valor."
  },
  "social": {
   "_aviso": "Roda do Humor do Livro MSS. Resistência à Manipulação (R.MNP) = perícia base Manipulação + 50 + modificadores.",

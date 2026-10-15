@@ -83,3 +83,24 @@ Ligados por `modulos.combate` / `modulos.social` em `mss.json`; no MSA ficam só
 - **Mestre**: edita fichas de jogador com as mesmas travas de pontos e de XP; a opção "Edição livre das fichas de jogador" (aba Campanha) desliga as travas para correções. NPCs não têm trava.
 - **Munição**: cada ataque com arma de fogo gasta 1 bala (cadência natural); arma nova vem carregada; recarregar usa as caixas de munição do mesmo tipo do inventário. Cadência maior que 1 (Rifle de Assalto) ainda não gasta mais balas.
 
+## Planilhas do autor (15/10): itens, armadilhas e regras gerais
+Regra combinada: **o livro é mais atual**; das planilhas só entra o que o livro não traz.
+
+**Itens** (`conteudo/sistemas/itens.json`, gerado por `ferramentas/itens/gerar_catalogo.mjs`)
+- 1449 itens: os 574 da "itens revisao parcial 1" (prioridade) + os da "itens" que não estão na revisão (marcados "em revisão"). Mesmo nome nas duas = vale a revisão. 23 itens da planilha original tinham o mesmo "num ctrl" de outro item da revisão e ganharam o id com "a" no fim.
+- O app deduz das colunas: tipo (Finalidade/Categoria), slot (arma = mãos; escudo = mãos; capacete = cabeça; armadura = corpo; vestuário = vestimenta; acessório = joias), mãos = MAESTRIA 2 → duas mãos, IP ("IP +N", "Defesa +N", "RD N" nos efeitos), bônus de atributo ("CAR +1", "Penalidade AGI -1"), penetração ("Ignora RD N"), perícia (Pericia Base + Subgrupo; nomes antigos como "Combate / Haste" viram Arma Branca › Lança).
+- Colunas opcionais "App: …" corrigem a dedução item a item (tipo, slot, mãos, IP, bônus, alcance, capacidade de munição, tipo de munição, quantidade, efeito de dano, em revisão).
+- **Munição**: as planilhas não têm capacidade do pente; armas sem "App: capacidade (balas)" não contam balas.
+- **"Defesa +N"** dos itens de proteção foi tratado como IP. Conferir.
+- Na criação ficam de fora itens Raros, Lendários, Únicos e Ilegais (planilha de regras gerais: créditos iniciais não compram raros). Créditos iniciais: 300 (livro), não 400 (planilha).
+- 23 armas ainda sem perícia reconhecida (ex.: "Ciências / Psiquismo", "Armadilhas / Explosivos"); usam o ataque desarmado até ganharem perícia.
+- 3 danos não roláveis ("Variável", "Vício ND30") ficam só como texto.
+
+**Regras gerais (planilha mais antiga que o livro)**
+- Adotado (o livro não trazia o número): margem do efeito de dano por tipo — Corte 2, Perfuração 3, Concussão 1, Elétrico 2, Calor 4, Frio 2, Ácido 8 (DS ≤ margem aplica o efeito). Penetração N ignora N pontos de IP (também está no livro).
+- Ignorado por conflito com o livro: PV = FOR + CONS; acerto crítico em 1–5 e erro em 96–100; morto em −10 PV; Amigável/Indisposto ±5%; Abalado < 20 / Instável < 12 / Surtado < 6; créditos iniciais 400.
+- Ainda não usado no app (sem conflito, fica para depois): carga (carregamento = 40 × 2^((FOR−10)/6), levantamento = 2×, sobrecarregado/supercarregado/esmagado), Dureza, PVs persistentes/permanentes, regeneração (1d4 × nível no descanso longo), deslocamento 9 m, capacidades com descrição.
+
+**Armadilhas** (planilha lida; ainda não automatizadas)
+- 7 armadilhas prontas (Alarme de Latas, Buraco de Estacas, Pêndulo de Sucata, Garra Enferrujada, Chicote de Espinhos, Rede de Queda, Mina Química Improvisada), tabelas de gatilho, área, progressão de dano e efeitos com modificador de ND.
+

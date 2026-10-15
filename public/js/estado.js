@@ -39,6 +39,13 @@ export async function carregarSistema(id = 'msa') {
   return sistemas.get(id);
 }
 
+// O catálogo de itens mudou no servidor: esquece o que estava guardado e recarrega o sistema atual.
+export async function recarregarSistema() {
+  sistemas.clear();
+  if (estado.sistema) estado.sistema = await carregarSistema(estado.sistema.id);
+  render();
+}
+
 // Deixa estado.sistema igual ao sistema da campanha (usado ao entrar e quando o mestre troca).
 export async function sincronizarSistema(campanha) {
   const id = campanha?.sistema || 'msa';

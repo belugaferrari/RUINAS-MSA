@@ -162,6 +162,9 @@ function validarCriacao(c, p, sis) {
   // Itens, dinheiro, PV e Sanidade são recalculados aqui, nunca confiando no navegador.
   const ini = sis.regras?.creditosIniciais ?? 0;
   const itens = (p.itens || []).map(i => itemDoCatalogo(i.itemId || i.id, sis));
+  // Créditos iniciais não compram itens raros ou mais (planilha de regras gerais).
+  const raro = itens.find(i => ['raro', 'lendario', 'unico', 'ilegal'].includes(String(i.raridade || '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase()));
+  if (raro) throw erro(`${raro.nome} é ${raro.raridade.toLowerCase()}: não dá para comprar na criação.`);
   const custo = itens.reduce((s, i) => s + (i.preco || 0), 0);
   if (custo > ini) throw erro(`Os itens custam mais que os ${ini} ${sis.moeda || 'créditos'} iniciais.`);
   p.itens = itens;

@@ -1,7 +1,7 @@
-import { h, botao, selecao, aviso, vazio, icone, titulo, tabela, abas, seloRevisao } from '../ui.js';
+import { h, botao, selecao, aviso, vazio, icone, titulo, tabela, abas, seloRevisao, confirmar, formatarData } from '../ui.js';
 import { ICONE_TIPO } from './ficha.js';
 import { estado, render, personagemPorId, meusPersonagens } from '../estado.js';
-import { acao } from '../api.js';
+import { acao, get, enviarArquivo, baixarArquivo } from '../api.js';
 import { marked } from '/vendor/marked.js';
 
 const cacheLivros = {};
@@ -187,7 +187,11 @@ export function periciasView() {
       h('ul', { class: 'lista-regras' }, p.subpericias.map(s => h('li', {}, h('strong', {}, s.nome), seloRevisao(s.revisao), ': ', s.descricao))))));
 }
 
-const TIPOS = { arma: 'Arma', defesa: 'Defesa', vestimenta: 'Vestimenta', joia: 'Joia', armadilha: 'Armadilha', geral: 'Geral' };
+export const TIPOS = {
+  arma: 'Arma', municao: 'Munição', defesa: 'Proteção', vestimenta: 'Vestimenta', joia: 'Acessório', cibernetico: 'Cibernético', ferramenta: 'Ferramenta',
+  boticario: 'Boticário', alimento: 'Alimentação', materia: 'Matéria-prima', energia: 'Fonte de energia', transporte: 'Transporte', armadilha: 'Armadilha', geral: 'Diversos',
+};
+const POR_PAGINA = 60;
 
 // Catálogo de itens. Com "compra", mostra o botão de comprar para o personagem escolhido.
 export function lojaView({ titulo: tituloLoja = 'Loja', tipos = null } = {}) {
@@ -196,7 +200,13 @@ export function lojaView({ titulo: tituloLoja = 'Loja', tipos = null } = {}) {
   const mestre = c.papel === 'mestre';
   const q = busca('loja');
   const tipoSel = estado.sel.lojaTipo || '';
-  const itens = sis.itens.filter(i => (!tipos || tipos.includes(i.tipo)) && (!tipoSel || i.tipo === tipoSel) && (!q || i.nome.toLowerCase().includes(q)));
+  const raridadeSel = estado.sel.lojaRaridade || '';
+  const todos = sis.itens.filter(i => (!tipos || tipos.includes(i.tipo)) && (!tipoSel || i.tipo === tipoSel) && (!raridadeSel || i.raridade === raridadeSel)
+    && (!q || i.nome.toLowerCase().includes(q) || (i.descricao || '').toLowerCase().includes(q)));
+  // O catálogo tem mais de mil itens: mostra uma página por vez.
+  const limite = estado.sel.lojaLimite || POR_PAGINA;
+  const itens = todos.slice(0, limite);
+  const raridades = [...new Set(sis.itens.map(i => i.raridade).filter(Boolean))];
   const compradores = mestre ? c.personagens.filter(p => p.tipo === 'pj') : meusPersonagens();
   const compradorId = estado.sel.comprador || estado.sel.personagem || compradores[0]?.id || '';
   const comprador = personagemPorId(compradorId);
@@ -210,16 +220,22 @@ export function lojaView({ titulo: tituloLoja = 'Loja', tipos = null } = {}) {
         h('input', { type: 'checkbox', checked: c.lojaAberta, onchange: e => acao('campanha.atualizar', { lojaAberta: e.target.checked }) }),
         icone(c.lojaAberta ? 'lock-open' : 'lock'), 'Loja liberada para os jogadores') : h('span', { class: `selo ${c.lojaAberta ? 'ok' : 'perigo'}` }, icone(c.lojaAberta ? 'lock-open' : 'lock'), c.lojaAberta ? 'Loja aberta' : 'Loja fechada pelo mestre'),
       h('span', { class: 'espaco' }),
-      tipos ? null : selecao([{ valor: '', rotulo: 'Todos os tipos' }, ...Object.entries(TIPOS).map(([v, r]) => ({ valor: v, rotulo: r }))], tipoSel, v => { estado.sel.lojaTipo = v; render(); }),
+      tipos ? null : selecao([{ valor: '', rotulo: 'Todos os tipos' }, ...Object.entries(TIPOS).filter(([v]) => sis.itens.some(i => i.tipo === v)).map(([v, r]) => ({ valor: v, rotulo: r }))], tipoSel,
+        v => { estado.sel.lojaTipo = v; estado.sel.lojaLimite = null; render(); }, { 'aria-label': 'Tipo de item' }),
+      raridades.length ? selecao([{ valor: '', rotulo: 'Toda raridade' }, ...raridades], raridadeSel, v => { estado.sel.lojaRaridade = v; estado.sel.lojaLimite = null; render(); }, { 'aria-label': 'Raridade' }) : null,
       h('label', { class: 'busca' }, icone('search'), filtroBusca('loja', 'Buscar item…'))),
     compradores.length ? h('div', { class: 'barra' },
       h('span', {}, icone('user'), mestre ? ' Comprar/dar para:' : ' Comprar para:'),
       selecao(compradores.map(p => ({ valor: p.id, rotulo: p.nome })), compradorId, v => { estado.sel.comprador = v; render(); }),
       comprador ? h('span', { class: 'selo moeda' }, icone('coins'), `${comprador.dinheiro ?? 0}`) : null) : null,
-    itens.length ? tabela(['Item', 'Tipo', 'Slot', 'Preço', 'Venda', 'Durab.', 'Peso', 'Dano/Def.', 'Bônus', ''], itens.map(i => [
-      h('span', { class: 'item-nome' }, icone(ICONE_TIPO[i.tipo] || 'tag'), i.nome), TIPOS[i.tipo] || i.tipo, [slotNome(i.slot), i.ocupa > 1 ? ` (${i.ocupa})` : ''],
+    mestre && !tipos ? catalogoMestre() : null,
+    h('p', { class: 'dica' }, `${todos.length} ${todos.length === 1 ? 'item' : 'itens'}${todos.length > itens.length ? ` (mostrando ${itens.length})` : ''}.`),
+    itens.length ? tabela(['Item', 'Tipo', 'Slot', 'Preço', 'Venda', 'Durab.', 'Peso', 'Dano/IP', 'Bônus', ''], itens.map(i => [
+      h('span', { class: 'item-nome', title: [i.descricao, i.aparencia, i.efeitos, i.observacoes, i.requisitos ? `Requisitos: ${i.requisitos}` : ''].filter(Boolean).join(' · ') },
+        icone(ICONE_TIPO[i.tipo] || 'tag'), i.nome, i.raridade ? h('small', { class: 'selo' }, i.raridade) : null, seloRevisao(i.revisao)),
+      TIPOS[i.tipo] || i.tipo, [slotNome(i.slot), i.ocupa > 1 ? ` (${i.ocupa})` : ''],
       h('span', { class: 'moeda' }, icone('coins'), i.preco), i.venda, i.durabilidade, i.peso,
-      [i.dano, i.defesa ? `Def ${i.defesa}` : null].filter(Boolean).join(' · ') || '—',
+      [i.dano ? `${i.dano}${i.tipoDano ? ` ${i.tipoDano}` : ''}` : i.danoTexto, i.defesa ? `IP ${i.defesa}` : null].filter(Boolean).join(' · ') || '—',
       Object.entries(i.bonus || {}).map(([k, v]) => `${k} ${v > 0 ? '+' : ''}${v}`).join(', ') || '—',
       [
         podeComprar ? botao('Comprar', async () => {
@@ -231,7 +247,45 @@ export function lojaView({ titulo: tituloLoja = 'Loja', tipos = null } = {}) {
           aviso(`${i.nome} entregue a ${comprador.nome}.`);
         }, { class: 'pequeno', icone: 'gem' }) : null,
       ],
-    ])) : vazio('Nenhum item encontrado.', 'search'));
+    ])) : vazio('Nenhum item encontrado.', 'search'),
+    todos.length > itens.length ? botao(`Mostrar mais ${Math.min(POR_PAGINA, todos.length - itens.length)}`, () => { estado.sel.lojaLimite = limite + POR_PAGINA; render(); }, { icone: 'chevron-down' }) : null);
+}
+
+// Catálogo de itens editável por planilha (só o mestre): baixar, enviar de volta ou voltar ao padrão.
+function catalogoMestre() {
+  const info = estado.sel.catalogoInfo;
+  if (!info && !estado.sel.catalogoPedido) {
+    estado.sel.catalogoPedido = true;
+    get('/api/itens/origem').then(r => { estado.sel.catalogoInfo = r; render(); }).catch(() => {});
+  }
+  const arquivo = h('input', { type: 'file', accept: '.xlsx', 'aria-label': 'Planilha de itens (.xlsx)' });
+  const modo = h('select', { 'aria-label': 'Como usar a planilha' },
+    h('option', { value: 'atualizar' }, 'Atualizar: troca os itens da planilha e mantém os outros'),
+    h('option', { value: 'substituir' }, 'Substituir: o catálogo fica só com os itens da planilha'));
+  const atualizarInfo = () => { estado.sel.catalogoInfo = null; estado.sel.catalogoPedido = false; };
+  return h('details', { class: 'bloco', open: !!estado.sel.catalogoAberto, ontoggle: e => { estado.sel.catalogoAberto = e.target.open; } },
+    h('summary', {}, icone('file-spreadsheet'), ' Catálogo de itens (planilha)'),
+    h('p', { class: 'dica' }, info
+      ? `${info.total} itens · ${info.origem === 'mestre' ? `enviado por você${info.arquivo ? ` (${info.arquivo})` : ''}` : 'catálogo padrão do app (planilhas do autor)'}${info.atualizadoEm ? ` · ${formatarData(info.atualizadoEm)}` : ''}.`
+      : 'Carregando…'),
+    h('p', { class: 'dica' }, 'Use a mesma planilha de itens (colunas "num ctrl", "Item", "Preço"…). As colunas "App: …" são opcionais e corrigem o que o app deduz (tipo, slot, IP, capacidade de munição…). Vale para todas as campanhas deste PC; itens que os personagens já têm não mudam.'),
+    h('div', { class: 'barra' },
+      botao('Baixar planilha atual', () => baixarArquivo('/api/itens.xlsx', 'itens-ilhas-das-ruinas.xlsx'), { icone: 'download' }),
+      arquivo, modo,
+      botao('Enviar planilha', async () => {
+        if (!arquivo.files[0]) throw new Error('Escolha a planilha .xlsx.');
+        const form = new FormData();
+        form.append('arquivo', arquivo.files[0]);
+        form.append('modo', modo.value);
+        const r = await enviarArquivo('/api/itens', form);
+        atualizarInfo();
+        aviso(`${r.recebidos} itens lidos da planilha; catálogo com ${r.total} itens.`);
+      }, { class: 'primario', icone: 'upload' }),
+      info?.origem === 'mestre' ? botao('Voltar ao catálogo padrão', async () => {
+        if (!(await confirmar('Apagar o catálogo enviado e voltar ao catálogo padrão do app?'))) return;
+        await enviarArquivo('/api/itens/padrao', new FormData());
+        atualizarInfo();
+      }, { class: 'perigo', icone: 'refresh-cw' }) : null));
 }
 
 // Consulta com sub-abas (Livro de Regras do jogador / Classes do mestre).

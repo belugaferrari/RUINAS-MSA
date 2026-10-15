@@ -1,4 +1,5 @@
-import { h, botao, aviso, vazio, confirmar, icone, titulo, tabela, passador, seloRevisao, escolhaComOutra } from '../ui.js';
+import { h, botao, aviso, vazio, confirmar, icone, titulo, tabela, passador, seloRevisao, escolhaComOutra, selecao } from '../ui.js';
+import { TIPOS } from './livros.js';
 import { estado, render, mudar } from '../estado.js';
 import { acao } from '../api.js';
 import { novaFicha, pontosDoNivel, pontosGastos, pontosPericiaTotal, pontosVantagemExtra, derivados, problemasFicha, custoPericiaBase, vantagensDisponiveis, acharVantagem } from '/shared/regras.js';
@@ -194,25 +195,43 @@ function passoVantagens() {
     deClasse.length ? h('div', { class: 'cartoes' }, filtra(deClasse).map(x => linha(x, 'vantagens', gasto + (x.custo ?? 1) > total))) : null);
 }
 
+// Itens raros ou mais não podem ser comprados com os créditos iniciais.
+const RARIDADES_FORA = ['raro', 'lendario', 'unico', 'ilegal'];
+const semAcento = s => String(s || '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+
 function passoItens() {
   const f = estado.criacao.ficha;
   const sis = estado.sistema;
+  const iniciais = sis.itens.filter(i => !RARIDADES_FORA.includes(semAcento(i.raridade)));
+  const tipoSel = estado.sel.crTipo || '';
+  const q = semAcento(estado.sel.crBusca).trim();
+  const lista = iniciais.filter(i => (!tipoSel || i.tipo === tipoSel) && (!q || semAcento(i.nome).includes(q)) && (!estado.sel.crCabe || i.preco <= f.dinheiro));
+  const mostrados = lista.slice(0, estado.sel.crLimite || 50);
   return h('div', {},
     h('p', { class: 'contador' }, icone('coins'), h('strong', {}, ` ${f.dinheiro} ${sis.moeda} disponíveis`)),
-    h('p', { class: 'alerta' }, icone('circle-alert'), ' A lista de itens do livro ainda está em revisão: estes itens são exemplos.'),
+    h('p', { class: 'alerta' }, icone('circle-alert'), ' Os itens vêm das planilhas do autor e ainda estão em revisão. Na criação não entram itens raros, lendários, únicos ou ilegais.'),
     titulo('Itens escolhidos', 'backpack'),
     f.itens.length ? h('ul', { class: 'lista-inline' }, f.itens.map((i, idx) => h('li', {}, `${i.nome} (${i.preco}) `,
       h('button', { type: 'button', class: 'x so-icone', 'aria-label': `Devolver ${i.nome}`, title: `Devolver ${i.nome}`, onclick: () => alterar(x => { x.itens.splice(idx, 1); x.dinheiro += i.preco; }) }, icone('x'))))) : vazio('Nenhum item ainda.', 'backpack'),
     titulo('Catálogo', 'store'),
-    tabela(['Item', 'Tipo', 'Preço', 'Dano/Def.', 'Bônus', ''], sis.itens.map(i => [
-      h('span', { class: 'item-nome' }, icone(ICONE_TIPO[i.tipo] || 'tag'), i.nome), i.tipo, h('span', { class: 'moeda' }, icone('coins'), i.preco),
-      [i.dano, i.defesa ? `Def ${i.defesa}` : null].filter(Boolean).join(' · ') || '—',
+    h('div', { class: 'barra' },
+      selecao([{ valor: '', rotulo: 'Todos os tipos' }, ...Object.entries(TIPOS).filter(([v]) => iniciais.some(i => i.tipo === v)).map(([v, r]) => ({ valor: v, rotulo: r }))], tipoSel,
+        v => { estado.sel.crTipo = v; estado.sel.crLimite = null; render(); }, { 'aria-label': 'Tipo de item' }),
+      h('label', { class: 'busca' }, icone('search'), h('input', { type: 'search', placeholder: 'Buscar item…', 'data-key': 'cr:buscaItem', value: estado.sel.crBusca || '',
+        oninput: e => { estado.sel.crBusca = e.target.value; estado.sel.crLimite = null; render(); } })),
+      h('label', { class: 'linha' }, h('input', { type: 'checkbox', checked: !!estado.sel.crCabe, onchange: e => { estado.sel.crCabe = e.target.checked; render(); } }), 'Só o que cabe no dinheiro')),
+    h('p', { class: 'dica' }, `${lista.length} itens${lista.length > mostrados.length ? ` (mostrando ${mostrados.length})` : ''}.`),
+    tabela(['Item', 'Tipo', 'Preço', 'Dano/IP', 'Bônus', ''], mostrados.map(i => [
+      h('span', { class: 'item-nome', title: [i.descricao, i.efeitos].filter(Boolean).join(' · ') }, icone(ICONE_TIPO[i.tipo] || 'tag'), i.nome),
+      TIPOS[i.tipo] || i.tipo, h('span', { class: 'moeda' }, icone('coins'), i.preco),
+      [i.dano || i.danoTexto, i.defesa ? `IP ${i.defesa}` : null].filter(Boolean).join(' · ') || '—',
       Object.entries(i.bonus || {}).map(([k, v]) => `${k} ${v > 0 ? '+' : ''}${v}`).join(', ') || '—',
       h('button', {
         type: 'button', class: 'pequeno', disabled: f.dinheiro < i.preco,
         onclick: () => alterar(x => { x.itens.push({ ...structuredClone(i), itemId: i.id, equipado: false, durabilidadeAtual: i.durabilidade }); x.dinheiro -= i.preco; }),
       }, icone('plus'), 'Escolher'),
-    ])));
+    ])),
+    lista.length > mostrados.length ? h('button', { type: 'button', onclick: () => { estado.sel.crLimite = mostrados.length + 50; render(); } }, icone('chevron-down'), 'Mostrar mais') : null);
 }
 
 function passoMental() {

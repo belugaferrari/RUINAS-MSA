@@ -1,5 +1,5 @@
 import { h, aviso } from './ui.js';
-import { estado, definirRender, mudar, carregarSistema, sincronizarSistema } from './estado.js';
+import { estado, definirRender, mudar, carregarSistema, sincronizarSistema, recarregarSistema } from './estado.js';
 import { observarRolagens } from './views/animacao.js';
 import { sessao, get, conectar, emitir } from './api.js';
 import { telaLogin } from './views/login.js';
@@ -85,6 +85,7 @@ export function iniciarSessao(s) {
       const p = vez && c.personagens.find(x => x.id === vez.id);
       if (vez && vez.chave !== vezAntes?.chave && p?.donoId === estado.usuario?.id && c.papel !== 'mestre') aviso(`Sua vez: ${p.nome} (rodada ${vez.rodada}).`);
     },
+    'sistema:atualizado': () => recarregarSistema().then(() => aviso('O catálogo de itens foi atualizado.')),
     expulso: msg => {
       aviso(msg, 'erro');
       mudar({ tela: 'saguao', campanha: null });

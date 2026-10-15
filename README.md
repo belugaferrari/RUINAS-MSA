@@ -45,6 +45,12 @@ Para jogar pela internet (sem estar na mesma Wi‑Fi), o mesmo app pode ser publ
 - **Confronto** (aba própria, fora do combate): o mestre cria Ação × Ação passiva (regra do livro) ou disputa (provisória); cada jogador rola o lado do próprio personagem; resultado em tempo real.
 - **Livro de Regras**: gerado do .docx com índice, busca, imagens e grifos destacados. Combate e regras sociais do MSS ficam de fora.
 
+## Catálogo de itens (planilha)
+
+- Os itens vêm das planilhas do autor: `conteudo/sistemas/itens.json` (1449 itens, gerado por `ferramentas/itens/gerar_catalogo.mjs`).
+- **Atualizar pelo app**: aba **Loja** (Mestre) → "Catálogo de itens (planilha)" → *Baixar planilha atual*, edite no Excel/Google Planilhas e *Enviar planilha*. "Atualizar" troca só os itens da planilha (mesmo "num ctrl" ou mesmo nome); "Substituir" deixa o catálogo só com eles. Fica salvo em `data/catalogo-itens.json` (não é apagado nas atualizações do app) e vale para todas as campanhas do PC. Itens que os personagens já têm não mudam.
+- A planilha é a mesma do autor (colunas "num ctrl", "Item", "Preço (créditos)"…); colunas extras "App: …" são opcionais.
+
 ## Turnos, XP e munição (qualquer sistema)
 
 - **Campo de Batalha**: o mestre inicia o combate (iniciativa de todos), o app mostra a rodada, de quem é a vez e um painel com os atalhos de quem está na vez (rolar teste, munição, passar a vez). O jogador recebe um aviso quando chega a vez dele.

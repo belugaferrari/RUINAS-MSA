@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
+process.env.ITENS_EXEMPLO = '1'; // testes usam a lista curta de itens de exemplo
 process.env.DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'msa-regras-'));
 const { sistema } = await import('../server/sistema.js');
 const R = await import('../shared/regras.js');
