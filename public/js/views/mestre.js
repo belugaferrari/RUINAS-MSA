@@ -1,4 +1,5 @@
 import { h, abas, botao, campo, selecao, aviso, confirmar, pedirTexto, janela, vazio, icone, titulo } from '../ui.js';
+import { efeitosIcones, marcadoresLivres } from './efeitos.js';
 import { estado, mudar, render, personagemPorId } from '../estado.js';
 import { acao, emitir, enviarArquivo, get, post } from '../api.js';
 import { topo, carregarSaguao, listaSistemas } from './saguao.js';
@@ -216,7 +217,7 @@ function abaResumo() {
           h('td', {}, h('button', { type: 'button', class: 'link', onclick: () => mudar({ aba: 'jogadores', sel: { ...estado.sel, personagem: p.id } }) }, p.nome)),
           h('td', {}, p.dono || '—'),
           h('td', { class: p.pv?.atual <= 0 ? 'perigo' : '' }, t(p.pv)), h('td', {}, t(p.sanidade)), h('td', {}, t(p.humanidade)),
-          h('td', {}, (p.marcadores || []).map(m => h('span', { class: 'etiqueta' }, m))),
+          h('td', {}, efeitosIcones(p, { mestre: true }), marcadoresLivres(p).map(m => h('span', { class: 'etiqueta' }, m))),
           h('td', {}, p.xp || 0))))) : vazio('Nenhum personagem-jogador ainda.')));
 }
 

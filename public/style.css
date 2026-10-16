@@ -575,11 +575,10 @@ mark.revisao { background: #5a4510; color: #ffe7a8; border-bottom: 1px dashed va
 .dados-linha { display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-end; gap: 1.2em; }
 .dado-rotulo { display: flex; flex-direction: column; align-items: center; gap: .3em; }
 .dado { display: grid; place-items: center; font-weight: 800; font-variant-numeric: tabular-nums; }
-.dado.dp { width: 86px; height: 86px; border-radius: 16px; background: #f4f1ea; color: #1a1a1a; font-size: 2.2rem; box-shadow: inset 0 -6px 0 rgba(0, 0, 0, .15); }
-.dado.ds { width: 70px; height: 80px; background: #c0392b; color: #fff; font-size: 1.8rem; clip-path: polygon(50% 0, 100% 38%, 80% 100%, 20% 100%, 0 38%); }
 .dado.dano { width: 44px; height: 44px; border-radius: 9px; background: var(--ouro); color: #1a1a1a; font-size: 1.2rem; }
 .dados-dano { display: flex; gap: .3em; flex-wrap: wrap; justify-content: center; }
-.dados-na-tela:not(.parou) .dado.dp, .dados-na-tela:not(.parou) .dado.ds { animation: dado-gira .18s linear infinite; }
+.dados-na-tela:not(.parou) .dado.d10 { animation: dado-rola .5s linear infinite; }
+.dados-na-tela:not(.parou) .par-d10 .dado.d10:last-child { animation-direction: reverse; animation-duration: .44s; }
 .dados-na-tela.parou .dado { animation: dado-para .25s ease-out; }
 .dado-extra { opacity: .75; }
 .dados-resultado { margin: 0; font-size: 1.15rem; font-weight: 700; }
@@ -640,3 +639,79 @@ mark.revisao { background: #5a4510; color: #ffe7a8; border-bottom: 1px dashed va
 .boneco.compacto .boneco-guardados { justify-content: center; font-size: .9em; margin: 0; }
 @media (max-width: 1100px) { .ficha-topo-tres { grid-template-columns: 1fr 1fr; } .ficha-topo-tres > .boneco-compacto { grid-column: 1 / -1; } }
 @media (max-width: 700px) { .ficha-topo-tres { grid-template-columns: 1fr; } }
+
+/* Efeitos que o personagem está sofrendo: ícone com a contagem de turnos e animação ao chegar. */
+.efeitos-icones { display: flex; flex-wrap: wrap; gap: .35em; margin: .3em 0; }
+.efeito-icone { --cor-ef: #c9a45c; position: relative; display: inline-grid; place-items: center; width: 34px; height: 34px; padding: 0; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--cor-ef) 45%, #2a2118), #17120d 75%); border: 2px solid var(--cor-ef); color: #fff; cursor: default;
+  box-shadow: 0 0 6px color-mix(in srgb, var(--cor-ef) 50%, transparent); min-width: 0; min-height: 0; }
+button.efeito-icone { cursor: pointer; }
+.efeitos-icones.grande .efeito-icone { width: 40px; height: 40px; }
+.efeito-icone .efeito-desenho { display: grid; place-items: center; }
+.efeito-icone .efeito-desenho svg { width: 18px; height: 18px; }
+.efeitos-icones.grande .efeito-desenho svg { width: 21px; height: 21px; }
+.efeito-turnos { position: absolute; right: -6px; bottom: -5px; min-width: 18px; height: 18px; padding: 0 3px; border-radius: 9px; background: #f4f1ea; color: #1a1a1a;
+  font: 800 11px/18px system-ui, sans-serif; text-align: center; box-shadow: 0 1px 3px rgba(0, 0, 0, .6); }
+.efeito-qtd { position: absolute; left: -6px; top: -6px; padding: 0 3px; border-radius: 8px; background: var(--cor-ef); color: #1a1a1a; font: 800 10px/15px system-ui, sans-serif; }
+.efeito-icone.grupo-dano { --cor-ef: #d9443a; }
+.efeito-icone.grupo-mobilidade { --cor-ef: #4f8fd6; }
+.efeito-icone.grupo-estado { --cor-ef: #9a9a9a; }
+.efeito-icone.grupo-mental, .efeito-icone.grupo-estado-mental { --cor-ef: #a46bd6; }
+.efeito-icone.grupo-necessidades, .efeito-icone.grupo-fadiga { --cor-ef: #d6a03a; }
+.efeito-icone.grupo-vício, .efeito-icone.grupo-vicio { --cor-ef: #5fb56a; }
+.efeito-icone.grupo-marcadores { --cor-ef: #c9a45c; }
+.efeito-icone.ef-queimadura { --cor-ef: #ff8a2a; }
+.efeito-icone.ef-bem-estar, .efeito-icone.ef-satisfeito, .efeito-icone.ef-estabilizado, .efeito-icone.ef-alerta { --cor-ef: #5fb56a; }
+
+/* Chegada: todo efeito "explode" no lugar; cada um tem o seu movimento no desenho. */
+.efeito-icone.chegou { animation: ef-chega 2.4s ease-out both; z-index: 2; }
+.efeito-icone.chegou .efeito-desenho { animation: ef-pulso 2.4s ease-in-out both; animation-delay: inherit; }
+.efeito-icone.chegou::before { content: ''; position: absolute; inset: -4px; border-radius: 50%; border: 2px solid var(--cor-ef); animation: ef-onda 1.2s ease-out 2 both; animation-delay: inherit; pointer-events: none; }
+@keyframes ef-chega { 0% { transform: scale(0) rotate(-30deg); } 18% { transform: scale(1.7) rotate(0); box-shadow: 0 0 22px var(--cor-ef); } 40% { transform: scale(1.25); } 100% { transform: scale(1); } }
+@keyframes ef-pulso { 0%, 100% { transform: none; } 50% { transform: scale(1.15); } }
+@keyframes ef-onda { from { transform: scale(1); opacity: 1; } to { transform: scale(2.2); opacity: 0; } }
+/* Sangramento: a gota pinga. */
+.efeito-icone.ef-sangramento.chegou .efeito-desenho { animation-name: ef-pinga; }
+.efeito-icone.ef-sangramento.chegou::after { content: ''; position: absolute; left: 50%; top: 70%; width: 6px; height: 9px; margin-left: -3px; border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%; background: #d9443a; animation: ef-gota .8s ease-in 3 both; animation-delay: inherit; }
+@keyframes ef-pinga { 0%, 100% { transform: none; } 20%, 60% { transform: translateY(2px) scaleY(1.15); } 40%, 80% { transform: translateY(-1px); } }
+@keyframes ef-gota { 0% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(22px); opacity: 0; } }
+/* Ferida aberta: lateja. */
+.efeito-icone.ef-ferida-aberta.chegou .efeito-desenho { animation-name: ef-lateja; }
+@keyframes ef-lateja { 0%, 30%, 60%, 100% { transform: scale(1); } 15%, 45%, 75% { transform: scale(1.35); filter: drop-shadow(0 0 4px #d9443a); } }
+/* Queimadura: a chama tremula. */
+.efeito-icone.ef-queimadura.chegou .efeito-desenho { animation-name: ef-chama; }
+@keyframes ef-chama { 0%, 100% { transform: none; } 10%, 30%, 50%, 70%, 90% { transform: scale(1.15, 1.3) rotate(-6deg); filter: drop-shadow(0 -2px 5px #ffb000); } 20%, 40%, 60%, 80% { transform: scale(.95, 1.05) rotate(6deg); } }
+/* Dor: pontadas. */
+.efeito-icone.ef-dor.chegou .efeito-desenho { animation-name: ef-pontada; }
+@keyframes ef-pontada { 0%, 100% { transform: none; } 10%, 35%, 60% { transform: scale(1.4) skewX(-10deg); } 20%, 45%, 70% { transform: scale(.9); } }
+/* Aturdido, desorientado, vertigem, confuso: gira tonto. */
+.efeito-icone:is(.ef-aturdido, .ef-desorientado, .ef-vertigem, .ef-confuso).chegou .efeito-desenho { animation-name: ef-tonto; }
+@keyframes ef-tonto { 0% { transform: rotate(0); } 70% { transform: rotate(720deg); } 85% { transform: rotate(700deg); } 100% { transform: rotate(720deg); } }
+/* Paralisado, imobilizado, enraizado: treme e congela. */
+.efeito-icone:is(.ef-paralisado, .ef-imobilizado, .ef-enraizado).chegou .efeito-desenho { animation-name: ef-trava; }
+@keyframes ef-trava { 0% { transform: none; } 5%, 15%, 25%, 35% { transform: translateX(-3px); } 10%, 20%, 30%, 40% { transform: translateX(3px); } 45%, 100% { transform: none; filter: drop-shadow(0 0 5px #8fd0ff); } }
+/* Caído e desmaiado: tomba. */
+.efeito-icone:is(.ef-caido, .ef-desmaiado).chegou .efeito-desenho { animation-name: ef-tomba; }
+@keyframes ef-tomba { 0% { transform: none; } 30% { transform: rotate(90deg) translateX(4px); opacity: .6; } 70% { transform: rotate(90deg) translateX(4px); opacity: .6; } 100% { transform: none; opacity: 1; } }
+/* Traumas e efeitos mentais: estremece e embaça. */
+.efeito-icone:is(.grupo-mental, .grupo-estado-mental).chegou .efeito-desenho { animation-name: ef-mente; }
+@keyframes ef-mente { 0%, 100% { transform: none; filter: none; } 15%, 45%, 75% { transform: translate(-2px, 1px); filter: blur(1px) drop-shadow(0 0 4px #a46bd6); } 30%, 60%, 90% { transform: translate(2px, -1px); } }
+/* Envenenado, doença, vícios: enjoo (balança). */
+.efeito-icone:is(.ef-envenenado, .ef-doenca, .grupo-vicio, .grupo-vício).chegou .efeito-desenho { animation-name: ef-enjoo; }
+@keyframes ef-enjoo { 0%, 100% { transform: none; } 25% { transform: rotate(-14deg) translateY(1px); filter: hue-rotate(60deg); } 50% { transform: rotate(10deg); } 75% { transform: rotate(-8deg); } }
+@media (prefers-reduced-motion: reduce) { .efeito-icone.chegou, .efeito-icone.chegou *, .efeito-icone.chegou::before, .efeito-icone.chegou::after { animation: none !important; } }
+
+/* Dados d10 desenhados: DP = 2 d10 de marfim (dezena e unidade), DS = 1 d10 vermelho. */
+.par-d10 { display: flex; gap: .35em; }
+.dado.d10 { position: relative; width: 74px; height: 82px; filter: drop-shadow(0 6px 8px rgba(0, 0, 0, .55)); }
+.dado.d10 svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.dado.d10 .f-meio { fill: var(--d-meio); }
+.dado.d10 .f-lado { fill: var(--d-lado); }
+.dado.d10 .f-baixo { fill: var(--d-baixo); }
+.dado.d10 .f-borda { fill: none; stroke: var(--d-borda); stroke-width: 1.6; stroke-linejoin: round; }
+.dado.d10 span { position: absolute; left: 0; right: 0; top: 30%; text-align: center; font-size: 1.45rem; font-weight: 800; color: var(--d-num); text-shadow: 0 1px 0 var(--d-sombra); letter-spacing: -.02em; }
+.dado.d10.dp { --d-meio: #fbf8f1; --d-lado: #e3dccb; --d-baixo: #c9bfa8; --d-borda: #8d816a; --d-num: #1d1a15; --d-sombra: rgba(255, 255, 255, .7); }
+.dado.d10.ds { --d-meio: #e04a3a; --d-lado: #b5301f; --d-baixo: #861f14; --d-borda: #4d0f08; --d-num: #fff; --d-sombra: rgba(0, 0, 0, .6); width: 80px; height: 88px; }
+.dado.d10.ds span { font-size: 1.6rem; }
+@keyframes dado-rola { 0% { transform: rotate(0) scale(.92); } 25% { transform: rotate(90deg) scale(1.05); } 50% { transform: rotate(180deg) scale(.92); } 75% { transform: rotate(270deg) scale(1.05); } 100% { transform: rotate(360deg) scale(.92); } }
+@media (max-width: 420px) { .dado.d10 { width: 60px; height: 66px; } .dado.d10.ds { width: 64px; height: 70px; } .dado.d10 span { font-size: 1.2rem; } }

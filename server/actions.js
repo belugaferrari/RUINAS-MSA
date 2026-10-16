@@ -1,6 +1,7 @@
 import { db, save, uid } from './db.js';
 import { sistema, idSistema } from './sistema.js';
 import { resolverAtaque, aplicarAtaque, armasDisponiveis, opcoesDefesa, sobrevida, rolarIniciativa, resolverManipulacao, modHumorTestes, humorDe, espectroDe, humorAparente } from '../shared/combate.js';
+import { sincronizarEfeitos, passarTurnoEfeitos, efeitosAoAgir } from '../shared/efeitos.js';
 import { itemVisivel, xpParaSubir, novaFicha, podeEquipar, rolarDado, rolarAtributosCriacao, testeDMil, gerarEncontro, derivados, problemasFicha, LIMITE_SALA } from '../shared/regras.js';
 
 const GRUPO_ENCONTROS = 'encontros';
@@ -57,8 +58,18 @@ export function resumoCampanha(c) {
 
 const nomeUsuario = id => db.users.find(u => u.id === id)?.name ?? null;
 
-function fichaPublica(p) {
-  return { id: p.id, tipo: p.tipo, nome: p.nome, classe: p.classe, especializacao: p.especializacao, profissao: p.profissao, nivel: p.nivel, foto: p.foto, humor: humorAparente(p), criatura: !!p.criatura, donoId: p.donoId, dono: nomeUsuario(p.donoId) };
+function fichaPublica(p, sis) {
+  return { id: p.id, tipo: p.tipo, nome: p.nome, classe: p.classe, especializacao: p.especializacao, profissao: p.profissao, nivel: p.nivel, foto: p.foto, humor: humorAparente(p), criatura: !!p.criatura, donoId: p.donoId, dono: nomeUsuario(p.donoId),
+    // Efeitos que se veem de fora (sangrando, caído, aturdido…), com a contagem de turnos.
+    ...efeitosPublicos(p, sis) };
+}
+
+const GRUPOS_VISIVEIS = new Set(['Dano', 'Mobilidade', 'Estado']);
+function efeitosPublicos(p, sis) {
+  if (!sis || !(p.marcadores || []).length) return {};
+  const visivel = m => (sis.condicoes || []).some(x => GRUPOS_VISIVEIS.has(x.grupo) && String(m).toLowerCase().startsWith(x.nome.toLowerCase()));
+  const marcadores = p.marcadores.filter(visivel);
+  return marcadores.length ? { marcadores, efeitos: p.efeitos } : {};
 }
 
 // O que cada pessoa enxerga da campanha. O mestre vê tudo; o jogador só o que é dele ou público.
@@ -74,7 +85,7 @@ export function visaoPara(c, user, area) {
 
   const personagens = c.personagens
     .filter(p => meus.has(p.id) || p.tipo === 'pj' || emSala.has(p.id) || conhecidos.has(p.id))
-    .map(p => (meus.has(p.id) ? comDono(p) : fichaPublica(p)));
+    .map(p => (meus.has(p.id) ? comDono(p) : fichaPublica(p, sistema(c.sistema))));
 
   return {
     id: c.id, nome: c.nome, nivel: c.nivel, padraoMSA: c.padraoMSA, pontos: c.pontos, aberta: c.aberta, sistema: idSistema(c.sistema),
@@ -256,6 +267,11 @@ function resolverPendente(c, s, pend, defesa, sis) {
   }
   s.pendentes = (s.pendentes || []).filter(x => x.id !== pend.id);
   const notas = aplicarAtaque(a, b, r);
+  // Efeito novo: Queimadura dá Vulnerabilidade; novo Corte reinicia a contagem do Sangramento.
+  if (r.efeito === 'Queimadura') (b.marcadores ||= []).push('Vulnerabilidade');
+  const condEfeito = r.efeito && (sis.condicoes || []).find(x => x.nome === r.efeito);
+  sincronizarEfeitos(b, sis, { reiniciar: condEfeito ? [condEfeito.id] : [] });
+  if (condEfeito && b.efeitos?.[condEfeito.id]) notas.push(`${r.efeito} por ${b.efeitos[condEfeito.id].turnos} turno(s)${condEfeito.sangra ? ' até a próxima perda de PV' : ''}`);
   const mods = r.mods.map(m => `${m.nome} ${fmtMod(m.valor)}`).join(', ');
   const modo = r.modo ? ` · ${r.modo} (${(r.modo === 'vantagem' ? r.motivosVantagem : r.motivosDesvantagem).join(', ')}) d100 [${r.dados.join(', ')}]` : '';
   const def = r.defesa.partes.map(x => `${x.nome} ${x.valor}`).join(' + ');
@@ -402,6 +418,7 @@ export const acoes = {
       if (problemas.length && JSON.stringify(problemas) !== JSON.stringify(problemasFicha(antes, sis, c, { apenasPontos: true }))) desfazer(problemas[0]);
       if (p.nivel > antes.nivel) p.xp = (antes.xp || 0) - xpParaSubir(antes.nivel, sis);
     }
+    if ('marcadores' in (patch || {})) sincronizarEfeitos(p, sis);
     // Explicitamente editado (ex.: "PV máx." pelo mestre) não é recalculado.
     const explicitos = new Set(Object.keys(patch || {}));
     if (CAMPOS_FORMULA.some(k => explicitos.has(k)) && !['pv', 'sanidade', 'humanidade'].some(k => explicitos.has(k))) recalcularMaximos(p, sis);
@@ -716,6 +733,11 @@ export const acoes = {
     const atual = c.personagens.find(p => p.id === cb.ordem[cb.vez]?.id);
     if (!ctx.mestre && atual?.donoId !== ctx.user.id) throw erro('Só quem está no turno (ou o mestre) passa a vez.');
     const sis = sistema(c.sistema);
+    // Fim do turno de quem estava agindo: os efeitos com tempo descontam um turno.
+    if (atual) {
+      const notasEfeitos = passarTurnoEfeitos(atual, sis);
+      if (notasEfeitos.length) registrar(s.log, { autor: atual.nome, rotulo: 'Efeitos', texto: notasEfeitos.join(' · ') });
+    }
     cb.vez++;
     if (cb.vez >= cb.ordem.length) {
       cb.vez = 0;
@@ -726,6 +748,24 @@ export const acoes = {
     s.ativo = p.id;
     const nota = sobrevida(p, sis);
     if (nota) registrar(s.log, { autor: p.nome, rotulo: 'Sobrevida', texto: nota });
+  },
+
+  // O mestre ajusta quantos turnos faltam num efeito (0 tira o efeito).
+  'efeito.turnos'(c, { id, efeito, turnos }, ctx) {
+    exigirMestre(ctx);
+    const p = personagem(c, id);
+    const sis = sistema(c.sistema);
+    const cond = (sis.condicoes || []).find(x => x.id === efeito);
+    if (!cond) throw erro('Efeito desconhecido.');
+    const n = Math.max(0, Math.min(99, parseInt(turnos, 10) || 0));
+    if (!n) {
+      p.marcadores = (p.marcadores || []).filter(m => !String(m).toLowerCase().startsWith(cond.nome.toLowerCase()));
+      sincronizarEfeitos(p, sis);
+      return;
+    }
+    sincronizarEfeitos(p, sis);
+    p.efeitos ||= {};
+    p.efeitos[cond.id] = { ...(p.efeitos[cond.id] || { qtd: 1, perdidos: 0 }), turnos: n };
   },
 
   'combate.ordenar'(c, { id, direcao }, ctx) {
@@ -763,6 +803,8 @@ export const acoes = {
     const op = { ...(opcoes || {}) };
     if (!ctx.mestre) { delete op.vantagem; delete op.desvantagem; delete op.danoLivre; }
     agressaoSubita(c, a, b, sis);
+    const notasAgir = efeitosAoAgir(a, sis);
+    if (notasAgir.length) registrar(s.log, { autor: a.nome, rotulo: 'Efeitos', texto: notasAgir.join(' · ') });
     const arma = armasDisponiveis(a, sis).find(x => x.uid === (op.armaUid || 'desarmado'));
     if (!arma) throw erro('Arma não equipada.');
     // Munição: cada ataque com arma de fogo gasta 1 (cadência natural).

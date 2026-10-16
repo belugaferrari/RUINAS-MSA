@@ -329,3 +329,33 @@ test('cadência: Rifle de Assalto dispara 2 vezes (2 danos, cada um menos o IP)'
   const um = resolverAtaque(a, b, mss, { armaUid: 'r', disparos: 1 }, 'nenhuma', seq(d100(90), d10(9), 0.99));
   assert.equal(um.disparos.length, 1, 'com 1 bala só, 1 disparo');
 });
+
+test('efeitos com tempo andam no fim do turno de quem sofre; o mestre ajusta os turnos', () => {
+  const c = novaCampanha(mestre, { nome: 'Efeitos', maxJogadores: 2, nivel: 1, padraoMSA: true });
+  const ids = ['Lia', 'Rato'].map(nome => executar(c, 'personagem.criar', { tipo: 'npc', grupoId: 'encontros', ficha: { nome } }, ctxM).id);
+  const [lia, rato] = ids.map(id => c.personagens.find(p => p.id === id));
+  for (const id of ids) executar(c, 'sala.adicionar', { sala: 'batalha', id }, ctxM);
+  executar(c, 'personagem.atualizar', { id: lia.id, patch: { marcadores: ['Aturdido'] } }, ctxM);
+  assert.equal(lia.efeitos.aturdido.turnos, 1);
+  executar(c, 'combate.iniciar', {}, ctxM);
+  const cb = c.salas.batalha.combate;
+  // Passa a vez até a Lia terminar o turno dela.
+  while (cb.ordem[cb.vez].id !== lia.id) executar(c, 'combate.proximo', {}, ctxM);
+  executar(c, 'combate.proximo', {}, ctxM);
+  assert.deepEqual(lia.marcadores, []);
+  assert.ok(c.salas.batalha.log.some(e => /Aturdido terminou/.test(e.texto)));
+
+  executar(c, 'personagem.atualizar', { id: rato.id, patch: { marcadores: ['Paralisado'] } }, ctxM);
+  assert.equal(rato.efeitos, undefined, 'sem duração no livro');
+  executar(c, 'efeito.turnos', { id: rato.id, efeito: 'paralisado', turnos: 3 }, ctxM);
+  assert.equal(rato.efeitos.paralisado.turnos, 3);
+  assert.throws(() => executar(c, 'efeito.turnos', { id: rato.id, efeito: 'paralisado', turnos: 1 }, { user: ana, mestre: false }));
+  executar(c, 'efeito.turnos', { id: rato.id, efeito: 'paralisado', turnos: 0 }, ctxM);
+  assert.deepEqual(rato.marcadores, []);
+  // Quem não é dono vê os efeitos visíveis de fora (com a contagem), não os outros marcadores.
+  rato.marcadores = ['Sangramento', 'Fome'];
+  rato.efeitos = { sangramento: { qtd: 1, turnos: 2, perdidos: 0 } };
+  const visto = visaoPara(c, ana, 'jogador').personagens.find(p => p.id === rato.id);
+  assert.deepEqual(visto.marcadores, ['Sangramento']);
+  assert.equal(visto.efeitos.sangramento.turnos, 2);
+});

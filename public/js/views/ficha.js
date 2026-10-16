@@ -1,4 +1,5 @@
 import { h, campo, botao, selecao, aviso, confirmar, pedirTexto, formatarData, vazio, icone, titulo, tabela, seloRevisao, escolhaComOutra, janela } from '../ui.js';
+import { efeitosIcones } from './efeitos.js';
 import { estado, render } from '../estado.js';
 import { acao, enviarArquivo } from '../api.js';
 import { derivados, slotsOcupados, ganhosDeClasse, pontosGastos, pontosPericiaTotal, vantagensDisponiveis, acharVantagem, xpParaSubir } from '/shared/regras.js';
@@ -114,8 +115,10 @@ export function escolherCondicao(p) {
       h('h4', {}, g),
       h('ul', {}, (sis.condicoes || []).filter(c => c.grupo === g).map(c => {
         const tem = ativas.has(c.nome.toLowerCase());
+        const qtd = (p.marcadores || []).filter(m => m.toLowerCase() === c.nome.toLowerCase()).length;
+        const cheio = c.maxAcumulo && qtd >= c.maxAcumulo;
         return h('li', {},
-          botao(tem && !c.acumula ? 'Já marcada' : c.acumula && tem ? '+1' : 'Marcar', () => adicionar(c.nome), { class: 'pequeno primario', disabled: tem && !c.acumula, title: `Marcar ${c.nome}` }),
+          botao(cheio ? 'No máximo' : tem && !c.acumula ? 'Já marcada' : c.acumula && tem ? '+1' : 'Marcar', () => adicionar(c.nome), { class: 'pequeno primario', disabled: (tem && !c.acumula) || cheio, title: `Marcar ${c.nome}` }),
           h('div', {}, h('strong', {}, c.nome), c.acumula ? h('small', { class: 'selo' }, 'acumula') : null, h('small', { class: 'bloco-texto' }, c.efeitos)));
       }))))));
 }
@@ -148,6 +151,7 @@ function estadoCompacto(p, d) {
     trilhaCompacta(p, 'sanidade', 'Sanidade', 'brain', d.estadoSanidade),
     trilhaCompacta(p, 'humanidade', 'Humanidade', 'hand-heart', d.estagioHumanidade?.nome || ''),
     p.humanidade && p.humanidade.atual < 1 ? h('p', { class: 'alerta perigo' }, icone('circle-alert'), ' Humanidade abaixo de 1: só o mestre controla este personagem.') : null,
+    efeitosIcones(p, { grande: true }),
     temporarios(p),
     condicoesView(p, d));
 }
@@ -293,6 +297,7 @@ function trilhas(p, mestre) {
     trilha(p, 'sanidade', 'Sanidade'),
     h('p', { class: 'meta' }, icone('brain'), ` Estado mental: ${derivados(p, estado.sistema).estadoSanidade}`),
     trilha(p, 'humanidade', 'Humanidade'),
+    efeitosIcones(p, { mestre, grande: true }),
     temporarios(p),
     p.humanidade && p.humanidade.atual < 1 ? h('p', { class: 'alerta perigo' }, icone('circle-alert'), ' Humanidade abaixo de 1: o jogador perdeu o controle deste personagem (só o mestre age por ele).') : null,
     estagioHumanidade(p),

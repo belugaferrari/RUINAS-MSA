@@ -1017,7 +1017,8 @@
     "CONS": -1
    },
    "testes": -5,
-   "acumula": true
+   "acumula": true,
+   "icone": "utensils-crossed"
   },
   {
    "id": "sede",
@@ -1028,7 +1029,8 @@
     "CONS": -1
    },
    "testes": -5,
-   "acumula": true
+   "acumula": true,
+   "icone": "cup-soda"
   },
   {
    "id": "sono",
@@ -1040,7 +1042,8 @@
     "INT": -2
    },
    "testes": -10,
-   "acumula": true
+   "acumula": true,
+   "icone": "bed"
   },
   {
    "id": "doenca",
@@ -1051,28 +1054,32 @@
     "CONS": -2
    },
    "testes": -10,
-   "acumula": true
+   "acumula": true,
+   "icone": "biohazard"
   },
   {
    "id": "friagem",
    "nome": "Friagem",
    "grupo": "Necessidades",
    "efeitos": "−10% em todos os testes; +1 marcador de vulnerabilidade a cada 15 min.",
-   "testes": -10
+   "testes": -10,
+   "icone": "thermometer-snowflake"
   },
   {
    "id": "cansado",
    "nome": "Cansado",
    "grupo": "Fadiga",
    "efeitos": "−10% em todos os testes.",
-   "testes": -10
+   "testes": -10,
+   "icone": "battery-low"
   },
   {
    "id": "exausto",
    "nome": "Exausto",
    "grupo": "Fadiga",
    "efeitos": "−20% em todos os testes; não corre nem carrega acima do carregamento.",
-   "testes": -20
+   "testes": -20,
+   "icone": "battery-warning"
   },
   {
    "id": "dor",
@@ -1082,103 +1089,129 @@
    "atributos": {
     "FOR": -2
    },
-   "acumula": true
+   "acumula": true,
+   "icone": "activity",
+   "duracao": "1d4",
+   "maxAcumulo": 3
   },
   {
    "id": "sangramento",
    "nome": "Sangramento",
    "grupo": "Dano",
-   "efeitos": "1 PV a cada 1D4 turnos, até 6 PV."
+   "efeitos": "1 PV a cada 1D4 turnos, até 6 PV perdidos. Não acumula; novo dano de Corte reinicia a contagem.",
+   "icone": "droplet",
+   "sangra": {
+    "pv": 1,
+    "intervalo": "1d4",
+    "maximo": 6
+   }
   },
   {
    "id": "ferida-aberta",
    "nome": "Ferida aberta",
    "grupo": "Dano",
-   "efeitos": "Recebe 1 PV a cada Ação Principal."
+   "efeitos": "Perde 1 PV sempre que fizer uma Ação principal (no app: a cada ataque).",
+   "icone": "bandage",
+   "pvPorAcao": 1
   },
   {
    "id": "queimadura",
    "nome": "Queimadura",
    "grupo": "Dano",
-   "efeitos": "+1 de dano sempre que for acertado; marcador de vulnerabilidade."
+   "efeitos": "+1 de dano sempre que for acertado (não é absorvido); ganha um marcador de Vulnerabilidade.",
+   "icone": "flame"
   },
   {
    "id": "envenenado",
    "nome": "Envenenado",
    "grupo": "Dano",
-   "efeitos": "Efeito descrito no veneno."
+   "efeitos": "Efeito descrito no veneno.",
+   "icone": "syringe"
   },
   {
    "id": "membros-superiores",
    "nome": "Dano a membros superiores",
    "grupo": "Dano",
-   "efeitos": "Testes com o membro ferido 20% mais difíceis (aplicar no teste)."
+   "efeitos": "Testes com o membro ferido 20% mais difíceis (aplicar no teste).",
+   "icone": "hand"
   },
   {
    "id": "membros-inferiores",
    "nome": "Dano a membros inferiores",
    "grupo": "Dano",
-   "efeitos": "Deslocamento −3 m; disparada causa Dor."
+   "efeitos": "Deslocamento −3 m; disparada causa Dor.",
+   "icone": "footprints"
   },
   {
    "id": "caido",
    "nome": "Caído",
    "grupo": "Mobilidade",
-   "efeitos": "Ataques físicos contra ele têm vantagem; os dele, desvantagem; cobertura parcial contra tiros."
+   "efeitos": "Ataques físicos contra ele têm vantagem; os dele, desvantagem; cobertura parcial contra tiros.",
+   "icone": "arrow-down-to-line"
   },
   {
    "id": "paralisado",
    "nome": "Paralisado",
    "grupo": "Mobilidade",
-   "efeitos": "Deslocamento 0; não move o corpo."
+   "efeitos": "Deslocamento 0; não move o corpo.",
+   "icone": "lock"
   },
   {
    "id": "enraizado",
    "nome": "Enraizado",
    "grupo": "Mobilidade",
-   "efeitos": "Deslocamento 0; braços livres."
+   "efeitos": "Deslocamento 0; braços livres.",
+   "icone": "anchor"
   },
   {
    "id": "desorientado",
    "nome": "Desorientado",
    "grupo": "Mobilidade",
-   "efeitos": "Move-se em direção aleatória (1d8 por passo)."
+   "efeitos": "Move-se em direção aleatória (1d8 por passo).",
+   "icone": "compass"
   },
   {
    "id": "aturdido",
    "nome": "Aturdido",
    "grupo": "Mobilidade",
-   "efeitos": "Desorientado; ataques dele em desvantagem e contra ele com vantagem."
+   "efeitos": "Ataques dele em desvantagem e contra ele com vantagem. Dura 1 turno.",
+   "icone": "stars",
+   "duracao": 1
   },
   {
    "id": "vertigem",
    "nome": "Vertigem",
    "grupo": "Mobilidade",
-   "efeitos": "Aturdido; ao se mover, teste de AGI difícil ou cai."
+   "efeitos": "Aturdido; ao se mover, teste de AGI difícil ou cai.",
+   "icone": "tornado"
   },
   {
    "id": "imobilizado",
    "nome": "Imobilizado",
    "grupo": "Mobilidade",
-   "efeitos": "Não ataca; ataques contra ele têm vantagem."
+   "efeitos": "Não ataca; ataques contra ele têm vantagem.",
+   "icone": "link"
   },
   {
    "id": "desmaiado",
    "nome": "Desmaiado",
    "grupo": "Estado",
-   "efeitos": "Não pode ser controlado; perde 1 PV por turno abaixo de 0."
+   "efeitos": "Não pode ser controlado; perde 1 PV por turno abaixo de 0.",
+   "icone": "moon-star"
   },
   {
    "id": "estabilizado",
    "nome": "Estabilizado",
    "grupo": "Estado",
-   "efeitos": "Não perde PV pela sobrevida."
+   "efeitos": "Não perde PV pela sobrevida.",
+   "icone": "heart-pulse"
   },
   {
    "id": "confuso",
    "nome": "Confuso",
    "grupo": "Mental",
-   "efeitos": "Desvantagem no próximo teste mental (INT, CAR, PER ou WILL)."
+   "efeitos": "Desvantagem no próximo teste mental (INT, CAR, PER ou WILL).",
+   "icone": "circle-help"
   },
   {
    "id": "alerta",
@@ -1188,7 +1221,8 @@
    "testesAtributos": {
     "PER": 20,
     "INT": -20
-   }
+   },
+   "icone": "eye"
   },
   {
    "id": "trauma-momentaneo",
@@ -1199,7 +1233,8 @@
     "briga": -30,
     "arma-branca": -30,
     "armas-de-fogo": -30
-   }
+   },
+   "icone": "brain"
   },
   {
    "id": "trauma-agudo",
@@ -1210,41 +1245,47 @@
     "INT": -5,
     "WILL": -5
    },
-   "testes": -20
+   "testes": -20,
+   "icone": "brain-circuit"
   },
   {
    "id": "trauma-profundo",
    "nome": "Trauma profundo",
    "grupo": "Mental",
    "efeitos": "Volta o ônus do trauma até o próximo descanso: −20% nos testes.",
-   "testes": -20
+   "testes": -20,
+   "icone": "heart-crack"
   },
   {
    "id": "mal-estar",
    "nome": "Humorado – mal-estar",
    "grupo": "Estado mental",
    "efeitos": "−5% nos testes (até 1 hora).",
-   "testes": -5
+   "testes": -5,
+   "icone": "frown"
   },
   {
    "id": "bem-estar",
    "nome": "Humorado – bem-estar",
    "grupo": "Estado mental",
    "efeitos": "+5% nos testes (até 1 hora).",
-   "testes": 5
+   "testes": 5,
+   "icone": "smile"
   },
   {
    "id": "satisfeito",
    "nome": "Satisfeito",
    "grupo": "Estado mental",
    "efeitos": "+5% nos testes; +1D4 PV no próximo descanso.",
-   "testes": 5
+   "testes": 5,
+   "icone": "laugh"
   },
   {
    "id": "drogado",
    "nome": "Drogado",
    "grupo": "Vício",
-   "efeitos": "Efeitos descritos na droga; teste de WILL para não viciar."
+   "efeitos": "Efeitos descritos na droga; teste de WILL para não viciar.",
+   "icone": "pill"
   },
   {
    "id": "viciado",
@@ -1253,7 +1294,8 @@
    "efeitos": "WILL −2 (suprimido até o descanso ao usar a droga).",
    "atributos": {
     "WILL": -2
-   }
+   },
+   "icone": "repeat"
   },
   {
    "id": "abstinencia-1",
@@ -1264,35 +1306,40 @@
     "INT": -10,
     "CAR": -10,
     "WILL": -10
-   }
+   },
+   "icone": "meh"
   },
   {
    "id": "abstinencia-2",
    "nome": "Abstinência – fase 2",
    "grupo": "Vício",
    "efeitos": "−15% em todos os testes.",
-   "testes": -15
+   "testes": -15,
+   "icone": "annoyed"
   },
   {
    "id": "abstinencia-3",
    "nome": "Abstinência – fase 3",
    "grupo": "Vício",
    "efeitos": "−20% em todos os testes; descansos não recuperam PV; 2D6 de Sanidade por dia.",
-   "testes": -20
+   "testes": -20,
+   "icone": "angry"
   },
   {
    "id": "vulnerabilidade",
    "nome": "Marcador de vulnerabilidade",
    "grupo": "Marcadores",
    "efeitos": "Conta no teste de CONS do descanso longo (doença).",
-   "acumula": true
+   "acumula": true,
+   "icone": "shield-alert"
   },
   {
    "id": "genetico",
    "nome": "Marcador genético",
    "grupo": "Marcadores",
    "efeitos": "Conta no teste de CONS do descanso longo (mutação).",
-   "acumula": true
+   "acumula": true,
+   "icone": "dna"
   }
  ],
  "_avisoCondicoes": "Condições do Livro de Regras (efeitos de sobrevivência, dano, mobilidade, mentais e vício). Os números entram sozinhos nas estatísticas da ficha."

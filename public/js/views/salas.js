@@ -1,4 +1,5 @@
 import { h, botao, selecao, aviso, confirmar, vazio, formatarData, icone, titulo } from '../ui.js';
+import { efeitosIcones, marcadoresLivres } from './efeitos.js';
 import { estado, personagemPorId, meusPersonagens, render } from '../estado.js';
 import { acao } from '../api.js';
 import { derivados, LIMITE_SALA } from '/shared/regras.js';
@@ -74,7 +75,8 @@ function cartaoParticipante(nome, s, p, i, total, mestre, participantes) {
         h('span', {}, icone('heart'), `${p.pv.atual}/${p.pv.max}`),
         h('span', {}, icone('brain'), p.sanidade?.atual ?? '-'),
         h('span', {}, icone('hand-heart'), p.humanidade?.atual ?? '-')) : null,
-      veStats && p.marcadores?.length ? h('div', { class: 'marcadores' }, p.marcadores.map(m => h('span', { class: 'etiqueta' }, m))) : null,
+      efeitosIcones(p, { mestre }),
+      veStats && marcadoresLivres(p).length ? h('div', { class: 'marcadores' }, marcadoresLivres(p).map(m => h('span', { class: 'etiqueta' }, m))) : null,
       nome === 'social' ? humorCartao(p, mestre || meu, mestre) : null,
       mestre ? ajustesMestre(p, nome) : null,
       nome === 'batalha' ? acoesCartaoBatalha(p, participantes, mestre) : acoesCartaoSocial(p, participantes, mestre)),
