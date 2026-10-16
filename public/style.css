@@ -715,3 +715,73 @@ button.efeito-icone { cursor: pointer; }
 .dado.d10.ds span { font-size: 1.6rem; }
 @keyframes dado-rola { 0% { transform: rotate(0) scale(.92); } 25% { transform: rotate(90deg) scale(1.05); } 50% { transform: rotate(180deg) scale(.92); } 75% { transform: rotate(270deg) scale(1.05); } 100% { transform: rotate(360deg) scale(.92); } }
 @media (max-width: 420px) { .dado.d10 { width: 60px; height: 66px; } .dado.d10.ds { width: 64px; height: 70px; } .dado.d10 span { font-size: 1.2rem; } }
+
+/* Campo de Combate: painel do personagem em três quadros (esboço do autor). */
+.batalha-topo { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, .9fr) minmax(0, 1.05fr); gap: 1em; align-items: start; margin-bottom: 1em; }
+.batalha-topo > .bloco { margin: 0; }
+.nome-controlado { margin: 0; font-size: 1.15em; }
+select.nome-controlado { font-weight: 700; }
+.maos { display: grid; grid-template-columns: 1fr 1fr; gap: .4em; margin: .5em 0; }
+.mao { display: flex; flex-direction: column; gap: .2em; padding: .35em .45em; border: 1px dashed var(--borda); border-radius: 8px; min-width: 0; }
+.mao small { opacity: .75; }
+.mao-item { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bat-personagem h4 { margin: .6em 0 .3em; display: flex; align-items: center; gap: .3em; }
+.defesas { display: grid; grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); gap: .35em; }
+.defesa { display: flex; flex-direction: column; align-items: center; padding: .3em; border: 1px solid var(--borda); border-radius: 8px; background: rgba(0, 0, 0, .15); }
+.defesa small { opacity: .75; font-size: .78em; }
+.defesa strong { font-size: 1.15em; font-variant-numeric: tabular-nums; }
+.lista-habilidades { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .3em; max-height: 520px; overflow-y: auto; }
+.lista-habilidades li { display: flex; align-items: flex-start; gap: .4em; padding: .3em .4em; border: 1px solid var(--borda); border-radius: 8px; }
+.lista-habilidades li.ativa { border-color: var(--ouro); background: rgba(201, 164, 92, .08); }
+.lista-habilidades details { flex: 1; min-width: 0; }
+.lista-habilidades summary { cursor: pointer; }
+.lista-ataques { list-style: none; margin: .4em 0 0; padding: 0; display: flex; flex-direction: column; gap: .5em; }
+.lista-ataques ul { list-style: none; margin: .2em 0 0; padding: 0 0 0 .8em; display: flex; flex-direction: column; gap: .2em; }
+.ataque-grupo { border: 1px solid var(--borda); border-radius: 8px; padding: .4em .5em; }
+.ataque-linha { display: flex; align-items: center; gap: .35em; }
+.ataque-nome { flex: 1; min-width: 0; }
+.ataque-grupo summary { cursor: pointer; font-size: .9em; opacity: .85; margin-top: .2em; }
+.dado-linha { flex: none; }
+.alvo-ataque select { flex: 1; min-width: 0; }
+.opcoes-ataque { margin-top: .6em; }
+.grade-opcoes { display: flex; flex-wrap: wrap; gap: .3em .8em; margin-top: .3em; }
+.sala-batalha .participantes, .sala-social .participantes { gap: .4em; }
+@media (max-width: 1250px) { .batalha-topo { grid-template-columns: 1fr 1fr; } .batalha-topo > .bat-ataques { grid-column: 1 / -1; } }
+@media (max-width: 760px) { .batalha-topo { grid-template-columns: 1fr; } }
+
+/* Sala Social: seu lado · manipulações · outro lado. */
+.social-tres { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr) minmax(0, 1fr); gap: 1em; align-items: start; margin-bottom: 1em; }
+.social-tres > .bloco { margin: 0; }
+.social-eu { border: 1px solid var(--ouro-esc); border-radius: 10px; padding: .5em; margin-bottom: .6em; }
+.social-eu .humor { display: flex; flex-direction: column; gap: .3em; margin-top: .3em; }
+.rmnp { display: flex; flex-direction: column; align-items: center; padding: .2em .6em; border: 1px solid var(--borda); border-radius: 8px; }
+.rmnp small { font-size: .75em; opacity: .75; }
+.social-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .4em; }
+.mini-cartao { width: 100%; display: flex; align-items: center; gap: .5em; text-align: left; padding: .4em .5em; border-radius: 10px; }
+.mini-cartao.alvo { border-color: #e06b5d; box-shadow: 0 0 0 1px #e06b5d inset; }
+.mini-cartao .avatar { width: 32px; height: 32px; flex: none; border-radius: 50%; display: grid; place-items: center; overflow: hidden; background: var(--painel); border: 1px solid var(--borda); }
+.mini-cartao .avatar img { width: 100%; height: 100%; object-fit: cover; }
+.mini-nome { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.mini-nome small { opacity: .8; display: inline-flex; align-items: center; gap: .2em; }
+.afinidade { display: flex; flex-direction: column; align-items: center; font-size: .85em; padding: .1em .4em; border-radius: 6px; border: 1px solid var(--borda); }
+.afinidade small { font-size: .75em; opacity: .7; }
+.afinidade.esp-a { border-color: #5fb56a; color: #8fd69a; }
+.afinidade.esp-c { border-color: #d9443a; color: #f08a80; }
+.alvo-manip { margin: 0 0 .5em; }
+.grade-manip { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .4em; }
+.manip { display: flex; flex-direction: column; align-items: center; gap: .1em; padding: .55em .3em; border-radius: 8px; }
+.manip.ativa { border-color: var(--ouro); color: var(--ouro); background: #3a2c1a; }
+.manip small { opacity: .8; }
+.causar { margin: .7em 0 .3em; display: flex; flex-direction: column; gap: .3em; }
+.outros-mods { margin-top: .8em; border-top: 1px solid var(--borda); padding-top: .5em; }
+@media (max-width: 1100px) { .social-tres { grid-template-columns: 1fr 1fr; } .social-tres > .social-manip { grid-column: 1 / -1; order: 3; } }
+@media (max-width: 700px) { .social-tres { grid-template-columns: 1fr; } }
+
+/* Rolador: dificuldade em bolinhas (F N D MD) e o botão Jogar. */
+.bolinhas-dif { display: flex; gap: .4em; justify-content: space-between; }
+.bolinha { width: 44px; height: 44px; padding: 0; border-radius: 50%; display: grid; place-items: center; font-weight: 800; font-size: .95em; }
+.bolinha.ativa { border-color: var(--ouro); color: #1a1a1a; background: var(--ouro); }
+.nd-escolhido { margin: .2em 0 0; text-align: center; }
+.painel-dados .jogar { width: 100%; justify-content: center; font-size: 1.1em; padding: .6em; }
+.painel-dados .outros-mods { display: flex; flex-direction: column; gap: .4em; }
+.painel-dados .outros-mods[open] > :not(summary) { margin-top: .4em; }

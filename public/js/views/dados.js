@@ -105,24 +105,36 @@ function secaoTeste(p, d, mestre) {
   const numero = (rot, chave, props = {}) => h('label', { class: 'linha' }, rot,
     h('input', { type: 'number', class: 'curto', value: s[chave], ...props, onchange: e => { s[chave] = Number(e.target.value) || 0; render(); } }));
 
+  const sigla = nome => nome.split(/\s+/).map(w => w[0].toUpperCase()).join('');
+  const outras = opcoesDif.filter(o => !sis.teste.dificuldades.some(x => x.nome === o.valor));
+  const jogar = botao('Jogar D-MIL', async () => {
+    const dif = sis.teste.dificuldades.find(x => x.nome === s.dif);
+    if (opcoesAcao && !s.acao) throw new Error('Escolha o que testar.');
+    const mod = s.mod + (s.intuicao ? (sis.teste.intuicao?.mod ?? -20) : 0);
+    await enviar({ acaoRef: opcoesAcao ? s.acao : null, acao: opcoesAcao ? null : (s.acaoLivre ?? 40), rotulo: opcoesAcao ? null : 'Teste', mod, nd: nd(), metade: !!dif?.metade }, textoResultado);
+  }, { class: 'primario jogar', icone: 'dices' });
+  // Ordem do esboço do autor: dificuldade (F N D MD), Jogar, perícia e outros modificadores.
   return h('div', { class: 'form' },
-    h('p', { class: 'dica' }, sis.teste.descricao),
-    opcoesAcao ? selecao(opcoesAcao, s.acao, v => { s.acao = v; }, { 'aria-label': 'O que testar' })
+    h('div', { class: 'bolinhas-dif', role: 'group', 'aria-label': 'Dificuldade' },
+      sis.teste.dificuldades.map(x => h('button', {
+        type: 'button', class: `bolinha ${s.dif === x.nome ? 'ativa' : ''}`, 'aria-pressed': s.dif === x.nome,
+        title: `${x.nome} · ND ${x.nd}${x.metade ? ' (metade da ação)' : ''}`, 'aria-label': `${x.nome}, ND ${x.nd}`,
+        onclick: () => { s.dif = x.nome; render(); },
+      }, sigla(x.nome)))),
+    h('p', { class: 'meta nd-escolhido' }, `${opcoesDif.find(o => o.valor === s.dif)?.rotulo || s.dif}`),
+    jogar,
+    opcoesAcao ? h('label', {}, 'Perícia ou atributo', selecao(opcoesAcao, s.acao, v => { s.acao = v; }, { 'aria-label': 'O que testar' }))
       : numero('Ação %', 'acaoLivre', { value: s.acaoLivre ?? 40 }),
-    selecao(opcoesDif, s.dif, v => { s.dif = v; render(); }, { 'aria-label': 'Dificuldade' }),
-    s.dif === 'livre' ? numero('ND', 'ndLivre') : null,
-    s.dif === 'passiva' ? numero('Ação do oponente %', 'passiva') : null,
-    !p && s.dif.startsWith('nivel:') ? numero('Nível', 'nivelNd', { min: 1, max: 20 }) : null,
-    h('div', { class: 'barra' },
-      numero('Mod.', 'mod', { step: 5 }),
-      h('label', { class: 'linha', title: sis.teste.intuicao?.descricao }, h('input', { type: 'checkbox', checked: s.intuicao, onchange: e => { s.intuicao = e.target.checked; } }), `Intuição (${sis.teste.intuicao?.mod ?? -20}%)`)),
-    h('p', { class: 'meta' }, `ND: ${nd() ?? '—'}`),
-    botao('Rolar D-MIL', async () => {
-      const dif = sis.teste.dificuldades.find(x => x.nome === s.dif);
-      if (opcoesAcao && !s.acao) throw new Error('Escolha o que testar.');
-      const mod = s.mod + (s.intuicao ? (sis.teste.intuicao?.mod ?? -20) : 0);
-      await enviar({ acaoRef: opcoesAcao ? s.acao : null, acao: opcoesAcao ? null : (s.acaoLivre ?? 40), rotulo: opcoesAcao ? null : 'Teste', mod, nd: nd(), metade: !!dif?.metade }, textoResultado);
-    }, { class: 'primario', icone: 'dices' }),
+    h('details', { class: 'outros-mods', open: !!s.outrosAbertos || !sis.teste.dificuldades.some(x => x.nome === s.dif), ontoggle: e => { s.outrosAbertos = e.target.open; } },
+      h('summary', {}, 'Outros modificadores'),
+      selecao([{ valor: '', rotulo: 'Outra dificuldade…' }, ...outras], outras.some(o => o.valor === s.dif) ? s.dif : '', v => { if (v) { s.dif = v; render(); } }, { 'aria-label': 'Outra dificuldade' }),
+      s.dif === 'livre' ? numero('ND', 'ndLivre') : null,
+      s.dif === 'passiva' ? numero('Ação do oponente %', 'passiva') : null,
+      !p && s.dif.startsWith('nivel:') ? numero('Nível', 'nivelNd', { min: 1, max: 20 }) : null,
+      h('div', { class: 'barra' },
+        numero('Mod.', 'mod', { step: 5 }),
+        h('label', { class: 'linha', title: sis.teste.intuicao?.descricao }, h('input', { type: 'checkbox', checked: s.intuicao, onchange: e => { s.intuicao = e.target.checked; } }), `Intuição (${sis.teste.intuicao?.mod ?? -20}%)`))),
+    h('p', { class: 'dica' }, sis.teste.descricao),
     ultimo());
 }
 
@@ -207,7 +219,7 @@ export function prepararTeste(personagemId, acaoRef) {
   estado.sel.dadosAberto = true;
   render();
   setTimeout(() => {
-    const b = [...document.querySelectorAll('.painel-dados button')].find(x => /Rolar D-MIL/.test(x.textContent));
+    const b = [...document.querySelectorAll('.painel-dados button')].find(x => /Jogar D-MIL/.test(x.textContent));
     b?.focus();
     b?.scrollIntoView({ block: 'nearest' });
   }, 0);

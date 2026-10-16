@@ -89,7 +89,7 @@ function temporarios(p) {
 }
 
 // Título em cima (nome e estado), barra embaixo com o valor no centro, entre − e +.
-function trilhaCompacta(p, chave, rotulo, ic, extra = null) {
+export function trilhaCompacta(p, chave, rotulo, ic, extra = null) {
   const t = p[chave] || { max: 0, atual: 0 };
   const pct = Math.max(0, Math.min(100, (100 * t.atual) / (t.max || 1)));
   return h('div', { class: `trilha-compacta ${chave}` },

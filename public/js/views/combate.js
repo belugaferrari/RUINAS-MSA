@@ -5,6 +5,7 @@ import { estado, personagemPorId, render } from '../estado.js';
 import { acao } from '../api.js';
 import { derivados } from '/shared/regras.js';
 import { armasDisponiveis, opcoesDefesa, defesaDoAlvo, ipDe, resistenciaManipulacao } from '/shared/combate.js';
+import { prepararTeste } from './dados.js';
 
 const meuOuMestre = (p, mestre) => mestre || p.donoId === estado.usuario.id;
 const opcoesPersonagens = lista => lista.map(p => ({ valor: p.id, rotulo: p.nome }));
@@ -24,13 +25,11 @@ export function combateView(participantes, mestre) {
       mestre ? botao('Iniciar combate', () => acao('combate.iniciar'), { class: 'primario', icone: 'play', disabled: participantes.length < 2 }) : null),
     cb ? painelVez(cb, mestre) : null,
     auto ? pendentesView(mestre) : null,
-    auto ? ataqueView(participantes, mestre, cb)
-      : h('p', { class: 'dica' }, icone('info'), ` No ${sis.nome} o ataque ainda é resolvido com os testes da sala e os PV à mão; o ataque automático liga quando a campanha está no MSS.`),
     mestre ? xpDaSala(participantes) : null);
 }
 
 // Quem está na vez: atalhos para o dono (ou o mestre) agir sem procurar na tela.
-function painelVez(cb, mestre) {
+export function painelVez(cb, mestre) {
   const p = personagemPorId(cb.ordem[cb.vez]?.id);
   if (!p) return null;
   const meu = p.donoId === estado.usuario.id;
@@ -44,8 +43,7 @@ function painelVez(cb, mestre) {
       botao('', () => acao('item.municao', { id: p.id, uid: i.uid, delta: -1 }), { class: 'pequeno', icone: 'minus', title: `Gastar 1 bala de ${i.nome}`, disabled: (i.carregada || 0) <= 0 }),
       botao('Recarregar', () => acao('item.recarregar', { id: p.id, uid: i.uid }), { class: 'pequeno', icone: 'refresh-cw', disabled: (i.carregada || 0) >= i.capacidade }))),
     h('span', { class: 'espaco' }),
-    botao('Rolar teste', () => { estado.sel['rolar-batalha'] = { ...(estado.sel['rolar-batalha'] || { dif: '1', valor: 50 }), quem: p.id, acao: '' }; render();
-      document.querySelector('[aria-label="O que testar"]')?.focus(); }, { class: 'pequeno', icone: 'dices' }),
+    botao('Rolar teste', () => prepararTeste(p.id, ''), { class: 'pequeno', icone: 'dices' }),
     botao('Passar a vez', () => acao('combate.proximo'), { class: 'pequeno primario', icone: 'skip-forward' }));
 }
 
@@ -64,7 +62,7 @@ export function xpDaSala(participantes) {
 }
 
 // Ataques declarados esperando a defesa. Quem controla o alvo (ou o mestre) escolhe; os valores só aparecem para quem escolhe.
-function pendentesView(mestre) {
+export function pendentesView(mestre) {
   const sis = estado.sistema;
   const lista = estado.campanha.salas.batalha.pendentes || [];
   if (!lista.length) return null;
@@ -92,7 +90,7 @@ function pendentesView(mestre) {
     }));
 }
 
-function ordemView(cb, mestre) {
+export function ordemView(cb, mestre) {
   const atual = personagemPorId(cb.ordem[cb.vez]?.id);
   const podePassar = mestre || atual?.donoId === estado.usuario.id;
   return h('div', {},
@@ -111,74 +109,13 @@ function ordemView(cb, mestre) {
     })));
 }
 
-function ataqueView(participantes, mestre, cb) {
-  const sis = estado.sistema;
-  const meus = participantes.filter(p => meuOuMestre(p, mestre) && p.atributos);
-  if (!meus.length) return null;
-  const sel = estado.sel.ataque ||= { atacante: '', alvo: '', arma: 'desarmado', duasArmas: '' };
-  const daVez = cb && meus.find(p => p.id === cb.ordem[cb.vez]?.id);
-  if (!meus.some(p => p.id === sel.atacante)) sel.atacante = (daVez || meus[0]).id;
-  const a = personagemPorId(sel.atacante);
-  const alvos = participantes.filter(p => p.id !== a.id);
-  if (!alvos.some(p => p.id === sel.alvo)) sel.alvo = alvos[0]?.id || '';
-  const armas = armasDisponiveis(a, sis);
-  if (!armas.some(x => x.uid === sel.arma)) sel.arma = 'desarmado';
-  const arma = armas.find(x => x.uid === sel.arma);
-  const d = derivados(a, sis);
-  const b = personagemPorId(sel.alvo);
-  // Só o mestre vê as defesas e o IP do alvo (revelam as perícias dele).
-  const tiro = arma.alcance === 'distancia' && !sel.area;
-  const defesas = mestre && b?.atributos
-    ? (tiro ? [`dificuldade do tiro ${defesaDoAlvo(b, arma, sis, { cobertura: sel.cobertura }).total}`]
-      : opcoesDefesa(b, arma, sis, { area: sel.area }).filter(o => o.id !== 'nenhuma')
-        .map(o => `${o.nome} ${defesaDoAlvo(b, arma, sis, { escolha: o.id, cobertura: sel.cobertura, area: sel.area }).total}`))
-    : null;
-  const pericia = arma.pericia || 'briga.ataque-desarmado';
-  return h('details', { class: 'ataque', open: estado.sel.ataqueAberto ?? false, ontoggle: e => { estado.sel.ataqueAberto = e.target.open; } },
-    h('summary', {}, icone('crosshair'), 'Opções do ataque (valem também para os botões "Atacar" dos cartões)'),
-    h('div', { class: 'barra' },
-      selecao(opcoesPersonagens(meus), sel.atacante, v => { sel.atacante = v; render(); }, { 'aria-label': 'Atacante' }),
-      h('span', {}, '→'),
-      alvos.length ? selecao(opcoesPersonagens(alvos), sel.alvo, v => { sel.alvo = v; render(); }, { 'aria-label': 'Alvo' }) : h('em', {}, 'sem alvos'),
-      selecao(armas.map(x => ({ valor: x.uid, rotulo: `${x.nome} (${x.dano}${x.alcance === 'distancia' ? ', distância' : ''})` })), sel.arma, v => { sel.arma = v; render(); }, { 'aria-label': 'Arma' })),
-    h('p', { class: 'dica' }, `Ataque: ${pericia.split('.').pop().replace(/-/g, ' ')} ${d.subpericias[pericia] ?? 0}%`,
-      arma.alcance === 'corpo' && d.mod.FOR ? ` · dano + MOD FOR ${d.mod.FOR}` : '',
-      ` · efeito ${arma.tipoDano} se DS ≤ ${arma.efeitoDano}`,
-      tiro ? ' · tiro: sem defesa, dificuldade 50 + 5 × nível do alvo' : ' · o alvo escolhe a defesa',
-      defesas ? ` (${defesas.length ? defesas.join(', ') : 'sem defesa possível'} · IP ${ipDe(b, sis)})` : ''),
-    h('div', { class: 'barra opcoes-ataque' },
-      caixa(sel, 'localizado', 'Localizado (−30%, +1d6)'),
-      caixa(sel, 'surpresa', 'Surpresa'),
-      caixa(sel, 'elevado', 'Terreno elevado'),
-      h('label', { class: 'linha' }, h('input', { type: 'checkbox', checked: !!sel.area, onchange: e => { sel.area = e.target.checked; render(); } }), 'Ataque em área'),
-      arma.alcance === 'distancia' ? caixa(sel, 'cobertura', 'Alvo em cobertura (+30)') : null,
-      a.tipo === 'pj' ? caixa(sel, 'sacrificio', 'Sacrifício (+10%, D6 de vida no dano)') : null,
-      selecao([{ valor: '', rotulo: 'Uma arma' }, { valor: 'principal', rotulo: 'Duas armas: mão principal (−20%)' }, { valor: 'inabil', rotulo: 'Duas armas: mão inábil (−40%)' }],
-        sel.duasArmas, v => { sel.duasArmas = v; }, { 'aria-label': 'Duas armas' })),
-    mestre ? h('div', { class: 'barra opcoes-ataque' },
-      caixa(sel, 'vantagem', 'Vantagem'), caixa(sel, 'desvantagem', 'Desvantagem'),
-      h('label', { class: 'linha' }, 'Mod. %', h('input', { type: 'number', class: 'curto', value: sel.mod || 0, onchange: e => { sel.mod = e.target.value; } })),
-      h('label', { class: 'linha' }, 'Dano livre', h('input', { class: 'curto', placeholder: 'ex.: 1d6+1', value: sel.danoLivre || '', onchange: e => { sel.danoLivre = e.target.value.trim(); } }))) : null,
-    botao('Atacar', async () => {
-      if (!sel.alvo) throw new Error('Escolha o alvo.');
-      const r = await acao('combate.atacar', {
-        atacante: sel.atacante, alvo: sel.alvo,
-        opcoes: { armaUid: sel.arma, localizado: sel.localizado, surpresa: sel.surpresa, elevado: sel.elevado, cobertura: sel.cobertura, area: sel.area, sacrificio: sel.sacrificio,
-          duasArmas: sel.duasArmas || null, vantagem: sel.vantagem, desvantagem: sel.desvantagem, mod: sel.mod, danoLivre: sel.danoLivre || null },
-      });
-      sel.sacrificio = false;
-      if (r.tipo === 'ataque') aviso(`${r.autor} ${r.rotulo}: ${r.texto}`, r.sucesso ? 'ok' : 'erro');
-      else aviso('Ataque declarado: aguardando a defesa do alvo.');
-    }, { class: 'primario', icone: 'swords', disabled: !alvos.length }));
-}
-
 // ---------- Sala Social ----------
 
-const humores = () => estado.sistema.social?.humores || [];
+export const humores = () => estado.sistema.social?.humores || [];
 // Texto do rebote por espectro (A Aliado/Amigável, B Desconhecido, C Rival/Inimigo).
-const reboteTexto = regra => Object.entries(regra.falha || {}).map(([k, l]) => `${k}: ${l.length ? l.map(id => nomeHumorLer(id)).join(' ou ') : 'sem efeito'}`).join(' · ');
+export const reboteTexto = regra => Object.entries(regra.falha || {}).map(([k, l]) => `${k}: ${l.length ? l.map(id => nomeHumorLer(id)).join(' ou ') : 'sem efeito'}`).join(' · ');
 const nomeHumorLer = id => (id === 'ler' ? 'ler o humor real' : nomeHumor(id));
-const nomeHumor = id => humores().find(x => x.id === (id || 'neutro'))?.nome || 'Neutro';
+export const nomeHumor = id => humores().find(x => x.id === (id || 'neutro'))?.nome || 'Neutro';
 
 // Selo do humor no cartão do participante; quem controla o personagem pode trocar.
 // Humor no cartão. Quem controla vê e muda as duas camadas: o humor real (dá os efeitos) e a máscara (o que a sala vê).
@@ -197,9 +134,9 @@ export function humorCartao(p, controla, mestre) {
   return h('div', { class: 'humor' },
     rebote.length ? h('div', { class: 'rebote' }, h('strong', {}, icone('circle-alert'), ' Rebote: escolha o humor de ', p.nome, ' '),
       rebote.map(id => botao(nomeHumor(id), () => acao('humor.definir', { id: p.id, humor: id }), { class: 'pequeno primario', title: `${p.nome} fica ${nomeHumor(id)}` }))) : null,
-    h('label', { class: 'linha' }, icone('smile'), h('small', {}, 'Real'),
+    h('label', { class: 'linha' }, icone('smile'), h('small', {}, 'Humor real'),
       selecao(permitidos.map(x => ({ valor: x.id, rotulo: x.nome })), real, mudarReal, { 'aria-label': `Humor real de ${p.nome}` })),
-    h('label', { class: 'linha' }, icone('drama'), h('small', {}, 'Máscara'),
+    h('label', { class: 'linha' }, icone('drama'), h('small', {}, 'Humor aparente'),
       selecao([{ valor: '', rotulo: 'sem máscara' }, ...humores().filter(x => x.id !== real).map(x => ({ valor: x.id, rotulo: x.nome }))], p.humorAparente || '',
         v => acao('humor.definir', { id: p.id, humor: v || null, camada: 'aparente' }).catch(e => aviso(e.message, 'erro')), { 'aria-label': `Máscara (humor aparente) de ${p.nome}` })),
     p.humorImposto ? h('span', { class: 'selo perigo', title: 'Mudar o humor real agora causa dano de Sanidade (dissonância)' }, 'imposto') : null,
@@ -226,7 +163,7 @@ export function rodaDoHumor() {
     })));
 }
 
-function nomeSub(id) {
+export function nomeSub(id) {
   const per = estado.sistema.pericias.find(x => x.id === 'manipulacao');
   return per?.subpericias.find(s => s.id === id)?.nome || id;
 }
@@ -291,7 +228,7 @@ export function marcarAlvo(sala, id) {
   render();
 }
 
-function alvoDe(p, sala, participantes) {
+export function alvoDe(p, sala, participantes) {
   const outros = participantes.filter(x => x.id !== p.id);
   const valido = id => id && outros.some(x => x.id === id);
   const proprio = estado.sel[`alvoDe:${sala}:${p.id}`];
@@ -303,7 +240,7 @@ function alvoDe(p, sala, participantes) {
 }
 
 // Opções do formulário "Opções do ataque" (surpresa, localizado…) valem para os botões dos cartões.
-function opcoesGerais(p, mestre) {
+export function opcoesGerais(p, mestre) {
   const sel = estado.sel.ataque || {};
   const op = { localizado: sel.localizado, surpresa: sel.surpresa, elevado: sel.elevado, cobertura: sel.cobertura, area: sel.area, duasArmas: sel.duasArmas || null };
   if (p.tipo === 'pj') op.sacrificio = sel.sacrificio;

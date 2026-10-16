@@ -62,7 +62,7 @@ function irParaInventario(mestre) {
   document.getElementById('equipamento')?.scrollIntoView({ behavior: 'smooth' });
 }
 
-function painelSlot(p, aberto, mestre) {
+export function painelSlot(p, aberto, mestre) {
   const sis = estado.sistema;
   const slot = aberto.split(':')[0];
   const slotDef = sis.slots.find(s => s.id === slot);
