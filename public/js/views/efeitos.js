@@ -1,6 +1,6 @@
 // Ícones dos efeitos que o personagem está sofrendo (Sangramento, Dor, Aturdido…), com os turnos que faltam.
 // Quando um personagem-jogador recebe um efeito novo, o ícone faz uma animação própria do efeito.
-import { h, icone, pedirTexto, aviso } from '../ui.js';
+import { h, icone, aviso, janela } from '../ui.js';
 import { estado, render } from '../estado.js';
 import { acao } from '../api.js';
 import { efeitosVisiveis } from '/shared/efeitos.js';
@@ -48,7 +48,7 @@ function iconeEfeito(p, e, mestre) {
   const turnos = e.turnos != null
     ? (e.sangra ? `próxima perda de PV em ${e.turnos} turno(s) · ${e.sangra.perdidos}/${e.sangra.maximo} PV perdidos` : `faltam ${e.turnos} turno(s)`)
     : 'até alguém tirar';
-  const titulo = `${e.nome}${e.qtd > 1 ? ` ×${e.qtd}` : ''} — ${e.efeitos || ''} (${turnos})${mestre ? ' · clique para mudar os turnos' : ''}`;
+  const titulo = `${e.nome}${e.qtd > 1 ? ` ×${e.qtd}` : ''} — ${e.efeitos || ''} (${turnos})`;
   const conteudo = [
     h('span', { class: 'efeito-desenho', 'aria-hidden': 'true' }, icone(e.icone)),
     e.turnos != null ? h('span', { class: 'efeito-turnos', 'aria-hidden': 'true' }, String(e.turnos)) : null,
@@ -56,21 +56,32 @@ function iconeEfeito(p, e, mestre) {
   ];
   const props = {
     class: `efeito-icone ef-${e.id} grupo-${(e.grupo || '').toLowerCase().replace(/\s+/g, '-')} ${animando ? 'chegou' : ''}`,
-    title: titulo, 'aria-label': titulo,
-    // A animação continua de onde estava mesmo se a tela for redesenhada no meio.
-    style: animando ? { animationDelay: `-${passou}ms` } : null,
+    title: titulo, 'aria-label': `${titulo}. Clique para ler`,
+    // A animação continua de onde estava mesmo se a tela for redesenhada no meio; cada efeito tem a sua cor.
+    style: { ...(e.cor ? { '--cor-ef': e.cor } : {}), ...(animando ? { animationDelay: `-${passou}ms` } : {}) },
+    onclick: ev => { ev.stopPropagation(); lerEfeito(p, e, mestre, turnos); },
   };
-  if (!mestre) return h('span', { ...props, role: 'img' }, ...conteudo);
-  return h('button', {
-    ...props, type: 'button',
-    onclick: async ev => {
-      ev.stopPropagation();
-      const v = await pedirTexto(`${e.nome} em ${p.nome}`, 'Turnos que faltam (0 tira o efeito)', String(e.turnos ?? ''));
-      if (v == null) return;
-      await acao('efeito.turnos', { id: p.id, efeito: e.id, turnos: v });
-      aviso(parseInt(v, 10) > 0 ? `${e.nome}: ${parseInt(v, 10)} turno(s).` : `${e.nome} tirado.`);
-    },
-  }, ...conteudo);
+  return h('button', { ...props, type: 'button' }, ...conteudo);
+}
+
+// Janela com o desenho grande, o que o efeito faz e quanto falta. O mestre também muda os turnos aqui.
+function lerEfeito(p, e, mestre, turnos) {
+  const campoTurnos = h('input', { type: 'number', min: 0, max: 99, class: 'curto', value: e.turnos ?? '', 'aria-label': 'Turnos que faltam' });
+  const salvar = async n => {
+    await acao('efeito.turnos', { id: p.id, efeito: e.id, turnos: n });
+    aviso(n > 0 ? `${e.nome}: ${n} turno(s).` : `${e.nome} tirado de ${p.nome}.`);
+  };
+  janela(`${e.nome}${e.qtd > 1 ? ` ×${e.qtd}` : ''} — ${p.nome}`,
+    h('div', { class: 'efeito-leitura' },
+      h('span', { class: `efeito-icone enorme ef-${e.id}`, style: e.cor ? { '--cor-ef': e.cor } : null, 'aria-hidden': 'true' }, h('span', { class: 'efeito-desenho' }, icone(e.icone))),
+      h('div', {},
+        h('p', {}, e.efeitos || 'Sem descrição.'),
+        h('p', { class: 'meta' }, icone('hourglass'), ` ${turnos[0].toUpperCase()}${turnos.slice(1)}.`),
+        h('p', { class: 'dica' }, `Grupo: ${e.grupo}.`),
+        mestre ? h('label', { class: 'linha' }, 'Turnos que faltam (0 tira o efeito)', campoTurnos) : null)),
+    mestre ? [['Tirar o efeito', () => salvar(0), 'perigo'], ['Salvar turnos', () => salvar(Math.max(0, parseInt(campoTurnos.value, 10) || 0)), 'primario']] : [['Fechar', () => true]]);
+  // Nos efeitos animados, mostra o movimento de novo na janela.
+  document.querySelector('.efeito-leitura .efeito-icone')?.classList.add('chegou');
 }
 
 // Marcadores de texto livre (que não são condições do livro), para mostrar como etiqueta ao lado dos ícones.

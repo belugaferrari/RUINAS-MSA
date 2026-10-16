@@ -1,6 +1,6 @@
 // Campo de Batalha: controle de turno (qualquer sistema) e combate automático; Sala Social: Roda do Humor.
 // O ataque automático e a Roda do Humor só ligam nos sistemas com esses módulos (hoje, o MSS).
-import { h, botao, selecao, aviso, icone, titulo, confirmar } from '../ui.js';
+import { h, botao, selecao, aviso, icone, titulo, confirmar, pedirTexto } from '../ui.js';
 import { estado, personagemPorId, render } from '../estado.js';
 import { acao } from '../api.js';
 import { derivados } from '/shared/regras.js';
@@ -21,7 +21,7 @@ export function combateView(participantes, mestre) {
   return h('div', { class: 'bloco combate' },
     titulo(`Turnos${auto ? ` e combate (${sis.nome})` : ''}`, 'swords'),
     cb ? ordemView(cb, mestre) : h('div', { class: 'barra' },
-      h('p', { class: 'dica' }, `Iniciativa = AGI + 1d10${auto ? ' (Corajoso, Amedrontado e Enojado rolam com vantagem)' : ''}. A ordem vai do maior para o menor.`),
+      h('p', { class: 'dica' }, `Com dois ou mais no campo, o combate começa sozinho: iniciativa = AGI + 1d10${auto ? ' (Corajoso, Amedrontado e Enojado rolam com vantagem)' : ''}, do maior para o menor.`),
       mestre ? botao('Iniciar combate', () => acao('combate.iniciar'), { class: 'primario', icone: 'play', disabled: participantes.length < 2 }) : null),
     cb ? painelVez(cb, mestre) : null,
     auto ? pendentesView(mestre) : null,
@@ -95,7 +95,7 @@ export function ordemView(cb, mestre) {
   const podePassar = mestre || atual?.donoId === estado.usuario.id;
   return h('div', {},
     h('div', { class: 'barra' },
-      h('span', { class: 'selo cheio' }, `Rodada ${cb.rodada}`),
+      h('span', { class: 'selo cheio' }, `Rodada ${cb.rodada} · Turno ${cb.turno || 1}`),
       h('strong', {}, atual ? `Vez de ${atual.nome}` : ''),
       h('span', { class: 'espaco' }),
       podePassar ? botao('Próximo turno', () => acao('combate.proximo'), { class: 'primario', icone: 'skip-forward' }) : null,
@@ -103,7 +103,9 @@ export function ordemView(cb, mestre) {
     h('ol', { class: 'ordem-iniciativa' }, cb.ordem.map((o, i) => {
       const p = personagemPorId(o.id);
       return h('li', { class: i === cb.vez ? 'vez' : '' },
-        h('span', { class: 'ini' }, o.ini), ' ', p?.nome || '?',
+        mestre ? h('button', { type: 'button', class: 'ini', title: `Mudar a iniciativa de ${p?.nome}`, 'aria-label': `Iniciativa de ${p?.nome}: ${o.ini}. Mudar`,
+          onclick: async () => { const v = await pedirTexto(`Iniciativa de ${p?.nome}`, 'Novo valor', String(o.ini)); if (v != null) acao('combate.iniciativa', { id: o.id, ini: v }); } }, o.ini)
+          : h('span', { class: 'ini' }, o.ini), ' ', p?.nome || '?',
         mestre ? botao('', () => acao('combate.ordenar', { id: o.id, direcao: -1 }), { class: 'pequeno', icone: 'chevron-up', disabled: i === 0, title: `Adiantar ${p?.nome}` }) : null,
         mestre ? botao('', () => acao('combate.ordenar', { id: o.id, direcao: 1 }), { class: 'pequeno', icone: 'chevron-down', disabled: i === cb.ordem.length - 1, title: `Atrasar ${p?.nome}` }) : null);
     })));

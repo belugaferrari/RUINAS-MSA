@@ -193,7 +193,7 @@ test('ações de combate e humor no servidor (MSS) e bloqueio no MSA', () => {
   assert.throws(() => executar(c, 'combate.defender', { id: pend.id, defesa: 'esquiva' }, { user: ana, mestre: false }), /controla o alvo/);
   const r = executar(c, 'combate.defender', { id: pend.id, defesa: 'esquiva' }, ctxM);
   assert.equal(r.tipo, 'ataque');
-  assert.match(r.rotulo, /Esquiva/);
+  assert.match(r.texto, /Acertou|defendeu \(Esquiva\)/);
   assert.equal(c.salas.batalha.pendentes.length, 0);
   assert.ok(!/mestre/.test(r.detalhe), 'jogador não força vantagem');
   assert.throws(() => executar(c, 'combate.atacar', { atacante: ids[1], alvo: ids[0] }, { user: ana, mestre: false }), /não é seu/);

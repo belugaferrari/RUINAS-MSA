@@ -5,9 +5,9 @@ import { h, botao, selecao, aviso, icone, titulo, vazio } from '../ui.js';
 import { estado, render, personagemPorId } from '../estado.js';
 import { acao } from '../api.js';
 import { derivados, acharVantagem, ganhosDeClasse } from '/shared/regras.js';
-import { armasDisponiveis, ipDe } from '/shared/combate.js';
+import { armasDisponiveis, ipDe, opcoesDefesa, defesaDoAlvo } from '/shared/combate.js';
 import { trilhaCompacta, escolherCondicao } from './ficha.js';
-import { painelSlot } from './boneco.js';
+import { painelSlot, naMao, maoHabil } from './boneco.js';
 import { efeitosIcones } from './efeitos.js';
 import { prepararTeste } from './dados.js';
 import { alvoDe, opcoesGerais, marcarAlvo } from './combate.js';
@@ -23,6 +23,12 @@ export function controladoNaSala(nome, participantes, mestre) {
   const vezAgora = cb ? `${cb.rodada}:${cb.vez}` : null;
   if (daVez && estado.sel[`${chave}:vez`] !== vezAgora) estado.sel[chave] = daVez.id;
   estado.sel[`${chave}:vez`] = vezAgora;
+  // Ataque novo esperando a defesa de um dos seus: o painel vai para ele.
+  if (nome === 'batalha') {
+    const pend = (estado.campanha.salas.batalha.pendentes || []).find(x => meus.some(p => p.id === x.alvo));
+    if (pend && estado.sel[`${chave}:pend`] !== pend.id) estado.sel[chave] = pend.alvo;
+    estado.sel[`${chave}:pend`] = pend?.id || null;
+  }
   if (!meus.some(p => p.id === estado.sel[chave])) estado.sel[chave] = (daVez || meus.find(p => p.tipo === 'pj') || meus[0])?.id || null;
   return { meus, p: meus.find(x => x.id === estado.sel[chave]) || null, chave };
 }
@@ -51,20 +57,37 @@ function quadroPersonagem(p, meus, chave, mestre) {
   const sub = id => d.subpericias[id] ?? 0;
   const base = sis.combate?.defesaPassiva ?? sis.teste.passiva?.soma ?? 50;
   const maos = (p.itens || []).filter(i => i.equipado && i.slot === 'maos');
-  const duas = maos.find(i => (i.ocupa ?? 1) >= 2);
-  const naMao = n => (duas ? duas : maos[n]);
   const abertoMao = estado.sel[`boneco:${p.id}`];
   const brancaEmpunhada = maos.filter(i => i.pericia?.startsWith('arma-branca.') && !(sis.combate?.semDefesaArmada || []).includes(i.pericia))
     .sort((a, b) => sub(b.pericia) - sub(a.pericia))[0];
   const mao = (n, rotulo) => {
-    const it = naMao(n);
+    const it = naMao(p, n);
     const id = `maos:${n}`;
-    return h('div', { class: 'mao' },
-      h('small', {}, rotulo), h('span', { class: 'mao-item', title: it?.nome || 'vazia' }, it?.nome || '—'),
+    const habil = maoHabil(p) === n;
+    return h('div', { class: `mao ${habil ? 'habil' : ''}` },
+      h('small', {}, rotulo, habil ? h('span', { class: 'selo ok' }, 'hábil') : null),
+      h('span', { class: 'mao-item', title: it?.nome || 'vazia' }, it ? [icone(it.tipo === 'arma' ? 'sword' : 'hand'), ` ${it.nome}`, (it.ocupa ?? 1) >= 2 ? h('small', {}, ' (2 mãos)') : null] : '—'),
       botao(abertoMao === id ? 'Fechar' : 'Equipar', () => { estado.sel[`boneco:${p.id}`] = abertoMao === id ? null : id; render(); },
         { class: 'pequeno', icone: 'shirt', title: `${rotulo}: equipar ou trocar`, 'aria-expanded': abertoMao === id }));
   };
-  const defesa = (rot, valor, titulo) => h('div', { class: 'defesa', title: titulo }, h('small', {}, rot), h('strong', {}, valor == null ? '—' : valor));
+  // Ataque esperando a defesa deste personagem: as defesas viram botões — clicar numa delas é defender.
+  const pend = sis.modulos?.combate ? (estado.campanha.salas.batalha.pendentes || []).find(x => x.alvo === p.id) : null;
+  const armaPend = pend ? { uid: pend.opcoes.armaUid || 'desarmado', alcance: pend.alcance } : null;
+  const opcoes = pend ? opcoesDefesa(p, armaPend, sis, { area: pend.area }) : [];
+  const defender = async id => {
+    const r = await acao('combate.defender', { id: pend.id, defesa: id });
+    aviso(`${r.autor} ${r.rotulo}: ${r.texto}`, r.sucesso ? 'erro' : 'ok');
+  };
+  const defesa = (rot, valor, titulo, idDefesa = null) => {
+    const op = pend && idDefesa ? opcoes.find(o => (idDefesa === 'armada' ? o.id.startsWith('armada:') : o.id === idDefesa)) : null;
+    if (op) {
+      const total = defesaDoAlvo(p, armaPend, sis, { escolha: op.id, cobertura: pend.opcoes.cobertura, area: pend.area }).total;
+      return h('button', { type: 'button', class: 'defesa escolher', title: op.nota || `Defender com ${op.nome}`, onclick: () => defender(op.id) },
+        h('small', {}, rot), h('strong', {}, total));
+    }
+    return h('div', { class: `defesa ${pend && idDefesa ? 'indisponivel' : ''}`, title: pend && idDefesa ? 'Não vale contra este ataque' : titulo }, h('small', {}, rot), h('strong', {}, valor == null ? '—' : valor));
+  };
+  const atacante = pend ? personagemPorId(pend.atacante) : null;
   return [
     h('div', { class: 'barra' }, icone('user'), nomeControlado(meus, p, chave)),
     trilhaCompacta(p, 'pv', 'PV', 'heart'),
@@ -73,12 +96,15 @@ function quadroPersonagem(p, meus, chave, mestre) {
     h('div', { class: 'maos' }, mao(1, 'Mão esq.'), mao(0, 'Mão dir.')),
     abertoMao?.startsWith('maos') ? painelSlot(p, abertoMao, mestre) : null,
     h('h4', {}, icone('shield'), ' Defesas'),
-    h('div', { class: 'defesas' },
-      defesa('Esquiva', sub('briga.esquiva') + base, 'Esquiva + 50: contra Briga e Armas Brancas'),
-      defesa('Armada', brancaEmpunhada ? sub(brancaEmpunhada.pericia) + base : null, brancaEmpunhada ? `Defesa armada com ${brancaEmpunhada.nome}` : 'Empunhe uma arma branca para defender com ela'),
-      defesa('Evasão', sub('briga.evasao') + base, 'Evasão + 50: só contra ataque em área'),
-      defesa('Desarmada', sub('briga.defesa-desarmada') + base, 'Defesa desarmada + 50: só contra Briga'),
-      defesa('IP', sis.modulos?.combate ? ipDe(p, sis) : d.defesa, 'Índice de Proteção: sai do dano recebido')),
+    pend ? h('div', { class: 'aviso-defesa', role: 'alert' }, icone('circle-alert'),
+      ` ${atacante?.nome || 'Alguém'} ataca ${p.nome} com ${pend.arma}${pend.alcance === 'distancia' ? ' (a distância)' : ''}. Clique na defesa:`) : null,
+    h('div', { class: `defesas ${pend ? 'escolhendo' : ''}` },
+      defesa('Esquiva', sub('briga.esquiva') + base, 'Esquiva + 50: contra Briga e Armas Brancas', 'esquiva'),
+      defesa('Armada', brancaEmpunhada ? sub(brancaEmpunhada.pericia) + base : null, brancaEmpunhada ? `Defesa armada com ${brancaEmpunhada.nome}` : 'Empunhe uma arma branca para defender com ela', 'armada'),
+      defesa('Evasão', sub('briga.evasao') + base, 'Evasão + 50: só contra ataque em área', 'evasao'),
+      defesa('Desarmada', sub('briga.defesa-desarmada') + base, 'Defesa desarmada + 50: só contra Briga', 'defesa-desarmada'),
+      pend ? h('button', { type: 'button', class: 'defesa escolher sem', title: 'Não defender (ex.: pego de surpresa, ou tiro)', onclick: () => defender('nenhuma') },
+        h('small', {}, opcoes.length === 1 ? 'Tiro' : 'Sem defesa'), h('strong', {}, icone('x'))) : null),
     h('h4', {}, icone('activity'), ' Efeitos'),
     h('div', { class: 'barra' }, efeitosIcones(p, { mestre }) || h('small', { class: 'dica' }, 'Nenhum.'),
       botao('Marcador', () => escolherCondicao(p), { class: 'pequeno', icone: 'tag', title: 'Escolher uma condição' })),
@@ -190,10 +216,43 @@ function opcoesAtaque(p, mestre) {
       caixa('area', 'Ataque em área', true),
       caixa('cobertura', 'Alvo em cobertura (+30, tiro)'),
       p.tipo === 'pj' ? caixa('sacrificio', 'Sacrifício (+10%, D6 de vida)') : null,
-      selecao([{ valor: '', rotulo: 'Uma arma' }, { valor: 'principal', rotulo: 'Duas armas: principal (−20%)' }, { valor: 'inabil', rotulo: 'Duas armas: inábil (−40%)' }],
-        sel.duasArmas || '', v => { sel.duasArmas = v; }, { 'aria-label': 'Duas armas' }),
       mestre ? caixa('vantagem', 'Vantagem') : null,
       mestre ? caixa('desvantagem', 'Desvantagem') : null,
       mestre ? h('label', { class: 'linha' }, 'Mod. %', h('input', { type: 'number', class: 'curto', value: sel.mod || 0, onchange: e => { sel.mod = e.target.value; } })) : null,
       mestre ? h('label', { class: 'linha' }, 'Dano livre', h('input', { class: 'curto', placeholder: '1d6+1', value: sel.danoLivre || '', onchange: e => { sel.danoLivre = e.target.value.trim(); } })) : null));
+}
+
+// ---------- Barra da esquerda: avatares na ordem da iniciativa ----------
+// Mostra quem age agora e quem vem depois. Clicar escolhe o alvo da próxima ação
+// (no seu próprio personagem, passa a controlá-lo). Com 0 PV ou menos, o avatar fica avermelhado.
+export function ordemLateral(participantes, mestre) {
+  const cb = estado.campanha.salas.batalha.combate;
+  const porId = Object.fromEntries(participantes.map(p => [p.id, p]));
+  const lista = cb ? cb.ordem.map(o => ({ p: porId[o.id], ini: o.ini })).filter(x => x.p) : participantes.map(p => ({ p, ini: null }));
+  if (!lista.length) return null;
+  const { meus, p: eu, chave } = controladoNaSala('batalha', participantes, mestre);
+  const alvo = eu ? alvoDe(eu, 'batalha', participantes) : null;
+  const vez = cb ? cb.vez : -1;
+  const proximo = cb && lista.length > 1 ? (vez + 1) % lista.length : -1;
+  return h('aside', { class: 'ordem-lateral', 'aria-label': 'Ordem dos turnos' },
+    cb ? h('div', { class: 'ordem-topo' }, h('strong', {}, `Rodada ${cb.rodada}`), h('small', {}, `Turno ${cb.turno || 1}`)) : h('div', { class: 'ordem-topo' }, h('small', {}, 'Sem combate')),
+    h('ol', {}, lista.map(({ p, ini }, i) => {
+      const meu = meus.some(x => x.id === p.id);
+      const semPv = p.semPv || (p.pv && p.pv.atual <= 0);
+      const ehAlvo = p.id === alvo;
+      const rotulo = `${p.nome}${ini != null ? `, iniciativa ${ini}` : ''}${i === vez ? ', agindo agora' : i === proximo ? ', próximo' : ''}${ehAlvo ? ', alvo' : ''}${semPv ? ', sem PV' : ''}`;
+      return h('li', { class: `${i === vez ? 'vez' : ''} ${i === proximo ? 'proximo' : ''}` },
+        h('button', {
+          type: 'button', class: `avatar-ordem ${p.tipo} ${ehAlvo ? 'alvo' : ''} ${semPv ? 'sem-pv' : ''} ${eu?.id === p.id ? 'eu' : ''}`,
+          title: meu ? `Controlar ${p.nome}` : `Escolher ${p.nome} como alvo`, 'aria-label': rotulo,
+          onclick: () => {
+            if (meu && eu?.id !== p.id) { estado.sel[chave] = p.id; render(); return; }
+            if (!meu) marcarAlvo('batalha', p.id);
+          },
+        },
+          h('span', { class: 'rosto' }, p.foto ? h('img', { src: p.foto, alt: '' }) : p.nome.slice(0, 1)),
+          ini != null ? h('span', { class: 'ini' }, ini) : null,
+          ehAlvo ? h('span', { class: 'mira' }, icone('crosshair')) : null),
+        h('small', { class: 'nome-ordem' }, i === vez ? 'agora' : i === proximo ? 'próximo' : p.nome));
+    })));
 }

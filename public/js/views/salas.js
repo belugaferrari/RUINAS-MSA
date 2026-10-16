@@ -5,7 +5,7 @@ import { acao } from '../api.js';
 import { LIMITE_SALA } from '/shared/regras.js';
 import { linhaRolagem } from './ficha.js';
 import { combateView, humorCartao, rodaDoHumor, ajustesMestre, xpDaSala, alvoMarcado, marcarAlvo } from './combate.js';
-import { painelBatalha } from './batalha.js';
+import { painelBatalha, ordemLateral } from './batalha.js';
 import { painelSocial } from './social.js';
 import { prepararTeste } from './dados.js';
 
@@ -26,8 +26,10 @@ export function salaView(nome) {
         if (await confirmar(`Remover todos de ${TITULOS[nome]} e limpar o registro?`)) await acao('sala.limpar', { sala: nome });
       }, { class: 'perigo', icone: 'trash-2' }) : null),
     // Em cima, o painel do personagem que você controla (esboço do autor); embaixo, o turno, o campo e o registro.
-    nome === 'batalha' ? painelBatalha(participantes, mestre) : painelSocial(participantes, mestre),
-    nome === 'batalha' ? combateView(participantes, mestre) : null,
+    nome === 'batalha'
+      ? h('div', { class: 'campo-com-ordem' }, ordemLateral(participantes, mestre),
+        h('div', { class: 'campo-conteudo' }, painelBatalha(participantes, mestre), combateView(participantes, mestre)))
+      : painelSocial(participantes, mestre),
     mestre && nome === 'batalha' ? encontroAleatorio() : null,
     nome === 'social' ? rodaDoHumor() : null,
     nome === 'social' && mestre ? h('div', { class: 'bloco' }, xpDaSala(participantes)) : null,
@@ -60,7 +62,7 @@ function cartaoParticipante(nome, s, p, i, total, mestre, participantes) {
   const marcavel = automatico && (mestre || (!meu && participantes.some(x => x.donoId === estado.usuario.id)));
   const alvo = alvoMarcado(nome) === p.id;
   return h('div', {
-    class: `participante ${s.ativo === p.id ? 'ativo' : ''} ${p.tipo} ${alvo ? 'alvo' : ''} ${marcavel ? 'marcavel' : ''}`,
+    class: `participante ${s.ativo === p.id ? 'ativo' : ''} ${p.tipo} ${alvo ? 'alvo' : ''} ${marcavel ? 'marcavel' : ''} ${p.semPv || (p.pv && p.pv.atual <= 0) ? 'sem-pv' : ''}`,
     onclick: marcavel ? e => { if (!e.target.closest('button, select, input, label, a, summary')) marcarAlvo(nome, p.id); } : null,
   },
     h('div', { class: 'avatar' }, p.foto ? h('img', { src: p.foto, alt: '' }) : p.nome.slice(0, 1)),

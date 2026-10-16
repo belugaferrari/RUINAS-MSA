@@ -43,7 +43,7 @@ export function telaJogador() {
         : h('span', { class: 'personagem-atual' }, atual.foto ? h('img', { class: 'mini-foto', src: atual.foto, alt: '' }) : icone('user'), atual.nome),
       botao('Trocar personagem', () => { estado.sel.personagem = null; render(); }, { class: 'pequeno compacto', icone: 'users', title: 'Trocar personagem', 'aria-label': 'Trocar personagem' })),
     abas(ABAS, aba, id => mudar({ aba: id })),
-    h('div', { class: `area-campanha ${dadosAberto() ? 'com-dados' : ''}` },
+    h('div', { class: `area-campanha ${dadosAberto() ? 'com-dados' : 'dados-recolhidos'}` },
       h('main', { class: 'conteudo' }, conteudoAba(aba, atual)),
       painelDados()),
     imagensMostradas());

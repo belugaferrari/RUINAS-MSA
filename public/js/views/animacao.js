@@ -49,9 +49,12 @@ function proxima() {
   const rotuloDp = h('small', {}, 'DP · 2d10');
   const extrasDp = (e.dados || []).length > 1 ? h('small', { class: 'dado-extra' }, `rolou ${e.dados.join(' e ')}`) : null;
   const dano = (e.danoDados || []).flatMap(x => x.dados.map(v => h('div', { class: 'dado dano', title: x.nome, 'aria-hidden': 'true' }, h('span', {}, String(v)))));
-  const resultado = e.sucesso == null ? `Total ${e.total}` : `${e.total}${e.nd != null ? ` × ${e.nd}` : ''} — ${e.sucesso ? 'SUCESSO' : 'FALHA'}${e.critico ? ` (crítico de ${e.critico})` : ''}`;
+  // No ataque, só "Acertou" (com o dano tomado) ou "Defendeu".
+  const resultado = e.tipo === 'ataque'
+    ? (e.sucesso ? `ACERTOU${e.dano ? ` · ${e.alvo || 'alvo'} tomou ${e.dano} de dano` : ''}` : e.dano ? `DEFENDEU EM PARTE · ${e.dano} de dano` : 'DEFENDEU')
+    : e.sucesso == null ? `Total ${e.total}` : `${e.total}${e.nd != null ? ` × ${e.nd}` : ''} — ${e.sucesso ? 'SUCESSO' : 'FALHA'}`;
   const resumo = h('p', { class: `dados-resultado ${e.sucesso === true ? 'ok' : e.sucesso === false ? 'perigo' : ''}` }, resultado,
-    e.tipo === 'ataque' && e.dano ? h('span', { class: 'dano-total' }, ` · dano ${e.dano}`) : null);
+    e.critico ? h('small', {}, ` (crítico de ${e.critico})`) : null);
   let fechado = false;
   const fechar = () => { if (fechado) return; fechado = true; caixa.remove(); clearTimeout(t); proxima(); };
   // Não bloqueia a tela: o cartão some sozinho (ou no "Fechar").
@@ -81,7 +84,7 @@ function proxima() {
       if (++n >= 14) { clearInterval(giro); fim(); }
     }, 60);
   }
-  const t = setTimeout(fechar, 4200);
+  const t = setTimeout(fechar, 8000);
 }
 
 // Um d10 desenhado (trapezoedro visto de frente), com o número na face do meio.

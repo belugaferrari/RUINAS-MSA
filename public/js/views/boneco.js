@@ -37,17 +37,14 @@ export function bonecoView(p, { mestre = false, linkGuardados = true, compacto =
     const lista = equipados(pt.slot);
     // Mãos: um item de duas mãos aparece nas duas.
     let itens = lista;
-    if (pt.slot === 'maos') {
-      const duas = lista.find(i => (i.ocupa ?? 1) >= 2);
-      itens = duas ? [duas] : lista[pt.mao] ? [lista[pt.mao]] : [];
-    }
+    if (pt.slot === 'maos') itens = naMao(p, pt.mao) ? [naMao(p, pt.mao)] : [];
     const id = pt.mao != null ? `maos:${pt.mao}` : pt.slot;
     figura.append(h('button', {
       type: 'button', class: `boneco-ponto ${itens.length ? 'cheio' : ''} ${aberto === id ? 'aberto' : ''}`,
       style: { left: `${pt.x}%`, top: `${pt.y}%` }, 'aria-expanded': aberto === id,
       title: `${pt.rotulo}: ${itens.map(i => i.nome).join(', ') || 'vazio'}`,
       onclick: () => { estado.sel[chave] = aberto === id ? null : id; render(); },
-    }, h('small', {}, pt.rotulo), h('span', {}, itens.map(i => i.nome).join(', ') || '—')));
+    }, h('small', {}, pt.rotulo, pt.mao != null && maoHabil(p) === pt.mao ? ' ★' : ''), h('span', {}, itens.map(i => i.nome).join(', ') || '—')));
   }
   const guardados = (p.itens || []).filter(i => !i.equipado);
   return h('div', { class: `boneco ${compacto ? 'compacto' : ''}` },
@@ -68,21 +65,22 @@ export function painelSlot(p, aberto, mestre) {
   const slotDef = sis.slots.find(s => s.id === slot);
   const noSlot = (p.itens || []).filter(i => i.equipado && i.slot === slot);
   const opcoes = (p.itens || []).filter(i => !i.equipado && i.slot === slot);
+  const mao = aberto.includes(':') ? parseInt(aberto.split(':')[1], 10) : null;
   const equipar = async it => {
-    // Sem espaço: troca, tirando o que estiver no caminho (primeiro o da mão escolhida).
-    const r = podeEquipar(p, it, sis);
-    if (!r.ok) {
-      const mao = aberto.includes(':') ? parseInt(aberto.split(':')[1], 10) : 0;
-      const ordem = [...noSlot.slice(mao), ...noSlot.slice(0, mao)];
+    // Na mão escolhida: tira o que estiver nela (ou a arma de duas mãos); sem espaço, tira o que estiver no caminho.
+    if (slot === 'maos') {
+      const ocupando = (it.ocupa ?? 1) >= 2 ? noSlot : noSlot.filter(x => (x.ocupa ?? 1) >= 2 || maoDoItem(p, x) === mao);
+      for (const x of ocupando) await acao('item.equipar', { id: p.id, uid: x.uid, equipar: false });
+    } else if (!podeEquipar(p, it, sis).ok) {
       let livre = slotDef.capacidade - noSlot.reduce((s, i) => s + (i.ocupa ?? 1), 0);
-      for (const x of ordem) {
+      for (const x of noSlot) {
         if (livre >= (it.ocupa ?? 1)) break;
         await acao('item.equipar', { id: p.id, uid: x.uid, equipar: false });
         livre += x.ocupa ?? 1;
       }
     }
-    await acao('item.equipar', { id: p.id, uid: it.uid, equipar: true });
-    aviso(`${it.nome} equipado.`);
+    await acao('item.equipar', { id: p.id, uid: it.uid, equipar: true, mao });
+    aviso(`${it.nome} equipado${slot === 'maos' && (it.ocupa ?? 1) < 2 ? ` na mão ${mao === 1 ? 'esquerda' : 'direita'}` : ''}.`);
   };
   return h('div', { class: 'boneco-painel' },
     titulo(`${slotDef.nome} (${noSlot.reduce((s, i) => s + (i.ocupa ?? 1), 0)}/${slotDef.capacidade})`, 'shirt', 'h4'),
@@ -94,4 +92,18 @@ export function painelSlot(p, aberto, mestre) {
       h('ul', { class: 'lista-inline' }, opcoes.map(i => h('li', {}, i.nome, (i.ocupa ?? 1) > 1 ? h('small', {}, ` (${i.ocupa} mãos)`) : null,
         botao(noSlot.length >= slotDef.capacidade ? 'Trocar' : 'Equipar', () => equipar(i), { class: 'pequeno primario', icone: 'shirt', title: `Equipar ${i.nome}` })))))
       : h('p', { class: 'dica' }, 'Nenhum item guardado serve nesta parte.'));
+}
+
+// Mãos: 0 = direita, 1 = esquerda. Itens antigos (sem "mao") ocupam as mãos na ordem em que foram equipados.
+export const maoHabil = p => (p.maoHabil === 'esquerda' ? 1 : 0);
+export function maoDoItem(p, it) {
+  if (it.mao === 0 || it.mao === 1) return it.mao;
+  const semMao = (p.itens || []).filter(i => i.equipado && i.slot === 'maos' && i.mao !== 0 && i.mao !== 1 && (i.ocupa ?? 1) < 2);
+  const usadas = new Set((p.itens || []).filter(i => i.equipado && i.slot === 'maos').map(i => i.mao));
+  const livres = [0, 1].filter(m => !usadas.has(m));
+  return livres[semMao.indexOf(it)] ?? 0;
+}
+export function naMao(p, n) {
+  const maos = (p.itens || []).filter(i => i.equipado && i.slot === 'maos');
+  return maos.find(i => (i.ocupa ?? 1) >= 2) || maos.find(i => maoDoItem(p, i) === n) || null;
 }

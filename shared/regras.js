@@ -80,6 +80,7 @@ export function novaFicha(sistema, campanha) {
     itens: [],
     dinheiro: r.creditosIniciais ?? 0,
     marcadores: [],
+    maoHabil: 'direita',
     background: '', anotacoes: '', foto: null,
     xp: 0, backups: [],
   };

@@ -34,7 +34,7 @@ export function telaMestre() {
         h('input', { type: 'checkbox', checked: c.aberta, onchange: e => acao('campanha.atualizar', { aberta: e.target.checked }).catch(err => aviso(err.message, 'erro')) }),
         icone(c.aberta ? 'lock-open' : 'lock'), h('span', {}, c.aberta ? 'Aberta' : 'Fechada'))),
     abas(ABAS, aba, id => mudar({ aba: id })),
-    h('div', { class: `area-campanha ${dadosAberto() ? 'com-dados' : ''}` },
+    h('div', { class: `area-campanha ${dadosAberto() ? 'com-dados' : 'dados-recolhidos'}` },
       h('main', { class: 'conteudo' }, estado.criacao ? criacaoView() : conteudoAba(aba)),
       painelDados()));
 }

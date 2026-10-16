@@ -1018,7 +1018,8 @@
    },
    "testes": -5,
    "acumula": true,
-   "icone": "utensils-crossed"
+   "icone": "utensils-crossed",
+   "cor": "#c98a3a"
   },
   {
    "id": "sede",
@@ -1030,7 +1031,8 @@
    },
    "testes": -5,
    "acumula": true,
-   "icone": "cup-soda"
+   "icone": "cup-soda",
+   "cor": "#4fb3d9"
   },
   {
    "id": "sono",
@@ -1043,7 +1045,8 @@
    },
    "testes": -10,
    "acumula": true,
-   "icone": "bed"
+   "icone": "bed",
+   "cor": "#7b6fd6"
   },
   {
    "id": "doenca",
@@ -1055,7 +1058,8 @@
    },
    "testes": -10,
    "acumula": true,
-   "icone": "biohazard"
+   "icone": "biohazard",
+   "cor": "#8fbf3a"
   },
   {
    "id": "friagem",
@@ -1063,7 +1067,8 @@
    "grupo": "Necessidades",
    "efeitos": "−10% em todos os testes; +1 marcador de vulnerabilidade a cada 15 min.",
    "testes": -10,
-   "icone": "thermometer-snowflake"
+   "icone": "thermometer-snowflake",
+   "cor": "#9fd8f0"
   },
   {
    "id": "cansado",
@@ -1071,7 +1076,8 @@
    "grupo": "Fadiga",
    "efeitos": "−10% em todos os testes.",
    "testes": -10,
-   "icone": "battery-low"
+   "icone": "battery-low",
+   "cor": "#d6a03a"
   },
   {
    "id": "exausto",
@@ -1079,7 +1085,8 @@
    "grupo": "Fadiga",
    "efeitos": "−20% em todos os testes; não corre nem carrega acima do carregamento.",
    "testes": -20,
-   "icone": "battery-warning"
+   "icone": "battery-warning",
+   "cor": "#e07a2a"
   },
   {
    "id": "dor",
@@ -1092,7 +1099,8 @@
    "acumula": true,
    "icone": "activity",
    "duracao": "1d4",
-   "maxAcumulo": 3
+   "maxAcumulo": 3,
+   "cor": "#e0507a"
   },
   {
    "id": "sangramento",
@@ -1104,7 +1112,8 @@
     "pv": 1,
     "intervalo": "1d4",
     "maximo": 6
-   }
+   },
+   "cor": "#d9283a"
   },
   {
    "id": "ferida-aberta",
@@ -1112,63 +1121,72 @@
    "grupo": "Dano",
    "efeitos": "Perde 1 PV sempre que fizer uma Ação principal (no app: a cada ataque).",
    "icone": "bandage",
-   "pvPorAcao": 1
+   "pvPorAcao": 1,
+   "cor": "#b3463a"
   },
   {
    "id": "queimadura",
    "nome": "Queimadura",
    "grupo": "Dano",
    "efeitos": "+1 de dano sempre que for acertado (não é absorvido); ganha um marcador de Vulnerabilidade.",
-   "icone": "flame"
+   "icone": "flame",
+   "cor": "#ff8a2a"
   },
   {
    "id": "envenenado",
    "nome": "Envenenado",
    "grupo": "Dano",
    "efeitos": "Efeito descrito no veneno.",
-   "icone": "syringe"
+   "icone": "syringe",
+   "cor": "#5fd65a"
   },
   {
    "id": "membros-superiores",
    "nome": "Dano a membros superiores",
    "grupo": "Dano",
    "efeitos": "Testes com o membro ferido 20% mais difíceis (aplicar no teste).",
-   "icone": "hand"
+   "icone": "hand",
+   "cor": "#c9785a"
   },
   {
    "id": "membros-inferiores",
    "nome": "Dano a membros inferiores",
    "grupo": "Dano",
    "efeitos": "Deslocamento −3 m; disparada causa Dor.",
-   "icone": "footprints"
+   "icone": "footprints",
+   "cor": "#a8865a"
   },
   {
    "id": "caido",
    "nome": "Caído",
    "grupo": "Mobilidade",
    "efeitos": "Ataques físicos contra ele têm vantagem; os dele, desvantagem; cobertura parcial contra tiros.",
-   "icone": "arrow-down-to-line"
+   "icone": "arrow-down-to-line",
+   "cor": "#8a8a8a"
   },
   {
    "id": "paralisado",
    "nome": "Paralisado",
    "grupo": "Mobilidade",
    "efeitos": "Deslocamento 0; não move o corpo.",
-   "icone": "lock"
+   "icone": "lock",
+   "cor": "#6fb8ff"
   },
   {
    "id": "enraizado",
    "nome": "Enraizado",
    "grupo": "Mobilidade",
    "efeitos": "Deslocamento 0; braços livres.",
-   "icone": "anchor"
+   "icone": "anchor",
+   "cor": "#6b8f3a"
   },
   {
    "id": "desorientado",
    "nome": "Desorientado",
    "grupo": "Mobilidade",
    "efeitos": "Move-se em direção aleatória (1d8 por passo).",
-   "icone": "compass"
+   "icone": "compass",
+   "cor": "#d6c23a"
   },
   {
    "id": "aturdido",
@@ -1176,42 +1194,48 @@
    "grupo": "Mobilidade",
    "efeitos": "Ataques dele em desvantagem e contra ele com vantagem. Dura 1 turno.",
    "icone": "stars",
-   "duracao": 1
+   "duracao": 1,
+   "cor": "#f2d64a"
   },
   {
    "id": "vertigem",
    "nome": "Vertigem",
    "grupo": "Mobilidade",
    "efeitos": "Aturdido; ao se mover, teste de AGI difícil ou cai.",
-   "icone": "tornado"
+   "icone": "tornado",
+   "cor": "#3ad6c2"
   },
   {
    "id": "imobilizado",
    "nome": "Imobilizado",
    "grupo": "Mobilidade",
    "efeitos": "Não ataca; ataques contra ele têm vantagem.",
-   "icone": "link"
+   "icone": "link",
+   "cor": "#4f7fd6"
   },
   {
    "id": "desmaiado",
    "nome": "Desmaiado",
    "grupo": "Estado",
    "efeitos": "Não pode ser controlado; perde 1 PV por turno abaixo de 0.",
-   "icone": "moon-star"
+   "icone": "moon-star",
+   "cor": "#5a5a8a"
   },
   {
    "id": "estabilizado",
    "nome": "Estabilizado",
    "grupo": "Estado",
    "efeitos": "Não perde PV pela sobrevida.",
-   "icone": "heart-pulse"
+   "icone": "heart-pulse",
+   "cor": "#5fb56a"
   },
   {
    "id": "confuso",
    "nome": "Confuso",
    "grupo": "Mental",
    "efeitos": "Desvantagem no próximo teste mental (INT, CAR, PER ou WILL).",
-   "icone": "circle-help"
+   "icone": "circle-help",
+   "cor": "#c26bd6"
   },
   {
    "id": "alerta",
@@ -1222,7 +1246,8 @@
     "PER": 20,
     "INT": -20
    },
-   "icone": "eye"
+   "icone": "eye",
+   "cor": "#3ad67a"
   },
   {
    "id": "trauma-momentaneo",
@@ -1234,7 +1259,8 @@
     "arma-branca": -30,
     "armas-de-fogo": -30
    },
-   "icone": "brain"
+   "icone": "brain",
+   "cor": "#a46bd6"
   },
   {
    "id": "trauma-agudo",
@@ -1246,7 +1272,8 @@
     "WILL": -5
    },
    "testes": -20,
-   "icone": "brain-circuit"
+   "icone": "brain-circuit",
+   "cor": "#8a4fd6"
   },
   {
    "id": "trauma-profundo",
@@ -1254,7 +1281,8 @@
    "grupo": "Mental",
    "efeitos": "Volta o ônus do trauma até o próximo descanso: −20% nos testes.",
    "testes": -20,
-   "icone": "heart-crack"
+   "icone": "heart-crack",
+   "cor": "#6a2fb6"
   },
   {
    "id": "mal-estar",
@@ -1262,7 +1290,8 @@
    "grupo": "Estado mental",
    "efeitos": "−5% nos testes (até 1 hora).",
    "testes": -5,
-   "icone": "frown"
+   "icone": "frown",
+   "cor": "#a0a05a"
   },
   {
    "id": "bem-estar",
@@ -1270,7 +1299,8 @@
    "grupo": "Estado mental",
    "efeitos": "+5% nos testes (até 1 hora).",
    "testes": 5,
-   "icone": "smile"
+   "icone": "smile",
+   "cor": "#6bd6a0"
   },
   {
    "id": "satisfeito",
@@ -1278,14 +1308,16 @@
    "grupo": "Estado mental",
    "efeitos": "+5% nos testes; +1D4 PV no próximo descanso.",
    "testes": 5,
-   "icone": "laugh"
+   "icone": "laugh",
+   "cor": "#e0c060"
   },
   {
    "id": "drogado",
    "nome": "Drogado",
    "grupo": "Vício",
    "efeitos": "Efeitos descritos na droga; teste de WILL para não viciar.",
-   "icone": "pill"
+   "icone": "pill",
+   "cor": "#d64fd0"
   },
   {
    "id": "viciado",
@@ -1295,7 +1327,8 @@
    "atributos": {
     "WILL": -2
    },
-   "icone": "repeat"
+   "icone": "repeat",
+   "cor": "#a03aa0"
   },
   {
    "id": "abstinencia-1",
@@ -1307,7 +1340,8 @@
     "CAR": -10,
     "WILL": -10
    },
-   "icone": "meh"
+   "icone": "meh",
+   "cor": "#c08a8a"
   },
   {
    "id": "abstinencia-2",
@@ -1315,7 +1349,8 @@
    "grupo": "Vício",
    "efeitos": "−15% em todos os testes.",
    "testes": -15,
-   "icone": "annoyed"
+   "icone": "annoyed",
+   "cor": "#c0605a"
   },
   {
    "id": "abstinencia-3",
@@ -1323,7 +1358,8 @@
    "grupo": "Vício",
    "efeitos": "−20% em todos os testes; descansos não recuperam PV; 2D6 de Sanidade por dia.",
    "testes": -20,
-   "icone": "angry"
+   "icone": "angry",
+   "cor": "#a0302a"
   },
   {
    "id": "vulnerabilidade",
@@ -1331,7 +1367,8 @@
    "grupo": "Marcadores",
    "efeitos": "Conta no teste de CONS do descanso longo (doença).",
    "acumula": true,
-   "icone": "shield-alert"
+   "icone": "shield-alert",
+   "cor": "#e0a0a0"
   },
   {
    "id": "genetico",
@@ -1339,7 +1376,8 @@
    "grupo": "Marcadores",
    "efeitos": "Conta no teste de CONS do descanso longo (mutação).",
    "acumula": true,
-   "icone": "dna"
+   "icone": "dna",
+   "cor": "#3ae0d0"
   }
  ],
  "_avisoCondicoes": "Condições do Livro de Regras (efeitos de sobrevivência, dano, mobilidade, mentais e vício). Os números entram sozinhos nas estatísticas da ficha."

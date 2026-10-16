@@ -388,10 +388,10 @@ function painelTeste(p, d) {
 export function linhaRolagem(e) {
   if (e.tipo === 'ataque' || e.tipo === 'manipulacao') {
     const res = e.sucesso ? 'sucesso' : 'falha';
-    return h('span', { class: `rolagem ${res}` },
+    // Só o resultado; as contas aparecem ao passar o mouse (ou segurar o dedo).
+    return h('span', { class: `rolagem ${res}`, title: e.detalhe || '' },
       h('strong', {}, `${e.autor} ${e.rotulo}: `),
-      h('span', { class: `selo ${e.sucesso ? 'ok' : 'perigo'}` }, icone(e.tipo === 'ataque' ? 'swords' : 'drama'), e.texto),
-      e.detalhe ? h('small', { class: 'detalhe' }, ` ${e.detalhe}`) : null);
+      h('span', { class: `selo ${e.sucesso ? 'ok' : 'perigo'}` }, icone(e.tipo === 'ataque' ? (e.sucesso ? 'swords' : 'shield') : 'drama'), e.texto));
   }
   if (e.texto) return h('span', {}, h('strong', {}, e.rotulo), ': ', e.texto);
   if (e.tipo === 'atributos') {

@@ -785,3 +785,57 @@ select.nome-controlado { font-weight: 700; }
 .painel-dados .jogar { width: 100%; justify-content: center; font-size: 1.1em; padding: .6em; }
 .painel-dados .outros-mods { display: flex; flex-direction: column; gap: .4em; }
 .painel-dados .outros-mods[open] > :not(summary) { margin-top: .4em; }
+
+/* Rolador recolhido: tira fina na direita (computador) ou botão redondo (celular). */
+.dados-trilho { display: none; }
+@media (min-width: 1100px) {
+  .area-campanha.dados-recolhidos { display: grid; grid-template-columns: minmax(0, 1fr) 46px; align-items: start; }
+  .dados-trilho { display: block; position: sticky; top: 3.6em; height: calc(100vh - 3.8em); }
+  .dados-trilho button { width: 100%; height: 100%; flex-direction: column; justify-content: flex-start; gap: .6em; padding: .8em 0; border-radius: 0; border: 0; border-left: 1px solid var(--borda); background: var(--painel); color: var(--ouro); }
+  .dados-trilho button span { writing-mode: vertical-rl; letter-spacing: .15em; font-family: var(--titulo, serif); text-transform: uppercase; }
+  .dados-trilho button:hover { background: #3a2c1a; }
+  .area-campanha.dados-recolhidos .botao-dados { display: none; }
+}
+/* Barras de PV, SAN e HUM 60% menores. */
+.trilha-compacta .linha .barra-trilha { flex: 0 1 24%; min-width: 92px; height: 16px; }
+.trilha-compacta .barra-trilha .valor { font-size: .72em; }
+
+/* Campo de Batalha: barra da esquerda com os avatares na ordem da iniciativa. */
+.campo-com-ordem { display: grid; grid-template-columns: 84px minmax(0, 1fr); gap: 1em; align-items: start; }
+.ordem-lateral { position: sticky; top: 3.8em; display: flex; flex-direction: column; align-items: center; gap: .4em; padding: .5em .3em; background: var(--painel); border: 1px solid var(--borda); border-radius: 12px; max-height: calc(100vh - 4.5em); overflow-y: auto; }
+.ordem-topo { display: flex; flex-direction: column; align-items: center; line-height: 1.1; color: var(--ouro); }
+.ordem-lateral ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .5em; align-items: center; }
+.ordem-lateral li { display: flex; flex-direction: column; align-items: center; gap: .1em; }
+.avatar-ordem { position: relative; width: 56px; height: 56px; padding: 0; border-radius: 50%; border: 2px solid var(--borda); background: var(--fundo, #17120d); min-width: 0; min-height: 0; justify-content: center; }
+.avatar-ordem .rosto { width: 100%; height: 100%; border-radius: 50%; overflow: hidden; display: grid; place-items: center; font-weight: 800; font-size: 1.3em; color: var(--texto); }
+.avatar-ordem .rosto img { width: 100%; height: 100%; object-fit: cover; }
+.avatar-ordem.pj { border-color: #5b8bd0; }
+.avatar-ordem.npc { border-color: #8a6a3a; }
+.ordem-lateral li.vez .avatar-ordem { border-color: var(--ouro); box-shadow: 0 0 0 3px rgba(201, 164, 92, .35), 0 0 14px rgba(201, 164, 92, .6); }
+.ordem-lateral li.proximo .avatar-ordem { border-style: dashed; border-color: var(--ouro); }
+.avatar-ordem.alvo { box-shadow: 0 0 0 3px #e06b5d; }
+.avatar-ordem.eu::after { content: ''; position: absolute; left: 50%; bottom: -6px; width: 8px; height: 8px; margin-left: -4px; border-radius: 50%; background: #5b8bd0; }
+.avatar-ordem .ini { position: absolute; top: -6px; right: -8px; min-width: 20px; height: 20px; padding: 0 4px; border-radius: 10px; background: #f4f1ea; color: #1a1a1a; font: 800 11px/20px system-ui, sans-serif; }
+.avatar-ordem .mira { position: absolute; bottom: -6px; right: -6px; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; background: #e06b5d; color: #fff; }
+.avatar-ordem .mira svg { width: 14px; height: 14px; }
+.nome-ordem { max-width: 76px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .72em; opacity: .85; }
+.ordem-lateral li.vez .nome-ordem { color: var(--ouro); font-weight: 700; opacity: 1; }
+/* 0 PV ou menos: imagem avermelhada. */
+.sem-pv .rosto, .avatar-ordem.sem-pv .rosto, .participante.sem-pv .avatar { filter: sepia(1) saturate(6) hue-rotate(-30deg) brightness(.75); }
+.avatar-ordem.sem-pv { border-color: #b3261e; }
+.ordem-iniciativa button.ini { padding: 0 .4em; min-height: 0; }
+@media (max-width: 760px) {
+  .campo-com-ordem { grid-template-columns: 1fr; }
+  .ordem-lateral { position: sticky; top: 3.2em; z-index: 3; flex-direction: row; max-height: none; overflow-x: auto; }
+  .ordem-lateral ol { flex-direction: row; }
+}
+.aviso-defesa { margin: 0 0 .4em; padding: .4em .5em; border-radius: 8px; background: rgba(224, 107, 93, .15); border: 1px solid #e06b5d; font-size: .92em; }
+.defesas.escolhendo .defesa.escolher { cursor: pointer; border-color: var(--ouro); background: #3a2c1a; color: var(--texto); animation: ef-pulso 1.4s ease-in-out infinite; }
+.defesas.escolhendo .defesa.escolher:hover { background: var(--ouro); color: #1a1a1a; }
+.defesas.escolhendo .defesa.indisponivel { opacity: .35; }
+.defesa.escolher.sem { animation: none; border-color: var(--borda); }
+.efeito-leitura { display: flex; gap: 1em; align-items: flex-start; }
+.efeito-icone.enorme { width: 84px; height: 84px; flex: none; border-width: 3px; }
+.efeito-icone.enorme .efeito-desenho svg { width: 44px; height: 44px; }
+.efeito-icone .efeito-desenho svg { color: color-mix(in srgb, var(--cor-ef) 35%, #fff); }
+@media (max-width: 480px) { .efeito-leitura { flex-direction: column; align-items: center; text-align: center; } }

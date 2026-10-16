@@ -87,7 +87,7 @@ export function efeitosVisiveis(p, sistema) {
   return condicoesAtivas(p, sistema).map(c => {
     const t = p.efeitos?.[c.id];
     return {
-      id: c.id, nome: c.nome, icone: c.icone || 'circle-alert', grupo: c.grupo, qtd: c.qtd, efeitos: c.efeitos,
+      id: c.id, nome: c.nome, icone: c.icone || 'circle-alert', cor: c.cor || null, grupo: c.grupo, qtd: c.qtd, efeitos: c.efeitos,
       turnos: t ? t.turnos : null, sangra: c.sangra ? { perdidos: t?.perdidos || 0, maximo: c.sangra.maximo ?? 6 } : null,
     };
   });

@@ -61,6 +61,7 @@ const nomeUsuario = id => db.users.find(u => u.id === id)?.name ?? null;
 function fichaPublica(p, sis) {
   return { id: p.id, tipo: p.tipo, nome: p.nome, classe: p.classe, especializacao: p.especializacao, profissao: p.profissao, nivel: p.nivel, foto: p.foto, humor: humorAparente(p), criatura: !!p.criatura, donoId: p.donoId, dono: nomeUsuario(p.donoId),
     // Efeitos que se veem de fora (sangrando, caído, aturdido…), com a contagem de turnos.
+    semPv: !!p.pv && p.pv.atual <= 0,
     ...efeitosPublicos(p, sis) };
 }
 
@@ -255,6 +256,36 @@ function sairDoCombate(s, id) {
   if (!cb.ordem.length) s.combate = null;
 }
 
+// Iniciativa de todos (AGI + 1d10) e a ordem dos turnos, do maior para o menor.
+function iniciarCombate(c) {
+  const sis = sistema(c.sistema);
+  const s = c.salas.batalha;
+  const vivos = s.participantes.map(id => c.personagens.find(p => p.id === id)).filter(Boolean);
+  const ordem = vivos.map(p => {
+    const r = rolarIniciativa(p, sis);
+    return { id: p.id, ini: r.total, agi: r.agi, dados: r.dados };
+  });
+  s.combate = { rodada: 1, turno: 1, vez: 0, ordem };
+  ordenarIniciativa(s.combate);
+  s.ativo = s.combate.ordem[0].id;
+  const nomes = s.combate.ordem.map(o => `${c.personagens.find(p => p.id === o.id).nome} ${o.ini}`);
+  registrar(s.log, { autor: 'Mestre', rotulo: 'Combate iniciado — iniciativa', texto: nomes.join(' · ') });
+}
+
+// O sistema força a iniciativa: com dois ou mais no Campo de Batalha o combate começa sozinho,
+// e quem chega depois entra na ordem com a própria iniciativa.
+function garantirCombate(c) {
+  const s = c.salas.batalha;
+  if (!s.combate) {
+    if (s.participantes.length >= 2) iniciarCombate(c);
+    return;
+  }
+  for (const id of s.participantes) {
+    const p = c.personagens.find(x => x.id === id);
+    if (p) entrarNoCombate(c, s, p);
+  }
+}
+
 // Resolve um ataque declarado com a defesa escolhida: rola, aplica o dano e registra.
 function resolverPendente(c, s, pend, defesa, sis) {
   const a = personagem(c, pend.atacante);
@@ -278,12 +309,17 @@ function resolverPendente(c, s, pend, defesa, sis) {
   const danoTxt = r.dano
     ? ` — dano ${r.dano}${r.metadeEvasao ? ' (metade pela Evasão)' : ''} (${r.danoPartes.map(x => `${x.nome} ${x.dados ? `[${x.dados.join(', ')}]` : ''}${x.total}`).join(' + ')}${r.ip ? ` − IP ${r.ip}` : ''}${r.queimadura ? ' +1 queimadura' : ''}) · ${b.nome} ${b.pv.atual}/${b.pv.max} PV`
     : '';
-  const notaDefesa = !r.sucesso && r.defesa.id === 'esquiva' ? ` · ${b.nome} pode se deslocar até 1,5 m` : '';
+  // Resultado curto para a mesa: Acertou (e o dano tomado) ou Defendeu. As contas ficam no "detalhe" (ver ao passar o mouse).
+  const tiro = r.defesa.id === 'nenhuma';
+  const resumo = r.sucesso
+    ? `Acertou! ${b.nome} tomou ${r.dano} de dano (${b.pv.atual}/${b.pv.max} PV)`
+    : r.dano ? `${b.nome} defendeu em parte (${r.defesa.nome}): tomou ${r.dano} de dano (${b.pv.atual}/${b.pv.max} PV)`
+      : tiro ? `Errou ${b.nome}` : `${b.nome} defendeu (${r.defesa.nome})`;
+  const extras = [...notas, !r.sucesso && r.defesa.id === 'esquiva' ? `${b.nome} pode se deslocar até 1,5 m` : null, r.perdaSacrificio ? `Sacrifício: ${a.nome} perde ${r.perdaSacrificio} PV` : null].filter(Boolean);
   const entrada = {
-    tipo: 'ataque', autor: a.nome, rotulo: `ataca ${b.nome} com ${r.arma} (defesa: ${r.defesa.nome})`, sucesso: r.sucesso, critico: r.critico,
-    texto: `${r.sucesso ? 'ACERTOU' : 'ERROU'}${r.critico ? ` (crítico de ${r.critico})` : ''}${danoTxt}${notas.length ? ` · ${notas.join(', ')}` : ''}${notaDefesa}`
-      + `${r.perdaSacrificio ? ` · Sacrifício: ${a.nome} perde ${r.perdaSacrificio} PV` : ''}`,
-    detalhe: `d100 ${r.dp} + ação ${r.acao}${mods ? ` (${mods})` : ''} = ${r.total} contra defesa ${r.nd} (${def})${modo} · DS ${r.ds}`,
+    tipo: 'ataque', autor: a.nome, rotulo: `ataca ${b.nome} com ${r.arma}`, sucesso: r.sucesso, critico: r.critico, defendeu: !r.sucesso, alvo: b.nome,
+    texto: `${resumo}${r.critico ? ` · crítico de ${r.critico}` : ''}${extras.length ? ` · ${extras.join(' · ')}` : ''}`,
+    detalhe: `d100 ${r.dp} + ação ${r.acao}${mods ? ` (${mods})` : ''} = ${r.total} contra defesa ${r.nd} (${def})${modo} · DS ${r.ds}${danoTxt}`,
     // Números dos dados para a animação na tela de todos.
     dp: r.dp, dados: r.dados, ds: r.ds, total: r.total, nd: r.nd, dano: r.dano, danoDados: r.danoPartes.filter(x => x.dados).map(x => ({ nome: x.nome, expr: x.expr, dados: x.dados })),
   };
@@ -556,16 +592,23 @@ export const acoes = {
     if (it) it.durabilidadeAtual = Math.max(0, parseInt(valor, 10) || 0);
   },
 
-  'item.equipar'(c, { id, uid: itemUid, equipar }, ctx) {
+  // mao: 0 = mão direita, 1 = mão esquerda (itens do slot "mãos"); sem mão escolhida, vai para a mão livre (a hábil primeiro).
+  'item.equipar'(c, { id, uid: itemUid, equipar, mao }, ctx) {
     const p = personagem(c, id);
     exigirDonoOuMestre(ctx, p);
     const it = p.itens.find(i => i.uid === itemUid);
     if (!it) throw erro('Item não encontrado.');
-    if (!equipar) { it.equipado = false; return; }
+    if (!equipar) { it.equipado = false; delete it.mao; return; }
     if (it.equipado) return;
     const r = podeEquipar(p, it, sistema(c.sistema));
     if (!r.ok) throw erro(r.motivo);
     it.equipado = true;
+    if (it.slot === 'maos' && (it.ocupa ?? 1) < 2) {
+      const ocupadas = new Set(p.itens.filter(i => i !== it && i.equipado && i.slot === 'maos').map(i => i.mao));
+      const habil = p.maoHabil === 'esquerda' ? 1 : 0;
+      const pedida = [0, 1].includes(Number(mao)) ? Number(mao) : null;
+      it.mao = pedida ?? (!ocupadas.has(habil) ? habil : 1 - habil);
+    } else delete it.mao;
   },
 
   'item.comprar'(c, { id, itemId }, ctx) {
@@ -632,7 +675,7 @@ export const acoes = {
     if (s.participantes.includes(id)) return;
     if (s.participantes.length >= LIMITE_SALA) throw erro(`A sala já tem ${LIMITE_SALA} integrantes.`);
     s.participantes.push(id);
-    if (s.combate) entrarNoCombate(c, s, p);
+    if (nome === 'batalha') garantirCombate(c);
   },
 
   'sala.remover'(c, { sala: nome, id }, ctx) {
@@ -711,19 +754,20 @@ export const acoes = {
   // Controle de turno (iniciativa, rodadas e vez) vale em qualquer sistema; o ataque automático só no MSS.
   'combate.iniciar'(c, d, ctx) {
     exigirMestre(ctx);
-    const sis = sistema(c.sistema);
-    const s = c.salas.batalha;
-    const vivos = s.participantes.map(id => c.personagens.find(p => p.id === id)).filter(Boolean);
-    if (vivos.length < 2) throw erro('Coloque ao menos dois participantes no Campo de Batalha.');
-    const ordem = vivos.map(p => {
-      const r = rolarIniciativa(p, sis);
-      return { id: p.id, ini: r.total, agi: r.agi, dados: r.dados };
-    });
-    s.combate = { rodada: 1, vez: 0, ordem };
-    ordenarIniciativa(s.combate);
-    s.ativo = s.combate.ordem[0].id;
-    const nomes = s.combate.ordem.map(o => `${c.personagens.find(p => p.id === o.id).nome} ${o.ini}`);
-    registrar(s.log, { autor: 'Mestre', rotulo: 'Combate iniciado — iniciativa', texto: nomes.join(' · ') });
+    if (c.salas.batalha.participantes.length < 2) throw erro('Coloque ao menos dois participantes no Campo de Batalha.');
+    iniciarCombate(c);
+  },
+
+  // O mestre corrige a iniciativa de alguém; a ordem se refaz e a vez continua com quem estava.
+  'combate.iniciativa'(c, { id, ini }, ctx) {
+    exigirMestre(ctx);
+    const cb = c.salas.batalha.combate;
+    const o = cb?.ordem.find(x => x.id === id);
+    if (!o) throw erro('Esse personagem não está na ordem de iniciativa.');
+    const atual = cb.ordem[cb.vez]?.id;
+    o.ini = Math.max(-99, Math.min(999, parseInt(ini, 10) || 0));
+    ordenarIniciativa(cb);
+    cb.vez = Math.max(0, cb.ordem.findIndex(x => x.id === atual));
   },
 
   'combate.proximo'(c, d, ctx) {
@@ -739,6 +783,7 @@ export const acoes = {
       if (notasEfeitos.length) registrar(s.log, { autor: atual.nome, rotulo: 'Efeitos', texto: notasEfeitos.join(' · ') });
     }
     cb.vez++;
+    cb.turno = (cb.turno || 1) + 1;
     if (cb.vez >= cb.ordem.length) {
       cb.vez = 0;
       cb.rodada++;
@@ -802,6 +847,10 @@ export const acoes = {
     if (!a.pv || !b.pv) throw erro('Os dois precisam ter PV na ficha.');
     const op = { ...(opcoes || {}) };
     if (!ctx.mestre) { delete op.vantagem; delete op.desvantagem; delete op.danoLivre; }
+    // Uma arma em cada mão: a da mão hábil ataca com o ônus de "duas armas" e a da outra mão com o de "mão inábil".
+    const nasMaos = (a.itens || []).filter(i => i.equipado && i.slot === 'maos' && i.tipo === 'arma' && (i.ocupa ?? 1) < 2);
+    const usada = nasMaos.find(i => i.uid === op.armaUid);
+    if (nasMaos.length >= 2 && usada) op.duasArmas = (usada.mao ?? 0) === (a.maoHabil === 'esquerda' ? 1 : 0) ? 'principal' : 'inabil';
     agressaoSubita(c, a, b, sis);
     const notasAgir = efeitosAoAgir(a, sis);
     if (notasAgir.length) registrar(s.log, { autor: a.nome, rotulo: 'Efeitos', texto: notasAgir.join(' · ') });
@@ -937,8 +986,8 @@ export const acoes = {
       if (bat.participantes.includes(p.id)) continue;
       if (bat.participantes.length >= LIMITE_SALA) throw erro('O Campo de Batalha está cheio.');
       bat.participantes.push(p.id);
-      if (bat.combate) entrarNoCombate(c, bat, p);
     }
+    garantirCombate(c);
     const texto = agressaoSubita(c, a, b, sis);
     registrar(bat.log, { autor: a.nome, rotulo: 'Escalada', texto: `${a.nome} parte para cima de ${b.nome} (vindo da Sala Social).` });
     return { texto };
@@ -1079,6 +1128,7 @@ export const acoes = {
     const p = npcDeMonstro(c, m);
     c.personagens.push(p);
     s.participantes.push(p.id);
+    garantirCombate(c);
   },
 
   'encontro.gerar'(c, { limite, usarMonstros, grupos }, ctx) {
@@ -1110,6 +1160,7 @@ export const acoes = {
       nomes.push(p.nome);
     }
     registrar(s.log, { autor: 'Mestre', rotulo: `Encontro aleatório (dificuldade ${soma}/${limite})`, texto: nomes.join(', ') });
+    garantirCombate(c);
     return { nomes, soma };
   },
 };

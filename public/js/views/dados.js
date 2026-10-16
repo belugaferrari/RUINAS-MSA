@@ -28,8 +28,18 @@ export function botaoDados() {
   return h('button', { type: 'button', class: 'botao-dados', 'aria-label': 'Abrir rolador de dados', title: 'Rolador de dados', onclick: () => alternar(true) }, icone('dices'));
 }
 
+// Recolhida: no computador vira uma tira fina na direita (clique para abrir); no celular, o botão redondo.
+function dadosRecolhidos() {
+  return [
+    h('aside', { class: 'dados-trilho', 'aria-label': 'Rolador de dados recolhido' },
+      h('button', { type: 'button', title: 'Abrir o rolador de dados', 'aria-label': 'Abrir o rolador de dados', onclick: () => alternar(true) },
+        icone('chevron-left'), icone('dices'), h('span', {}, 'Dados'))),
+    botaoDados(),
+  ];
+}
+
 export function painelDados() {
-  if (!dadosAberto()) return botaoDados();
+  if (!dadosAberto()) return dadosRecolhidos();
   const c = estado.campanha;
   const sis = estado.sistema;
   const mestre = c.papel === 'mestre';
@@ -46,7 +56,7 @@ export function painelDados() {
     h('div', { class: 'painel-dados-topo' },
       titulo('Dados', 'dices', 'h3'),
       h('span', { class: 'espaco' }),
-      botao('', () => alternar(false), { class: 'x', icone: 'x', title: 'Fechar rolador' })),
+      botao('', () => alternar(false), { class: 'x', icone: 'chevron-right', title: 'Recolher rolador', 'aria-label': 'Recolher rolador' })),
     h('label', {}, 'Quem rola',
       selecao([...(mestre ? [{ valor: '', rotulo: 'Mestre (sem ficha)' }] : []), ...candidatos.map(x => ({ valor: x.id, rotulo: x.nome }))], s.quem,
         v => { s.quem = v; s.acao = ''; render(); }, { 'aria-label': 'Quem rola' })),
