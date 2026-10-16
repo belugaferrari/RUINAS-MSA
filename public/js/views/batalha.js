@@ -1,10 +1,10 @@
 // Campo de Combate (esboço do autor): no alto, o painel do personagem que você controla, em três quadros —
 // Personagem (PV, SAN, HUM, mãos, defesas, IP, efeitos) · Habilidades e vantagens (ativar/desativar) · Ataques.
 // Embaixo ficam o turno, os participantes (o campo) e o registro.
-import { h, botao, selecao, aviso, icone, titulo, vazio } from '../ui.js';
+import { h, botao, selecao, aviso, icone, titulo, vazio, pedirTexto } from '../ui.js';
 import { estado, render, personagemPorId } from '../estado.js';
 import { acao } from '../api.js';
-import { derivados, acharVantagem, ganhosDeClasse } from '/shared/regras.js';
+import { derivados, listaHabilidades, efeitosHabilidade, GRUPOS_IP } from '/shared/regras.js';
 import { armasDisponiveis, ipDe, opcoesDefesa, defesaDoAlvo } from '/shared/combate.js';
 import { trilhaCompacta, escolherCondicao } from './ficha.js';
 import { painelSlot, naMao, maoHabil } from './boneco.js';
@@ -45,7 +45,7 @@ export function painelBatalha(participantes, mestre) {
   if (!p) return null;
   return h('div', { class: 'batalha-topo' },
     h('section', { class: 'bloco bat-personagem' }, quadroPersonagem(p, meus, chave, mestre)),
-    h('section', { class: 'bloco bat-habilidades' }, titulo('Habilidades, características e vantagens', 'sparkles'), quadroHabilidades(p)),
+    h('section', { class: 'bloco bat-habilidades' }, titulo('Habilidades, características e vantagens', 'sparkles'), quadroHabilidades(p, mestre)),
     h('section', { class: 'bloco bat-ataques' }, titulo('Ataques', 'swords'), quadroAtaques(p, participantes, mestre)));
 }
 
@@ -90,6 +90,7 @@ function quadroPersonagem(p, meus, chave, mestre) {
   const atacante = pend ? personagemPorId(pend.atacante) : null;
   return [
     h('div', { class: 'barra' }, icone('user'), nomeControlado(meus, p, chave)),
+    humorCombate(p),
     trilhaCompacta(p, 'pv', 'PV', 'heart'),
     p.sanidade ? trilhaCompacta(p, 'sanidade', 'SAN', 'brain') : null,
     p.humanidade ? trilhaCompacta(p, 'humanidade', 'HUM', 'hand-heart') : null,
@@ -105,30 +106,66 @@ function quadroPersonagem(p, meus, chave, mestre) {
       defesa('Desarmada', sub('briga.defesa-desarmada') + base, 'Defesa desarmada + 50: só contra Briga', 'defesa-desarmada'),
       pend ? h('button', { type: 'button', class: 'defesa escolher sem', title: 'Não defender (ex.: pego de surpresa, ou tiro)', onclick: () => defender('nenhuma') },
         h('small', {}, opcoes.length === 1 ? 'Tiro' : 'Sem defesa'), h('strong', {}, icone('x'))) : null),
+    h('h4', {}, icone('shield-alert'), ' IP (proteção)'),
+    ipView(d.ip),
     h('h4', {}, icone('activity'), ' Efeitos'),
     h('div', { class: 'barra' }, efeitosIcones(p, { mestre }) || h('small', { class: 'dica' }, 'Nenhum.'),
       botao('Marcador', () => escolherCondicao(p), { class: 'pequeno', icone: 'tag', title: 'Escolher uma condição' })),
   ];
 }
 
+// IP geral e o de cada tipo de dano, em bolinhas (o geral vale contra tudo; o do tipo, só contra aquele dano).
+const SIGLA_IP = { 'Corte': 'COR', 'Perfuração': 'PER', 'Concussão': 'CON', 'Elétrico': 'ELÉ', 'Calor': 'CAL', 'Frio': 'FRI', 'Energia': 'ENE', 'Radiação': 'RAD',
+  'Vibração': 'VIB', 'Onda de Choque': 'OND', 'Ácido': 'ÁCI', 'Venenoso': 'VEN', 'Psíquico': 'PSI', 'Impacto': 'IMP', 'Físico': 'FÍS', 'A distância': 'DIS', 'Elemental': 'ELM', 'Químico': 'QUÍ' };
+function ipView(ip) {
+  const tipos = Object.entries(ip.tipos).filter(([, v]) => v > 0);
+  const bola = (sigla, valor, titulo, classe = '') => h('span', { class: `bola-ip ${classe}`, title: titulo, 'aria-label': titulo }, h('strong', {}, valor), h('small', {}, sigla));
+  return h('div', { class: 'ips' },
+    bola('GERAL', ip.geral, `IP geral ${ip.geral}: vale contra qualquer dano`, 'geral'),
+    tipos.map(([t, v]) => bola(SIGLA_IP[t] || t.slice(0, 3).toUpperCase(), v, `IP ${t} ${v}: só contra dano de ${t}${GRUPOS_IP[t] ? ` (${GRUPOS_IP[t].join(', ')})` : ''}`)),
+    tipos.length ? null : h('small', { class: 'dica' }, 'Nenhum IP por tipo de dano.'));
+}
+
+// Humor do personagem (o real, que dá os efeitos; e o aparente, se houver máscara).
+function humorCombate(p) {
+  const humores = estado.sistema.social?.humores;
+  if (!humores) return null;
+  const nome = id => humores.find(x => x.id === (id || 'neutro'))?.nome || 'Neutro';
+  const real = humores.find(x => x.id === (p.humor || 'neutro'));
+  return h('p', { class: 'humor-combate', title: real?.efeitos || '' }, icone('smile'), ` Humor: `, h('strong', {}, nome(p.humor)),
+    p.humorAparente ? h('small', {}, ` (a sala vê ${nome(p.humorAparente)})`) : null,
+    real && real.id !== 'neutro' && real.efeitos ? h('small', { class: 'dica' }, ` — ${real.efeitos}`) : null);
+}
+
 // ---------- Habilidades ----------
 // Ativar/desativar fica anotado na ficha (lembrete na mesa). Os bônus de cada uma ainda não entram sozinhos nas contas.
 
-function quadroHabilidades(p) {
+function quadroHabilidades(p, mestre) {
   const sis = estado.sistema;
   const ativas = new Set(p.ativas || []);
-  const lista = [
-    ...(p.vantagens || []).map(id => acharVantagem(id, sis)).filter(Boolean).map(v => ({ id: `v:${v.id}`, nome: v.nome, descricao: v.descricao, tipo: v.origem === 'Geral' ? 'Vantagem' : `Classe · ${v.origem}` })),
-    ...ganhosDeClasse(p, sis).filter(g => g.descricao).map(g => ({ id: `c:${g.nome}`, nome: g.nome, descricao: g.descricao, tipo: `Nível ${g.nivel}` })),
-    sis.raca?.habilidadeUnica ? { id: 'raca', nome: sis.raca.habilidadeUnica.nome, descricao: sis.raca.habilidadeUnica.descricao, tipo: sis.raca.nome } : null,
-  ].filter(Boolean);
+  const lista = listaHabilidades(p, sis);
   if (!lista.length) return vazio('Nenhuma habilidade ou vantagem.', 'sparkles');
   const alternar = id => acao('personagem.atualizar', { id: p.id, patch: { ativas: ativas.has(id) ? [...ativas].filter(x => x !== id) : [...ativas, id] } });
+  // O mestre corrige o que o app entendeu (mesmo formato: "Furtividade +10%; +1 IP Corte; dano +1; +1d6 de dano").
+  const ajustar = async x => {
+    const atual = p.ajustesHabilidades?.[x.id] ?? efeitosHabilidade(p, sis, x).notas.join('; ');
+    const v = await pedirTexto(`O que "${x.nome}" faz no app`, 'Efeitos separados por ; (vazio volta ao texto do livro)', atual);
+    if (v == null) return;
+    const ajustes = { ...(p.ajustesHabilidades || {}) };
+    if (v.trim() && v.trim() !== efeitosHabilidade(p, sis, x).notas.join('; ')) ajustes[x.id] = v.trim(); else delete ajustes[x.id];
+    await acao('personagem.atualizar', { id: p.id, patch: { ajustesHabilidades: ajustes } });
+  };
   return h('ul', { class: 'lista-habilidades' }, lista.map(x => {
     const on = ativas.has(x.id);
+    const ef = efeitosHabilidade(p, sis, x);
     return h('li', { class: on ? 'ativa' : '' },
-      h('details', {}, h('summary', {}, h('strong', {}, x.nome), h('small', {}, ` ${x.tipo}`)), h('p', { class: 'bloco-texto' }, x.descricao)),
-      botao(on ? 'Ativo' : 'Desativado', () => alternar(x.id), { class: `pequeno ${on ? 'primario' : ''}`, 'aria-pressed': on, title: `${on ? 'Desativar' : 'Ativar'} ${x.nome}` }));
+      h('div', { class: 'hab-texto' },
+        h('details', {}, h('summary', {}, h('strong', {}, x.nome), h('small', {}, ` ${x.tipo}`)), h('p', { class: 'bloco-texto' }, x.descricao)),
+        h('small', { class: `hab-efeito ${ef.notas.length ? '' : 'so-lembrete'}` }, ef.notas.length ? [icone('zap'), ` ${ef.notas.join(' · ')}`] : 'Só lembrete (sem número para o app somar)',
+          p.ajustesHabilidades?.[x.id] ? h('span', { class: 'selo' }, 'ajustado') : null)),
+      h('div', { class: 'hab-botoes' },
+        botao(on ? 'Ativo' : 'Desativado', () => alternar(x.id), { class: `pequeno ${on ? 'primario' : ''}`, 'aria-pressed': on, title: `${on ? 'Desativar' : 'Ativar'} ${x.nome}` }),
+        mestre ? botao('', () => ajustar(x), { class: 'pequeno', icone: 'pencil', title: `Ajustar o que ${x.nome} faz no app` }) : null));
   }));
 }
 

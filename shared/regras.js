@@ -1,3 +1,4 @@
+import { efeitosDoTexto, somarEfeitos } from './habilidades.js';
 // Regras compartilhadas entre servidor e navegador.
 // Base: Livro do Jogador MSS (rev. 14/10/2026). O MSA pode mudar regras — as fórmulas ficam todas aqui.
 
@@ -229,9 +230,31 @@ export function condicoesAtivas(ficha, sistema) {
   return [...ativas.values()];
 }
 
+// Habilidades que o personagem pode ativar no combate: vantagens, ganhos da classe e a habilidade única da raça.
+export function listaHabilidades(ficha, sistema) {
+  return [
+    ...(ficha.vantagens || []).map(id => acharVantagem(id, sistema)).filter(Boolean).map(v => ({ id: `v:${v.id}`, nome: v.nome, descricao: v.descricao, tipo: v.origem === 'Geral' ? 'Vantagem' : `Classe · ${v.origem}` })),
+    ...ganhosDeClasse(ficha, sistema).filter(g => g.descricao).map(g => ({ id: `c:${g.nome}`, nome: g.nome, descricao: g.descricao, tipo: `Nível ${g.nivel}` })),
+    sistema.raca?.habilidadeUnica ? { id: 'raca', nome: sistema.raca.habilidadeUnica.nome, descricao: sistema.raca.habilidadeUnica.descricao, tipo: sistema.raca.nome } : null,
+  ].filter(Boolean);
+}
+
+// O que uma habilidade faz no app: o ajuste do mestre (se houver) ou o que o app leu do texto do livro.
+export function efeitosHabilidade(ficha, sistema, hab) {
+  const texto = ficha.ajustesHabilidades?.[hab.id] ?? hab.descricao;
+  return efeitosDoTexto(texto, sistema, { tipoIp });
+}
+
+export function bonusHabilidades(ficha, sistema) {
+  const ativas = new Set(ficha.ativas || []);
+  if (!ativas.size) return somarEfeitos([]);
+  return somarEfeitos(listaHabilidades(ficha, sistema).filter(x => ativas.has(x.id)).map(x => efeitosHabilidade(ficha, sistema, x)));
+}
+
 export function derivados(ficha, sistema) {
   const r = regras(sistema);
   const bonus = bonusEquipados(ficha);
+  const hab = bonusHabilidades(ficha, sistema);
   const racial = sistema.raca?.modificadores || {};
   // Condições (Fome, Cansado, Sono…): mudam atributos e somam/subtraem % nos testes.
   const condicoes = condicoesAtivas(ficha, sistema);
@@ -245,9 +268,9 @@ export function derivados(ficha, sistema) {
   }
   const atributos = {}, percentual = {}, bonusPericial = {}, mod = {};
   for (const a of sistema.atributos) {
-    const v = (ficha.atributos?.[a.sigla] ?? 0) + (bonus[a.sigla] || 0) + (condAtr[a.sigla] || 0);
+    const v = (ficha.atributos?.[a.sigla] ?? 0) + (bonus[a.sigla] || 0) + (condAtr[a.sigla] || 0) + (hab.atributos[a.sigla] || 0);
     atributos[a.sigla] = v;
-    percentual[a.sigla] = 4 * v + condTestes + (condTesteAtr[a.sigla] || 0);
+    percentual[a.sigla] = 4 * v + condTestes + hab.testes + (condTesteAtr[a.sigla] || 0);
     bonusPericial[a.sigla] = Math.max(0, 2 * (v - 5));
     mod[a.sigla] = Math.floor((v - 10) / 2) + (racial[a.sigla] || 0);
   }
@@ -258,14 +281,14 @@ export function derivados(ficha, sistema) {
   for (const p of sistema.pericias || []) {
     const base = ficha.pericias?.[p.id] ?? 0;
     const bp = bonusPericial[p.atributo] ?? 0;
-    const cond = condTestes + (condTesteAtr[p.atributo] || 0) + (condPericia[p.id] || 0);
+    const cond = condTestes + (condTesteAtr[p.atributo] || 0) + (condPericia[p.id] || 0) + hab.testes + (hab.pericias[p.id] || 0);
     pericias[p.id] = base + bp + (bonus[p.id] || 0) + cond;
     for (const s of p.subpericias) {
-      subpericias[s.id] = base + (ficha.subpericias?.[s.id] ?? 0) + bp + (bonusProfissao[s.id] || 0) + (bonus[p.id] || 0) + (bonus[s.id] || 0) + cond;
+      subpericias[s.id] = base + (ficha.subpericias?.[s.id] ?? 0) + bp + (bonusProfissao[s.id] || 0) + (bonus[p.id] || 0) + (bonus[s.id] || 0) + cond + (hab.subpericias[s.id] || 0);
     }
   }
   const nivel = ficha.nivel || 1;
-  const pvMax = 5 + 5 * nivel + Math.floor(((ficha.atributos?.FOR ?? 0) + (ficha.atributos?.CONS ?? 0)) / 2) + (profissao?.extras?.pv || 0);
+  const pvMax = 5 + 5 * nivel + Math.floor(((ficha.atributos?.FOR ?? 0) + (ficha.atributos?.CONS ?? 0)) / 2) + (profissao?.extras?.pv || 0) + hab.pv;
   const sanidadeMax = (ficha.atributos?.INT ?? 0) + (ficha.atributos?.WILL ?? 0) + 10;
   const san = ficha.sanidade?.atual ?? sanidadeMax;
   const estadoSanidade = [...(sistema.sanidade?.estados || [])].reverse().find(e => san < e.abaixoDe)?.nome || 'Lúcido';
@@ -283,7 +306,9 @@ export function derivados(ficha, sistema) {
     pvMax, sanidadeMax, estadoSanidade, humanidadeMax, humanidadeLimite, humanidadeMinInicial, estagioHumanidade,
     iniciativa: atributos.AGI ?? 0,
     linguasExtras: Math.max(0, mod.INT ?? 0),
-    defesa: equipados.reduce((s, i) => s + (i.defesa || 0), 0) + (bonus.Defesa || 0),
+    defesa: equipados.reduce((s, i) => s + ipDoItem(i).geral, 0) + (bonus.Defesa || 0),
+    ip: ipPorTipo(ficha, equipados, bonus, hab),
+    habilidades: hab,
     carga: (ficha.itens || []).reduce((s, i) => s + (i.peso || 0), 0),
     limitePericia: limitePericia(nivel, sistema),
     atributoMax: atributoMax(nivel, sistema),
@@ -364,4 +389,69 @@ export function gerarEncontro(candidatos, limite, rng = Math.random, maxCriatura
     soma += c.dificuldade || 1;
   }
   return { escolhidos, soma };
+}
+
+// ---------- IP (Índice de Proteção) por tipo de dano ----------
+// Livro: Corte; Perfuração; Concussão; Elétrico; Calor; Energia (Mágico); Radiação; Vibração; Onda de Choque; Ácido;
+// Venenoso; Impacto*; Físico*; A distância*; Elemental*; Químico*; Psíquico. Os com * agrupam outros tipos.
+// O IP "geral" vale contra tudo; o de um tipo só contra aquele dano (e o de um grupo, contra os tipos do grupo).
+export const TIPOS_IP = ['Corte', 'Perfuração', 'Concussão', 'Elétrico', 'Calor', 'Frio', 'Energia', 'Radiação', 'Vibração', 'Onda de Choque',
+  'Ácido', 'Venenoso', 'Psíquico', 'Impacto', 'Físico', 'A distância', 'Elemental', 'Químico'];
+export const GRUPOS_IP = {
+  'Físico': ['Corte', 'Perfuração', 'Concussão', 'Impacto', 'Não letal'],
+  'Impacto': ['Concussão', 'Onda de Choque', 'Vibração'],
+  'Elemental': ['Elétrico', 'Calor', 'Frio'],
+  'Químico': ['Ácido', 'Venenoso'],
+};
+const SINONIMOS_IP = {
+  corte: 'Corte', laminas: 'Corte', perf: 'Perfuração', perfuracao: 'Perfuração', perfurante: 'Perfuração', mordida: 'Perfuração',
+  concussao: 'Concussão', impacto: 'Impacto', queda: 'Concussão', eletrico: 'Elétrico', eletricidade: 'Elétrico', choque: 'Elétrico',
+  calor: 'Calor', fogo: 'Calor', termico: 'Calor', frio: 'Frio', gelo: 'Frio', energia: 'Energia', magico: 'Energia', espectral: 'Energia', mistico: 'Energia',
+  radiacao: 'Radiação', vibracao: 'Vibração', 'onda de choque': 'Onda de Choque', explosao: 'Onda de Choque', acido: 'Ácido',
+  venenoso: 'Venenoso', veneno: 'Venenoso', toxico: 'Venenoso', psiquico: 'Psíquico', mental: 'Psíquico', fisico: 'Físico',
+  balistico: 'A distância', bala: 'A distância', balas: 'A distância', tiro: 'A distância', 'a distancia': 'A distância', distancia: 'A distância',
+  elemental: 'Elemental', quimico: 'Químico',
+};
+export const tipoIp = nome => SINONIMOS_IP[semAcento(nome).replace(/\s*\(.*$/, '')] || null;
+
+// IP de um item: { geral, tipos }. Usa "ipTipos" do catálogo ou lê o texto ("IP 3 (Corte) IP 1 (Outros)", "IP 2 (Corte/Perf)").
+// Parte do corpo entre parênteses (Cabeça, Pernas…) ou "Outros" contam como geral.
+export function ipDoItem(i) {
+  if (i.ipTipos) return { geral: i.ipTipos.geral || 0, tipos: Object.fromEntries(Object.entries(i.ipTipos).filter(([k]) => k !== 'geral')) };
+  const texto = [i.efeitos, i.efeitosObs, i.observacoes].filter(Boolean).join(' ');
+  const r = { geral: 0, tipos: {} };
+  let achou = false;
+  for (const m of texto.matchAll(/\bIP\s*\+?(\d+)\s*(?:\(([^)]*)\))?/gi)) {
+    achou = true;
+    const v = parseInt(m[1], 10) || 0;
+    const tipos = (m[2] || '').split(/[\/,;]| e /).map(tipoIp).filter(Boolean);
+    if (!tipos.length) r.geral += v;
+    for (const t of tipos) r.tipos[t] = (r.tipos[t] || 0) + v;
+  }
+  if (!achou) r.geral = i.defesa || 0;
+  return r;
+}
+
+function ipPorTipo(ficha, equipados, bonus, hab) {
+  const tipos = { ...hab.ip.tipos };
+  let geral = (bonus.Defesa || 0) + (parseInt(ficha.ipExtra, 10) || 0) + hab.ip.geral;
+  for (const i of equipados) {
+    const x = ipDoItem(i);
+    geral += x.geral;
+    for (const [t, v] of Object.entries(x.tipos)) tipos[t] = (tipos[t] || 0) + v;
+  }
+  for (const [k, v] of Object.entries(bonus)) {
+    const t = k.startsWith('IP ') ? tipoIp(k.slice(3)) : null;
+    if (t) tipos[t] = (tipos[t] || 0) + v;
+  }
+  return { geral, tipos };
+}
+
+// IP que vale contra um dano: geral + o do tipo + o dos grupos que contêm o tipo (+ "A distância" contra tiros).
+export function ipContraDano(ip, tipoDano, distancia = false) {
+  const t = tipoIp(tipoDano || '') || tipoDano;
+  let total = ip.geral + (ip.tipos[t] || 0);
+  for (const [g, membros] of Object.entries(GRUPOS_IP)) if (g !== t && membros.includes(t)) total += ip.tipos[g] || 0;
+  if (distancia && t !== 'A distância') total += ip.tipos['A distância'] || 0;
+  return total;
 }

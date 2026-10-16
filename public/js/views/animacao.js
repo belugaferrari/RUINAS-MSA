@@ -43,9 +43,9 @@ function proxima() {
   mostrando = true;
   const reduzido = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
   // DP = 2 d10 brancos (dezena e unidade: 00 + 0 = 100); DS = 1 d10 vermelho.
-  const dezena = d10('dp');
-  const unidade = d10('dp');
-  const ds = d10('ds');
+  const dezena = d10('dp', 0);
+  const unidade = d10('dp', 90);
+  const ds = d10('ds', 160);
   const rotuloDp = h('small', {}, 'DP · 2d10');
   const extrasDp = (e.dados || []).length > 1 ? h('small', { class: 'dado-extra' }, `rolou ${e.dados.join(' e ')}`) : null;
   const dano = (e.danoDados || []).flatMap(x => x.dados.map(v => h('div', { class: 'dado dano', title: x.nome, 'aria-hidden': 'true' }, h('span', {}, String(v)))));
@@ -81,24 +81,42 @@ function proxima() {
     const giro = setInterval(() => {
       mostrarDp(dezena, unidade, 1 + Math.floor(Math.random() * 100));
       escrever(ds, 1 + Math.floor(Math.random() * 10));
-      if (++n >= 14) { clearInterval(giro); fim(); }
-    }, 60);
+      if (++n >= 16) { clearInterval(giro); fim(); }
+    }, 75);
   }
   const t = setTimeout(fechar, 8000);
 }
 
-// Um d10 desenhado (trapezoedro visto de frente), com o número na face do meio.
-const FACES_D10 = `<svg viewBox="0 0 100 110" aria-hidden="true">
-  <path class="f-lado" d="M50 3 L22 52 L3 45 Z M50 3 L78 52 L97 45 Z"/>
-  <path class="f-baixo" d="M3 45 L22 52 L12 72 Z M97 45 L78 52 L88 72 Z M22 52 L50 72 L50 107 L12 72 Z M78 52 L50 72 L50 107 L88 72 Z"/>
-  <path class="f-meio" d="M50 3 L78 52 L50 72 L22 52 Z"/>
-  <path class="f-borda" d="M50 3 L97 45 L88 72 L50 107 L12 72 L3 45 Z M22 52 L50 72 L78 52 M50 72 L50 107 M3 45 L22 52 L12 72 M97 45 L78 52 L88 72"/>
+// Um d10 desenhado (trapezoedro visto de frente), com luz vindo de cima à esquerda, brilho e número gravado.
+// Cada dado tem os próprios gradientes (ids únicos), uma sombra na "mesa" e um corpo que tomba enquanto rola.
+let nDado = 0;
+function desenhoD10() {
+  const k = `d10g${++nDado}`;
+  return `<svg viewBox="0 0 100 110" aria-hidden="true">
+  <defs>
+    <linearGradient id="${k}m" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="var(--d-claro)"/><stop offset=".55" stop-color="var(--d-meio)"/><stop offset="1" stop-color="var(--d-lado)"/></linearGradient>
+    <linearGradient id="${k}e" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="var(--d-meio)"/><stop offset="1" stop-color="var(--d-lado)"/></linearGradient>
+    <linearGradient id="${k}d" x1="1" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--d-lado)"/><stop offset="1" stop-color="var(--d-baixo)"/></linearGradient>
+    <linearGradient id="${k}b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--d-lado)"/><stop offset="1" stop-color="var(--d-baixo)"/></linearGradient>
+    <radialGradient id="${k}s" cx=".35" cy=".25" r=".5"><stop offset="0" stop-color="#fff" stop-opacity=".75"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
+  </defs>
+  <path fill="url(#${k}e)" d="M50 3 L22 52 L3 45 Z"/>
+  <path fill="url(#${k}d)" d="M50 3 L78 52 L97 45 Z"/>
+  <path fill="url(#${k}e)" d="M3 45 L22 52 L12 72 Z"/>
+  <path fill="url(#${k}b)" d="M97 45 L78 52 L88 72 Z"/>
+  <path fill="url(#${k}e)" d="M22 52 L50 72 L50 107 L12 72 Z"/>
+  <path fill="url(#${k}b)" d="M78 52 L50 72 L50 107 L88 72 Z"/>
+  <path fill="url(#${k}m)" d="M50 3 L78 52 L50 72 L22 52 Z"/>
+  <path fill="url(#${k}s)" d="M50 3 L78 52 L50 72 L22 52 Z"/>
+  <path class="f-borda" d="M50 3 L97 45 L88 72 L50 107 L12 72 L3 45 Z M22 52 L50 72 L78 52 M50 72 L50 107 M3 45 L22 52 L12 72 M97 45 L78 52 L88 72 M50 3 L22 52 M50 3 L78 52"/>
+  <path class="f-luz" d="M50 6 L24 50"/>
 </svg>`;
+}
 
-function d10(tipo) {
-  const el = h('div', { class: `dado d10 ${tipo}`, 'aria-hidden': 'true' }, h('span', {}, '0'));
-  el.insertAdjacentHTML('afterbegin', FACES_D10);
-  return el;
+function d10(tipo, atraso = 0) {
+  const corpo = h('div', { class: 'corpo' }, h('span', {}, '0'));
+  corpo.insertAdjacentHTML('afterbegin', desenhoD10());
+  return h('div', { class: `dado d10 ${tipo}`, 'aria-hidden': 'true', style: { animationDelay: `${atraso}ms` } }, h('div', { class: 'sombra' }), corpo);
 }
 
 const escrever = (el, v) => { el.querySelector('span').textContent = String(v); };

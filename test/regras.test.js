@@ -206,3 +206,40 @@ test('condições entram nas estatísticas', () => {
   f.marcadores = ['Cansado (-10%)'];
   assert.equal(R.derivados(f, sis).condTestes, -10, 'nome antigo do marcador ainda vale');
 });
+
+test('IP por tipo de dano: geral, do tipo, do grupo e contra tiros', async () => {
+  const { ipDoItem, ipContraDano } = await import('../shared/regras.js');
+  const malha = ipDoItem({ efeitos: 'IP 3 (Corte) IP 1 (Outros)' });
+  assert.deepEqual(malha, { geral: 1, tipos: { Corte: 3 } });
+  const livros = ipDoItem({ efeitos: 'IP 2 (Corte/Perf) IP 0 (Balas)' });
+  assert.deepEqual(livros.tipos, { Corte: 2, Perfuração: 2, 'A distância': 0 });
+  assert.equal(ipDoItem({ efeitos: 'IP 1 (Cabeça)' }).geral, 1);
+  assert.equal(ipDoItem({ efeitos: 'Defesa +4', defesa: 4 }).geral, 4);
+  const ip = { geral: 1, tipos: { Corte: 3, 'Físico': 2, 'A distância': 4 } };
+  assert.equal(ipContraDano(ip, 'Corte'), 1 + 3 + 2);
+  assert.equal(ipContraDano(ip, 'Calor'), 1);
+  assert.equal(ipContraDano(ip, 'Perfuração', true), 1 + 2 + 4);
+});
+
+test('vantagem ativada soma os bônus do texto; o mestre pode ajustar', async () => {
+  const { efeitosDoTexto } = await import('../shared/habilidades.js');
+  const e = efeitosDoTexto('Recebe IP 1 contra Concussão. Ganhe +1 Dano e +5% Acerto. Receba Negociação +10% e +5% em todos os testes. Adicione +1d6 de dano. Receba +5 PVs.', sis, { tipoIp: R.tipoIp });
+  assert.equal(e.ip.tipos['Concussão'], 1);
+  assert.equal(e.danoFixo, 1);
+  assert.equal(e.pericias.briga, 5);
+  assert.equal(e.testes, 5);
+  assert.deepEqual(e.danoDados, ['1d6']);
+  assert.equal(e.pv, 5);
+  assert.ok(Object.values(e.subpericias).includes(10) || Object.values(e.pericias).includes(10));
+  // Ativar e ajustar na ficha.
+  const v = sis.vantagens.find(x => /Sobreviv/.test(x.nome)) || sis.vantagens[0];
+  const f = R.novaFicha(sis);
+  f.vantagens = [v.id];
+  const antes = R.derivados(f, sis);
+  f.ativas = [`v:${v.id}`];
+  f.ajustesHabilidades = { [`v:${v.id}`]: '+10% em todos os testes; +2 IP Corte; dano +2' };
+  const depois = R.derivados(f, sis);
+  assert.equal(depois.percentual.FOR, antes.percentual.FOR + 10);
+  assert.equal(depois.ip.tipos.Corte, 2);
+  assert.equal(depois.habilidades.danoFixo, 2);
+});

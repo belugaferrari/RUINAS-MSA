@@ -100,7 +100,8 @@ export function ordemView(cb, mestre) {
       h('span', { class: 'espaco' }),
       podePassar ? botao('Próximo turno', () => acao('combate.proximo'), { class: 'primario', icone: 'skip-forward' }) : null,
       mestre ? botao('Encerrar', () => acao('combate.encerrar'), { class: 'perigo', icone: 'square-x' }) : null),
-    h('ol', { class: 'ordem-iniciativa' }, cb.ordem.map((o, i) => {
+    // A ordem aparece na barra de avatares; aqui fica só para o mestre mexer (subir, descer, mudar a iniciativa).
+    !mestre ? null : h('ol', { class: 'ordem-iniciativa' }, cb.ordem.map((o, i) => {
       const p = personagemPorId(o.id);
       return h('li', { class: i === cb.vez ? 'vez' : '' },
         mestre ? h('button', { type: 'button', class: 'ini', title: `Mudar a iniciativa de ${p?.nome}`, 'aria-label': `Iniciativa de ${p?.nome}: ${o.ini}. Mudar`,

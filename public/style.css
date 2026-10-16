@@ -577,8 +577,6 @@ mark.revisao { background: #5a4510; color: #ffe7a8; border-bottom: 1px dashed va
 .dado { display: grid; place-items: center; font-weight: 800; font-variant-numeric: tabular-nums; }
 .dado.dano { width: 44px; height: 44px; border-radius: 9px; background: var(--ouro); color: #1a1a1a; font-size: 1.2rem; }
 .dados-dano { display: flex; gap: .3em; flex-wrap: wrap; justify-content: center; }
-.dados-na-tela:not(.parou) .dado.d10 { animation: dado-rola .5s linear infinite; }
-.dados-na-tela:not(.parou) .par-d10 .dado.d10:last-child { animation-direction: reverse; animation-duration: .44s; }
 .dados-na-tela.parou .dado { animation: dado-para .25s ease-out; }
 .dado-extra { opacity: .75; }
 .dados-resultado { margin: 0; font-size: 1.15rem; font-weight: 700; }
@@ -702,19 +700,6 @@ button.efeito-icone { cursor: pointer; }
 @media (prefers-reduced-motion: reduce) { .efeito-icone.chegou, .efeito-icone.chegou *, .efeito-icone.chegou::before, .efeito-icone.chegou::after { animation: none !important; } }
 
 /* Dados d10 desenhados: DP = 2 d10 de marfim (dezena e unidade), DS = 1 d10 vermelho. */
-.par-d10 { display: flex; gap: .35em; }
-.dado.d10 { position: relative; width: 74px; height: 82px; filter: drop-shadow(0 6px 8px rgba(0, 0, 0, .55)); }
-.dado.d10 svg { position: absolute; inset: 0; width: 100%; height: 100%; }
-.dado.d10 .f-meio { fill: var(--d-meio); }
-.dado.d10 .f-lado { fill: var(--d-lado); }
-.dado.d10 .f-baixo { fill: var(--d-baixo); }
-.dado.d10 .f-borda { fill: none; stroke: var(--d-borda); stroke-width: 1.6; stroke-linejoin: round; }
-.dado.d10 span { position: absolute; left: 0; right: 0; top: 30%; text-align: center; font-size: 1.45rem; font-weight: 800; color: var(--d-num); text-shadow: 0 1px 0 var(--d-sombra); letter-spacing: -.02em; }
-.dado.d10.dp { --d-meio: #fbf8f1; --d-lado: #e3dccb; --d-baixo: #c9bfa8; --d-borda: #8d816a; --d-num: #1d1a15; --d-sombra: rgba(255, 255, 255, .7); }
-.dado.d10.ds { --d-meio: #e04a3a; --d-lado: #b5301f; --d-baixo: #861f14; --d-borda: #4d0f08; --d-num: #fff; --d-sombra: rgba(0, 0, 0, .6); width: 80px; height: 88px; }
-.dado.d10.ds span { font-size: 1.6rem; }
-@keyframes dado-rola { 0% { transform: rotate(0) scale(.92); } 25% { transform: rotate(90deg) scale(1.05); } 50% { transform: rotate(180deg) scale(.92); } 75% { transform: rotate(270deg) scale(1.05); } 100% { transform: rotate(360deg) scale(.92); } }
-@media (max-width: 420px) { .dado.d10 { width: 60px; height: 66px; } .dado.d10.ds { width: 64px; height: 70px; } .dado.d10 span { font-size: 1.2rem; } }
 
 /* Campo de Combate: painel do personagem em três quadros (esboço do autor). */
 .batalha-topo { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, .9fr) minmax(0, 1.05fr); gap: 1em; align-items: start; margin-bottom: 1em; }
@@ -839,3 +824,40 @@ select.nome-controlado { font-weight: 700; }
 .efeito-icone.enorme .efeito-desenho svg { width: 44px; height: 44px; }
 .efeito-icone .efeito-desenho svg { color: color-mix(in srgb, var(--cor-ef) 35%, #fff); }
 @media (max-width: 480px) { .efeito-leitura { flex-direction: column; align-items: center; text-align: center; } }
+.ips { display: flex; flex-wrap: wrap; gap: .35em; }
+.bola-ip { width: 46px; height: 46px; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 2px solid #5b8bd0; background: rgba(91, 139, 208, .12); line-height: 1; }
+.bola-ip strong { font-size: 1.05em; }
+.bola-ip small { font-size: .58em; opacity: .85; letter-spacing: .03em; }
+.bola-ip.geral { border-color: var(--ouro); background: rgba(201, 164, 92, .12); }
+.lista-habilidades .hab-texto { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: .15em; }
+.hab-efeito { color: var(--ouro); display: inline-flex; align-items: center; gap: .25em; flex-wrap: wrap; }
+.hab-efeito.so-lembrete { color: inherit; opacity: .6; }
+.hab-botoes { display: flex; gap: .25em; align-items: flex-start; }
+.humor-combate { margin: .2em 0 .4em; }
+
+/* Dados d10 realistas: rolam sobre uma mesa de feltro, tombando, quicando, e assentam no resultado. */
+.dados-linha { padding: 1em 1.2em .6em; border-radius: 14px; background: radial-gradient(ellipse at 50% 40%, #2f4a35, #18261c 75%); box-shadow: inset 0 0 0 1px rgba(201, 164, 92, .35), inset 0 6px 22px rgba(0, 0, 0, .6); overflow: hidden; }
+.dados-linha small { color: #e9e1cf; }
+.par-d10 { display: flex; gap: .35em; }
+.dado.d10 { position: relative; width: 78px; height: 92px; display: block; animation: d10-entra 1.15s cubic-bezier(.25, .7, .35, 1) both; }
+.dado.d10 .corpo { position: absolute; left: 0; right: 0; top: 0; height: 86px; transform-style: preserve-3d; filter: drop-shadow(0 2px 1px rgba(0, 0, 0, .35)); }
+.dado.d10 svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.dado.d10 .f-borda { fill: none; stroke: var(--d-borda); stroke-width: 1.2; stroke-linejoin: round; opacity: .8; }
+.dado.d10 .f-luz { fill: none; stroke: #fff; stroke-opacity: .55; stroke-width: 1.4; stroke-linecap: round; }
+.dado.d10 span { position: absolute; left: 0; right: 0; top: 29%; text-align: center; font: 800 1.45rem/1 Georgia, 'Times New Roman', serif; color: var(--d-num); text-shadow: 0 1px 0 var(--d-sombra), 0 -1px 0 rgba(0, 0, 0, .25); letter-spacing: -.02em; }
+.dado.d10 .sombra { position: absolute; left: 14%; right: 14%; bottom: 0; height: 12px; border-radius: 50%; background: radial-gradient(ellipse, rgba(0, 0, 0, .65), transparent 70%); animation: d10-sombra 1.15s cubic-bezier(.25, .7, .35, 1) both; animation-delay: inherit; }
+.dado.d10.dp { --d-claro: #ffffff; --d-meio: #f3eee2; --d-lado: #d9cfb8; --d-baixo: #a99c80; --d-borda: #7d7058; --d-num: #24201a; --d-sombra: rgba(255, 255, 255, .8); }
+.dado.d10.ds { --d-claro: #ff8a78; --d-meio: #d63a2a; --d-lado: #a8241a; --d-baixo: #6a130c; --d-borda: #3d0905; --d-num: #fff6ee; --d-sombra: rgba(0, 0, 0, .55); width: 84px; height: 98px; }
+.dado.d10.ds .corpo { height: 92px; }
+.dado.d10.ds span { font-size: 1.6rem; }
+/* Rolando: o corpo tomba em 3D e fica borrado; ao parar, assenta com um quique. */
+.dados-na-tela:not(.parou) .dado.d10 .corpo { animation: d10-tomba .42s linear infinite; }
+.dados-na-tela:not(.parou) .par-d10 .dado.d10:last-child .corpo { animation-duration: .37s; animation-direction: reverse; }
+.dados-na-tela.parou .dado.d10 .corpo { animation: d10-assenta .55s cubic-bezier(.3, 1.6, .5, 1) both; }
+@keyframes d10-entra { 0% { transform: translate(-190px, -60px) rotate(-200deg); opacity: 0; } 15% { opacity: 1; } 45% { transform: translate(-40px, 0) rotate(-40deg); } 62% { transform: translate(-14px, -18px) rotate(-12deg); } 80% { transform: translate(0, 0) rotate(0); } 90% { transform: translate(0, -5px); } 100% { transform: none; } }
+@keyframes d10-sombra { 0% { opacity: 0; transform: translateX(-190px) scale(.5); } 45% { opacity: 1; transform: translateX(-40px) scale(1); } 62% { transform: translateX(-14px) scale(.75); } 80% { transform: none; } 90% { transform: scale(.9); } 100% { transform: none; opacity: 1; } }
+@keyframes d10-tomba { 0% { transform: rotateX(0) rotateY(0) rotateZ(0); filter: blur(.6px); } 25% { transform: rotateX(70deg) rotateY(25deg) rotateZ(90deg) scale(.92); } 50% { transform: rotateX(180deg) rotateY(-20deg) rotateZ(180deg); } 75% { transform: rotateX(250deg) rotateY(30deg) rotateZ(270deg) scale(.92); } 100% { transform: rotateX(360deg) rotateY(0) rotateZ(360deg); filter: blur(.6px); } }
+@keyframes d10-assenta { 0% { transform: rotateZ(-14deg) scale(1.18) translateY(-8px); } 55% { transform: rotateZ(4deg) scale(.97) translateY(1px); } 100% { transform: none; } }
+@media (max-width: 420px) { .dado.d10 { width: 62px; height: 74px; } .dado.d10 .corpo { height: 68px; } .dado.d10.ds { width: 66px; height: 78px; } .dado.d10.ds .corpo { height: 72px; } .dado.d10 span { font-size: 1.15rem; } }
+@media (prefers-reduced-motion: reduce) { .dado.d10, .dado.d10 .corpo, .dado.d10 .sombra { animation: none !important; } }
+.ordem-iniciativa button.ini { min-width: 32px; min-height: 32px; justify-content: center; }

@@ -1,6 +1,6 @@
 // Combate e regras sociais automatizadas (Livro MSS). Só valem quando o sistema da campanha liga
 // "modulos.combate" / "modulos.social". Escolhas provisórias estão em conteudo/sistemas/PENDENCIAS.md.
-import { rolarDado, derivados } from './regras.js';
+import { rolarDado, derivados, ipContraDano } from './regras.js';
 
 const d100 = rng => 1 + Math.floor(rng() * 100);
 
@@ -95,7 +95,12 @@ export function defesaDoAlvo(alvo, arma, sistema, { escolha = 'nenhuma', cobertu
 
 // IP (Índice de Proteção) do alvo: itens equipados + habilidades (campo ipExtra da ficha). Subtrai do dano recebido.
 export function ipDe(p, sistema) {
-  return derivados(p, sistema).defesa + (parseInt(p.ipExtra, 10) || 0);
+  return derivados(p, sistema).ip.geral;
+}
+
+// IP do alvo contra este dano (tipo e alcance da arma).
+export function ipContra(p, sistema, tipoDano, distancia = false) {
+  return ipContraDano(derivados(p, sistema).ip, tipoDano, distancia);
 }
 
 // Valor do D6 de vida atual (os 5 primeiros PV ficam à parte; dali para cima conta-se em D6).
@@ -152,7 +157,7 @@ export function resolverAtaque(atacante, alvo, sistema, op = {}, defesaId = 'nen
   if (!teste.sucesso && !(op.area && defesa.id === 'evasao')) return r;
 
   // Penetração ignora até N pontos de IP do alvo.
-  r.ip = cfg.ignoramIP.includes(arma.tipoDano) ? 0 : Math.max(0, ipDe(alvo, sistema) - (arma.penetracao || 0));
+  r.ip = cfg.ignoramIP.includes(arma.tipoDano) ? 0 : Math.max(0, ipContra(alvo, sistema, arma.tipoDano, arma.alcance === 'distancia') - (arma.penetracao || 0));
   // Cada disparo (cadência) é um dano separado, cada um descontando o IP. Crítico, localizado e bônus entram no primeiro.
   const disparos = Math.max(1, Math.min(arma.cadencia || 1, op.disparos || arma.cadencia || 1));
   const partes = [];
@@ -170,6 +175,9 @@ export function resolverAtaque(atacante, alvo, sistema, op = {}, defesaId = 'nen
       if (teste.sucesso && defesa.id === 'esquiva' && arma.uid !== 'desarmado') doDisparo.push({ nome: 'esquiva contra arma', total: cfg.esquivaArmada });
       if (arma.alcance === 'corpo' && da.mod.FOR) doDisparo.push({ nome: 'MOD FOR', total: da.mod.FOR });
       if (r.perdaSacrificio) doDisparo.push({ nome: 'Sacrifício', total: r.perdaSacrificio });
+      // Habilidades e vantagens ativas que somam dano.
+      if (da.habilidades?.danoFixo) doDisparo.push({ nome: 'habilidades', total: da.habilidades.danoFixo });
+      for (const expr of da.habilidades?.danoDados || []) rolar('habilidades', expr);
     }
     const bruto = doDisparo.reduce((s, p) => s + p.total, 0);
     r.disparos.push({ bruto, dano: Math.max(cfg.danoMinimo, bruto - r.ip) });

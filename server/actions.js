@@ -455,6 +455,11 @@ export const acoes = {
       if (p.nivel > antes.nivel) p.xp = (antes.xp || 0) - xpParaSubir(antes.nivel, sis);
     }
     if ('marcadores' in (patch || {})) sincronizarEfeitos(p, sis);
+    // Habilidade ativada/desativada que muda o PV máximo: soma (ou tira) a diferença no máximo e no atual.
+    if ('ativas' in (patch || {}) || 'ajustesHabilidades' in (patch || {})) {
+      const delta = derivados(p, sis).habilidades.pv - derivados(antes, sis).habilidades.pv;
+      if (delta && p.pv) p.pv = { ...p.pv, max: p.pv.max + delta, atual: p.pv.atual + delta };
+    }
     // Explicitamente editado (ex.: "PV máx." pelo mestre) não é recalculado.
     const explicitos = new Set(Object.keys(patch || {}));
     if (CAMPOS_FORMULA.some(k => explicitos.has(k)) && !['pv', 'sanidade', 'humanidade'].some(k => explicitos.has(k))) recalcularMaximos(p, sis);
