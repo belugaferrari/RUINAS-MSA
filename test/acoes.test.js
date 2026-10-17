@@ -184,3 +184,14 @@ test('mestre: travas na ficha de jogador, PV recalculado e Humanidade', () => {
   p.humanidade.atual = 0;
   assert.throws(() => executar(c, 'personagem.atualizar', { id, patch: { anotacoes: 'x' } }, { user: j, mestre: false }), /perdeu a Humanidade/);
 });
+
+test('perícia base + subperícia não passa do limite do nível (em qualquer ordem)', () => {
+  const c = novaCampanha(mestre, { nome: 'Limite', maxJogadores: 2, nivel: 1, padraoMSA: true });
+  executar(c, 'campanha.atualizar', { aberta: true }, { user: mestre, mestre: true });
+  entrarNaCampanha(c, ana, 'jogador');
+  const per = sis.pericias.find(p => p.subpericias.length);
+  const sub = per.subpericias[0].id;
+  const lim = sis.regras.pericias?.limiteBase ?? 10;
+  assert.throws(() => executar(c, 'personagem.criar', { ficha: fichaValida({ pericias: { [per.id]: 5 }, subpericias: { [sub]: 10 } }) }, { user: ana, mestre: false }), /limite|Perícias/);
+  assert.ok(lim > 0);
+});

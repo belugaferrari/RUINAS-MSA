@@ -29,6 +29,7 @@ function grupo(ficha, p, d, editar, rolar, chave, forcarAberto, soTreinadas) {
   const sis = estado.sistema;
   const base = ficha.pericias?.[p.id] ?? 0;
   const gastoSubs = p.subpericias.reduce((s, x) => s + (ficha.subpericias?.[x.id] ?? 0), 0);
+  const maiorSub = Math.max(0, ...p.subpericias.map(x => ficha.subpericias?.[x.id] ?? 0));
   const aberto = forcarAberto || estado.sel[`${chave}:${p.id}`] === true;
   const treinada = base > 0 || gastoSubs > 0;
   const custo = custoPericiaBase(p, sis);
@@ -41,7 +42,8 @@ function grupo(ficha, p, d, editar, rolar, chave, forcarAberto, soTreinadas) {
       h('span', { class: 'espaco' }),
       editar ? h('span', { class: 'mini', title: `Perícia base: cada ponto custa ${custo} PP e melhora todas as subperícias` },
         `Base (${custo} PP) `,
-        passador(base, editar.minBase?.(p.id) ?? 0, Math.min(editar.limite, base + Math.floor(editar.maxRestante() / custo)), v => editar.base(p.id, v), `${p.nome} base`)) : null,
+        // Base + subperícia não passa do limite do nível: a base desconta a subperícia mais treinada desta perícia.
+        passador(base, editar.minBase?.(p.id) ?? 0, Math.min(editar.limite - maiorSub, base + Math.floor(editar.maxRestante() / custo)), v => editar.base(p.id, v), `${p.nome} base`)) : null,
       h('span', { class: 'valor-final', title: 'Valor da perícia base (pontos + bônus pericial)' }, `${d.pericias[p.id]}%`),
       rolar ? h('button', { type: 'button', class: 'so-icone pequeno', title: `Testar ${p.nome}`, 'aria-label': `Testar ${p.nome}`, onclick: () => rolar(`per:${p.id}`, p.nome) }, icone('dices')) : null),
     aberto || (soTreinadas && gastoSubs > 0) ? h('div', { class: 'subpericias' },
