@@ -861,3 +861,17 @@ select.nome-controlado { font-weight: 700; }
 @media (max-width: 420px) { .dado.d10 { width: 62px; height: 74px; } .dado.d10 .corpo { height: 68px; } .dado.d10.ds { width: 66px; height: 78px; } .dado.d10.ds .corpo { height: 72px; } .dado.d10 span { font-size: 1.15rem; } }
 @media (prefers-reduced-motion: reduce) { .dado.d10, .dado.d10 .corpo, .dado.d10 .sombra { animation: none !important; } }
 .ordem-iniciativa button.ini { min-width: 32px; min-height: 32px; justify-content: center; }
+
+/* Barra de carga: verde (normal), amarela (sobrecarregado), vermelha (supercarregado). */
+.carga { margin-top: .5em; display: flex; flex-direction: column; gap: .25em; }
+.carga-topo { display: flex; align-items: baseline; flex-wrap: wrap; gap: .2em; font-size: .9em; }
+.carga-topo small { opacity: .75; }
+.carga-barra { position: relative; height: 10px; border-radius: 5px; background: #111; overflow: hidden; border: 1px solid var(--borda); }
+.carga-barra .faixa { position: absolute; top: 0; bottom: 0; opacity: .45; }
+.carga-barra .verde { left: 0; background: #3f9e4f; }
+.carga-barra .amarela { background: #d6a03a; }
+.carga-barra .vermelha { background: #b3261e; }
+.marcador-carga { position: absolute; top: -2px; bottom: -2px; width: 4px; margin-left: -2px; background: #fff; border-radius: 2px; box-shadow: 0 0 4px #000; }
+.efeito-carga { margin: 0; font-size: .85em; }
+.efeito-carga.sobrecarregado { color: #e8c06a; }
+.efeito-carga.supercarregado { color: #f08a80; }

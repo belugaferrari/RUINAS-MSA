@@ -57,9 +57,12 @@ export function painelDados() {
       titulo('Dados', 'dices', 'h3'),
       h('span', { class: 'espaco' }),
       botao('', () => alternar(false), { class: 'x', icone: 'chevron-right', title: 'Recolher rolador', 'aria-label': 'Recolher rolador' })),
-    h('label', {}, 'Quem rola',
-      selecao([...(mestre ? [{ valor: '', rotulo: 'Mestre (sem ficha)' }] : []), ...candidatos.map(x => ({ valor: x.id, rotulo: x.nome }))], s.quem,
-        v => { s.quem = v; s.acao = ''; render(); }, { 'aria-label': 'Quem rola' })),
+    // O jogador com um só personagem rola com ele direto; só escolhe quem rola quem tem mais de um (ou o mestre).
+    !mestre && candidatos.length <= 1
+      ? (p ? h('p', { class: 'quem-rola' }, icone('user'), h('strong', {}, ` ${p.nome}`)) : null)
+      : h('label', {}, 'Quem rola',
+        selecao([...(mestre ? [{ valor: '', rotulo: 'Mestre (sem ficha)' }] : []), ...candidatos.map(x => ({ valor: x.id, rotulo: x.nome }))], s.quem,
+          v => { s.quem = v; s.acao = ''; render(); }, { 'aria-label': 'Quem rola' })),
     h('nav', { class: 'secoes-dados' }, secoes.map(([id, rot, ic]) => h('button', {
       type: 'button', class: s.secao === id ? 'ativa' : '', 'aria-pressed': s.secao === id, onclick: () => { s.secao = id; render(); },
     }, icone(ic), h('span', {}, rot)))),
@@ -221,16 +224,16 @@ function historico() {
     todas.length ? h('ol', { class: 'log' }, todas.map(e => h('li', {}, h('small', {}, formatarData(e.em)), ' ', linhaRolagem(e)))) : h('p', { class: 'dica' }, 'Nenhuma rolagem ainda.'));
 }
 
-// Botões de dado da ficha: abrem o rolador lateral já com o personagem e a ação escolhidos.
-// O jogador só confere a dificuldade e rola.
-export function prepararTeste(personagemId, acaoRef) {
+// Botões de dado da ficha e do combate: rolam o teste na hora (com a dificuldade escolhida no rolador, Normal por padrão)
+// e abrem o rolador com o resultado. Sem perícia escolhida (ex.: "Rolar teste"), só abre o rolador.
+export async function prepararTeste(personagemId, acaoRef) {
   const s = cfg();
   Object.assign(s, { quem: personagemId, acao: acaoRef, secao: 'teste' });
   estado.sel.dadosAberto = true;
   render();
-  setTimeout(() => {
-    const b = [...document.querySelectorAll('.painel-dados button')].find(x => /Jogar D-MIL/.test(x.textContent));
-    b?.focus();
-    b?.scrollIntoView({ block: 'nearest' });
-  }, 0);
+  if (!acaoRef) return;
+  const sis = estado.sistema;
+  const dif = sis.teste.dificuldades.find(x => x.nome === s.dif) || sis.teste.dificuldades.find(x => x.nome === 'Normal');
+  const nd = dif ? dif.nd : s.dif === 'livre' ? s.ndLivre : null;
+  await enviar({ acaoRef, mod: s.mod || 0, nd, metade: !!dif?.metade }, textoResultado);
 }

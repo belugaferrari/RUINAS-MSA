@@ -153,7 +153,8 @@ function estadoCompacto(p, d) {
     p.humanidade && p.humanidade.atual < 1 ? h('p', { class: 'alerta perigo' }, icone('circle-alert'), ' Humanidade abaixo de 1: só o mestre controla este personagem.') : null,
     efeitosIcones(p, { grande: true }),
     temporarios(p),
-    condicoesView(p, d));
+    condicoesView(p, d),
+    cargaView(d));
 }
 
 function atributosCompactos(p, d, testar) {
@@ -304,7 +305,8 @@ function trilhas(p, mestre) {
     mestre ? h('div', { class: 'grade3 mini' },
       ...['pv', 'sanidade'].map(k => h('label', {}, `${k === 'pv' ? 'PV' : k[0].toUpperCase() + k.slice(1)} máx.`,
         campo(`${p.id}:${k}:max`, p[k]?.max, v => atualizar(p, { [k]: { ...p[k], max: v } }), { tipo: 'number', min: 0 })))) : null,
-    condicoesView(p, derivados(p, estado.sistema)));
+    condicoesView(p, derivados(p, estado.sistema)),
+    cargaView(derivados(p, estado.sistema)));
 }
 
 function estagioHumanidade(p) {
@@ -527,4 +529,20 @@ function controleMestre(p) {
           if (await confirmar('Restaurar este backup? A ficha atual será substituída.')) await acao('backup.restaurar', { id: p.id, backupId: b.id });
         }, { class: 'pequeno', icone: 'refresh-cw' }))))
       : vazio('Nenhum backup ainda.', 'save'));
+}
+
+// Barra de carga (como a torre do livro): verde até o carregamento, amarela até o levantamento, vermelha acima.
+export function cargaView(d) {
+  const max = d.cargaLevantamento * 1.25;
+  const pct = v => `${Math.min(100, (100 * v) / max)}%`;
+  const rotulo = { normal: 'Normal', sobrecarregado: 'Sobrecarregado', supercarregado: 'Supercarregado' }[d.cargaNivel];
+  return h('div', { class: `carga carga-${d.cargaNivel}`, title: d.cargaEfeito },
+    h('div', { class: 'carga-topo' }, icone('weight'), h('strong', {}, ` Carga ${d.carga.toFixed(1)} kg`),
+      h('small', {}, ` / carregamento ${d.cargaCapacidade} kg · levantamento ${d.cargaLevantamento} kg`)),
+    h('div', { class: 'carga-barra', role: 'meter', 'aria-valuemin': 0, 'aria-valuemax': d.cargaLevantamento, 'aria-valuenow': d.carga, 'aria-label': `Carga: ${d.carga.toFixed(1)} kg, ${rotulo}` },
+      h('span', { class: 'faixa verde', style: { width: pct(d.cargaCapacidade) } }),
+      h('span', { class: 'faixa amarela', style: { left: pct(d.cargaCapacidade), width: `calc(${pct(d.cargaLevantamento)} - ${pct(d.cargaCapacidade)})` } }),
+      h('span', { class: 'faixa vermelha', style: { left: pct(d.cargaLevantamento), right: '0' } }),
+      h('i', { class: 'marcador-carga', style: { left: pct(d.carga) } })),
+    d.cargaNivel === 'normal' ? null : h('p', { class: `efeito-carga ${d.cargaNivel}` }, icone('circle-alert'), ` ${d.cargaEfeito}`));
 }

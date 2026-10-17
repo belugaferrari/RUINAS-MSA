@@ -47,6 +47,12 @@ function adicionar(nome, s, mestre) {
   const c = estado.campanha;
   const candidatos = (mestre ? c.personagens : meusPersonagens()).filter(p => !s.participantes.includes(p.id));
   if (!candidatos.length) return null;
+  // Jogador: um botão "Entrar" (com o nome, se tiver mais de um personagem). Só o mestre escolhe numa lista.
+  if (!mestre) {
+    const entrar = p => acao('sala.adicionar', { sala: nome, id: p.id }).catch(e => aviso(e.message, 'erro'));
+    return h('div', { class: 'barra' }, candidatos.map(p => botao(candidatos.length > 1 || meusPersonagens().length > 1 ? `Entrar com ${p.nome}` : 'Entrar',
+      () => entrar(p), { class: 'primario', icone: 'log-in', title: `${p.nome} entra em ${TITULOS[nome]}` })));
+  }
   const grupos = Object.fromEntries((c.grupos || []).map(g => [g.id, g.nome]));
   const opcoes = [{ valor: '', rotulo: mestre ? '+ colocar na sala…' : '+ entrar com…' },
     ...candidatos.map(p => ({ valor: p.id, rotulo: p.tipo === 'pj' ? `${p.nome} (PJ${p.dono ? ` de ${p.dono}` : ''})` : `${p.nome} (NPC · ${grupos[p.grupoId] || ''})` }))];

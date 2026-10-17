@@ -6,7 +6,7 @@ import { estado, render, personagemPorId } from '../estado.js';
 import { acao } from '../api.js';
 import { derivados, listaHabilidades, efeitosHabilidade, GRUPOS_IP } from '/shared/regras.js';
 import { armasDisponiveis, ipDe, opcoesDefesa, defesaDoAlvo } from '/shared/combate.js';
-import { trilhaCompacta, escolherCondicao } from './ficha.js';
+import { trilhaCompacta, escolherCondicao, cargaView } from './ficha.js';
 import { painelSlot, naMao, maoHabil } from './boneco.js';
 import { efeitosIcones } from './efeitos.js';
 import { prepararTeste } from './dados.js';
@@ -108,6 +108,7 @@ function quadroPersonagem(p, meus, chave, mestre) {
         h('small', {}, opcoes.length === 1 ? 'Tiro' : 'Sem defesa'), h('strong', {}, icone('x'))) : null),
     h('h4', {}, icone('shield-alert'), ' IP (proteção)'),
     ipView(d.ip),
+    cargaView(d),
     h('h4', {}, icone('activity'), ' Efeitos'),
     h('div', { class: 'barra' }, efeitosIcones(p, { mestre }) || h('small', { class: 'dica' }, 'Nenhum.'),
       botao('Marcador', () => escolherCondicao(p), { class: 'pequeno', icone: 'tag', title: 'Escolher uma condição' })),

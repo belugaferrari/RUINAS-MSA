@@ -310,6 +310,7 @@ export function derivados(ficha, sistema) {
     ip: ipPorTipo(ficha, equipados, bonus, hab),
     habilidades: hab,
     carga: (ficha.itens || []).reduce((s, i) => s + (i.peso || 0), 0),
+    ...estadoCarga((ficha.itens || []).reduce((s, i) => s + (i.peso || 0), 0), atributos.FOR ?? 10),
     limitePericia: limitePericia(nivel, sistema),
     atributoMax: atributoMax(nivel, sistema),
     temClasse: nivel >= (r.nivelClasse ?? 3),
@@ -454,4 +455,18 @@ export function ipContraDano(ip, tipoDano, distancia = false) {
   for (const [g, membros] of Object.entries(GRUPOS_IP)) if (g !== t && membros.includes(t)) total += ip.tipos[g] || 0;
   if (distancia && t !== 'A distância') total += ip.tipos['A distância'] || 0;
   return total;
+}
+
+// Carga (livro, "Barra de carga"): carregamento de 40 kg com FOR 10, dobrando a cada 6 pontos de FOR;
+// levantamento = o dobro. Até o carregamento: normal. Até o levantamento: Sobrecarregado. Acima: Supercarregado.
+export function estadoCarga(peso, FOR) {
+  const capacidade = Math.round(40 * 2 ** ((FOR - 10) / 6));
+  const levantamento = capacidade * 2;
+  const nivel = peso <= capacidade ? 'normal' : peso <= levantamento ? 'sobrecarregado' : 'supercarregado';
+  const efeito = {
+    normal: 'Sem ônus.',
+    sobrecarregado: 'Sobrecarregado: deslocamento −4,5 m. Se correr (duas ações de movimento), teste de CONS difícil para não ficar Cansado.',
+    supercarregado: 'Supercarregado: só 1 passo (1,5 m) por turno e não corre. A cada turno, teste de FOR muito difícil; se falhar, solta o peso que puder ou fica Esmagado (1 PV por 20 kg excedentes por turno).',
+  }[nivel];
+  return { cargaCapacidade: capacidade, cargaLevantamento: levantamento, cargaNivel: nivel, cargaEfeito: efeito };
 }

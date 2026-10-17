@@ -243,3 +243,12 @@ test('vantagem ativada soma os bônus do texto; o mestre pode ajustar', async ()
   assert.equal(depois.ip.tipos.Corte, 2);
   assert.equal(depois.habilidades.danoFixo, 2);
 });
+
+test('carga: 40 kg com FOR 10, dobra a cada 6 de FOR; levantamento é o dobro', () => {
+  assert.deepEqual(R.estadoCarga(30, 10).cargaNivel, 'normal');
+  assert.equal(R.estadoCarga(0, 10).cargaCapacidade, 40);
+  assert.equal(R.estadoCarga(0, 16).cargaCapacidade, 80);
+  assert.equal(R.estadoCarga(0, 16).cargaLevantamento, 160);
+  assert.equal(R.estadoCarga(50, 10).cargaNivel, 'sobrecarregado');
+  assert.equal(R.estadoCarga(81, 10).cargaNivel, 'supercarregado');
+});

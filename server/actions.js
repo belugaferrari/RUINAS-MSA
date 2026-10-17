@@ -2,7 +2,7 @@ import { db, save, uid } from './db.js';
 import { sistema, idSistema } from './sistema.js';
 import { resolverAtaque, aplicarAtaque, armasDisponiveis, opcoesDefesa, sobrevida, rolarIniciativa, resolverManipulacao, modHumorTestes, humorDe, espectroDe, humorAparente } from '../shared/combate.js';
 import { sincronizarEfeitos, passarTurnoEfeitos, efeitosAoAgir } from '../shared/efeitos.js';
-import { itemVisivel, xpParaSubir, novaFicha, podeEquipar, rolarDado, rolarAtributosCriacao, testeDMil, gerarEncontro, derivados, problemasFicha, LIMITE_SALA } from '../shared/regras.js';
+import { itemAberto, itemVisivel, xpParaSubir, novaFicha, podeEquipar, rolarDado, rolarAtributosCriacao, testeDMil, gerarEncontro, derivados, problemasFicha, LIMITE_SALA } from '../shared/regras.js';
 
 const GRUPO_ENCONTROS = 'encontros';
 const MAX_LOG = 100;
@@ -175,7 +175,7 @@ function validarCriacao(c, p, sis) {
   const ini = sis.regras?.creditosIniciais ?? 0;
   const itens = (p.itens || []).map(i => itemDoCatalogo(i.itemId || i.id, sis));
   // Créditos iniciais não compram itens raros ou mais (planilha de regras gerais).
-  const raro = itens.find(i => ['raro', 'lendario', 'unico', 'ilegal'].includes(String(i.raridade || '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase()));
+  const raro = itens.find(i => !itemAberto(i));
   if (raro) throw erro(`${raro.nome} é ${raro.raridade.toLowerCase()}: não dá para comprar na criação.`);
   const custo = itens.reduce((s, i) => s + (i.preco || 0), 0);
   if (custo > ini) throw erro(`Os itens custam mais que os ${ini} ${sis.moeda || 'créditos'} iniciais.`);
