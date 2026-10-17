@@ -136,7 +136,8 @@ export function humorCartao(p, controla, mestre) {
   const rebote = p.humorOpcoes || [];
   return h('div', { class: 'humor' },
     rebote.length ? h('div', { class: 'rebote' }, h('strong', {}, icone('circle-alert'), ' Rebote: escolha o humor de ', p.nome, ' '),
-      rebote.map(id => botao(nomeHumor(id), () => acao('humor.definir', { id: p.id, humor: id }), { class: 'pequeno primario', title: `${p.nome} fica ${nomeHumor(id)}` }))) : null,
+      rebote.map(id => botao(nomeHumor(id), () => acao('humor.definir', { id: p.id, humor: id }), { class: 'pequeno primario', title: `${p.nome} fica ${nomeHumor(id)}` })),
+      botao(`Não reagir (continuar ${nomeHumor(real)})`, () => acao('humor.recusarRebote', { id: p.id }), { class: 'pequeno', title: 'O rebote não é obrigatório' })) : null,
     h('label', { class: 'linha' }, icone('smile'), h('small', {}, 'Humor real'),
       selecao(permitidos.map(x => ({ valor: x.id, rotulo: x.nome })), real, mudarReal, { 'aria-label': `Humor real de ${p.nome}` })),
     h('label', { class: 'linha' }, icone('drama'), h('small', {}, 'Humor aparente'),
@@ -157,12 +158,12 @@ export function rodaDoHumor() {
     h('ul', { class: 'dica lista-humores' },
       h('li', {}, 'Cada um escolhe Neutro, Amigável, Indisposto ou Apático. Os demais humores vêm de manipulação ou do mestre.'),
       h('li', {}, h('strong', {}, 'Máscara: '), 'o humor real (oculto) dá os efeitos; a máscara é o que a sala vê. Empatia → "ler o humor real" revela a máscara só para quem testou.'),
-      h('li', {}, h('strong', {}, 'Rebote: '), 'falhar na manipulação joga o alvo num humor reativo, conforme o relacionamento (A Aliado/Amigável · B Desconhecido · C Rival/Inimigo, pelo mapa de relacionamento).'),
+      h('li', {}, h('strong', {}, 'Rebote: '), 'falhar na manipulação pode jogar o alvo num humor reativo, conforme o relacionamento (A Aliado/Amigável · B Desconhecido · C Rival/Inimigo). O rebote nunca é obrigatório: o alvo escolhe uma opção ou não reage.'),
       h('li', {}, h('strong', {}, 'Dissonância: '), `agir contra um humor imposto custa ${sis.social.dissonancia?.dano || '1d6'} de Sanidade.`),
       h('li', {}, h('strong', {}, 'Agressão súbita: '), `atacar um humano no meio do diálogo custa ${sis.social.agressao?.dano || '1d6'} de Humanidade.`)),
     h('ul', { class: 'lista-humores' }, humores().map(x => {
       const causas = Object.entries(sis.social.manipulacoes).filter(([, r]) => r.causa.includes(x.id)).map(([id]) => nomeSub(id));
-      return h('li', {}, h('strong', {}, x.nome), ` — ${x.efeitos}`, causas.length ? h('small', {}, ` Causado por: ${causas.join(', ')}.`) : null);
+      return h('li', {}, h('strong', {}, x.nome), ` — ${x.efeitos}`, x.descricao ? h('small', { class: 'bloco-texto' }, x.descricao) : null, causas.length ? h('small', {}, ` Causado por: ${causas.join(', ')}.`) : null);
     })));
 }
 

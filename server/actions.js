@@ -146,6 +146,27 @@ function recalcularMaximos(p, sis) {
   }
 }
 
+// Ajustes de dados quando uma regra muda (cada um roda uma vez por campanha).
+// pv-for-cons: o PV passou a ser FOR + CONS no 1º nível, +5 por nível. Mantém o dano já tomado.
+export function migrarCampanhas() {
+  let mudou = false;
+  for (const c of db.campaigns) {
+    c.migracoes ||= [];
+    if (c.migracoes.includes('pv-for-cons')) continue;
+    const sis = sistema(c.sistema);
+    for (const p of c.personagens) {
+      if (!p.atributos || !p.pv) continue;
+      const novo = derivados(p, sis).pvMax;
+      if (novo === p.pv.max) continue;
+      const delta = novo - p.pv.max;
+      p.pv = { ...p.pv, max: novo, atual: p.pv.atual + delta };
+    }
+    c.migracoes.push('pv-for-cons');
+    mudou = true;
+  }
+  if (mudou) save();
+}
+
 function sala(c, nome) {
   const s = c.salas[nome];
   if (!s) throw erro('Sala desconhecida.');
@@ -800,10 +821,10 @@ export const acoes = {
     if (nota) registrar(s.log, { autor: p.nome, rotulo: 'Sobrevida', texto: nota });
   },
 
-  // O mestre ajusta quantos turnos faltam num efeito (0 tira o efeito).
+  // Quantos turnos faltam num efeito (0 tira o efeito). O tempo varia: vem da regra ou da habilidade que causou.
   'efeito.turnos'(c, { id, efeito, turnos }, ctx) {
-    exigirMestre(ctx);
     const p = personagem(c, id);
+    exigirDonoOuMestre(ctx, p);
     const sis = sistema(c.sistema);
     const cond = (sis.condicoes || []).find(x => x.id === efeito);
     if (!cond) throw erro('Efeito desconhecido.');
@@ -913,6 +934,16 @@ export const acoes = {
 
   // ---------- Humor (Roda do Humor) e Máscara ----------
   // camada "real": o humor verdadeiro (dá os bônus e ônus). camada "aparente": a máscara que a sala vê (null = igual ao real).
+  // Rebote nunca é obrigatório: o alvo pode não reagir e manter o humor que tinha.
+  'humor.recusarRebote'(c, { id }, ctx) {
+    const p = personagem(c, id);
+    exigirDonoOuMestre(ctx, p);
+    if (!(p.humorOpcoes || []).length) return;
+    p.humorOpcoes = [];
+    const nome = sistema(c.sistema).social?.humores.find(x => x.id === (p.humor || 'neutro'))?.nome || 'Neutro';
+    registrar(c.salas.social.log, { autor: p.nome, rotulo: 'Rebote', texto: `${p.nome} não reage e continua ${nome}.` });
+  },
+
   'humor.definir'(c, { id, humor, camada = 'real' }, ctx) {
     const sis = sistema(c.sistema);
     exigirModulo(sis, 'social');

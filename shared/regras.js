@@ -288,7 +288,9 @@ export function derivados(ficha, sistema) {
     }
   }
   const nivel = ficha.nivel || 1;
-  const pvMax = 5 + 5 * nivel + Math.floor(((ficha.atributos?.FOR ?? 0) + (ficha.atributos?.CONS ?? 0)) / 2) + (profissao?.extras?.pv || 0) + hab.pv;
+  // PV (livro, Passo 6, sem o "+1" — confirmado pelo autor): FOR + CONS no 1º nível e +5 a cada nível depois.
+  // Usa os atributos da ficha: condições que baixam a CONS não diminuem o PV total.
+  const pvMax = (ficha.atributos?.FOR ?? 0) + (ficha.atributos?.CONS ?? 0) + 5 * (nivel - 1) + (profissao?.extras?.pv || 0) + hab.pv;
   const sanidadeMax = (ficha.atributos?.INT ?? 0) + (ficha.atributos?.WILL ?? 0) + 10;
   const san = ficha.sanidade?.atual ?? sanidadeMax;
   const estadoSanidade = [...(sistema.sanidade?.estados || [])].reverse().find(e => san < e.abaixoDe)?.nome || 'Lúcido';

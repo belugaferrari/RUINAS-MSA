@@ -219,14 +219,17 @@ export function sobrevida(p, sistema) {
   return `${p.nome} perdeu 1 PV (sobrevida): ${p.pv.atual}. Estabilize com Medicina [Primeiros Socorros] ND ${50 + 10 * -p.pv.atual}.`;
 }
 
-// Iniciativa = AGI + 1d10, com vantagem pelo humor (Corajoso, Amedrontado, Enojado).
+// Iniciativa = AGI + 1d10, com vantagem pelo humor (Corajoso, Amedrontado, Enojado) ou desvantagem (Sereno).
 export function rolarIniciativa(p, sistema, rng = Math.random) {
   const agi = derivados(p, sistema).iniciativa;
   const h = sistema.modulos?.social ? humorDe(p, sistema) : null;
   const a = 1 + Math.floor(rng() * 10);
   const dados = [a];
-  if (h?.vantagemIniciativa) dados.push(1 + Math.floor(rng() * 10));
-  return { total: agi + Math.max(...dados), agi, dados, vantagem: !!h?.vantagemIniciativa };
+  // Vantagem fica com o maior dos dois d10; desvantagem (Sereno), com o menor.
+  const dois = h?.vantagemIniciativa || h?.desvantagemIniciativa;
+  if (dois) dados.push(1 + Math.floor(rng() * 10));
+  const d10 = h?.desvantagemIniciativa && !h?.vantagemIniciativa ? Math.min(...dados) : Math.max(...dados);
+  return { total: agi + d10, agi, dados, vantagem: !!h?.vantagemIniciativa, desvantagem: !!h?.desvantagemIniciativa };
 }
 
 // ---------- Social ----------

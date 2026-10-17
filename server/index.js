@@ -9,7 +9,9 @@ import { db, save, flush, uid, RAIZ, UPLOADS } from './db.js';
 import { execSync } from 'node:child_process';
 import { registrar, entrar, usuarioDoToken, sair } from './auth.js';
 import { sistema, listaSistemas, CONTEUDO } from './sistema.js';
-import { novaCampanha, resumoCampanha, visaoPara, entrarNaCampanha, executar, acoes } from './actions.js';
+import { novaCampanha, resumoCampanha, visaoPara, entrarNaCampanha, executar, acoes, migrarCampanhas } from './actions.js';
+
+migrarCampanhas();
 import { modeloNpcs, lerNpcs } from './excel.js';
 import { catalogoItens, origemCatalogo, lerPlanilhaItens, planilhaDoCatalogo, salvarCatalogoMestre, voltarCatalogoPadrao } from './itens.js';
 import { montarSprite } from './icones.js';

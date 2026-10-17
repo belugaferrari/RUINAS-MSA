@@ -165,7 +165,7 @@ test('mestre: travas na ficha de jogador, PV recalculado e Humanidade', () => {
   // PV segue a fórmula quando o mestre mexe nos atributos.
   const pv0 = p.pv.max;
   executar(c, 'personagem.atualizar', { id, patch: { atributos: { ...p.atributos, FOR: 12, CONS: 12 } } }, ctxM);
-  assert.equal(p.pv.max, pv0 + 2);
+  assert.equal(p.pv.max, pv0 + 4, "PV = FOR + CONS: +2 FOR e +2 CONS dão +4");
   // Passar dos pontos de atributo é recusado (e desfeito).
   assert.throws(() => executar(c, 'personagem.atualizar', { id, patch: { atributos: { ...p.atributos, FOR: 14, CONS: 14, AGI: 14, DES: 14 } } }, ctxM), /Atributos/);
   assert.equal(p.atributos.FOR, 12);
@@ -178,7 +178,7 @@ test('mestre: travas na ficha de jogador, PV recalculado e Humanidade', () => {
   // NPC do mestre não tem trava, mas o PV segue a fórmula.
   const npc = executar(c, 'personagem.criar', { tipo: 'npc', grupoId: 'encontros', ficha: { nome: 'Brutamontes', atributos: { ...p.atributos, FOR: 20, CONS: 20 } } }, ctxM);
   const n = c.personagens.find(x => x.id === npc.id);
-  assert.equal(n.pv.max, 5 + 5 + 20);
+  assert.equal(n.pv.max, 20 + 20, "nível 1: FOR + CONS");
   // Humanidade abaixo de 1: o jogador perde o controle.
   p.donoId = j.id;
   p.humanidade.atual = 0;

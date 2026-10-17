@@ -107,10 +107,18 @@ export function escolherCondicao(p) {
   const grupos = [...new Set((sis.condicoes || []).map(c => c.grupo))];
   const ativas = new Set((p.marcadores || []).map(m => m.toLowerCase()));
   let fechar = () => {};
-  const adicionar = async nome => { await atualizar(p, { marcadores: [...(p.marcadores || []), nome] }); fechar(); };
+  // Duração opcional: o tempo de cada efeito vem da regra ou da habilidade que o causou.
+  const duracao = h('input', { type: 'number', min: 1, max: 99, class: 'curto', placeholder: '—', 'aria-label': 'Duração em turnos (opcional)' });
+  const adicionar = async (nome, cond = null) => {
+    await atualizar(p, { marcadores: [...(p.marcadores || []), nome] });
+    const n = parseInt(duracao.value, 10);
+    if (cond && n > 0) await acao('efeito.turnos', { id: p.id, efeito: cond.id, turnos: n });
+    fechar();
+  };
   const outro = h('input', { placeholder: 'Outro marcador (texto livre)', 'aria-label': 'Outro marcador' });
   fechar = janela(`Condições de ${p.nome}`, h('div', { class: 'lista-condicoes' },
     h('div', { class: 'barra' }, outro, botao('Adicionar', () => { const t = outro.value.trim(); if (t) adicionar(t); }, { icone: 'plus' })),
+    h('label', { class: 'linha' }, icone('hourglass'), 'Dura quantos turnos? (opcional — vazio usa a regra do efeito ou fica até tirar)', duracao),
     grupos.map(g => h('section', {},
       h('h4', {}, g),
       h('ul', {}, (sis.condicoes || []).filter(c => c.grupo === g).map(c => {
@@ -118,7 +126,7 @@ export function escolherCondicao(p) {
         const qtd = (p.marcadores || []).filter(m => m.toLowerCase() === c.nome.toLowerCase()).length;
         const cheio = c.maxAcumulo && qtd >= c.maxAcumulo;
         return h('li', {},
-          botao(cheio ? 'No máximo' : tem && !c.acumula ? 'Já marcada' : c.acumula && tem ? '+1' : 'Marcar', () => adicionar(c.nome), { class: 'pequeno primario', disabled: (tem && !c.acumula) || cheio, title: `Marcar ${c.nome}` }),
+          botao(cheio ? 'No máximo' : tem && !c.acumula ? 'Já marcada' : c.acumula && tem ? '+1' : 'Marcar', () => adicionar(c.nome, c), { class: 'pequeno primario', disabled: (tem && !c.acumula) || cheio, title: `Marcar ${c.nome}` }),
           h('div', {}, h('strong', {}, c.nome), c.acumula ? h('small', { class: 'selo' }, 'acumula') : null, h('small', { class: 'bloco-texto' }, c.efeitos)));
       }))))));
 }

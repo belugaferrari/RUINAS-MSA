@@ -81,7 +81,7 @@
    "atributoPercentual": "4 × atributo",
    "bonusPericial": "+2 por ponto de atributo a partir do 5º  →  2 × (atributo − 5)",
    "modificador": "0 no valor 10, +1 a cada 2 pontos  →  ⌊(atributo − 10) ÷ 2⌋ (+1 racial em CONS, INT, WILL, CAR)",
-   "pv": "5 + 5 × nível + ⌊(FOR + CONS) ÷ 2⌋   (o Passo 6 do livro diz FOR + CONS + 1 — conferir)",
+   "pv": "FOR + CONS no 1º nível, +5 a cada nível (sem o +1 do Passo 6, confirmado pelo autor). Condições que baixam a CONS não mudam o PV total.",
    "sanidade": "INT + WILL + 10",
    "pontosPericia": "70 + 5 × INT + 20 × nível",
    "limitePericia": "5 + 5 × nível (gastos na base + na subperícia)",
@@ -825,14 +825,20 @@
    {
     "id": "raivoso",
     "nome": "Raivoso",
-    "efeitos": "Efeitos ainda não definidos (aguardando o texto).",
-    "revisao": true
+    "efeitos": "Vantagem nos ataques; defesas −5%; R.MNP −10.",
+    "vantagemAtaque": true,
+    "defesa": -5,
+    "rmnp": -10,
+    "descricao": "A raiva toma conta e estreita a visão: o personagem quer descontar em alguém. Ataca com mais vontade, mas baixa a guarda e morde a isca de quem sabe provocá-lo. A raiva não obriga a atacar, mas tudo o que não é confronto parece perda de tempo."
    },
    {
     "id": "sereno",
     "nome": "Sereno",
-    "efeitos": "Efeitos ainda não definidos (aguardando o texto).",
-    "revisao": true
+    "efeitos": "R.MNP +10; defesas +5%; Desvantagem na iniciativa.",
+    "rmnp": 10,
+    "defesa": 5,
+    "desvantagemIniciativa": true,
+    "descricao": "Um personagem sereno respira fundo antes de agir. Nada o apressa: é difícil manipulá-lo e ele se defende com calma, mas também demora a reagir quando a briga começa."
    }
   ],
   "manipulacoes": {
@@ -939,9 +945,15 @@
      "enojado"
     ],
     "falha": {
-     "A": [],
-     "B": [],
-     "C": []
+     "A": [
+      "enojado"
+     ],
+     "B": [
+      "enojado"
+     ],
+     "C": [
+      "enojado"
+     ]
     }
    },
    "manipulacao.interrogatorio": {
@@ -949,9 +961,15 @@
      "confiante"
     ],
     "falha": {
-     "A": [],
-     "B": [],
-     "C": []
+     "A": [
+      "desconfiado"
+     ],
+     "B": [
+      "desconfiado"
+     ],
+     "C": [
+      "desconfiado"
+     ]
     }
    },
    "manipulacao.tortura": {
@@ -960,9 +978,15 @@
      "amedrontado"
     ],
     "falha": {
-     "A": [],
-     "B": [],
-     "C": []
+     "A": [
+      "confiante"
+     ],
+     "B": [
+      "confiante"
+     ],
+     "C": [
+      "confiante"
+     ]
     }
    },
    "manipulacao.etiqueta": {
@@ -970,9 +994,15 @@
      "enojado"
     ],
     "falha": {
-     "A": [],
-     "B": [],
-     "C": []
+     "A": [
+      "confiante"
+     ],
+     "B": [
+      "confiante"
+     ],
+     "C": [
+      "confiante"
+     ]
     }
    }
   },
@@ -1253,14 +1283,15 @@
    "id": "trauma-momentaneo",
    "nome": "Trauma momentâneo",
    "grupo": "Mental",
-   "efeitos": "−30% no combate ofensivo (Briga, Arma Branca, Armas de Fogo).",
+   "efeitos": "−30% no combate ofensivo (Briga, Armas Brancas, Armas de Fogo). Some sozinho em 4 turnos (acumula até 10). Para confrontar quem causou o trauma: WILL difícil.",
    "testesPericias": {
     "briga": -30,
     "arma-branca": -30,
     "armas-de-fogo": -30
    },
    "icone": "brain",
-   "cor": "#a46bd6"
+   "cor": "#a46bd6",
+   "duracao": 4
   },
   {
    "id": "trauma-agudo",
@@ -1279,10 +1310,14 @@
    "id": "trauma-profundo",
    "nome": "Trauma profundo",
    "grupo": "Mental",
-   "efeitos": "Volta o ônus do trauma até o próximo descanso: −20% nos testes.",
+   "efeitos": "Algo fez lembrar o antigo Trauma Agudo: volta o ônus dele até o próximo descanso (curto ou longo) — INT −5, WILL −5 e −20% em todos os testes. Para superar: enfrentar o trauma em jogo ou passar em WILL% ND 150 (uma vez por descanso longo).",
    "testes": -20,
    "icone": "heart-crack",
-   "cor": "#6a2fb6"
+   "cor": "#6a2fb6",
+   "atributos": {
+    "INT": -5,
+    "WILL": -5
+   }
   },
   {
    "id": "mal-estar",

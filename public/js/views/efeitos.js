@@ -64,8 +64,9 @@ function iconeEfeito(p, e, mestre) {
   return h('button', { ...props, type: 'button' }, ...conteudo);
 }
 
-// Janela com o desenho grande, o que o efeito faz e quanto falta. O mestre também muda os turnos aqui.
-function lerEfeito(p, e, mestre, turnos) {
+// Janela com o desenho grande, o que o efeito faz e quanto falta. O mestre e o dono do personagem mudam os turnos aqui.
+function lerEfeito(p, e, mestreOuDono, turnos) {
+  const mestre = mestreOuDono || p.donoId === estado.usuario?.id;
   const campoTurnos = h('input', { type: 'number', min: 0, max: 99, class: 'curto', value: e.turnos ?? '', 'aria-label': 'Turnos que faltam' });
   const salvar = async n => {
     await acao('efeito.turnos', { id: p.id, efeito: e.id, turnos: n });

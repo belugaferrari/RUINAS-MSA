@@ -7,7 +7,7 @@ Pontos em que o app precisou escolher um caminho. Confira e me diga se a escolha
 ## Inconsistências no texto
 | # | Onde | O que o livro diz | O que o app faz |
 |---|---|---|---|
-| 1 | PV — Passo 0 × Passo 6 | Passo 0: `5 + 5×nível + (FOR+CONS)/2`. Passo 6: `FOR + CONS + 1` | Usa a do Passo 0 |
+| 1 | PV — Passo 0 × Passo 6 | Passo 0: `5 + 5×nível + (FOR+CONS)/2`. Passo 6: `FOR + CONS + 1` | **Resolvido:** `FOR + CONS` no 1º nível, +5 por nível (sem o +1; confirmado pelo autor) |
 | 2 | Tabela da Dormet (Passo 1) | CAR 13 → Bônus pericial 14 e MOD 3 | Pela fórmula do texto dá Bônus 16 e MOD 2 (+1 racial). O app segue a fórmula; o resto da tabela bate |
 | 3 | Profissão Protetor | Bônus em "Defesa Desarmada" | Essa subperícia só existe no livro MSS. No MSA o bônus fica sem efeito até definir |
 | 4 | Profissão Protetor | "Salvaguarda" | Entendido como Briga › Salvaguardar |
