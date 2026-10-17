@@ -167,11 +167,6 @@ export function migrarCampanhas() {
   if (mudou) save();
 }
 
-// Leituras de Empatia sobre alguém deixam de valer quando o humor (ou a máscara) dele muda.
-function esquecerLeituras(c, id) {
-  for (const x of c.personagens) if (x.leituras?.[id]) delete x.leituras[id];
-}
-
 function sala(c, nome) {
   const s = c.salas[nome];
   if (!s) throw erro('Sala desconhecida.');
@@ -900,8 +895,8 @@ export const acoes = {
       try { rolarDado(op.danoLivre); } catch { throw erro(`Dano inválido: ${op.danoLivre}`); }
     }
     const pend = { id: uid(), atacante: a.id, alvo: b.id, opcoes: op, arma: arma.nome, alcance: arma.alcance, area: !!op.area, em: Date.now(), municao: itemArma?.capacidade ? itemArma.uid : null };
-    // Contra tiro não há defesa a escolher: resolve na hora.
-    if (opcoesDefesa(b, arma, sis, { area: pend.area }).length === 1) return resolverPendente(c, s, pend, 'nenhuma', sis);
+    // Contra tiro, ou com o alvo pego de surpresa, não há defesa a escolher: resolve na hora.
+    if (op.surpresa || opcoesDefesa(b, arma, sis, { area: pend.area }).length === 1) return resolverPendente(c, s, pend, 'nenhuma', sis);
     (s.pendentes ||= []).push(pend);
     registrar(s.log, { autor: a.nome, rotulo: `${a.nome} ataca ${b.nome} com ${arma.nome}${op.area ? ' (área)' : ''}`, texto: `aguardando a defesa de ${b.nome}` });
     return pend;
@@ -955,7 +950,6 @@ export const acoes = {
     const p = personagem(c, id);
     exigirDonoOuMestre(ctx, p);
     const nomeH = hid => sis.social.humores.find(x => x.id === hid)?.nome || 'Neutro';
-    esquecerLeituras(c, p.id);
     if (camada === 'aparente') {
       if (humor && !sis.social.humores.some(x => x.id === humor)) throw erro('Humor desconhecido.');
       p.humorAparente = humor && humor !== (p.humor || 'neutro') ? humor : null;
@@ -1054,7 +1048,7 @@ export const acoes = {
     const per = sis.pericias.find(x => x.id === 'manipulacao');
     const nomeSub = per?.subpericias.find(x => x.id === sub)?.nome || sub;
     const nomeEsp = sis.social.espectros?.[espectro]?.nome || espectro;
-    const mudar = novo => { b.humor = novo; b.humorAparente = null; b.humorImposto = novo !== 'neutro'; b.humorOpcoes = []; esquecerLeituras(c, b.id); };
+    const mudar = novo => { b.humor = novo; b.humorAparente = null; b.humorImposto = novo !== 'neutro'; b.humorOpcoes = []; };
     let resultado;
     if (r.sucesso && r.ler) {
       // A quebra da máscara: só quem testou vê o humor real.
@@ -1063,8 +1057,6 @@ export const acoes = {
       const texto = b.humorAparente ? `A máscara caiu. O humor aparente é ${nomeH(b.humorAparente)}, mas o humor real é ${real}.` : `Sem máscara: o humor real de ${b.nome} é ${real}.`;
       registrar(c.salas.social.log, { autor: a.nome, rotulo: `Leitura de ${b.nome}`, texto, privadoPara: ctx.user.id });
       r.revelado = texto;
-      // Quem leu passa a ver o humor real de b (até b mudar de humor ou de máscara).
-      (a.leituras ||= {})[b.id] = { real: b.humor || 'neutro', aparente: b.humorAparente || null };
     } else if (r.sucesso) {
       mudar(humor);
       resultado = `SUCESSO — ${b.nome} fica ${nomeH(humor)}`;

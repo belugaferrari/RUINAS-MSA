@@ -77,15 +77,20 @@ export function opcoesDefesa(alvo, arma, sistema, { area = false } = {}) {
 
 // Valor de defesa contra o qual o atacante rola (só o ataque rola): defesa escolhida + 50.
 // Contra tiro (a distância, fora de área) a dificuldade é 50 + 5 × nível do alvo. Cobertura parcial +30 só contra ataques a distância.
-export function defesaDoAlvo(alvo, arma, sistema, { escolha = 'nenhuma', cobertura = false, area = false } = {}) {
+// Defesa surpresa (alvo pego de surpresa, não escolhe defesa): só a base da Esquiva (50) contra ataque físico,
+// e só nível × 5 contra ataque a distância.
+export function defesaDoAlvo(alvo, arma, sistema, { escolha = 'nenhuma', cobertura = false, area = false, surpresa = false } = {}) {
   const cfg = sistema.combate;
   const opcoes = opcoesDefesa(alvo, arma, sistema, { area });
-  const esc = opcoes.find(o => o.id === escolha);
+  const esc = surpresa ? { id: 'nenhuma', nome: 'Surpresa' } : opcoes.find(o => o.id === escolha);
   if (!esc) throw new Error('Essa defesa não vale contra este ataque.');
   const tiro = arma.alcance === 'distancia' && !area;
-  const partes = tiro
-    ? [{ nome: 'base', valor: cfg.distancia.base }, { nome: `nível ${alvo.nivel || 1} × ${cfg.distancia.porNivel}`, valor: cfg.distancia.porNivel * (alvo.nivel || 1) }]
-    : [{ nome: esc.nome, valor: esc.valor }, { nome: 'base', valor: cfg.defesaPassiva }];
+  const nivel = { nome: `nível ${alvo.nivel || 1} × ${cfg.distancia.porNivel}`, valor: cfg.distancia.porNivel * (alvo.nivel || 1) };
+  const partes = surpresa
+    ? (tiro ? [nivel] : [{ nome: 'base da Esquiva', valor: cfg.defesaPassiva }])
+    : tiro
+      ? [{ nome: 'base', valor: cfg.distancia.base }, nivel]
+      : [{ nome: esc.nome, valor: esc.valor }, { nome: 'base', valor: cfg.defesaPassiva }];
   const caidoDistancia = arma.alcance === 'distancia' && tem(alvo, 'Caído');
   if (arma.alcance === 'distancia' && (cobertura || caidoDistancia)) partes.push({ nome: 'cobertura parcial', valor: cfg.coberturaParcial });
   const humor = sistema.modulos?.social ? humorDe(alvo, sistema) : null;
@@ -145,7 +150,7 @@ export function resolverAtaque(atacante, alvo, sistema, op = {}, defesaId = 'nen
   if (hA?.desvantagemAtaque) motivosD.push(hA.nome);
   const modo = modoRolagem(motivosV.length > 0, motivosD.length > 0);
 
-  const defesa = defesaDoAlvo(alvo, arma, sistema, { escolha: defesaId, cobertura: !!op.cobertura, area: !!op.area });
+  const defesa = defesaDoAlvo(alvo, arma, sistema, { escolha: defesaId, cobertura: !!op.cobertura, area: !!op.area, surpresa: !!op.surpresa });
   const teste = testeContra(acao, defesa.total, sistema, { modo, rng });
   const r = {
     arma: arma.nome, pericia, acao, mods, defesa, ...teste, motivosVantagem: motivosV, motivosDesvantagem: motivosD,

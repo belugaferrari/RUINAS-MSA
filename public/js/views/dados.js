@@ -101,7 +101,7 @@ function secaoTeste(p, d, mestre) {
     ...porNivel.map(x => ({ valor: `nivel:${x.nome}`, rotulo: `${x.nome} do nível ${nivel} · ND ${x.nd}` })),
     { valor: 'passiva', rotulo: 'Contra ação passiva (oponente + 50)' },
     { valor: 'livre', rotulo: 'ND livre…' },
-    { valor: 'sem', rotulo: 'Sem ND (só o total)' },
+    { valor: 'sem', rotulo: 'Especial (só o número)' },
   ];
   const opcoesAcao = d ? [{ valor: '', rotulo: 'O que testar…' },
     ...sis.atributos.map(a => ({ valor: `atr:${a.sigla}`, rotulo: `${a.nome}% (${d.percentual[a.sigla]})` })),
@@ -119,7 +119,7 @@ function secaoTeste(p, d, mestre) {
     h('input', { type: 'number', class: 'curto', value: s[chave], ...props, onchange: e => { s[chave] = Number(e.target.value) || 0; render(); } }));
 
   const sigla = nome => nome.split(/\s+/).map(w => w[0].toUpperCase()).join('');
-  const outras = opcoesDif.filter(o => !sis.teste.dificuldades.some(x => x.nome === o.valor));
+  const outras = opcoesDif.filter(o => o.valor !== 'sem' && !sis.teste.dificuldades.some(x => x.nome === o.valor));
   const jogar = botao('Jogar D-MIL', async () => {
     const dif = sis.teste.dificuldades.find(x => x.nome === s.dif);
     if (opcoesAcao && !s.acao) throw new Error('Escolha o que testar.');
@@ -133,7 +133,10 @@ function secaoTeste(p, d, mestre) {
         type: 'button', class: `bolinha ${s.dif === x.nome ? 'ativa' : ''}`, 'aria-pressed': s.dif === x.nome,
         title: `${x.nome} · ND ${x.nd}${x.metade ? ' (metade da ação)' : ''}`, 'aria-label': `${x.nome}, ND ${x.nd}`,
         onclick: () => { s.dif = x.nome; render(); },
-      }, sigla(x.nome)))),
+      }, sigla(x.nome))),
+      // E = dificuldade Especial: o mestre decide; o app mostra só o número, sem dizer se passou.
+      h('button', { type: 'button', class: `bolinha ${s.dif === 'sem' ? 'ativa' : ''}`, 'aria-pressed': s.dif === 'sem',
+        title: 'Especial: só o resultado numérico (o mestre diz se passou)', 'aria-label': 'Especial, só o número', onclick: () => { s.dif = 'sem'; render(); } }, 'E')),
     h('p', { class: 'meta nd-escolhido' }, `${opcoesDif.find(o => o.valor === s.dif)?.rotulo || s.dif}`),
     jogar,
     opcoesAcao ? h('label', {}, 'Perícia ou atributo', selecao(opcoesAcao, s.acao, v => { s.acao = v; }, { 'aria-label': 'O que testar' }))
@@ -233,7 +236,7 @@ export async function prepararTeste(personagemId, acaoRef) {
   render();
   if (!acaoRef) return;
   const sis = estado.sistema;
-  const dif = sis.teste.dificuldades.find(x => x.nome === s.dif) || sis.teste.dificuldades.find(x => x.nome === 'Normal');
-  const nd = dif ? dif.nd : s.dif === 'livre' ? s.ndLivre : null;
+  const dif = s.dif === 'sem' ? null : sis.teste.dificuldades.find(x => x.nome === s.dif) || sis.teste.dificuldades.find(x => x.nome === 'Normal');
+  const nd = dif ? dif.nd : null;
   await enviar({ acaoRef, mod: s.mod || 0, nd, metade: !!dif?.metade }, textoResultado);
 }

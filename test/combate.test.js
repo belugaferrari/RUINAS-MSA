@@ -359,3 +359,15 @@ test('efeitos com tempo andam no fim do turno de quem sofre; o mestre ajusta os 
   assert.deepEqual(visto.marcadores, ['Sangramento']);
   assert.equal(visto.efeitos.sangramento.turnos, 2);
 });
+
+test('defesa surpresa: só a base da Esquiva no corpo a corpo; só nível × 5 contra tiro', () => {
+  const a = lutador('A');
+  const b = lutador('B');
+  b.nivel = 3;
+  a.itens = [{ uid: 'p', nome: 'Pistola', tipo: 'arma', equipado: true, dano: '1d6', pericia: 'armas-de-fogo.pistolas', tipoDano: 'Perfuração', alcance: 'distancia' }];
+  const corpo = resolverAtaque(a, b, mss, { armaUid: 'desarmado', surpresa: true }, 'nenhuma');
+  assert.equal(corpo.nd, 50);
+  const tiro = resolverAtaque(a, b, mss, { armaUid: 'p', surpresa: true }, 'nenhuma');
+  assert.equal(tiro.nd, 15);
+  assert.equal(defesaDoAlvo(b, { uid: 'p', alcance: 'distancia' }, mss).total, 50 + 15);
+});

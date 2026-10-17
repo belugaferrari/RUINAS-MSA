@@ -56,6 +56,9 @@ function quadroPersonagem(p, meus, chave, mestre) {
   const d = derivados(p, sis);
   const sub = id => d.subpericias[id] ?? 0;
   const base = sis.combate?.defesaPassiva ?? sis.teste.passiva?.soma ?? 50;
+  const distBase = sis.combate?.distancia?.base ?? 50;
+  const porNivel = sis.combate?.distancia?.porNivel ?? 5;
+  const nivel = p.nivel || 1;
   const maos = (p.itens || []).filter(i => i.equipado && i.slot === 'maos');
   const abertoMao = estado.sel[`boneco:${p.id}`];
   const brancaEmpunhada = maos.filter(i => i.pericia?.startsWith('arma-branca.') && !(sis.combate?.semDefesaArmada || []).includes(i.pericia))
@@ -104,8 +107,12 @@ function quadroPersonagem(p, meus, chave, mestre) {
       defesa('Armada', brancaEmpunhada ? sub(brancaEmpunhada.pericia) + base : null, brancaEmpunhada ? `Defesa armada com ${brancaEmpunhada.nome}` : 'Empunhe uma arma branca para defender com ela', 'armada'),
       defesa('Evasão', sub('briga.evasao') + base, 'Evasão + 50: só contra ataque em área', 'evasao'),
       defesa('Desarmada', sub('briga.defesa-desarmada') + base, 'Defesa desarmada + 50: só contra Briga', 'defesa-desarmada'),
+      // Contra tiro não há defesa: a dificuldade é 50 + 5 × nível. Pego de surpresa: só a base (50) no físico, só nível × 5 no tiro.
+      defesa('À dist.', distBase + porNivel * nivel, `Ataques a distância contra ${p.nome}: ${distBase} + ${porNivel} × nível ${nivel}`),
+      defesa('Surpresa', [String(base), h('small', { class: 'sub-def' }, ` / ${porNivel * nivel}`)], `Pego de surpresa: ${base} contra ataque físico (só a base da Esquiva) e ${porNivel * nivel} contra tiro (só nível × ${porNivel})`),
       pend ? h('button', { type: 'button', class: 'defesa escolher sem', title: 'Não defender (ex.: pego de surpresa, ou tiro)', onclick: () => defender('nenhuma') },
         h('small', {}, opcoes.length === 1 ? 'Tiro' : 'Sem defesa'), h('strong', {}, icone('x'))) : null),
+    resumoAcao(p, maos),
     h('h4', {}, icone('shield-alert'), ' IP (proteção)'),
     ipView(d.ip),
     cargaView(d),
@@ -113,6 +120,15 @@ function quadroPersonagem(p, meus, chave, mestre) {
     h('div', { class: 'barra' }, efeitosIcones(p, { mestre }) || h('small', { class: 'dica' }, 'Nenhum.'),
       botao('Marcador', () => escolherCondicao(p), { class: 'pequeno', icone: 'tag', title: 'Escolher uma condição' })),
   ];
+}
+
+// Linha "Personagem | Arma | Distância" do esboço: quem age, o que empunha e a distância até o alvo (em branco por enquanto).
+function resumoAcao(p, maos) {
+  const arma = maos.find(i => i.tipo === 'arma');
+  return h('div', { class: 'resumo-acao', 'aria-label': 'Personagem, arma empunhada e distância' },
+    h('span', {}, icone('user'), ` ${p.nome}`),
+    h('span', {}, icone('sword'), ` ${arma ? arma.nome : 'desarmado'}`),
+    h('span', { title: 'Distância até o alvo (ainda não usada)' }, icone('ruler'), ' —'));
 }
 
 // IP geral e o de cada tipo de dano, em bolinhas (o geral vale contra tudo; o do tipo, só contra aquele dano).

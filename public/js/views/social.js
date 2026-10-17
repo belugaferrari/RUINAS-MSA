@@ -4,7 +4,7 @@
 import { h, botao, aviso, icone, titulo, confirmar, vazio, janela } from '../ui.js';
 import { estado, render, personagemPorId } from '../estado.js';
 import { acao } from '../api.js';
-import { derivados } from '/shared/regras.js';
+import { derivados, listaHabilidades, efeitosHabilidade } from '/shared/regras.js';
 import { resistenciaManipulacao } from '/shared/combate.js';
 import { controladoNaSala, nomeControlado } from './batalha.js';
 import { humorCartao, nomeHumor, nomeSub, reboteTexto, alvoDe, marcarAlvo } from './combate.js';
@@ -31,10 +31,10 @@ export function painelSocial(participantes, mestre) {
     h('section', { class: 'bloco social-lado outro' },
       direita.length ? h('ul', { class: 'social-lista' }, direita.map(x => miniCartao(p, x, alvo)))
         : outros.length ? null : vazio('Ninguém mais na sala.', 'users'),
-      outrosModificadores(mestre)));
+      outrosModificadores(p, mestre)));
 }
 
-// Personagem da sala como o seu o enxerga: o humor que ele interpreta (o aparente, ou o real se já leu com Empatia)
+// Personagem da sala como o seu o enxerga: o humor que ele interpreta (o aparente)
 // e a afinidade (como o SEU personagem vê o outro — escolha do jogador, aqui ou nas Redes Sociais).
 // Clicar no cartão escolhe o alvo; clicar na afinidade muda a afinidade.
 function miniCartao(eu, x, alvo) {
@@ -42,8 +42,6 @@ function miniCartao(eu, x, alvo) {
   const afinidade = estado.campanha.relacoes?.[eu.id]?.[x.id]?.tipo || 'Neutro';
   const esp = { Aliado: 'a', Amigável: 'a', Rival: 'c', Inimigo: 'c' }[afinidade] || 'b';
   const visto = x.donoId === estado.usuario.id || estado.campanha.papel === 'mestre' ? (x.humorAparente || x.humor) : x.humor;
-  const leitura = eu.leituras?.[x.id];
-  const lido = leitura && (leitura.aparente || leitura.real) === visto ? leitura.real : null;
   const ler = async () => {
     const r = await acao('social.manipular', { autor: eu.id, alvo: x.id, sub: 'manipulacao.empatia', humor: 'ler' });
     aviso(r.revelado || `${r.autor}: ${r.texto}`, r.sucesso ? 'ok' : 'erro');
@@ -55,8 +53,8 @@ function miniCartao(eu, x, alvo) {
     },
       h('span', { class: 'avatar rosto' }, x.foto ? h('img', { src: x.foto, alt: '' }) : x.nome.slice(0, 1)),
       h('span', { class: 'mini-nome' }, h('strong', {}, x.nome),
-        h('small', { title: lido ? 'Humor real, lido com Empatia' : 'Humor como o seu personagem interpreta (pode ser uma máscara)' },
-          icone(lido ? 'eye' : 'smile'), lido ? ` ${nomeHumor(lido)} (lido)` : ` ${nomeHumor(visto)}`)),
+        // Sempre o humor interpretado (a máscara, se houver). O que a Empatia revela fica só no aviso e no registro de quem leu.
+        h('small', { title: 'Humor como o seu personagem interpreta (pode ser uma máscara)' }, icone('smile'), ` ${nomeHumor(visto)}`)),
       x.id === alvo ? icone('crosshair') : null),
     h('div', { class: 'mini-acoes' },
       h('button', { type: 'button', class: `afinidade esp-${esp}`, title: `Como ${eu.nome} vê ${x.nome}. Clique para mudar`, 'aria-label': `Afinidade de ${eu.nome} com ${x.nome}: ${afinidade}. Mudar`,
@@ -83,7 +81,8 @@ function manipulacoes(p, b, mestre) {
   const regra = regras[sub];
   const manipular = async humor => {
     if (!b) throw new Error('Escolha o alvo (clique num personagem).');
-    const r = await acao('social.manipular', { autor: p.id, alvo: b.id, sub, humor, mod: mestre ? estado.sel.manipular?.mod : 0 });
+    const sel = estado.sel.manipular || {};
+    const r = await acao('social.manipular', { autor: p.id, alvo: b.id, sub, humor, mod: mestre ? (parseInt(sel.mod, 10) || 0) + (parseInt(sel.situacaoMod, 10) || 0) : 0 });
     aviso(r.revelado || `${r.autor}: ${r.texto}`, r.sucesso ? 'ok' : 'erro');
   };
   return [
@@ -106,12 +105,25 @@ function manipulacoes(p, b, mestre) {
   ];
 }
 
-// "Outros modificadores": por enquanto só o bônus livre do mestre (vantagens, situações e bônus aguardam as regras).
-function outrosModificadores(mestre) {
+// "Outros modificadores": sempre há o bônus livre do mestre (bônus interpretativo) e o de situação;
+// as vantagens e habilidades ativas que mexem em Manipulação já entram sozinhas no valor da perícia.
+function outrosModificadores(p, mestre) {
+  const sis = estado.sistema;
   const sel = estado.sel.manipular ||= {};
+  const ativas = new Set(p.ativas || []);
+  const daManipulacao = listaHabilidades(p, sis).filter(x => ativas.has(x.id)).map(x => ({ x, ef: efeitosHabilidade(p, sis, x) }))
+    .filter(({ ef }) => ef.testes || ef.pericias.manipulacao || Object.keys(ef.subpericias).some(k => k.startsWith('manipulacao.')));
+  const numero = (chave, rotulo) => h('label', { class: 'linha' }, rotulo,
+    h('input', { type: 'number', class: 'curto', step: 5, value: sel[chave] || 0, 'aria-label': rotulo, onchange: e => { sel[chave] = e.target.value; render(); } }));
+  const total = (parseInt(sel.mod, 10) || 0) + (parseInt(sel.situacaoMod, 10) || 0);
   return h('div', { class: 'outros-mods' },
     titulo('Outros modificadores', 'sliders-horizontal', 'h4'),
-    mestre ? h('label', { class: 'linha' }, 'Bônus livre %', h('input', { type: 'number', class: 'curto', step: 5, value: sel.mod || 0, onchange: e => { sel.mod = e.target.value; } }))
-      : h('p', { class: 'dica' }, 'Bônus livre: só o mestre aplica.'),
-    h('p', { class: 'dica' }, 'Vantagens, situações e bônus: aguardando as regras.'));
+    h('p', { class: 'mods-linha' }, h('strong', {}, 'Vantagens e habilidades: '),
+      daManipulacao.length ? daManipulacao.map(({ x, ef }) => h('span', { class: 'selo ok', title: ef.notas.join(' · ') }, x.nome)) : h('small', { class: 'dica' }, 'nenhuma ativa que mexa em Manipulação'),
+      daManipulacao.length ? h('small', { class: 'dica' }, ' (já somadas na %)') : null),
+    mestre
+      ? [numero('mod', 'Bônus livre do mestre %'),
+        h('div', { class: 'barra' }, h('input', { class: 'curto', placeholder: 'Situação (ex.: está bêbado)', value: sel.situacao || '', 'aria-label': 'Situação', onchange: e => { sel.situacao = e.target.value; } }), numero('situacaoMod', 'Situação %')),
+        total ? h('p', { class: 'meta' }, `Próxima manipulação: ${total > 0 ? '+' : ''}${total}%${sel.situacao ? ` (${sel.situacao})` : ''}.`) : null]
+      : h('p', { class: 'dica' }, 'Bônus livre e de situação: o mestre aplica na hora, conforme a interpretação.'));
 }

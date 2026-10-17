@@ -880,3 +880,9 @@ select.nome-controlado { font-weight: 700; }
 .mini-acoes { display: flex; flex-direction: column; gap: .25em; align-items: stretch; }
 button.afinidade { padding: .15em .4em; min-height: 0; justify-content: center; }
 .mini-cartao.sem-pv .rosto { filter: sepia(1) saturate(6) hue-rotate(-30deg) brightness(.75); }
+.resumo-acao { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: .6em 0 .2em; border: 1px solid var(--borda); border-radius: 8px; overflow: hidden; }
+.resumo-acao span { display: flex; align-items: center; gap: .25em; padding: .35em .45em; font-size: .88em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.resumo-acao span + span { border-left: 1px solid var(--borda); }
+.mods-linha { display: flex; flex-wrap: wrap; gap: .3em; align-items: center; margin: .3em 0; }
+.defesa strong { white-space: nowrap; }
+.defesa .sub-def { font-size: .7em; opacity: .85; }
