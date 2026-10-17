@@ -1,7 +1,7 @@
 // Sala Social (esboço do autor), em três colunas:
 // o seu lado (você em cima: humor aparente, humor real e R.MNP) · Manipulações (botões) · o outro lado (alvos).
 // Cada personagem mostra o humor que se vê e a afinidade (como o seu personagem vê aquele, no mapa de relacionamento).
-import { h, botao, selecao, aviso, icone, titulo, confirmar, vazio } from '../ui.js';
+import { h, botao, aviso, icone, titulo, confirmar, vazio, janela } from '../ui.js';
 import { estado, render, personagemPorId } from '../estado.js';
 import { acao } from '../api.js';
 import { derivados } from '/shared/regras.js';
@@ -15,8 +15,10 @@ export function painelSocial(participantes, mestre) {
   const { meus, p, chave } = controladoNaSala('social', participantes, mestre);
   if (!p) return null;
   const alvo = alvoDe(p, 'social', participantes);
-  const meuLado = participantes.filter(x => x.id !== p.id && x.tipo === p.tipo);
-  const outroLado = participantes.filter(x => x.id !== p.id && x.tipo !== p.tipo);
+  // Sem lados nem ordem: só duas colunas de até 10 (você em cima da primeira) para caber na tela.
+  const outros = participantes.filter(x => x.id !== p.id);
+  const esquerda = outros.slice(0, 9);
+  const direita = outros.slice(9);
   return h('div', { class: 'social-tres' },
     h('section', { class: 'bloco social-lado' },
       h('div', { class: 'social-eu' },
@@ -24,28 +26,50 @@ export function painelSocial(participantes, mestre) {
           sis.modulos?.social ? h('span', { class: 'rmnp', title: 'Resistência à Manipulação: Manipulação + 50 + modificadores' }, h('small', {}, 'R.MNP'), h('strong', {}, resistenciaManipulacao(p, sis))) : null),
         humorCartao(p, true, mestre),
         efeitosIcones(p, { mestre })),
-      meuLado.length ? h('ul', { class: 'social-lista' }, meuLado.map(x => miniCartao(p, x, alvo))) : null),
+      esquerda.length ? h('ul', { class: 'social-lista' }, esquerda.map(x => miniCartao(p, x, alvo))) : null),
     h('section', { class: 'bloco social-manip' }, titulo('Manipulações', 'drama'), manipulacoes(p, personagemPorId(alvo), mestre)),
     h('section', { class: 'bloco social-lado outro' },
-      outroLado.length ? h('ul', { class: 'social-lista' }, outroLado.map(x => miniCartao(p, x, alvo))) : vazio('Ninguém do outro lado.', 'users'),
+      direita.length ? h('ul', { class: 'social-lista' }, direita.map(x => miniCartao(p, x, alvo)))
+        : outros.length ? null : vazio('Ninguém mais na sala.', 'users'),
       outrosModificadores(mestre)));
 }
 
-// Personagem da sala visto pelo seu: humor que aparece e afinidade. Clicar escolhe como alvo.
+// Personagem da sala como o seu o enxerga: o humor que ele interpreta (o aparente, ou o real se já leu com Empatia)
+// e a afinidade (como o SEU personagem vê o outro — escolha do jogador, aqui ou nas Redes Sociais).
+// Clicar no cartão escolhe o alvo; clicar na afinidade muda a afinidade.
 function miniCartao(eu, x, alvo) {
-  const meu = x.donoId === estado.usuario.id || estado.campanha.papel === 'mestre';
+  const sis = estado.sistema;
   const afinidade = estado.campanha.relacoes?.[eu.id]?.[x.id]?.tipo || 'Neutro';
   const esp = { Aliado: 'a', Amigável: 'a', Rival: 'c', Inimigo: 'c' }[afinidade] || 'b';
-  const humor = meu ? (x.humorAparente || x.humor) : x.humor;
-  return h('li', {},
+  const visto = x.donoId === estado.usuario.id || estado.campanha.papel === 'mestre' ? (x.humorAparente || x.humor) : x.humor;
+  const leitura = eu.leituras?.[x.id];
+  const lido = leitura && (leitura.aparente || leitura.real) === visto ? leitura.real : null;
+  const ler = async () => {
+    const r = await acao('social.manipular', { autor: eu.id, alvo: x.id, sub: 'manipulacao.empatia', humor: 'ler' });
+    aviso(r.revelado || `${r.autor}: ${r.texto}`, r.sucesso ? 'ok' : 'erro');
+  };
+  return h('li', { class: `mini-linha ${x.id === alvo ? 'alvo' : ''}` },
     h('button', {
-      type: 'button', class: `mini-cartao ${x.id === alvo ? 'alvo' : ''}`, 'aria-pressed': x.id === alvo,
+      type: 'button', class: `mini-cartao ${x.id === alvo ? 'alvo' : ''} ${x.semPv || (x.pv && x.pv.atual <= 0) ? 'sem-pv' : ''}`, 'aria-pressed': x.id === alvo,
       title: x.id === alvo ? `${x.nome} é o alvo` : `Escolher ${x.nome} como alvo`, onclick: () => marcarAlvo('social', x.id),
     },
-      h('span', { class: 'avatar' }, x.foto ? h('img', { src: x.foto, alt: '' }) : x.nome.slice(0, 1)),
-      h('span', { class: 'mini-nome' }, h('strong', {}, x.nome), h('small', {}, icone('smile'), ` ${nomeHumor(humor)}`)),
-      h('span', { class: `afinidade esp-${esp}`, title: 'Afinidade (mapa de relacionamento)' }, h('small', {}, 'Afin.'), afinidade),
-      x.id === alvo ? icone('crosshair') : null));
+      h('span', { class: 'avatar rosto' }, x.foto ? h('img', { src: x.foto, alt: '' }) : x.nome.slice(0, 1)),
+      h('span', { class: 'mini-nome' }, h('strong', {}, x.nome),
+        h('small', { title: lido ? 'Humor real, lido com Empatia' : 'Humor como o seu personagem interpreta (pode ser uma máscara)' },
+          icone(lido ? 'eye' : 'smile'), lido ? ` ${nomeHumor(lido)} (lido)` : ` ${nomeHumor(visto)}`)),
+      x.id === alvo ? icone('crosshair') : null),
+    h('div', { class: 'mini-acoes' },
+      h('button', { type: 'button', class: `afinidade esp-${esp}`, title: `Como ${eu.nome} vê ${x.nome}. Clique para mudar`, 'aria-label': `Afinidade de ${eu.nome} com ${x.nome}: ${afinidade}. Mudar`,
+        onclick: () => escolherAfinidade(eu, x, afinidade) }, h('small', {}, 'Afin.'), afinidade),
+      sis.modulos?.social ? botao('', ler, { class: 'pequeno', icone: 'eye', title: `Ler o humor real de ${x.nome} (Empatia)`, 'aria-label': `Ler o humor real de ${x.nome} com Empatia` }) : null));
+}
+
+function escolherAfinidade(eu, x, atual) {
+  let fechar = () => {};
+  const definir = async tipo => { await acao('relacao.definir', { de: eu.id, para: x.id, tipo }); fechar(); };
+  fechar = janela(`Como ${eu.nome} vê ${x.nome}?`, h('div', { class: 'barra' },
+    estado.sistema.relacoes.map(t => botao(t, () => definir(t), { class: `pequeno ${t === atual ? 'primario' : ''}`, 'aria-pressed': t === atual }))),
+    [['Fechar', () => true]]);
 }
 
 function manipulacoes(p, b, mestre) {

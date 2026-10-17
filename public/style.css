@@ -875,3 +875,8 @@ select.nome-controlado { font-weight: 700; }
 .efeito-carga { margin: 0; font-size: .85em; }
 .efeito-carga.sobrecarregado { color: #e8c06a; }
 .efeito-carga.supercarregado { color: #f08a80; }
+.mini-linha { display: flex; align-items: stretch; gap: .3em; }
+.mini-linha .mini-cartao { flex: 1; min-width: 0; }
+.mini-acoes { display: flex; flex-direction: column; gap: .25em; align-items: stretch; }
+button.afinidade { padding: .15em .4em; min-height: 0; justify-content: center; }
+.mini-cartao.sem-pv .rosto { filter: sepia(1) saturate(6) hue-rotate(-30deg) brightness(.75); }
