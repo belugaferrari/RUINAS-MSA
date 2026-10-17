@@ -12,10 +12,11 @@ import { redesSociaisView } from './relacoes.js';
 import { criacaoView, iniciarCriacao } from './criacao.js';
 import { painelDados, dadosAberto } from './dados.js';
 import { confrontoView } from './confronto.js';
+import { mapaView } from './mapa.js';
 
 const ABAS = [
   ['ficha', 'Ficha', 'user'], ['lore', 'Lore', 'scroll'], ['redes', 'Redes Sociais', 'network'], ['itens', 'Itens', 'backpack'],
-  ['armas', 'Armas e Armadilhas', 'axe'], ['social', 'Sala Social', 'drama'], ['batalha', 'Campo de Batalha', 'swords'], ['confronto', 'Confronto', 'scale'],
+  ['armas', 'Armas e Armadilhas', 'axe'], ['social', 'Sala Social', 'drama'], ['batalha', 'Campo de Batalha', 'swords'], ['mapa', 'Mapa', 'map'], ['confronto', 'Confronto', 'scale'],
   ['evoluir', 'Evoluir', 'trending-up'], ['regras', 'Livro de Regras', 'book-open'], ['loja', 'Loja', 'store'],
 ];
 
@@ -85,6 +86,7 @@ function conteudoAba(aba, p) {
       lojaView({ titulo: 'Catálogo de armas, defesas e armadilhas', tipos: ['arma', 'armadilha', 'defesa'] }));
     case 'social': return salaView('social');
     case 'batalha': return salaView('batalha');
+    case 'mapa': return mapaView();
     case 'confronto': return confrontoView();
     case 'evoluir': return evoluirView(p);
     case 'regras': return referenciaView('livro', true);

@@ -9,7 +9,7 @@ import { db, save, flush, uid, RAIZ, UPLOADS } from './db.js';
 import { execSync } from 'node:child_process';
 import { registrar, entrar, usuarioDoToken, sair } from './auth.js';
 import { sistema, listaSistemas, CONTEUDO } from './sistema.js';
-import { novaCampanha, resumoCampanha, visaoPara, entrarNaCampanha, executar, acoes, migrarCampanhas } from './actions.js';
+import { novaCampanha, resumoCampanha, visaoPara, entrarNaCampanha, executar, acoes, migrarCampanhas, podeSuporte } from './actions.js';
 
 migrarCampanhas();
 import { modeloNpcs, lerNpcs } from './excel.js';
@@ -71,13 +71,16 @@ app.get('/api/modelo-npcs.xlsx', async (req, res) => {
   res.send(Buffer.from(await modeloNpcs(req.query.sistema)));
 });
 
-const upload = multer({ limits: { fileSize: 10 * 1024 * 1024 }, storage: multer.memoryStorage() });
+const upload = multer({ limits: { fileSize: 60 * 1024 * 1024 }, storage: multer.memoryStorage() });
 
 const EXT_IMAGEM = { 'image/png': '.png', 'image/jpeg': '.jpg', 'image/gif': '.gif', 'image/webp': '.webp' };
+// Vídeos (para mapas animados): só na aba Imagens do mestre.
+const EXT_VIDEO = { 'video/mp4': '.mp4', 'video/webm': '.webm' };
 
-function salvarImagem(file) {
-  const ext = EXT_IMAGEM[file?.mimetype];
-  if (!ext) throw new Error('Envie uma imagem PNG, JPG, GIF ou WEBP.');
+function salvarImagem(file, { video = false } = {}) {
+  const ext = EXT_IMAGEM[file?.mimetype] || (video ? EXT_VIDEO[file?.mimetype] : null);
+  if (!ext) throw new Error(video ? 'Envie uma imagem (PNG, JPG, GIF, WEBP) ou um vídeo (MP4, WEBM).' : 'Envie uma imagem PNG, JPG, GIF ou WEBP.');
+  if (!EXT_VIDEO[file.mimetype] && file.size > 10 * 1024 * 1024) throw new Error('Imagem muito grande (máximo 10 MB).');
   const nome = `${uid()}${uid()}${ext}`;
   fs.writeFileSync(path.join(UPLOADS, nome), file.buffer);
   return `/uploads/${nome}`;
@@ -85,7 +88,8 @@ function salvarImagem(file) {
 
 app.post('/api/campanhas/:id/imagens', upload.single('arquivo'), rota(req => {
   const c = campanhaDoMestre(req);
-  const img = { id: uid(), titulo: String(req.body.titulo || req.file?.originalname || 'Imagem').slice(0, 120), categoria: String(req.body.categoria || 'Geral').slice(0, 40), url: salvarImagem(req.file), mostrando: false };
+  const tipo = EXT_VIDEO[req.file?.mimetype] ? 'video' : 'imagem';
+  const img = { id: uid(), titulo: String(req.body.titulo || req.file?.originalname || 'Imagem').slice(0, 120), categoria: String(req.body.categoria || 'Geral').slice(0, 40), url: salvarImagem(req.file, { video: true }), tipo, mostrando: false };
   c.imagens.push(img);
   save();
   transmitir(c);
@@ -205,6 +209,7 @@ app.post('/api/atualizar', rota(req => {
 // ---------- tempo real ----------
 
 const sala = c => `c:${c.id}`;
+const ACOES_SUPORTE = new Set(['mapa.mover', 'mapa.tirar', 'imagem.mostrar']);
 
 async function transmitir(c) {
   const sockets = await io.in(sala(c)).fetchSockets();
@@ -231,6 +236,7 @@ io.on('connection', socket => {
 
   socket.on('saguao', (area, ack) => responder(ack, () => {
     if (area === 'mestre') return db.campaigns.filter(c => c.mestreId === user.id).map(resumoCampanha);
+    if (area === 'suporte') return db.campaigns.filter(c => podeSuporte(c, user)).map(resumoCampanha);
     return db.campaigns
       .filter(c => c.mestreId !== user.id && (c.aberta || c.jogadores.includes(user.id)))
       .map(c => ({ ...resumoCampanha(c), participando: c.jogadores.includes(user.id) }));
@@ -261,9 +267,9 @@ io.on('connection', socket => {
     entrarNaCampanha(c, user, area);
     for (const r of socket.rooms) if (r !== socket.id) socket.leave(r);
     socket.join(sala(c));
-    socket.data.area = area === 'mestre' ? 'mestre' : 'jogador';
+    socket.data.area = ['mestre', 'suporte'].includes(area) ? area : 'jogador';
     socket.data.campanhaId = c.id;
-    if (area !== 'mestre') transmitir(c);
+    if (socket.data.area === 'jogador') transmitir(c);
     return visaoPara(c, user, socket.data.area);
   }));
 
@@ -280,8 +286,11 @@ io.on('connection', socket => {
     if (!c) throw Object.assign(new Error('Entre em uma campanha primeiro.'), { publico: true });
     if (!(tipo in acoes)) throw Object.assign(new Error('Ação desconhecida.'), { publico: true });
     const mestre = socket.data.area === 'mestre' && c.mestreId === user.id;
-    if (!mestre && !c.aberta) throw Object.assign(new Error('A campanha foi fechada pelo mestre.'), { publico: true });
-    const r = executar(c, tipo, dados, { user, mestre });
+    // Suporte: só mexe no mapa e mostra/esconde as imagens que o mestre liberou.
+    const suporte = socket.data.area === 'suporte' && podeSuporte(c, user);
+    if (suporte && !ACOES_SUPORTE.has(tipo)) throw Object.assign(new Error('O Suporte só mexe no mapa e nas imagens liberadas.'), { publico: true });
+    if (!mestre && !suporte && !c.aberta) throw Object.assign(new Error('A campanha foi fechada pelo mestre.'), { publico: true });
+    const r = executar(c, tipo, dados, { user, mestre, suporte });
     transmitir(c);
     if (tipo === 'campanha.atualizar' && !c.aberta) expulsarJogadores(c);
     if (tipo === 'jogador.remover') expulsarJogadores(c, dados.userId);
@@ -291,7 +300,7 @@ io.on('connection', socket => {
 
 async function expulsarJogadores(c, apenas) {
   for (const s of await io.in(sala(c)).fetchSockets()) {
-    if (s.data.area === 'mestre') continue;
+    if (s.data.area === 'mestre' || s.data.area === 'suporte') continue;
     if (apenas && s.data.user.id !== apenas) continue;
     s.emit('expulso', apenas ? 'O mestre removeu você da campanha.' : 'O mestre fechou a campanha.');
     s.leave(sala(c));

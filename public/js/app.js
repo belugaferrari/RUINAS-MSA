@@ -1,6 +1,7 @@
 import { h, aviso } from './ui.js';
 import { estado, definirRender, mudar, carregarSistema, sincronizarSistema, recarregarSistema } from './estado.js';
 import { observarRolagens } from './views/animacao.js';
+import { telaSuporte } from './views/suporte.js';
 import { observarEfeitos } from './views/efeitos.js';
 import { sessao, get, conectar, emitir } from './api.js';
 import { telaLogin } from './views/login.js';
@@ -43,7 +44,7 @@ function tela() {
   switch (estado.tela) {
     case 'login': return telaLogin();
     case 'saguao': return telaSaguao();
-    case 'campanha': return estado.area === 'mestre' ? telaMestre() : telaJogador();
+    case 'campanha': return estado.area === 'mestre' ? telaMestre() : estado.area === 'suporte' ? telaSuporte() : telaJogador();
     default: return h('div', { class: 'centro' }, h('p', {}, 'Carregando…'));
   }
 }

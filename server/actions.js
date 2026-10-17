@@ -35,6 +35,8 @@ export function novaCampanha(user, dados) {
     personagens: [],
     relacoes: {},
     imagens: [],
+    mapa: novoMapa(),
+    suportes: [],
     salas: { social: novaSala(), batalha: novaSala() },
     confrontos: [],
     log: [],
@@ -76,11 +78,22 @@ function efeitosPublicos(p, sis) {
 // O que cada pessoa enxerga da campanha. O mestre vê tudo; o jogador só o que é dele ou público.
 export function visaoPara(c, user, area) {
   const comDono = p => ({ ...p, dono: nomeUsuario(p.donoId) });
+  const mapa = mapaPublico(c);
   if (area === 'mestre') {
-    return { ...c, sistema: idSistema(c.sistema), personagens: c.personagens.map(comDono), jogadoresNomes: c.jogadores.map(nomeUsuario), papel: 'mestre' };
+    return { ...c, mapa, sistema: idSistema(c.sistema), personagens: c.personagens.map(comDono), jogadoresNomes: c.jogadores.map(nomeUsuario),
+      suportesNomes: (c.suportes || []).map(id => ({ id, nome: nomeUsuario(id) })), papel: 'mestre' };
+  }
+  // Suporte: só o que ele apresenta — o mapa (com os personagens que estão nele) e as imagens liberadas pelo mestre.
+  if (area === 'suporte') {
+    const noMapa = new Set(Object.keys(mapa.pecas));
+    return {
+      id: c.id, nome: c.nome, sistema: idSistema(c.sistema), aberta: c.aberta, papel: 'suporte', mapa,
+      personagens: c.personagens.filter(p => noMapa.has(p.id)).map(p => fichaPublica(p, sistema(c.sistema))),
+      imagens: c.imagens.filter(i => i.suporte), salas: { social: { participantes: [], log: [] }, batalha: { participantes: [], log: [] } }, log: [], relacoes: {},
+    };
   }
   const meus = new Set(c.personagens.filter(p => p.donoId === user.id).map(p => p.id));
-  const emSala = new Set([...c.salas.social.participantes, ...c.salas.batalha.participantes]);
+  const emSala = new Set([...c.salas.social.participantes, ...c.salas.batalha.participantes, ...Object.keys(mapa.pecas)]);
   const conhecidos = new Set();
   for (const id of meus) for (const alvo of Object.keys(c.relacoes[id] || {})) conhecidos.add(alvo);
 
@@ -95,15 +108,22 @@ export function visaoPara(c, user, area) {
     personagens,
     relacoes: Object.fromEntries([...meus].map(id => [id, c.relacoes[id] || {}])),
     imagens: c.imagens.filter(i => i.mostrando),
+    mapa,
     salas: Object.fromEntries(Object.entries(c.salas).map(([k, s]) => [k, { ...s, log: s.log.filter(e => !e.secreta && (!e.privadoPara || e.privadoPara === user.id)) }])),
     log: c.log.filter(e => !e.secreta),
     confrontos: (c.confrontos || []).filter(x => !x.secreto),
   };
 }
 
+export const podeSuporte = (c, user) => c.mestreId === user.id || (c.suportes || []).includes(user.id);
+
 export function entrarNaCampanha(c, user, area) {
   if (area === 'mestre') {
     if (c.mestreId !== user.id) throw erro('Você não é o mestre desta campanha.');
+    return;
+  }
+  if (area === 'suporte') {
+    if (!podeSuporte(c, user)) throw erro('O mestre não liberou o Suporte desta campanha para a sua conta.');
     return;
   }
   if (c.mestreId === user.id) throw erro('Você é o mestre desta campanha — entre pela Área do Mestre.');
@@ -113,6 +133,20 @@ export function entrarNaCampanha(c, user, area) {
     c.jogadores.push(user.id);
     save();
   }
+}
+
+// ---------- Mapa ----------
+// Imagem, GIF ou vídeo escolhido pelo mestre, com a grade de 1,5 m por quadrado por cima e os peões dos personagens.
+// grade.colunas = quantos quadrados cabem na largura do mapa (o mestre aumenta/diminui); ox/oy deslocam a grade (fração de quadrado).
+function novoMapa() {
+  return { imagemId: null, grade: { colunas: 20, ox: 0, oy: 0, visivel: true }, pecas: {} };
+}
+
+function mapaPublico(c) {
+  c.mapa ||= novoMapa();
+  const img = c.imagens.find(i => i.id === c.mapa.imagemId);
+  const vivos = Object.fromEntries(Object.entries(c.mapa.pecas).filter(([id]) => c.personagens.some(p => p.id === id)));
+  return { ...c.mapa, pecas: vivos, midia: img ? { url: img.url, tipo: img.tipo || 'imagem', titulo: img.titulo } : null };
 }
 
 // ---------- utilitários ----------
@@ -683,9 +717,66 @@ export const acoes = {
     if (c.relacoes[de]) delete c.relacoes[de][para];
   },
 
-  'imagem.mostrar'(c, { id, mostrando }, ctx) {
+  'mapa.definir'(c, { imagemId }, ctx) {
+    exigirMestre(ctx);
+    c.mapa ||= novoMapa();
+    if (imagemId && !c.imagens.some(i => i.id === imagemId)) throw erro('Imagem não encontrada.');
+    c.mapa.imagemId = imagemId || null;
+  },
+
+  'mapa.grade'(c, { colunas, ox, oy, visivel }, ctx) {
+    exigirMestre(ctx);
+    c.mapa ||= novoMapa();
+    const g = c.mapa.grade;
+    if (colunas !== undefined) g.colunas = Math.max(2, Math.min(200, parseInt(colunas, 10) || 20));
+    const frac = v => Math.max(0, Math.min(0.99, Number(v) || 0));
+    if (ox !== undefined) g.ox = frac(ox);
+    if (oy !== undefined) g.oy = frac(oy);
+    if (visivel !== undefined) g.visivel = !!visivel;
+  },
+
+  // Mestre e Suporte colocam e movem os peões (col/lin = quadrado da grade).
+  'mapa.mover'(c, { id, col, lin }, ctx) {
+    if (!ctx.mestre && !ctx.suporte) throw erro('Só o mestre ou o Suporte mexem no mapa.');
+    personagem(c, id);
+    c.mapa ||= novoMapa();
+    c.mapa.pecas[id] = { col: Math.max(0, Math.min(999, parseInt(col, 10) || 0)), lin: Math.max(0, Math.min(999, parseInt(lin, 10) || 0)) };
+  },
+
+  'mapa.tirar'(c, { id }, ctx) {
+    if (!ctx.mestre && !ctx.suporte) throw erro('Só o mestre ou o Suporte mexem no mapa.');
+    if (c.mapa) delete c.mapa.pecas[id];
+  },
+
+  'mapa.limpar'(c, d, ctx) {
+    exigirMestre(ctx);
+    if (c.mapa) c.mapa.pecas = {};
+  },
+
+  // O mestre libera imagens para o Suporte apresentar.
+  'imagem.suporte'(c, { id, liberada }, ctx) {
     exigirMestre(ctx);
     const img = c.imagens.find(i => i.id === id);
+    if (img) img.suporte = !!liberada;
+  },
+
+  // Contas que podem entrar como Suporte (além da do próprio mestre), pelo nome da conta.
+  'suporte.adicionar'(c, { nome }, ctx) {
+    exigirMestre(ctx);
+    const alvo = db.users.find(u => u.name.toLowerCase() === String(nome || '').trim().toLowerCase());
+    if (!alvo) throw erro('Nenhuma conta com esse nome. A pessoa precisa criar a conta antes.');
+    c.suportes ||= [];
+    if (!c.suportes.includes(alvo.id)) c.suportes.push(alvo.id);
+  },
+
+  'suporte.remover'(c, { userId }, ctx) {
+    exigirMestre(ctx);
+    c.suportes = (c.suportes || []).filter(x => x !== userId);
+  },
+
+  'imagem.mostrar'(c, { id, mostrando }, ctx) {
+    const img = c.imagens.find(i => i.id === id);
+    if (!ctx.mestre && !(ctx.suporte && img?.suporte)) throw erro('Apenas o mestre pode fazer isso.');
     if (img) img.mostrando = !!mostrando;
   },
 

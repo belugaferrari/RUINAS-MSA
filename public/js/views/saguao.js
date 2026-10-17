@@ -47,26 +47,30 @@ export function telaSaguao() {
         h('h2', {}, `Olá, ${estado.usuario.name}! Como você vai jogar hoje?`),
         h('div', { class: 'escolha-area' },
           h('button', { class: 'cartao grande', onclick: () => { estado.area = 'mestre'; carregarSaguao(); } }, icone('scroll', 'grande'), h('strong', {}, 'Área do Mestre'), h('small', {}, 'Criar e conduzir campanhas')),
-          h('button', { class: 'cartao grande', onclick: () => { estado.area = 'jogador'; carregarSaguao(); } }, icone('sword', 'grande'), h('strong', {}, 'Área do Jogador'), h('small', {}, 'Entrar com seu personagem')))));
+          h('button', { class: 'cartao grande', onclick: () => { estado.area = 'jogador'; carregarSaguao(); } }, icone('sword', 'grande'), h('strong', {}, 'Área do Jogador'), h('small', {}, 'Entrar com seu personagem')),
+          h('button', { class: 'cartao grande', onclick: () => { estado.area = 'suporte'; carregarSaguao(); } }, icone('presentation', 'grande'), h('strong', {}, 'Suporte'), h('small', {}, 'Apresentar o mapa e as imagens aos jogadores')))));
   }
 
   const mestre = estado.area === 'mestre';
+  const suporte = estado.area === 'suporte';
   const lista = estado.saguao;
   return h('div', {},
-    topo(botao(mestre ? 'Área do Mestre' : 'Área do Jogador', () => mudar({ area: null, saguao: [] }), { class: 'pequeno', icone: 'arrow-left', title: 'Trocar de área' })),
+    topo(botao(mestre ? 'Área do Mestre' : suporte ? 'Suporte' : 'Área do Jogador', () => mudar({ area: null, saguao: [] }), { class: 'pequeno', icone: 'arrow-left', title: 'Trocar de área' })),
     h('main', { class: 'conteudo estreito' },
       h('div', { class: 'barra' },
         h('h2', { class: 'com-icone' }, icone(mestre ? 'castle' : 'compass'), mestre ? 'Suas campanhas' : 'Campanhas'),
         h('span', { class: 'espaco' }),
         botao('Atualizar', carregarSaguao, { icone: 'refresh-cw' }),
         mestre ? botao('Nova campanha', novaCampanha, { class: 'primario', icone: 'plus' }) : null),
-      mestre ? null : h('p', { class: 'dica' }, 'Aparecem aqui as campanhas abertas pelos mestres e as que você já participa. Campanhas fechadas não podem ser acessadas.'),
-      lista.length ? h('div', { class: 'lista-campanhas' }, lista.map(c => cartaoCampanha(c, mestre)))
-        : vazio(mestre ? 'Nenhuma campanha ainda. Crie a primeira!' : 'Nenhuma campanha aberta no momento.', 'map'),
+      mestre ? null : h('p', { class: 'dica' }, suporte
+        ? 'Aparecem aqui as campanhas que você mestra e as em que o mestre liberou o Suporte para a sua conta (aba Campanha do mestre).'
+        : 'Aparecem aqui as campanhas abertas pelos mestres e as que você já participa. Campanhas fechadas não podem ser acessadas.'),
+      lista.length ? h('div', { class: 'lista-campanhas' }, lista.map(c => cartaoCampanha(c, mestre, suporte)))
+        : vazio(mestre ? 'Nenhuma campanha ainda. Crie a primeira!' : suporte ? 'Nenhuma campanha com o Suporte liberado para você.' : 'Nenhuma campanha aberta no momento.', 'map'),
       mestre ? versaoApp() : null));
 }
 
-function cartaoCampanha(c, mestre) {
+function cartaoCampanha(c, mestre, suporte = false) {
   return h('div', { class: 'cartao campanha' },
     h('div', { class: 'campanha-icone' }, icone('ship')),
     h('div', { class: 'campanha-info' },
@@ -89,7 +93,8 @@ function cartaoCampanha(c, mestre) {
         await emitir('campanha:apagar', c.id);
         carregarSaguao();
       }, { class: 'perigo', icone: 'trash-2' }) : null,
-      botao(mestre ? 'Jogar' : (c.participando ? 'Continuar' : 'Entrar'), () => abrirCampanha(c.id), { class: 'primario', icone: mestre ? 'dices' : 'door-open', disabled: !mestre && !c.aberta })));
+      botao(mestre ? 'Jogar' : suporte ? 'Apresentar' : (c.participando ? 'Continuar' : 'Entrar'), () => abrirCampanha(c.id),
+        { class: 'primario', icone: mestre ? 'dices' : suporte ? 'presentation' : 'door-open', disabled: !mestre && !suporte && !c.aberta })));
 }
 
 function novaCampanha() {

@@ -825,20 +825,18 @@
    {
     "id": "raivoso",
     "nome": "Raivoso",
-    "efeitos": "Vantagem nos ataques; defesas −5%; R.MNP −10.",
-    "vantagemAtaque": true,
-    "defesa": -5,
-    "rmnp": -10,
-    "descricao": "A raiva toma conta e estreita a visão: o personagem quer descontar em alguém. Ataca com mais vontade, mas baixa a guarda e morde a isca de quem sabe provocá-lo. A raiva não obriga a atacar, mas tudo o que não é confronto parece perda de tempo."
+    "efeitos": "Vantagem na iniciativa; R.MNP −20.",
+    "rmnp": -20,
+    "descricao": "A raiva toma conta e estreita a visão: o personagem quer descontar em alguém e reage antes de pensar. É o primeiro a agir quando a coisa esquenta, mas morde a isca de quem sabe provocá-lo.",
+    "vantagemIniciativa": true
    },
    {
     "id": "sereno",
     "nome": "Sereno",
-    "efeitos": "R.MNP +10; defesas +5%; Desvantagem na iniciativa.",
+    "efeitos": "R.MNP +10; Desvantagem na iniciativa.",
     "rmnp": 10,
-    "defesa": 5,
     "desvantagemIniciativa": true,
-    "descricao": "Um personagem sereno respira fundo antes de agir. Nada o apressa: é difícil manipulá-lo e ele se defende com calma, mas também demora a reagir quando a briga começa."
+    "descricao": "Um personagem sereno respira fundo antes de agir. Nada o apressa: é difícil manipulá-lo, mas ele demora a reagir quando a briga começa."
    }
   ],
   "manipulacoes": {

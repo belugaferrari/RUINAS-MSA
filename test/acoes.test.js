@@ -195,3 +195,39 @@ test('perícia base + subperícia não passa do limite do nível (em qualquer or
   assert.throws(() => executar(c, 'personagem.criar', { ficha: fichaValida({ pericias: { [per.id]: 5 }, subpericias: { [sub]: 10 } }) }, { user: ana, mestre: false }), /limite|Perícias/);
   assert.ok(lim > 0);
 });
+
+test('mapa e Suporte: mestre escolhe e ajusta, Suporte move peões e mostra só imagens liberadas', async () => {
+  const m = { id: 'mm', name: 'Mestra' };
+  const sup = { id: 'ss', name: 'Ajudante' };
+  const jog = { id: 'jj', name: 'Jogadora' };
+  const { db } = await import('../server/db.js');
+  db.users.push({ ...sup });
+  const c = novaCampanha(m, { nome: 'Mapa', maxJogadores: 2, nivel: 1, padraoMSA: true });
+  const ctxM = { user: m, mestre: true };
+  c.imagens.push({ id: 'i1', titulo: 'Ilha', url: '/uploads/a.png', tipo: 'imagem', mostrando: false }, { id: 'i2', titulo: 'Segredo', url: '/uploads/b.png', mostrando: false });
+  const { id } = executar(c, 'personagem.criar', { tipo: 'npc', grupoId: 'encontros', ficha: { nome: 'Rato' } }, ctxM);
+  executar(c, 'mapa.definir', { imagemId: 'i1' }, ctxM);
+  executar(c, 'mapa.grade', { colunas: 500, ox: 2 }, ctxM);
+  assert.equal(c.mapa.grade.colunas, 200);
+  assert.equal(c.mapa.grade.ox, 0.99);
+  executar(c, 'mapa.mover', { id, col: 3, lin: 4 }, ctxM);
+  // Jogador não mexe; Suporte só entra se liberado.
+  assert.throws(() => executar(c, 'mapa.mover', { id, col: 1, lin: 1 }, { user: jog, mestre: false }), /mestre ou o Suporte/);
+  assert.throws(() => entrarNaCampanha(c, sup, 'suporte'), /não liberou/);
+  entrarNaCampanha(c, m, 'suporte');
+  executar(c, 'suporte.adicionar', { nome: 'ajudante' }, ctxM);
+  assert.throws(() => executar(c, 'suporte.adicionar', { nome: 'ninguém' }, ctxM), /Nenhuma conta/);
+  entrarNaCampanha(c, sup, 'suporte');
+  const ctxS = { user: sup, mestre: false, suporte: true };
+  executar(c, 'mapa.mover', { id, col: 5, lin: 6 }, ctxS);
+  assert.deepEqual(c.mapa.pecas[id], { col: 5, lin: 6 });
+  assert.throws(() => executar(c, 'imagem.mostrar', { id: 'i2', mostrando: true }, ctxS), /mestre/);
+  executar(c, 'imagem.suporte', { id: 'i2', liberada: true }, ctxM);
+  executar(c, 'imagem.mostrar', { id: 'i2', mostrando: true }, ctxS);
+  const v = visaoPara(c, sup, 'suporte');
+  assert.equal(v.papel, 'suporte');
+  assert.deepEqual(v.imagens.map(i => i.id), ['i2']);
+  assert.equal(v.mapa.midia.url, '/uploads/a.png');
+  assert.deepEqual(v.personagens.map(p => p.nome), ['Rato']);
+  assert.equal(v.personagens[0].atributos, undefined, 'o Suporte não vê a ficha');
+});

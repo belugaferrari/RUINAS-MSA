@@ -11,10 +11,11 @@ import { painelDados, dadosAberto } from './dados.js';
 import { confrontoView } from './confronto.js';
 import { criacaoView, iniciarCriacao } from './criacao.js';
 import { versaoApp } from './versao.js';
+import { mapaView } from './mapa.js';
 
 const ABAS = [
   ['jogadores', 'Jogadores', 'users'], ['npcs', 'NPCs', 'ghost'], ['imagens', 'Imagens', 'image'], ['social', 'Sala Social', 'drama'],
-  ['batalha', 'Campo de Batalha', 'swords'], ['confronto', 'Confronto', 'scale'], ['resumo', 'Resumo', 'heart-pulse'], ['regras', 'Livro de Regras', 'book-open'],
+  ['batalha', 'Campo de Batalha', 'swords'], ['mapa', 'Mapa', 'map'], ['confronto', 'Confronto', 'scale'], ['resumo', 'Resumo', 'heart-pulse'], ['regras', 'Livro de Regras', 'book-open'],
   ['monstros', 'Livro dos Monstros', 'skull'], ['mestre', 'Livro do Mestre', 'library'], ['loja', 'Loja', 'store'],
   ['classes', 'Classes', 'shield'], ['lore', 'Lore', 'scroll'], ['campanha', 'Campanha', 'notebook-pen'],
 ];
@@ -46,6 +47,7 @@ function conteudoAba(aba) {
     case 'imagens': return abaImagens();
     case 'social': return salaView('social');
     case 'batalha': return salaView('batalha');
+    case 'mapa': return mapaView();
     case 'confronto': return confrontoView();
     case 'resumo': return abaResumo();
     case 'regras': return livroView(estado.sistema.livro || 'regras-msa', `Livro de Regras · ${estado.sistema.nome}`);
@@ -175,13 +177,14 @@ function abaImagens() {
   const c = estado.campanha;
   const campoTitulo = h('input', { placeholder: 'Título (ex.: Mapa da Ilha Norte)' });
   const categoria = h('input', { placeholder: 'Categoria (Personagens, Mapas…)', list: 'categorias-img' });
-  const arquivo = h('input', { type: 'file', accept: 'image/*' });
+  const arquivo = h('input', { type: 'file', accept: 'image/*,video/mp4,video/webm' });
   const categorias = [...new Set(c.imagens.map(i => i.categoria))];
   const filtro = estado.sel.imgCat || '';
   const lista = c.imagens.filter(i => !filtro || i.categoria === filtro);
   return h('div', {},
     h('div', { class: 'bloco' },
-      titulo('Enviar imagem', 'upload'),
+      titulo('Enviar imagem, GIF ou vídeo', 'upload'),
+      h('p', { class: 'dica' }, 'Imagens até 10 MB; vídeos MP4/WEBM até 60 MB (para mapas animados, aba Mapa).'),
       h('div', { class: 'barra' }, campoTitulo, categoria, h('datalist', { id: 'categorias-img' }, categorias.map(k => h('option', { value: k }))), arquivo,
         botao('Enviar', async () => {
           if (!arquivo.files[0]) throw new Error('Escolha um arquivo.');
@@ -196,8 +199,11 @@ function abaImagens() {
       selecao([{ valor: '', rotulo: 'Todas' }, ...categorias], filtro, v => { estado.sel.imgCat = v; render(); }),
       c.imagens.some(i => i.mostrando) ? botao('Parar de mostrar todas', () => Promise.all(c.imagens.filter(i => i.mostrando).map(i => acao('imagem.mostrar', { id: i.id, mostrando: false }))), { icone: 'eye-off' }) : null),
     lista.length ? h('div', { class: 'galeria' }, lista.map(i => h('figure', { class: i.mostrando ? 'mostrando' : '' },
-      h('img', { src: i.url, alt: i.titulo, onclick: () => janela(i.titulo, h('img', { src: i.url, class: 'img-cheia', alt: i.titulo })) }),
+      i.tipo === 'video' ? h('video', { src: i.url, muted: true, loop: true, playsinline: true, controls: true, class: 'miniatura-video' })
+        : h('img', { src: i.url, alt: i.titulo, onclick: () => janela(i.titulo, h('img', { src: i.url, class: 'img-cheia', alt: i.titulo })) }),
       h('figcaption', {}, h('strong', {}, i.titulo), h('small', {}, i.categoria)),
+      h('label', { class: 'linha', title: 'O Suporte pode mostrar e esconder esta imagem para os jogadores' },
+        h('input', { type: 'checkbox', checked: !!i.suporte, onchange: e => acao('imagem.suporte', { id: i.id, liberada: e.target.checked }) }), 'Liberar para o Suporte'),
       h('div', { class: 'acoes' },
         botao(i.mostrando ? 'Ocultar dos jogadores' : 'Mostrar aos jogadores', () => acao('imagem.mostrar', { id: i.id, mostrando: !i.mostrando }), { class: i.mostrando ? 'pequeno' : 'pequeno primario', icone: i.mostrando ? 'eye-off' : 'eye' }),
         botao('', async () => { if (await confirmar(`Apagar "${i.titulo}"?`)) await acao('imagem.remover', { id: i.id }); }, { class: 'pequeno perigo', icone: 'trash-2', title: `Apagar ${i.titulo}` }))))) : vazio('Nenhuma imagem.', 'image'));
@@ -261,9 +267,26 @@ function seletorSistema(c) {
     }, h('strong', {}, `${x.nome} · ${x.nomeCompleto}`), h('p', {}, x.descricao)))));
 }
 
+// Contas que podem entrar como Suporte (a do mestre sempre pode, em outro aparelho).
+function suportesView() {
+  const c = estado.campanha;
+  const nome = h('input', { placeholder: 'Nome da conta', 'aria-label': 'Nome da conta do Suporte' });
+  return h('section', { class: 'bloco' },
+    titulo('Suporte', 'presentation'),
+    h('p', { class: 'dica' }, 'O Suporte abre só o Mapa (mexe nos peões) e as imagens que você liberar, para apresentar aos jogadores sem usar a sua tela. A sua própria conta pode entrar como Suporte em outro aparelho; outras contas, só as listadas aqui.'),
+    (c.suportesNomes || []).length ? h('ul', { class: 'lista-inline' }, c.suportesNomes.map(x => h('li', {}, x.nome || '(conta apagada)',
+      botao('', () => acao('suporte.remover', { userId: x.id }), { class: 'x', icone: 'x', title: `Tirar ${x.nome} do Suporte` })))) : null,
+    h('div', { class: 'barra' }, nome, botao('Liberar Suporte', async () => {
+      if (!nome.value.trim()) throw new Error('Digite o nome da conta.');
+      await acao('suporte.adicionar', { nome: nome.value });
+      aviso(`${nome.value.trim()} pode entrar como Suporte.`);
+    }, { class: 'pequeno primario', icone: 'user-plus' })));
+}
+
 function abaCampanha() {
   const c = estado.campanha;
   return h('div', { class: 'dividido largo-dir' },
+    suportesView(),
     h('section', { class: 'bloco' },
       titulo('Configurações', 'settings'),
       h('div', { class: 'form' },

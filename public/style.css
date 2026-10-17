@@ -74,7 +74,7 @@ legend { color: var(--ouro); padding: 0 .4em; }
 .topo { display: flex; flex-wrap: wrap; align-items: center; gap: .6em; padding: .6em 1em; background: #0f0b09cc; border-bottom: 1px solid var(--borda); position: sticky; top: 0; z-index: 5; backdrop-filter: blur(4px); }
 .logo { font-family: Georgia, serif; color: var(--ouro); }
 .usuario { color: var(--suave); }
-.conteudo { padding: 1em; max-width: 1400px; margin: 0 auto; }
+.conteudo { padding: 1em; max-width: 1400px; margin: 0 auto; width: 100%; box-sizing: border-box; min-width: 0; }
 .estreito { max-width: 860px; margin: 0 auto; }
 .centro { min-height: 80vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1em; padding: 1em; text-align: center; }
 .marca h1 { font-size: 2.4rem; margin: 0; letter-spacing: .03em; }
@@ -886,3 +886,47 @@ button.afinidade { padding: .15em .4em; min-height: 0; justify-content: center; 
 .mods-linha { display: flex; flex-wrap: wrap; gap: .3em; align-items: center; margin: .3em 0; }
 .defesa strong { white-space: nowrap; }
 .defesa .sub-def { font-size: .7em; opacity: .85; }
+
+/* ===================== Mapa ===================== */
+.mapa-grade-tela { display: grid; grid-template-columns: minmax(0, 1fr) 240px; gap: 1em; align-items: start; }
+.mapa-centro { display: flex; flex-direction: column; align-items: center; gap: .4em; min-width: 0; }
+.mapa-quadro { position: relative; container-type: inline-size; width: 100%; max-width: 1200px; margin: 0 auto; border-radius: 8px; overflow: hidden; background: #000; box-shadow: 0 6px 24px #0008; user-select: none; touch-action: none; }
+.mapa-quadro > * { --cel: calc(100cqw / var(--cols)); }
+.mapa-midia { display: block; width: 100%; height: auto; pointer-events: none; }
+.mapa-grade { position: absolute; inset: 0; pointer-events: none; opacity: 0; }
+.mapa-quadro.com-grade .mapa-grade { opacity: 1;
+  background-image: linear-gradient(to right, rgba(255, 255, 255, .38) 1px, transparent 1px), linear-gradient(to bottom, rgba(255, 255, 255, .38) 1px, transparent 1px);
+  background-size: var(--cel) var(--cel); background-position: calc(var(--ox) * var(--cel)) calc(var(--oy) * var(--cel)); }
+.mapa-quadro.movel { cursor: crosshair; }
+.peao { position: absolute; left: calc((var(--col) + var(--ox)) * var(--cel)); top: calc((var(--lin) + var(--oy)) * var(--cel)); width: var(--cel); height: var(--cel);
+  min-width: 0; min-height: 0; padding: 0; border: 0; background: none; display: grid; place-items: center; transition: left .25s, top .25s; touch-action: none; z-index: 2; }
+.peao .rosto { width: 86%; height: 86%; border-radius: 50%; overflow: hidden; display: grid; place-items: center; font-weight: 800; font-size: calc(var(--cel) * .38);
+  background: #1c1610; color: #fff; border: 2px solid #5b8bd0; box-shadow: 0 2px 6px #000c; }
+.peao.npc .rosto { border-color: #c0392b; }
+.peao .rosto img { width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
+.peao .peao-nome { position: absolute; top: 100%; left: 50%; transform: translateX(-50%); white-space: nowrap; font-size: max(9px, calc(var(--cel) * .2)); background: #000a; color: #fff; padding: 0 .3em; border-radius: 4px; pointer-events: none; }
+.mapa-quadro.movel .peao { cursor: grab; }
+.peao.arrastando { transition: none; z-index: 5; cursor: grabbing; opacity: .85; }
+.peao.escolhido .rosto { box-shadow: 0 0 0 3px var(--ouro), 0 0 14px var(--ouro); }
+.peao.sem-pv .rosto { filter: sepia(1) saturate(6) hue-rotate(-30deg) brightness(.75); }
+.mapa-lado { position: sticky; top: 4em; }
+.mapa-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .3em; }
+.mapa-lista li { display: flex; align-items: center; gap: .3em; padding: .2em .3em; border-radius: 8px; }
+.mapa-lista li.escolhido { background: #3a2c1a; }
+.mapa-lista button.link { flex: 1; display: flex; align-items: center; gap: .4em; text-align: left; min-width: 0; }
+.rosto-mini { width: 30px; height: 30px; flex: none; border-radius: 50%; overflow: hidden; display: grid; place-items: center; font-weight: 800; border: 2px solid #5b8bd0; background: #1c1610; color: #fff; }
+.rosto-mini.npc { border-color: #c0392b; }
+.rosto-mini img { width: 100%; height: 100%; object-fit: cover; }
+.rosto-mini.sem-pv { filter: sepia(1) saturate(6) hue-rotate(-30deg) brightness(.75); }
+.mapa-colocar { display: flex; flex-direction: column; gap: .4em; margin-top: .6em; }
+.mapa-controles .barra { flex-wrap: wrap; }
+.mapa-controles input[type=range] { width: 110px; }
+.miniatura-video { width: 100%; max-height: 180px; object-fit: cover; background: #000; }
+@media (max-width: 900px) { .mapa-grade-tela { grid-template-columns: 1fr; } .mapa-lado { position: static; } }
+/* O quadro usa unidades do próprio tamanho (cqw): precisa de largura definida, senão encolhe para 0. */
+.mapa-tela, .mapa-grade-tela, .mapa-centro { width: 100%; box-sizing: border-box; }
+.mapa-centro { align-items: stretch; }
+/* No celular o mapa mantém um tamanho mínimo (peões fáceis de tocar) e rola para o lado. */
+.mapa-rolagem { width: 100%; overflow: auto; border-radius: 8px; }
+@media (max-width: 760px) { .mapa-quadro { min-width: 760px; } }
+span.peao { display: grid; }

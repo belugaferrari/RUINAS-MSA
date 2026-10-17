@@ -10,6 +10,7 @@ import { trilhaCompacta, escolherCondicao, cargaView } from './ficha.js';
 import { painelSlot, naMao, maoHabil } from './boneco.js';
 import { efeitosIcones } from './efeitos.js';
 import { prepararTeste } from './dados.js';
+import { distanciaNoMapa } from './mapa.js';
 import { alvoDe, opcoesGerais, marcarAlvo } from './combate.js';
 
 const meuOuMestre = (p, mestre) => mestre || p.donoId === estado.usuario.id;
@@ -44,14 +45,14 @@ export function painelBatalha(participantes, mestre) {
   const { meus, p, chave } = controladoNaSala('batalha', participantes, mestre);
   if (!p) return null;
   return h('div', { class: 'batalha-topo' },
-    h('section', { class: 'bloco bat-personagem' }, quadroPersonagem(p, meus, chave, mestre)),
+    h('section', { class: 'bloco bat-personagem' }, quadroPersonagem(p, meus, chave, mestre, participantes)),
     h('section', { class: 'bloco bat-habilidades' }, titulo('Habilidades, características e vantagens', 'sparkles'), quadroHabilidades(p, mestre)),
     h('section', { class: 'bloco bat-ataques' }, titulo('Ataques', 'swords'), quadroAtaques(p, participantes, mestre)));
 }
 
 // ---------- Personagem ----------
 
-function quadroPersonagem(p, meus, chave, mestre) {
+function quadroPersonagem(p, meus, chave, mestre, participantes) {
   const sis = estado.sistema;
   const d = derivados(p, sis);
   const sub = id => d.subpericias[id] ?? 0;
@@ -112,7 +113,7 @@ function quadroPersonagem(p, meus, chave, mestre) {
       defesa('Surpresa', [String(base), h('small', { class: 'sub-def' }, ` / ${porNivel * nivel}`)], `Pego de surpresa: ${base} contra ataque físico (só a base da Esquiva) e ${porNivel * nivel} contra tiro (só nível × ${porNivel})`),
       pend ? h('button', { type: 'button', class: 'defesa escolher sem', title: 'Não defender (ex.: pego de surpresa, ou tiro)', onclick: () => defender('nenhuma') },
         h('small', {}, opcoes.length === 1 ? 'Tiro' : 'Sem defesa'), h('strong', {}, icone('x'))) : null),
-    resumoAcao(p, maos),
+    resumoAcao(p, maos, participantes),
     h('h4', {}, icone('shield-alert'), ' IP (proteção)'),
     ipView(d.ip),
     cargaView(d),
@@ -123,12 +124,16 @@ function quadroPersonagem(p, meus, chave, mestre) {
 }
 
 // Linha "Personagem | Arma | Distância" do esboço: quem age, o que empunha e a distância até o alvo (em branco por enquanto).
-function resumoAcao(p, maos) {
+function resumoAcao(p, maos, participantes) {
   const arma = maos.find(i => i.tipo === 'arma');
+  const alvo = participantes ? personagemPorId(alvoDe(p, 'batalha', participantes)) : null;
+  // Distância vem do Mapa: quadrados entre os dois peões (diagonal conta 1) × 1,5 m.
+  const dist = alvo ? distanciaNoMapa(estado.campanha, p.id, alvo.id) : null;
   return h('div', { class: 'resumo-acao', 'aria-label': 'Personagem, arma empunhada e distância' },
     h('span', {}, icone('user'), ` ${p.nome}`),
     h('span', {}, icone('sword'), ` ${arma ? arma.nome : 'desarmado'}`),
-    h('span', { title: 'Distância até o alvo (ainda não usada)' }, icone('ruler'), ' —'));
+    h('span', { title: alvo ? `Distância até ${alvo.nome} no mapa (1 quadrado = 1,5 m)` : 'Escolha um alvo' }, icone('ruler'),
+      dist != null ? ` ${String(dist).replace('.', ',')} m${alvo ? ` até ${alvo.nome}` : ''}` : ' —'));
 }
 
 // IP geral e o de cada tipo de dano, em bolinhas (o geral vale contra tudo; o do tipo, só contra aquele dano).
