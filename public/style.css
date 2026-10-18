@@ -554,14 +554,6 @@ mark.revisao { background: #5a4510; color: #ffe7a8; border-bottom: 1px dashed va
 
 /* Boneco do personagem */
 .boneco { display: flex; flex-direction: column; gap: .5em; }
-.boneco-figura { position: relative; width: 100%; max-width: 340px; aspect-ratio: 2 / 3; margin: 0 auto; }
-.boneco-figura .silhueta { position: absolute; inset: 6% 16% 3%; width: 68%; height: 91%; overflow: visible; filter: drop-shadow(0 6px 10px rgba(0, 0, 0, .55)); }
-.boneco-ponto { position: absolute; transform: translate(-50%, 0); display: flex; flex-direction: column; align-items: center; gap: 0; min-width: 70px; max-width: 100px;
-  padding: .2em .4em; font-size: .78em; line-height: 1.15; background: var(--fundo); border: 1px dashed var(--borda); border-radius: 8px; text-align: center; }
-.boneco-ponto small { opacity: .7; font-size: .85em; }
-.boneco-ponto span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
-.boneco-ponto.cheio { border-style: solid; border-color: var(--ouro); }
-.boneco-ponto.aberto { box-shadow: 0 0 0 2px var(--ouro); }
 .boneco-painel { border-top: 1px solid var(--borda); padding-top: .4em; }
 .boneco-guardados { display: flex; align-items: center; gap: .3em; flex-wrap: wrap; }
 .itens-com-boneco { display: grid; grid-template-columns: minmax(260px, 360px) 1fr; gap: 1em; align-items: start; }
@@ -632,8 +624,6 @@ mark.revisao { background: #5a4510; color: #ffe7a8; border-bottom: 1px dashed va
 /* Ficha do jogador: Estado | Atributos | Equipado lado a lado, mesma altura. */
 .ficha-topo-tres { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1em; align-items: stretch; margin-bottom: 1em; }
 .ficha-topo-tres > .bloco { margin: 0; }
-.boneco.compacto .boneco-figura { max-width: 230px; }
-.boneco.compacto .boneco-ponto { min-width: 60px; max-width: 86px; font-size: .72em; padding: .15em .3em; }
 .boneco.compacto .boneco-guardados { justify-content: center; font-size: .9em; margin: 0; }
 @media (max-width: 1100px) { .ficha-topo-tres { grid-template-columns: 1fr 1fr; } .ficha-topo-tres > .boneco-compacto { grid-column: 1 / -1; } }
 @media (max-width: 700px) { .ficha-topo-tres { grid-template-columns: 1fr; } }
@@ -1001,22 +991,65 @@ span.peao { display: grid; }
 .bloco[data-pid] > .fx, .bloco[data-pid] > .fx.fx-critico, .bloco[data-pid] > .fx.fx-cura { overflow: hidden; border-radius: 12px; }
 .bloco[data-pid] > .fx-golpe .fx-arma, .bloco[data-pid] > .fx-ameaca .fx-arma { width: 64px; }
 
-/* Boneco do equipamento: fundo de altar, camadas por parte ocupada e brilho ao equipar. */
-.boneco-figura { background: radial-gradient(ellipse at 50% 45%, rgba(201, 164, 92, .16), transparent 62%), radial-gradient(ellipse at 50% 100%, rgba(0, 0, 0, .35), transparent 60%); border-radius: 14px; }
-.boneco-figura .camada { display: none; }
-.boneco-figura.c-cabeca .camada-cabeca, .boneco-figura.c-corpo .camada-corpo, .boneco-figura.c-vestimenta .camada-vestimenta,
-.boneco-figura.c-joia .camada-joia, .boneco-figura.c-costas .camada-costas, .boneco-figura.c-duas .camada-duas,
-.boneco-figura.c-m0-arma .camada-m0-arma, .boneco-figura.c-m0-escudo .camada-m0-escudo, .boneco-figura.c-m0-item .camada-m0-item,
-.boneco-figura.c-m1-arma .camada-m1-arma, .boneco-figura.c-m1-escudo .camada-m1-escudo, .boneco-figura.c-m1-item .camada-m1-item { display: inline; }
-.boneco-figura .camada { transform-box: fill-box; transform-origin: center; }
-.boneco-figura[class*="novo-"] .camada { animation: none; }
-.boneco-figura.novo-cabeca .camada-cabeca, .boneco-figura.novo-corpo .camada-corpo, .boneco-figura.novo-vestimenta .camada-vestimenta,
-.boneco-figura.novo-joia .camada-joia, .boneco-figura.novo-costas .camada-costas, .boneco-figura.novo-duas .camada-duas,
-.boneco-figura.novo-m0-arma .camada-m0-arma, .boneco-figura.novo-m0-escudo .camada-m0-escudo, .boneco-figura.novo-m0-item .camada-m0-item,
-.boneco-figura.novo-m1-arma .camada-m1-arma, .boneco-figura.novo-m1-escudo .camada-m1-escudo, .boneco-figura.novo-m1-item .camada-m1-item { animation: bn-equipa 1.5s ease-out both; }
-@keyframes bn-equipa { 0% { opacity: 0; transform: translateY(-14px) scale(1.25); filter: drop-shadow(0 0 0 #ffd75a); } 35% { opacity: 1; transform: translateY(0) scale(1.05); filter: drop-shadow(0 0 10px #ffd75a); } 100% { transform: none; filter: drop-shadow(0 0 0 transparent); } }
-/* Etiquetas das partes: vidro escuro; ocupadas com borda dourada e um pontinho brilhando. */
-.boneco-ponto { background: rgba(20, 15, 10, .78); backdrop-filter: blur(2px); border-radius: 8px; box-shadow: 0 2px 8px rgba(0, 0, 0, .5); }
-.boneco-ponto.cheio { background: linear-gradient(180deg, rgba(58, 44, 26, .92), rgba(28, 21, 14, .92)); }
-.boneco-ponto.cheio::after { content: ''; position: absolute; top: -3px; right: -3px; width: 8px; height: 8px; border-radius: 50%; background: #ffd75a; box-shadow: 0 0 6px #ffd75a; }
-@media (prefers-reduced-motion: reduce) { .boneco-figura .camada { animation: none !important; } }
+
+
+/* Boneco do equipamento (arte de fantasia sombria): figura pintada entre colunas de molduras de ferro.
+   Parte ocupada: moldura e medalhão acendem em azul de runa; ao equipar, um clarão. */
+.boneco { --runa: #7cc8ff; --runa-forte: #b9e4ff; --ferro: #1b2228; --ferro2: #2a333b; --bronze: #8a6a3a; }
+.boneco-palco { display: grid; grid-template-columns: minmax(0, 1fr) minmax(120px, 1.25fr) minmax(0, 1fr); gap: .5em; align-items: stretch;
+  padding: .6em; border-radius: 12px; background: radial-gradient(ellipse at 50% 40%, #2a3a48 0%, #141a20 60%, #0c0f12 100%);
+  border: 1px solid #3a3226; box-shadow: inset 0 0 40px rgba(0, 0, 0, .7), 0 4px 16px rgba(0, 0, 0, .5); }
+.boneco-coluna { display: flex; flex-direction: column; justify-content: space-around; gap: .5em; min-width: 0; }
+.boneco-coluna.dir { padding-top: 1.2em; }
+.boneco-figura { position: relative; width: 100%; max-width: 260px; margin: 0 auto; aspect-ratio: 480 / 1230; }
+.boneco-arte { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: 8px; user-select: none;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 14%, #000 86%, transparent), linear-gradient(180deg, transparent, #000 6%, #000 92%, transparent);
+  -webkit-mask-composite: source-in; mask-image: linear-gradient(90deg, transparent, #000 14%, #000 86%, transparent), linear-gradient(180deg, transparent, #000 6%, #000 92%, transparent); mask-composite: intersect; }
+.boneco-moldura { position: relative; display: flex; align-items: center; gap: .45em; width: 100%; min-width: 0; padding: .3em .45em .3em .3em; text-align: left;
+  font-size: .8em; line-height: 1.15; color: #9fa9b2; cursor: pointer;
+  background: linear-gradient(180deg, var(--ferro2), var(--ferro)); border: 1px solid #4b4234; border-radius: 4px;
+  clip-path: polygon(6px 0, calc(100% - 6px) 0, 100% 6px, 100% calc(100% - 6px), calc(100% - 6px) 100%, 6px 100%, 0 calc(100% - 6px), 0 6px);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .6), inset 0 1px 0 rgba(255, 255, 255, .06); transition: border-color .2s, box-shadow .2s; }
+.boneco-moldura:hover, .boneco-moldura:focus-visible { border-color: var(--bronze); color: #d8dee4; }
+.moldura-icone { flex: none; display: grid; place-items: center; width: 2.4em; height: 2.4em; border-radius: 3px; color: #56606a;
+  background: radial-gradient(circle at 50% 40%, #222b33, #0e1216); border: 1px solid #3c3428; box-shadow: inset 0 0 8px rgba(0, 0, 0, .9); }
+.moldura-icone svg { width: 1.3em; height: 1.3em; }
+.moldura-texto { display: flex; flex-direction: column; min-width: 0; }
+.moldura-texto small { font-family: var(--fonte-titulo); text-transform: uppercase; letter-spacing: .06em; font-size: .78em; color: #b8935a; }
+.moldura-texto span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.boneco-moldura:not(.cheio) .moldura-texto span { font-style: italic; opacity: .55; }
+.boneco-moldura.cheio { color: #e6eef5; border-color: #6d5a3a; }
+.boneco-moldura.cheio .moldura-icone { color: var(--runa-forte); border-color: #4f7fa3;
+  background: radial-gradient(circle at 50% 45%, rgba(124, 200, 255, .35), #0e1620 70%); box-shadow: inset 0 0 10px rgba(124, 200, 255, .35), 0 0 8px rgba(124, 200, 255, .35); }
+.boneco-moldura.cheio .moldura-icone svg { filter: drop-shadow(0 0 3px var(--runa)); }
+.boneco-moldura.aberto { border-color: var(--ouro); box-shadow: 0 0 0 1px var(--ouro), inset 0 0 12px rgba(212, 162, 76, .25); }
+/* Medalhão sobre a parte do corpo: vazio = só um anel apagado; ocupado = runa acesa com o ícone do item. */
+.boneco-medalhao { position: absolute; transform: translate(-50%, -50%); display: grid; place-items: center; width: 40px; height: 40px; min-height: 0; padding: 0;
+  border: 0; background: transparent; cursor: pointer; }
+.boneco-medalhao .selo { position: relative; display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%;
+  border: 1px dashed rgba(184, 147, 90, .35); color: transparent; }
+.boneco-medalhao svg { position: relative; width: 14px; height: 14px; }
+.boneco-medalhao .aura { position: absolute; inset: -60%; border-radius: 50%; pointer-events: none; opacity: 0;
+  background: radial-gradient(circle, rgba(124, 200, 255, .55) 0%, rgba(124, 200, 255, .18) 40%, transparent 70%); mix-blend-mode: screen; }
+.boneco-medalhao.cheio .selo { border: 1px solid #9fd6ff; color: #eaf6ff; background: radial-gradient(circle at 50% 40%, rgba(40, 80, 110, .92), rgba(8, 16, 24, .92));
+  box-shadow: 0 0 0 2px rgba(10, 18, 26, .8), 0 0 10px rgba(124, 200, 255, .8); }
+.boneco-medalhao.cheio .aura { opacity: 1; animation: bn-pulso 3.2s ease-in-out infinite; }
+.boneco-medalhao.cheio .selo::before { content: ''; position: absolute; inset: -5px; border-radius: 50%; border: 1px dashed rgba(124, 200, 255, .7); animation: bn-gira 14s linear infinite; }
+.boneco-medalhao.aberto .selo { box-shadow: 0 0 0 2px var(--ouro), 0 0 12px var(--ouro); }
+.boneco-medalhao:not(.cheio):hover .selo { border-color: var(--ouro); }
+.boneco:has(.boneco-moldura.parte-cabeca:hover) .boneco-medalhao.parte-cabeca .selo, .boneco:has(.boneco-moldura.parte-joia:hover) .boneco-medalhao.parte-joia .selo,
+.boneco:has(.boneco-moldura.parte-corpo:hover) .boneco-medalhao.parte-corpo .selo, .boneco:has(.boneco-moldura.parte-costas:hover) .boneco-medalhao.parte-costas .selo,
+.boneco:has(.boneco-moldura.parte-m0:hover) .boneco-medalhao.parte-m0 .selo, .boneco:has(.boneco-moldura.parte-m1:hover) .boneco-medalhao.parte-m1 .selo,
+.boneco:has(.boneco-moldura.parte-vestimenta:hover) .boneco-medalhao.parte-vestimenta .selo { border: 1px solid var(--ouro); box-shadow: 0 0 12px var(--ouro); }
+.boneco-medalhao.novo .selo { animation: bn-equipa 1.5s ease-out both; }
+.boneco-moldura.novo .moldura-icone { animation: bn-acende 1.5s ease-out both; }
+@keyframes bn-pulso { 0%, 100% { transform: scale(.85); opacity: .65; } 50% { transform: scale(1.1); opacity: 1; } }
+@keyframes bn-gira { to { transform: rotate(360deg); } }
+@keyframes bn-equipa { 0% { transform: scale(2.6); opacity: 0; box-shadow: 0 0 40px 20px rgba(185, 228, 255, .9); } 40% { transform: scale(1); opacity: 1; } 100% { transform: scale(1); } }
+@keyframes bn-acende { 0% { box-shadow: 0 0 0 0 rgba(185, 228, 255, 0); } 30% { box-shadow: 0 0 22px 6px rgba(185, 228, 255, .9); } 100% { } }
+.boneco.compacto .boneco-palco { grid-template-columns: 1fr; padding: .4em; }
+.boneco.compacto .boneco-figura { max-width: 190px; }
+.boneco.compacto .boneco-medalhao .selo { width: 22px; height: 22px; }
+.boneco.compacto .boneco-medalhao:not(.cheio) .selo { border-color: rgba(184, 147, 90, .55); }
+@media (max-width: 480px) { .boneco-moldura { font-size: .74em; gap: .3em; } .moldura-icone { width: 2em; height: 2em; } .boneco-palco { gap: .3em; padding: .4em; } }
+@media (prefers-reduced-motion: reduce) { .boneco-medalhao .selo, .boneco-medalhao .selo::before, .boneco-medalhao .aura, .moldura-icone { animation: none !important; } }

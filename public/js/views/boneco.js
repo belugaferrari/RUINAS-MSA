@@ -3,67 +3,82 @@ import { h, botao, aviso, icone, titulo } from '../ui.js';
 import { estado, render, mudar } from '../estado.js';
 import { acao } from '../api.js';
 import { podeEquipar } from '/shared/regras.js';
-import { desenhoBoneco } from './bonecoArte.js';
 
-// Posição de cada slot sobre o desenho (em % da figura). "maos" vira duas mãos.
-const PONTOS = [
-  { slot: 'cabeca', rotulo: 'Cabeça', x: 50, y: 4 },
-  { slot: 'joia', rotulo: 'Joias', x: 79, y: 19 },
-  { slot: 'costas', rotulo: 'Costas', x: 21, y: 19 },
-  { slot: 'corpo', rotulo: 'Corpo', x: 50, y: 34 },
-  { slot: 'maos', mao: 0, rotulo: 'Mão direita', x: 17, y: 60 },
-  { slot: 'maos', mao: 1, rotulo: 'Mão esquerda', x: 83, y: 60 },
-  { slot: 'vestimenta', rotulo: 'Vestimenta', x: 50, y: 70 },
+// Boneco: o personagem pintado (masculino ou feminino, pelo gênero da ficha) entre duas colunas de molduras,
+// uma para cada parte do corpo. Parte ocupada: a moldura acende em azul de runa e um medalhão com o item
+// brilha sobre aquela parte do corpo. Clicar na moldura ou no medalhão abre o painel para equipar/trocar.
+const PARTES = [
+  { id: 'cabeca', slot: 'cabeca', rotulo: 'Cabeça', icone: 'hard-hat', lado: 'esq' },
+  { id: 'joia', slot: 'joia', rotulo: 'Joias', icone: 'gem', lado: 'dir' },
+  { id: 'corpo', slot: 'corpo', rotulo: 'Corpo', icone: 'shield', lado: 'esq' },
+  { id: 'costas', slot: 'costas', rotulo: 'Costas', icone: 'backpack', lado: 'dir' },
+  { id: 'm0', slot: 'maos', mao: 0, rotulo: 'Mão direita', icone: 'hand', lado: 'esq' },
+  { id: 'm1', slot: 'maos', mao: 1, rotulo: 'Mão esquerda', icone: 'hand', lado: 'dir' },
+  { id: 'vestimenta', slot: 'vestimenta', rotulo: 'Vestimenta', icone: 'shirt', lado: 'esq' },
 ];
+// Onde fica cada parte em cada figura (em % da imagem).
+const FIGURAS = {
+  masculino: { img: '/img/boneco-masculino.webp', pontos: { cabeca: [49, 3.5], joia: [50, 19], corpo: [50, 30], costas: [76, 21], m0: [12, 46], m1: [85, 46], vestimenta: [50, 62] } },
+  feminino: { img: '/img/boneco-feminino.webp', pontos: { cabeca: [40, 6], joia: [41, 21], corpo: [44, 33], costas: [66, 25], m0: [12, 49], m1: [77, 49], vestimenta: [46, 63] } },
+};
+const ICONE_NA_MAO = { arma: 'sword', escudo: 'shield', item: 'package', duas: 'swords' };
 
-// Que desenho vai em cada mão: arma, escudo (proteção) ou um item qualquer.
+// Que tipo de coisa está em cada mão: arma, escudo (proteção) ou um item qualquer.
 const tipoNaMao = it => (it.tipo === 'arma' ? 'arma' : it.tipo === 'defesa' || /escudo/i.test(it.nome) ? 'escudo' : 'item');
 
-// Partes que acabaram de ser ocupadas brilham por um instante ("equipado!").
+// Partes que acabaram de ser ocupadas acendem com mais força por um instante ("equipado!").
 const ocupacaoVista = new Map();
 const recem = new Map();
-function camadasOcupadas(p) {
+function partesOcupadas(p) {
   const tem = slot => (p.itens || []).some(i => i.equipado && i.slot === slot);
-  const camadas = ['cabeca', 'corpo', 'vestimenta', 'joia', 'costas'].filter(tem);
-  const duas = (p.itens || []).find(i => i.equipado && i.slot === 'maos' && (i.ocupa ?? 1) >= 2);
-  if (duas) camadas.push('duas');
-  else for (const n of [0, 1]) { const it = naMao(p, n); if (it) camadas.push(`m${n}-${tipoNaMao(it)}`); }
+  const ocupadas = ['cabeca', 'corpo', 'vestimenta', 'joia', 'costas'].filter(tem);
+  if (naMao(p, 0)) ocupadas.push('m0');
+  if (naMao(p, 1)) ocupadas.push('m1');
   const antes = ocupacaoVista.get(p.id);
-  if (antes) for (const c of camadas) if (!antes.has(c)) { recem.set(`${p.id}:${c}`, Date.now()); setTimeout(render, 1700); }
-  ocupacaoVista.set(p.id, new Set(camadas));
-  return camadas;
+  if (antes) for (const c of ocupadas) if (!antes.has(c)) { recem.set(`${p.id}:${c}`, Date.now()); setTimeout(render, 1700); }
+  ocupacaoVista.set(p.id, new Set(ocupadas));
+  return ocupadas;
 }
 
 export function bonecoView(p, { mestre = false, linkGuardados = true, compacto = false } = {}) {
   const sis = estado.sistema;
-  const equipados = slot => (p.itens || []).filter(i => i.equipado && i.slot === slot);
   const chave = `boneco:${p.id}`;
   const aberto = estado.sel[chave] || null;
-  const camadas = camadasOcupadas(p);
+  const fig = FIGURAS[p.genero === 'feminino' ? 'feminino' : 'masculino'];
+  const ocupadas = new Set(partesOcupadas(p));
   const agora = Date.now();
-  const novas = camadas.filter(c => agora - (recem.get(`${p.id}:${c}`) || 0) < 1600);
-  const figura = h('div', { class: `boneco-figura ${camadas.map(c => `c-${c}`).join(' ')} ${novas.map(c => `novo-${c}`).join(' ')}` });
-  // Figura masculina ou feminina, conforme o gênero da ficha (sem gênero: masculina).
-  figura.innerHTML = desenhoBoneco(p.genero);
-  for (const pt of PONTOS) {
-    const slotDef = sis.slots.find(s => s.id === pt.slot);
-    if (!slotDef) continue;
-    const lista = equipados(pt.slot);
-    // Mãos: um item de duas mãos aparece nas duas.
-    let itens = lista;
-    if (pt.slot === 'maos') itens = naMao(p, pt.mao) ? [naMao(p, pt.mao)] : [];
+  const novo = id => agora - (recem.get(`${p.id}:${id}`) || 0) < 1600;
+  const partes = PARTES.filter(pt => sis.slots.some(s => s.id === pt.slot)).map(pt => {
+    const itens = pt.slot === 'maos' ? (naMao(p, pt.mao) ? [naMao(p, pt.mao)] : []) : (p.itens || []).filter(i => i.equipado && i.slot === pt.slot);
     const id = pt.mao != null ? `maos:${pt.mao}` : pt.slot;
-    figura.append(h('button', {
-      type: 'button', class: `boneco-ponto ${itens.length ? 'cheio' : ''} ${aberto === id ? 'aberto' : ''}`,
-      style: { left: `${pt.x}%`, top: `${pt.y}%` }, 'aria-expanded': aberto === id,
-      title: `${pt.rotulo}: ${itens.map(i => i.nome).join(', ') || 'vazio'}`,
-      onclick: () => { estado.sel[chave] = aberto === id ? null : id; render(); },
-    }, h('small', {}, pt.rotulo, pt.mao != null && maoHabil(p) === pt.mao ? ' ★' : ''), h('span', {}, itens.map(i => i.nome).join(', ') || '—')));
-  }
+    const duas = itens[0] && pt.slot === 'maos' && (itens[0].ocupa ?? 1) >= 2;
+    const simbolo = pt.slot === 'maos' && itens[0] ? ICONE_NA_MAO[duas ? 'duas' : tipoNaMao(itens[0])] : pt.icone;
+    const nomes = itens.map(i => i.nome).join(', ');
+    const habil = pt.mao != null && maoHabil(p) === pt.mao;
+    return { ...pt, itens, chaveAberta: id, simbolo, nomes, habil, cheio: ocupadas.has(pt.id), novo: novo(pt.id),
+      abrir: () => { estado.sel[chave] = aberto === id ? null : id; render(); } };
+  });
+  const classe = x => `parte-${x.id} ${x.cheio ? 'cheio' : ''} ${x.novo ? 'novo' : ''} ${aberto === x.chaveAberta ? 'aberto' : ''}`;
+  const moldura = x => h('button', {
+    type: 'button', class: `boneco-moldura ${classe(x)}`, 'aria-expanded': aberto === x.chaveAberta,
+    title: `${x.rotulo}: ${x.nomes || 'vazio'}`, onclick: x.abrir,
+  },
+    h('span', { class: 'moldura-icone' }, icone(x.simbolo)),
+    h('span', { class: 'moldura-texto' }, h('small', {}, x.rotulo, x.habil ? ' ★' : ''), h('span', {}, x.nomes || 'vazio')));
+  const pontos = fig.pontos;
+  const medalhao = x => h('button', {
+    type: 'button', class: `boneco-medalhao ${classe(x)}`, style: { left: `${pontos[x.id][0]}%`, top: `${pontos[x.id][1]}%` },
+    title: `${x.rotulo}: ${x.nomes || 'vazio'}`, 'aria-label': `${x.rotulo}: ${x.nomes || 'vazio'}`, tabindex: compacto ? 0 : -1, onclick: x.abrir,
+  }, h('span', { class: 'selo' }, h('span', { class: 'aura' }), icone(x.simbolo)));
   const guardados = (p.itens || []).filter(i => !i.equipado);
   return h('div', { class: `boneco ${compacto ? 'compacto' : ''}` },
-    figura,
-    aberto ? painelSlot(p, aberto, mestre) : compacto ? null : h('p', { class: 'dica' }, icone('info'), ' Toque numa parte do corpo para ver, equipar ou trocar.'),
+    h('div', { class: 'boneco-palco' },
+      compacto ? null : h('div', { class: 'boneco-coluna esq' }, partes.filter(x => x.lado === 'esq').map(moldura)),
+      h('div', { class: 'boneco-figura' },
+        h('img', { src: fig.img, alt: '', class: 'boneco-arte', draggable: 'false' }),
+        partes.map(medalhao)),
+      compacto ? null : h('div', { class: 'boneco-coluna dir' }, partes.filter(x => x.lado === 'dir').map(moldura))),
+    aberto ? painelSlot(p, aberto, mestre) : compacto ? null : h('p', { class: 'dica' }, icone('info'), ' Toque numa moldura (ou no corpo) para ver, equipar ou trocar.'),
     linkGuardados ? h('p', { class: 'boneco-guardados' }, icone('backpack'), ` Guardados: ${guardados.length} ${guardados.length === 1 ? 'item' : 'itens'} `,
       botao('Ver inventário', () => irParaInventario(mestre), { class: 'pequeno link', icone: 'backpack' })) : null);
 }
