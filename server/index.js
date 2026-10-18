@@ -15,6 +15,7 @@ migrarCampanhas();
 import { modeloNpcs, lerNpcs } from './excel.js';
 import { catalogoItens, origemCatalogo, lerPlanilhaItens, planilhaDoCatalogo, salvarCatalogoMestre, voltarCatalogoPadrao } from './itens.js';
 import { montarSprite } from './icones.js';
+import { avatarPorId, svgAvatar } from '../shared/avatares.js';
 
 const PORTA = parseInt(process.env.PORT, 10) || 3000;
 const LIVROS = new Set(['regras-msa', 'regras-mss', 'mestre']);
@@ -26,6 +27,12 @@ const io = new Server(server, { maxHttpBufferSize: 5e6 });
 app.use(express.json({ limit: '2mb' }));
 app.use(express.static(path.join(RAIZ, 'public')));
 app.use('/shared', express.static(path.join(RAIZ, 'shared')));
+// Avatares prontos: desenhados na hora (e guardados em memória) a partir de shared/avatares.js.
+app.get('/avatares/:id.svg', (req, res) => {
+  const a = avatarPorId(req.params.id);
+  if (!a) return res.status(404).end();
+  res.type('image/svg+xml').set('Cache-Control', 'public, max-age=86400').send(svgAvatar(a));
+});
 app.use('/uploads', express.static(UPLOADS, { maxAge: '7d' }));
 const SPRITE = montarSprite();
 app.get('/icones.svg', (_req, res) => res.type('image/svg+xml').set('Cache-Control', 'max-age=3600').send(SPRITE));

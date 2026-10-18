@@ -1053,3 +1053,22 @@ span.peao { display: grid; }
 .boneco.compacto .boneco-medalhao:not(.cheio) .selo { border-color: rgba(184, 147, 90, .55); }
 @media (max-width: 480px) { .boneco-moldura { font-size: .74em; gap: .3em; } .moldura-icone { width: 2em; height: 2em; } .boneco-palco { gap: .3em; padding: .4em; } }
 @media (prefers-reduced-motion: reduce) { .boneco-medalhao .selo, .boneco-medalhao .selo::before, .boneco-medalhao .aura, .moldura-icone { animation: none !important; } }
+
+/* Galeria de avatares prontos */
+.avatar-galeria { display: flex; flex-direction: column; gap: .5em; }
+.avatar-filtros { display: flex; flex-direction: column; gap: .3em; }
+.avatar-grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: .5em; max-height: 56vh; overflow-y: auto; padding: .2em; }
+.avatar-opcao { display: flex; flex-direction: column; align-items: center; gap: .25em; padding: .35em .2em; background: transparent; border: 1px solid transparent; border-radius: 10px; min-width: 0; }
+.avatar-opcao img { width: 76px; height: 76px; border-radius: 50%; box-shadow: 0 0 0 1px #3a3226, 0 3px 10px rgba(0, 0, 0, .6); transition: transform .15s, box-shadow .15s; }
+.avatar-opcao small { font-size: .72em; line-height: 1.15; text-align: center; color: var(--suave); }
+.avatar-opcao:hover img, .avatar-opcao:focus-visible img { transform: scale(1.06); box-shadow: 0 0 0 2px var(--ouro), 0 3px 14px rgba(0, 0, 0, .7); }
+.avatar-opcao.atual { border-color: var(--ouro); background: rgba(212, 162, 76, .08); }
+.avatar-escolhido { align-items: center; }
+.avatar.grande { width: 64px; height: 64px; }
+@media (max-width: 480px) {
+  .avatar-filtros .barra { flex-wrap: nowrap; overflow-x: auto; padding-bottom: .2em; }
+  .avatar-filtros .barra button { flex: none; }
+  .avatar-grade { grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); gap: .3em; max-height: none; }
+  .avatar-opcao img { width: 58px; height: 58px; }
+  .avatar-opcao small { font-size: .66em; }
+}

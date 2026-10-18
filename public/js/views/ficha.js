@@ -5,6 +5,7 @@ import { acao, enviarArquivo } from '../api.js';
 import { GENEROS, derivados, slotsOcupados, ganhosDeClasse, pontosGastos, pontosPericiaTotal, vantagensDisponiveis, acharVantagem, xpParaSubir } from '/shared/regras.js';
 import { painelPericias } from './pericias.js';
 import { bonecoView } from './boneco.js';
+import { escolherAvatar } from './avatares.js';
 import { prepararTeste } from './dados.js';
 
 export const ICONE_TIPO = {
@@ -233,7 +234,7 @@ function cabecalho(p, mestre) {
     },
   });
   return h('header', { class: 'ficha-topo' },
-    h('button', { class: 'foto', title: 'Trocar foto', onclick: () => arquivo.click() },
+    h('button', { class: 'foto', title: 'Trocar foto ou avatar', onclick: () => escolherAvatar({ titulo: `Avatar de ${p.nome}`, atual: p.foto, genero: p.genero, aoEscolher: url => atualizar(p, { foto: url }), enviarFoto: () => arquivo.click() }) },
       p.foto ? h('img', { src: p.foto, alt: p.nome }) : h('span', { class: 'foto-vazia' }, icone('camera'), h('small', {}, 'Foto'))),
     arquivo,
     h('div', { class: 'ficha-titulo' },

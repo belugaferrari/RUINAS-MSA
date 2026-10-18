@@ -5,6 +5,7 @@ import { acao } from '../api.js';
 import { GENEROS, itemAberto, novaFicha, pontosDoNivel, pontosGastos, pontosPericiaTotal, pontosVantagemExtra, derivados, problemasFicha, custoPericiaBase, vantagensDisponiveis, acharVantagem } from '/shared/regras.js';
 import { ICONE_TIPO, descInstinto } from './ficha.js';
 import { painelPericias } from './pericias.js';
+import { escolherAvatar } from './avatares.js';
 
 const PASSOS = [
   ['Nível e raça', 'trending-up'], ['Identidade', 'user'], ['Atributos', 'zap'], ['Profissão', 'backpack'], ['Perícias', 'target'],
@@ -105,7 +106,10 @@ function passoIdentidade() {
     h('p', { class: 'dica' }, 'O instinto é o inconsciente do personagem: guia o mestre quando ele perde o controle.'),
     h('label', {}, 'Aparência e jeito de agir',
       h('textarea', { rows: 3, 'data-key': 'cr:caracteristicas', value: f.caracteristicas, oninput: e => { f.caracteristicas = e.target.value; salvarRascunho(); } })),
-    h('p', { class: 'dica' }, 'A foto do personagem é enviada depois, na própria ficha.'));
+    h('div', { class: 'barra avatar-escolhido' },
+      h('span', { class: 'avatar rosto grande' }, f.foto ? h('img', { src: f.foto, alt: '' }) : icone('user')),
+      botao(f.foto ? 'Trocar avatar' : 'Escolher avatar', () => escolherAvatar({ atual: f.foto, genero: f.genero, aoEscolher: url => alterar(x => { x.foto = url; }) }), { class: 'pequeno', icone: 'image' })),
+    h('p', { class: 'dica' }, 'Escolha um dos avatares prontos agora; uma foto própria pode ser enviada depois, na ficha.'));
 }
 
 function passoAtributos() {
