@@ -314,6 +314,18 @@ function sairDoCombate(s, id) {
   if (!cb.ordem.length) s.combate = null;
 }
 
+// Tipo de arma, para o desenho que aparece sobre o alvo (punho, lâmina, machado, martelo, arco, arma de fogo).
+function tipoDaArma(arma) {
+  const per = arma.pericia || '';
+  if (arma.uid === 'desarmado' || per.startsWith('briga')) return 'desarmado';
+  if (per === 'armas-de-fogo.projeteis') return 'arco';
+  if (per.startsWith('armas-de-fogo')) return 'fogo';
+  if (/machado/.test(per)) return 'machado';
+  if (/martelo|bastao/.test(per)) return 'martelo';
+  if (per.startsWith('arma-branca')) return 'lamina';
+  return arma.alcance === 'distancia' ? 'fogo' : 'lamina';
+}
+
 // Iniciativa de todos (AGI + 1d10) e a ordem dos turnos, do maior para o menor.
 function iniciarCombate(c) {
   const sis = sistema(c.sistema);
@@ -376,6 +388,9 @@ function resolverPendente(c, s, pend, defesa, sis) {
   const extras = [...notas, !r.sucesso && r.defesa.id === 'esquiva' ? `${b.nome} pode se deslocar até 1,5 m` : null, r.perdaSacrificio ? `Sacrifício: ${a.nome} perde ${r.perdaSacrificio} PV` : null].filter(Boolean);
   const entrada = {
     tipo: 'ataque', autor: a.nome, rotulo: `ataca ${b.nome} com ${r.arma}`, sucesso: r.sucesso, critico: r.critico, defendeu: !r.sucesso, alvo: b.nome,
+    // Para as artes na tela: quem ataca, quem é o alvo, o tipo de arma e se o alvo caiu.
+    atacanteId: a.id, alvoId: b.id, armaTipo: pend.armaTipo || 'desarmado', tipoDano: pend.tipoDano || null,
+    morto: (b.marcadores || []).includes('Morto'), desmaiado: (b.marcadores || []).includes('Desmaiado'),
     texto: `${resumo}${r.critico ? ` · crítico de ${r.critico}` : ''}${extras.length ? ` · ${extras.join(' · ')}` : ''}`,
     detalhe: `d100 ${r.dp} + ação ${r.acao}${mods ? ` (${mods})` : ''} = ${r.total} contra defesa ${r.nd} (${def})${modo} · DS ${r.ds}${danoTxt}`,
     // Números dos dados para a animação na tela de todos.
@@ -1011,7 +1026,8 @@ export const acoes = {
     if (op.danoLivre) {
       try { rolarDado(op.danoLivre); } catch { throw erro(`Dano inválido: ${op.danoLivre}`); }
     }
-    const pend = { id: uid(), atacante: a.id, alvo: b.id, opcoes: op, arma: arma.nome, alcance: arma.alcance, area: !!op.area, em: Date.now(), municao: itemArma?.capacidade ? itemArma.uid : null };
+    const pend = { id: uid(), atacante: a.id, alvo: b.id, opcoes: op, arma: arma.nome, alcance: arma.alcance, area: !!op.area, em: Date.now(), municao: itemArma?.capacidade ? itemArma.uid : null,
+      armaTipo: tipoDaArma(arma), tipoDano: arma.tipoDano || null };
     // Contra tiro, ou com o alvo pego de surpresa, não há defesa a escolher: resolve na hora.
     if (op.surpresa || opcoesDefesa(b, arma, sis, { area: pend.area }).length === 1) return resolverPendente(c, s, pend, 'nenhuma', sis);
     (s.pendentes ||= []).push(pend);

@@ -109,7 +109,7 @@ function peao(x, g, mover, sel) {
   // Quem só vê (jogadores) recebe uma figura, não um botão.
   const el = h(mover ? 'button' : 'span', {
     type: mover ? 'button' : null, role: mover ? null : 'img', class: `peao ${p.tipo} ${sel === p.id ? 'escolhido' : ''} ${semPv ? 'sem-pv' : ''} ${x.oculto ? 'oculto' : ''}`,
-    style: { '--col': x.col, '--lin': x.lin }, title: x.oculto ? `${p.nome} (invisível para os jogadores)` : p.nome, 'aria-label': `${p.nome} (coluna ${x.col + 1}, linha ${x.lin + 1})`,
+    'data-pid': p.id, style: { '--col': x.col, '--lin': x.lin }, title: x.oculto ? `${p.nome} (invisível para os jogadores)` : p.nome, 'aria-label': `${p.nome} (coluna ${x.col + 1}, linha ${x.lin + 1})`,
     onclick: mover ? e => {
       e.stopPropagation();
       if (e.currentTarget.dataset.arrastou) { delete e.currentTarget.dataset.arrastou; return; }

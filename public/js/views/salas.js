@@ -71,7 +71,7 @@ function cartaoParticipante(nome, s, p, i, total, mestre, participantes) {
     class: `participante ${s.ativo === p.id ? 'ativo' : ''} ${p.tipo} ${alvo ? 'alvo' : ''} ${marcavel ? 'marcavel' : ''} ${p.semPv || (p.pv && p.pv.atual <= 0) ? 'sem-pv' : ''}`,
     onclick: marcavel ? e => { if (!e.target.closest('button, select, input, label, a, summary')) marcarAlvo(nome, p.id); } : null,
   },
-    h('div', { class: 'avatar' }, p.foto ? h('img', { src: p.foto, alt: '' }) : p.nome.slice(0, 1)),
+    h('div', { class: 'avatar', 'data-pid': p.id }, p.foto ? h('img', { src: p.foto, alt: '' }) : p.nome.slice(0, 1)),
     h('div', { class: 'info' },
       h('strong', {}, p.nome), s.ativo === p.id ? h('span', { class: 'selo ok' }, mestre ? 'acionado' : 'em cena') : null,
       h('div', { class: 'meta' }, p.tipo === 'pj' ? `PJ${p.dono ? ` · ${p.dono}` : ''}` : 'NPC'),

@@ -51,7 +51,7 @@ function miniCartao(eu, x, alvo) {
       type: 'button', class: `mini-cartao ${x.id === alvo ? 'alvo' : ''} ${x.semPv || (x.pv && x.pv.atual <= 0) ? 'sem-pv' : ''}`, 'aria-pressed': x.id === alvo,
       title: x.id === alvo ? `${x.nome} é o alvo` : `Escolher ${x.nome} como alvo`, onclick: () => marcarAlvo('social', x.id),
     },
-      h('span', { class: 'avatar rosto' }, x.foto ? h('img', { src: x.foto, alt: '' }) : x.nome.slice(0, 1)),
+      h('span', { class: 'avatar rosto', 'data-pid': x.id }, x.foto ? h('img', { src: x.foto, alt: '' }) : x.nome.slice(0, 1)),
       h('span', { class: 'mini-nome' }, h('strong', {}, x.nome),
         // Sempre o humor interpretado (a máscara, se houver). O que a Empatia revela fica só no aviso e no registro de quem leu.
         h('small', { title: 'Humor como o seu personagem interpreta (pode ser uma máscara)' }, icone('smile'), ` ${nomeHumor(visto)}`)),

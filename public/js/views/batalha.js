@@ -45,7 +45,7 @@ export function painelBatalha(participantes, mestre) {
   const { meus, p, chave } = controladoNaSala('batalha', participantes, mestre);
   if (!p) return null;
   return h('div', { class: 'batalha-topo' },
-    h('section', { class: 'bloco bat-personagem' }, quadroPersonagem(p, meus, chave, mestre, participantes)),
+    h('section', { class: 'bloco bat-personagem', 'data-pid': p.id }, quadroPersonagem(p, meus, chave, mestre, participantes)),
     h('section', { class: 'bloco bat-habilidades' }, titulo('Habilidades, características e vantagens', 'sparkles'), quadroHabilidades(p, mestre)),
     h('section', { class: 'bloco bat-ataques' }, titulo('Ataques', 'swords'), quadroAtaques(p, participantes, mestre)));
 }
@@ -302,7 +302,7 @@ export function ordemLateral(participantes, mestre) {
       const rotulo = `${p.nome}${ini != null ? `, iniciativa ${ini}` : ''}${i === vez ? ', agindo agora' : i === proximo ? ', próximo' : ''}${ehAlvo ? ', alvo' : ''}${semPv ? ', sem PV' : ''}`;
       return h('li', { class: `${i === vez ? 'vez' : ''} ${i === proximo ? 'proximo' : ''}` },
         h('button', {
-          type: 'button', class: `avatar-ordem ${p.tipo} ${ehAlvo ? 'alvo' : ''} ${semPv ? 'sem-pv' : ''} ${eu?.id === p.id ? 'eu' : ''}`,
+          type: 'button', 'data-pid': p.id, class: `avatar-ordem ${p.tipo} ${ehAlvo ? 'alvo' : ''} ${semPv ? 'sem-pv' : ''} ${eu?.id === p.id ? 'eu' : ''}`,
           title: meu ? `Controlar ${p.nome}` : `Escolher ${p.nome} como alvo`, 'aria-label': rotulo,
           onclick: () => {
             if (meu && eu?.id !== p.id) { estado.sel[chave] = p.id; render(); return; }

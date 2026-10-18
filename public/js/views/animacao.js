@@ -2,6 +2,7 @@
 // aparecem o DP (2 d10 brancos: dezena e unidade), o DS (d10 vermelho) e, no ataque, os dados de dano.
 // O mestre pode desligar na aba Campanha ("Mostrar as rolagens na tela de todos"). Rolagens secretas nunca aparecem.
 import { h, icone } from '../ui.js';
+import { SANGUE } from './fx.js';
 
 const TIPOS = new Set(['dmil', 'ataque', 'manipulacao']);
 const vistos = new Set();
@@ -68,6 +69,12 @@ function proxima() {
       resumo,
       h('button', { type: 'button', class: 'pequeno', onclick: ev => { ev.stopPropagation(); fechar(); } }, icone('x'), 'Fechar')));
   document.body.append(caixa);
+  // Ataque que acertou: sangue escorre do alto do cartão; defendido: borda azul de escudo.
+  if (e.tipo === 'ataque') {
+    const cartao = caixa.querySelector('.dados-cartao');
+    if (e.sucesso || e.dano) setTimeout(() => cartao.insertAdjacentHTML('afterbegin', SANGUE), reduzido ? 0 : 1300);
+    else cartao.classList.add('defendeu');
+  }
   // Os números giram por um instante e param no resultado.
   const fim = () => {
     mostrarDp(dezena, unidade, e.dp);

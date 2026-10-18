@@ -936,3 +936,67 @@ span.peao { display: grid; }
 .marca svg { width: 55%; height: 55%; filter: drop-shadow(0 1px 2px #000); }
 .peao.oculto { opacity: .45; }
 .peao.oculto .rosto { border-style: dashed; }
+
+/* ===================== Artes de combate (fx) ===================== */
+[data-pid] { position: relative; }
+.fx { position: absolute; inset: 0; pointer-events: none; z-index: 6; display: grid; place-items: center; border-radius: inherit; }
+/* Ameaça: o desenho da arma pulsa sobre quem está sendo atacado (até ele se defender). */
+.fx-ameaca { border-radius: inherit; box-shadow: inset 0 0 0 3px rgba(224, 70, 50, .85); animation: fx-ameaca 1s ease-in-out infinite; }
+.fx-arma { display: grid; place-items: center; width: min(70%, 46px); aspect-ratio: 1; border-radius: 50%; background: radial-gradient(circle, rgba(30, 10, 8, .85), rgba(30, 10, 8, .55)); color: #ffd2c4; box-shadow: 0 0 12px rgba(224, 70, 50, .9); }
+.fx-arma svg { width: 62%; height: 62%; }
+.fx-ameaca .fx-arma { animation: fx-arma-balanca 1s ease-in-out infinite; }
+@keyframes fx-ameaca { 0%, 100% { box-shadow: inset 0 0 0 3px rgba(224, 70, 50, .85), 0 0 0 0 rgba(224, 70, 50, .5); } 50% { box-shadow: inset 0 0 0 3px rgba(255, 110, 80, 1), 0 0 16px 4px rgba(224, 70, 50, .55); } }
+@keyframes fx-arma-balanca { 0%, 100% { transform: rotate(-14deg) scale(.95); } 50% { transform: rotate(14deg) scale(1.08); } }
+/* Golpe: a arma entra rápido e some. */
+.fx-golpe .fx-arma { animation: fx-golpe 1.4s cubic-bezier(.2, .9, .3, 1) both; animation-delay: inherit; }
+.fx-golpe { animation: none; }
+@keyframes fx-golpe { 0% { transform: translate(-60%, -60%) rotate(-70deg) scale(1.6); opacity: 0; } 25% { transform: rotate(20deg) scale(1.15); opacity: 1; } 45% { transform: rotate(0) scale(1); } 80% { opacity: 1; } 100% { opacity: 0; transform: scale(.8); } }
+/* Acerto: sangue escorrendo do alto e gotas pingando; o dano sobe. */
+.fx-acerto { place-items: start center; overflow: hidden; border-radius: inherit; animation: fx-some 2.8s ease-in both; animation-delay: inherit; }
+.fx-sangue { position: absolute; inset: 0; width: 100%; height: 100%; }
+.fx-sangue .escorre { transform-origin: 50% 0; animation: fx-escorre 1.6s cubic-bezier(.3, .1, .3, 1) both; animation-delay: inherit; }
+.fx-sangue .gota { opacity: 0; animation: fx-gota 1.2s ease-in 1.1s both; }
+.fx-sangue .gota.g2 { animation-delay: 1.5s; }
+.fx-numero { position: relative; z-index: 2; margin-top: 8%; font: 900 clamp(12px, 40%, 22px)/1 Georgia, serif; color: #ff4d4d; text-shadow: 0 0 3px #000, 0 2px 0 #3a0000; animation: fx-sobe 2s ease-out both; animation-delay: inherit; }
+.fx-numero.verde { color: #7dff9a; text-shadow: 0 0 3px #000, 0 2px 0 #003a10; }
+@keyframes fx-escorre { 0% { transform: scaleY(0); } 100% { transform: scaleY(1); } }
+@keyframes fx-gota { 0% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(40px); } }
+@keyframes fx-sobe { 0% { transform: translateY(10px) scale(.6); opacity: 0; } 15% { transform: translateY(0) scale(1.25); opacity: 1; } 70% { opacity: 1; } 100% { transform: translateY(-22px) scale(1); opacity: 0; } }
+@keyframes fx-some { 0%, 75% { opacity: 1; } 100% { opacity: 0; } }
+/* Defesa: escudo azul com faíscas. */
+.fx-defesa { animation: fx-some 1.8s ease-in both; animation-delay: inherit; }
+.fx-escudo { display: grid; place-items: center; width: min(70%, 44px); aspect-ratio: 1; color: #bfe0ff; filter: drop-shadow(0 0 8px #4f9bff); animation: fx-escudo .6s cubic-bezier(.3, 1.6, .5, 1) both; animation-delay: inherit; }
+.fx-escudo svg { width: 100%; height: 100%; fill: rgba(79, 155, 255, .35); }
+.fx-faiscas { position: absolute; inset: -20%; border-radius: 50%; background: radial-gradient(circle, transparent 45%, rgba(255, 240, 160, .9) 47%, transparent 52%); animation: fx-onda-escudo .7s ease-out both; animation-delay: inherit; }
+@keyframes fx-escudo { 0% { transform: scale(.2) rotate(-30deg); opacity: 0; } 100% { transform: scale(1) rotate(0); opacity: 1; } }
+@keyframes fx-onda-escudo { 0% { transform: scale(.4); opacity: 1; } 100% { transform: scale(1.4); opacity: 0; } }
+/* Crítico: explosão dourada e o texto. */
+.fx-critico { overflow: visible; animation: fx-some 2.4s ease-in both; animation-delay: inherit; }
+.fx-explosao { position: absolute; inset: -30%; background: conic-gradient(from 0deg, transparent 0 8%, rgba(255, 210, 90, .9) 9% 11%, transparent 12% 20%, rgba(255, 210, 90, .9) 21% 23%, transparent 24% 33%, rgba(255, 210, 90, .9) 34% 36%, transparent 37% 45%, rgba(255, 210, 90, .9) 46% 48%, transparent 49% 58%, rgba(255, 210, 90, .9) 59% 61%, transparent 62% 70%, rgba(255, 210, 90, .9) 71% 73%, transparent 74% 83%, rgba(255, 210, 90, .9) 84% 86%, transparent 87%);
+  -webkit-mask: radial-gradient(circle, #000 20%, transparent 70%); mask: radial-gradient(circle, #000 20%, transparent 70%); animation: fx-explode 1.2s ease-out both; animation-delay: inherit; }
+.fx-texto { position: relative; font: 900 11px/1 Georgia, serif; letter-spacing: .05em; color: #ffd75a; text-shadow: 0 0 4px #000, 0 0 10px #ff9b00; animation: fx-sobe 2.2s ease-out both; animation-delay: inherit; white-space: nowrap; }
+@keyframes fx-explode { 0% { transform: scale(.2) rotate(0); opacity: 1; } 100% { transform: scale(1.3) rotate(60deg); opacity: 0; } }
+/* Morte: a caveira sobe e o avatar escurece. */
+.fx-morte { background: rgba(0, 0, 0, .55); animation: fx-some 3.6s ease-in both; animation-delay: inherit; }
+.fx-caveira { width: min(70%, 44px); aspect-ratio: 1; color: #f2ece0; filter: drop-shadow(0 0 6px #b3261e); animation: fx-caveira 3.6s ease-out both; animation-delay: inherit; }
+.fx-caveira svg { width: 100%; height: 100%; }
+@keyframes fx-caveira { 0% { transform: translateY(20%) scale(.4); opacity: 0; } 20% { transform: scale(1.2); opacity: 1; } 35% { transform: scale(1); } 100% { transform: translateY(-25%); opacity: .9; } }
+/* Cura: cruzes verdes subindo. */
+.fx-cura { overflow: visible; animation: fx-some 2s ease-in both; animation-delay: inherit; }
+.fx-mais { position: absolute; bottom: 10%; font: 900 14px/1 system-ui, sans-serif; color: #7dff9a; text-shadow: 0 0 6px #1fbf4a; font-style: normal; animation: fx-mais 1.6s ease-out both; }
+.fx-mais.m0 { left: 15%; } .fx-mais.m1 { left: 35%; animation-delay: .2s; } .fx-mais.m2 { left: 55%; animation-delay: .1s; } .fx-mais.m3 { left: 75%; animation-delay: .3s; } .fx-mais.m4 { left: 45%; animation-delay: .45s; }
+@keyframes fx-mais { 0% { transform: translateY(0) scale(.5); opacity: 0; } 20% { opacity: 1; } 100% { transform: translateY(-160%) scale(1.2); opacity: 0; } }
+/* O seu personagem foi ferido: bordas da tela em vermelho e sangue escorrendo do topo. */
+.fx-tela { position: fixed; inset: 0; z-index: 950; pointer-events: none; box-shadow: inset 0 0 calc(120px * var(--forca)) calc(30px * var(--forca)) rgba(160, 0, 0, .85); animation: fx-tela 2.6s ease-out both; }
+.fx-tela .fx-sangue { position: absolute; left: 0; right: 0; top: 0; height: 22vh; width: 100%; opacity: .85; }
+@keyframes fx-tela { 0% { opacity: 0; } 10% { opacity: 1; } 70% { opacity: .9; } 100% { opacity: 0; } }
+/* Janela dos dados: sangue no cartão quando acerta. */
+.dados-cartao { position: relative; overflow: hidden; }
+.dados-cartao > .fx-sangue { position: absolute; left: 0; right: 0; top: 0; height: 70px; width: 100%; pointer-events: none; }
+.dados-cartao.defendeu { box-shadow: 0 12px 40px rgba(0, 0, 0, .5), 0 0 0 2px #4f9bff, 0 0 24px rgba(79, 155, 255, .45); }
+@media (prefers-reduced-motion: reduce) { .fx, .fx *, .fx-tela { animation: none !important; } .fx-acerto, .fx-defesa, .fx-critico, .fx-morte, .fx-cura, .fx-tela { display: none; } }
+.fx-acerto .fx-numero { position: absolute; bottom: 6%; margin: 0; color: #fff; text-shadow: 0 0 2px #000, 0 0 6px #d01010, 0 2px 0 #5e070b; }
+.fx-sangue .escorre { filter: drop-shadow(0 2px 1px rgba(0, 0, 0, .5)); }
+/* No quadro grande do personagem a arte fica dentro das bordas (sem criar rolagem). */
+.bloco[data-pid] > .fx, .bloco[data-pid] > .fx.fx-critico, .bloco[data-pid] > .fx.fx-cura { overflow: hidden; border-radius: 12px; }
+.bloco[data-pid] > .fx-golpe .fx-arma, .bloco[data-pid] > .fx-ameaca .fx-arma { width: 64px; }

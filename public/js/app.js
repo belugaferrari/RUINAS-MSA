@@ -3,6 +3,7 @@ import { estado, definirRender, mudar, carregarSistema, sincronizarSistema, reca
 import { observarRolagens } from './views/animacao.js';
 import { telaSuporte } from './views/suporte.js';
 import { observarEfeitos } from './views/efeitos.js';
+import { observarFx, aplicarFx } from './views/fx.js';
 import { sessao, get, conectar, emitir } from './api.js';
 import { telaLogin } from './views/login.js';
 import { telaSaguao, carregarSaguao } from './views/saguao.js';
@@ -21,6 +22,7 @@ function desenhar() {
   const rolagemJanela = window.scrollY;
 
   raiz.replaceChildren(tela());
+  aplicarFx(raiz);
 
   for (const [id, top] of rolagens) {
     const el = raiz.querySelector(`[data-rolagem="${id}"]`);
@@ -67,6 +69,7 @@ export function iniciarSessao(s) {
           observarRolagens(estado.campanha);
           await sincronizarSistema(estado.campanha);
           observarEfeitos(estado.campanha);
+          observarFx(estado.campanha);
         } catch (e) {
           aviso(e.message, 'erro');
           estado.tela = 'saguao';
@@ -86,6 +89,7 @@ export function iniciarSessao(s) {
       if (await sincronizarSistema(c) && anterior) aviso(`Agora a campanha usa o ${estado.sistema.nome} (${estado.sistema.nomeCompleto}).`);
       const vezAntes = vezDe(estado.campanha);
       observarEfeitos(c);
+      observarFx(c);
       if (estado.campanha?.id === c.id) mudar({ campanha: c });
       observarRolagens(c);
       // Avisa o jogador quando chega a vez de um personagem dele no Campo de Batalha.
