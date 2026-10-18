@@ -78,7 +78,7 @@ function efeitosPublicos(p, sis) {
 // O que cada pessoa enxerga da campanha. O mestre vê tudo; o jogador só o que é dele ou público.
 export function visaoPara(c, user, area) {
   const comDono = p => ({ ...p, dono: nomeUsuario(p.donoId) });
-  const mapa = mapaPublico(c);
+  const mapa = mapaPublico(c, area);
   if (area === 'mestre') {
     return { ...c, mapa, sistema: idSistema(c.sistema), personagens: c.personagens.map(comDono), jogadoresNomes: c.jogadores.map(nomeUsuario),
       suportesNomes: (c.suportes || []).map(id => ({ id, nome: nomeUsuario(id) })), papel: 'mestre' };
@@ -142,11 +142,14 @@ function novoMapa() {
   return { imagemId: null, grade: { colunas: 20, ox: 0, oy: 0, visivel: true }, pecas: {} };
 }
 
-function mapaPublico(c) {
+// Só o mestre vê as marcações secretas (armadilhas…) e os peões ocultos (NPC fantasma); jogadores e Suporte não recebem nada deles.
+function mapaPublico(c, area) {
   c.mapa ||= novoMapa();
+  const mestre = area === 'mestre';
   const img = c.imagens.find(i => i.id === c.mapa.imagemId);
-  const vivos = Object.fromEntries(Object.entries(c.mapa.pecas).filter(([id]) => c.personagens.some(p => p.id === id)));
-  return { ...c.mapa, pecas: vivos, midia: img ? { url: img.url, tipo: img.tipo || 'imagem', titulo: img.titulo } : null };
+  const vivos = Object.fromEntries(Object.entries(c.mapa.pecas)
+    .filter(([id, x]) => c.personagens.some(p => p.id === id) && (mestre || !x.oculto)));
+  return { ...c.mapa, pecas: vivos, marcas: mestre ? (c.mapa.marcas || []) : [], midia: img ? { url: img.url, tipo: img.tipo || 'imagem', titulo: img.titulo } : null };
 }
 
 // ---------- utilitários ----------
@@ -740,7 +743,30 @@ export const acoes = {
     if (!ctx.mestre && !ctx.suporte) throw erro('Só o mestre ou o Suporte mexem no mapa.');
     personagem(c, id);
     c.mapa ||= novoMapa();
-    c.mapa.pecas[id] = { col: Math.max(0, Math.min(999, parseInt(col, 10) || 0)), lin: Math.max(0, Math.min(999, parseInt(lin, 10) || 0)) };
+    const antes = c.mapa.pecas[id];
+    // O Suporte não enxerga peões ocultos, então também não mexe neles.
+    if (antes?.oculto && !ctx.mestre) throw erro('Personagem não encontrado no mapa.');
+    c.mapa.pecas[id] = { ...antes, col: Math.max(0, Math.min(999, parseInt(col, 10) || 0)), lin: Math.max(0, Math.min(999, parseInt(lin, 10) || 0)) };
+  },
+
+  // NPC fantasma: o peão some para jogadores e Suporte (o mestre continua vendo, meio transparente).
+  'mapa.ocultar'(c, { id, oculto }, ctx) {
+    exigirMestre(ctx);
+    const x = c.mapa?.pecas?.[id];
+    if (!x) throw erro('Esse personagem não está no mapa.');
+    x.oculto = !!oculto;
+  },
+
+  // Marcações secretas do mestre (armadilhas, gatilhos…): só ele vê.
+  'mapa.marcar'(c, { col, lin, texto }, ctx) {
+    exigirMestre(ctx);
+    c.mapa ||= novoMapa();
+    (c.mapa.marcas ||= []).push({ id: uid(), col: Math.max(0, parseInt(col, 10) || 0), lin: Math.max(0, parseInt(lin, 10) || 0), texto: nomeStr(texto).slice(0, 300) || 'Marcação' });
+  },
+
+  'mapa.desmarcar'(c, { id }, ctx) {
+    exigirMestre(ctx);
+    if (c.mapa) c.mapa.marcas = (c.mapa.marcas || []).filter(m => m.id !== id);
   },
 
   'mapa.tirar'(c, { id }, ctx) {

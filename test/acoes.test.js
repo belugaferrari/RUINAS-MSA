@@ -231,3 +231,27 @@ test('mapa e Suporte: mestre escolhe e ajusta, Suporte move peões e mostra só 
   assert.deepEqual(v.personagens.map(p => p.nome), ['Rato']);
   assert.equal(v.personagens[0].atributos, undefined, 'o Suporte não vê a ficha');
 });
+
+test('mapa: marcações secretas e NPC fantasma só aparecem para o mestre', () => {
+  const m = { id: 'mx', name: 'M' };
+  const j = { id: 'jx', name: 'J' };
+  const c = novaCampanha(m, { nome: 'Segredos', maxJogadores: 2, nivel: 1, padraoMSA: true });
+  const ctxM = { user: m, mestre: true };
+  const { id } = executar(c, 'personagem.criar', { tipo: 'npc', grupoId: 'encontros', ficha: { nome: 'Fantasma' } }, ctxM);
+  executar(c, 'mapa.mover', { id, col: 2, lin: 2 }, ctxM);
+  executar(c, 'mapa.marcar', { col: 5, lin: 5, texto: 'Armadilha: fosso' }, ctxM);
+  executar(c, 'mapa.ocultar', { id, oculto: true }, ctxM);
+  assert.equal(visaoPara(c, m, 'mestre').mapa.marcas.length, 1);
+  assert.ok(visaoPara(c, m, 'mestre').mapa.pecas[id].oculto);
+  const vj = visaoPara(c, j, 'jogador');
+  assert.deepEqual(vj.mapa.marcas, []);
+  assert.equal(vj.mapa.pecas[id], undefined);
+  assert.ok(!vj.personagens.some(p => p.id === id), 'o NPC fantasma nem aparece na lista do jogador');
+  const vs = visaoPara(c, m, 'suporte');
+  assert.equal(vs.mapa.pecas[id], undefined);
+  assert.throws(() => executar(c, 'mapa.mover', { id, col: 1, lin: 1 }, { user: m, mestre: false, suporte: true }), /não encontrado/);
+  executar(c, 'mapa.mover', { id, col: 3, lin: 3 }, ctxM);
+  assert.ok(c.mapa.pecas[id].oculto, 'mover não revela o fantasma');
+  executar(c, 'mapa.desmarcar', { id: c.mapa.marcas[0].id }, ctxM);
+  assert.equal(c.mapa.marcas.length, 0);
+});

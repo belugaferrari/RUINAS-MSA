@@ -1,7 +1,7 @@
 // Aba Mapa: a imagem, GIF ou vídeo escolhido pelo mestre, centralizado, com a grade de RPG por cima
 // (cada quadrado = 1,5 m) e os peões dos personagens. O mestre escolhe o mapa e ajusta a grade;
 // mestre e Suporte arrastam os peões; os jogadores só veem.
-import { h, botao, selecao, aviso, icone, titulo, vazio, passador } from '../ui.js';
+import { h, botao, selecao, aviso, icone, titulo, vazio, passador, pedirTexto, janela } from '../ui.js';
 import { estado, render, personagemPorId } from '../estado.js';
 import { acao } from '../api.js';
 
@@ -41,21 +41,33 @@ export function mapaView() {
     class: `mapa-quadro ${g.visivel ? 'com-grade' : ''} ${mover ? 'movel' : ''}`,
     style: { '--cols': g.colunas, '--ox': g.ox, '--oy': g.oy },
     // Com um peão escolhido, clicar num quadrado leva ele para lá.
-    onclick: mover ? e => {
-      if (!estado.sel.mapaSel || e.target.closest('.peao')) return;
+    // No modo "marcar" (só o mestre), clicar num quadrado cria uma marcação secreta.
+    onclick: mover ? async e => {
+      if (e.target.closest('.peao, .marca')) return;
       const { col, lin } = quadradoDoPonto(e.currentTarget, g, e.clientX, e.clientY);
+      if (mestre && estado.sel.mapaMarcar) {
+        const texto = await pedirTexto('Marcação secreta', 'O que tem aqui? (só você vê — ex.: Armadilha: fosso, ND 70)');
+        if (texto) acao('mapa.marcar', { col, lin, texto }).catch(err => aviso(err.message, 'erro'));
+        return;
+      }
+      if (!estado.sel.mapaSel) return;
       acao('mapa.mover', { id: estado.sel.mapaSel, col, lin }).catch(err => aviso(err.message, 'erro'));
     } : null,
   },
     midiaEl(mapa.midia),
     h('div', { class: 'mapa-grade', 'aria-hidden': 'true' }),
+    mestre ? (mapa.marcas || []).map(marca) : null,
     pecas.map(x => peao(x, g, mover, sel))) : vazio(mestre ? 'Escolha o mapa abaixo (envie imagens, GIFs ou vídeos na aba Imagens).' : 'O mestre ainda não escolheu um mapa.', 'map');
 
   return h('div', { class: 'mapa-tela' },
     mestre ? controlesMestre(mapa) : null,
     h('div', { class: 'mapa-grade-tela' },
       h('div', { class: 'mapa-centro' }, h('div', { class: 'mapa-rolagem' }, quadro),
-        mover && mapa.midia ? h('p', { class: 'dica' }, icone('info'), ' Arraste os peões, ou escolha um na lista e clique no quadrado de destino. Cada quadrado = 1,5 m.') : null),
+        mover && mapa.midia ? h('p', { class: 'dica' }, icone('info'), ' Arraste os peões, ou escolha um na lista e clique no quadrado de destino. Cada quadrado = 1,5 m.') : null,
+        mestre && mapa.midia ? h('div', { class: 'barra' },
+          botao(estado.sel.mapaMarcar ? 'Marcando: clique no mapa (clique aqui para parar)' : 'Marcação secreta', () => { estado.sel.mapaMarcar = !estado.sel.mapaMarcar; render(); },
+            { class: `pequeno ${estado.sel.mapaMarcar ? 'primario' : ''}`, icone: 'eye-off', 'aria-pressed': !!estado.sel.mapaMarcar, title: 'Marcações (armadilhas, gatilhos…) que só você vê' }),
+          (mapa.marcas || []).length ? h('small', { class: 'dica' }, `${mapa.marcas.length} marcação(ões) secreta(s) — os jogadores e o Suporte não veem.`) : null) : null),
       h('aside', { class: 'bloco mapa-lado' },
         titulo('No mapa', 'users', 'h3'),
         pecas.length ? h('ul', { class: 'mapa-lista' }, pecas.map(x => h('li', { class: sel === x.p.id ? 'escolhido' : '' },
@@ -63,9 +75,23 @@ export function mapaView() {
             onclick: () => { estado.sel.mapaSel = sel === x.p.id ? null : x.p.id; render(); } },
             h('span', { class: `rosto-mini ${x.p.tipo} ${x.p.semPv || (x.p.pv && x.p.pv.atual <= 0) ? 'sem-pv' : ''}` }, x.p.foto ? h('img', { src: x.p.foto, alt: '' }) : x.p.nome.slice(0, 1)),
             h('span', {}, x.p.nome)),
+          mestre && x.p.tipo !== 'pj' ? botao('', () => acao('mapa.ocultar', { id: x.p.id, oculto: !x.oculto }), { class: `pequeno ${x.oculto ? 'primario' : ''}`, icone: x.oculto ? 'eye-off' : 'eye',
+            'aria-pressed': !!x.oculto, title: x.oculto ? `${x.p.nome} está invisível para os jogadores (fantasma). Clique para mostrar` : `Deixar ${x.p.nome} invisível para os jogadores (fantasma)` }) : null,
           mover ? botao('', () => acao('mapa.tirar', { id: x.p.id }), { class: 'x', icone: 'x', title: `Tirar ${x.p.nome} do mapa` }) : null)))
           : vazio('Ninguém no mapa.', 'users'),
         mestre ? colocarNoMapa(mapa) : null)));
+}
+
+// Marcação secreta: um losango no quadrado; clicar mostra o texto e deixa apagar.
+function marca(m) {
+  return h('button', {
+    type: 'button', class: 'marca', style: { '--col': m.col, '--lin': m.lin }, title: m.texto, 'aria-label': `Marcação secreta: ${m.texto}`,
+    onclick: e => {
+      e.stopPropagation();
+      janela('Marcação secreta', h('p', {}, icone('eye-off'), ` ${m.texto}`),
+        [['Apagar', () => acao('mapa.desmarcar', { id: m.id }), 'perigo'], ['Fechar', () => true]]);
+    },
+  }, icone('triangle-alert'));
 }
 
 function quadradoDoPonto(quadro, g, x, y) {
@@ -82,8 +108,8 @@ function peao(x, g, mover, sel) {
   const semPv = p.semPv || (p.pv && p.pv.atual <= 0);
   // Quem só vê (jogadores) recebe uma figura, não um botão.
   const el = h(mover ? 'button' : 'span', {
-    type: mover ? 'button' : null, role: mover ? null : 'img', class: `peao ${p.tipo} ${sel === p.id ? 'escolhido' : ''} ${semPv ? 'sem-pv' : ''}`,
-    style: { '--col': x.col, '--lin': x.lin }, title: p.nome, 'aria-label': `${p.nome} (coluna ${x.col + 1}, linha ${x.lin + 1})`,
+    type: mover ? 'button' : null, role: mover ? null : 'img', class: `peao ${p.tipo} ${sel === p.id ? 'escolhido' : ''} ${semPv ? 'sem-pv' : ''} ${x.oculto ? 'oculto' : ''}`,
+    style: { '--col': x.col, '--lin': x.lin }, title: x.oculto ? `${p.nome} (invisível para os jogadores)` : p.nome, 'aria-label': `${p.nome} (coluna ${x.col + 1}, linha ${x.lin + 1})`,
     onclick: mover ? e => {
       e.stopPropagation();
       if (e.currentTarget.dataset.arrastou) { delete e.currentTarget.dataset.arrastou; return; }

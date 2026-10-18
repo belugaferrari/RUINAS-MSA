@@ -930,3 +930,9 @@ button.afinidade { padding: .15em .4em; min-height: 0; justify-content: center; 
 .mapa-rolagem { width: 100%; overflow: auto; border-radius: 8px; }
 @media (max-width: 760px) { .mapa-quadro { min-width: 760px; } }
 span.peao { display: grid; }
+/* Marcações secretas do mestre e NPC fantasma (só o mestre vê). */
+.marca { position: absolute; left: calc((var(--col) + var(--ox)) * var(--cel)); top: calc((var(--lin) + var(--oy)) * var(--cel)); width: var(--cel); height: var(--cel);
+  min-width: 0; min-height: 0; padding: 0; border: 2px dashed #ff5a4a; border-radius: 4px; background: rgba(224, 70, 50, .28); color: #fff; display: grid; place-items: center; z-index: 1; }
+.marca svg { width: 55%; height: 55%; filter: drop-shadow(0 1px 2px #000); }
+.peao.oculto { opacity: .45; }
+.peao.oculto .rosto { border-style: dashed; }
