@@ -52,6 +52,7 @@ test('validação da criação', () => {
   let p = R.problemasFicha(f, sis, c);
   assert.ok(p.some(x => /profissão/.test(x)) && p.some(x => /defeito/.test(x)));
   f.profissao = 'batedor';
+  f.genero = 'feminino';
   f.defeitos = [sis.defeitos.find(d => d.tipo === 'normal').id];
   f.vantagens = sis.vantagens.slice(0, 4).map(v => v.id); // 3 + 1 do defeito normal
   assert.deepEqual(R.problemasFicha(f, sis, c), []);

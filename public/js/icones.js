@@ -1,6 +1,7 @@
 // Ícones (Lucide, licença ISC). O servidor monta /icones.svg só com os nomes desta lista,
 // então todo ícone novo precisa ser adicionado aqui.
 export const ICONES = [
+  'flask-conical',
   'hand-fist', 'hammer', 'bow-arrow',
   'triangle-alert',
   'presentation',

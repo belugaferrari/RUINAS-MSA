@@ -2,7 +2,7 @@ import { h, botao, aviso, vazio, confirmar, icone, titulo, tabela, passador, sel
 import { TIPOS } from './livros.js';
 import { estado, render, mudar } from '../estado.js';
 import { acao } from '../api.js';
-import { itemAberto, novaFicha, pontosDoNivel, pontosGastos, pontosPericiaTotal, pontosVantagemExtra, derivados, problemasFicha, custoPericiaBase, vantagensDisponiveis, acharVantagem } from '/shared/regras.js';
+import { GENEROS, itemAberto, novaFicha, pontosDoNivel, pontosGastos, pontosPericiaTotal, pontosVantagemExtra, derivados, problemasFicha, custoPericiaBase, vantagensDisponiveis, acharVantagem } from '/shared/regras.js';
 import { ICONE_TIPO, descInstinto } from './ficha.js';
 import { painelPericias } from './pericias.js';
 
@@ -86,6 +86,14 @@ function passoIdentidade() {
       [['direita', 'Destro (mão direita)'], ['esquerda', 'Canhoto (mão esquerda)']].map(([v, rot]) => botao(rot, () => alterar(x => { x.maoHabil = v; }),
         { class: `pequeno ${(f.maoHabil || 'direita') === v ? 'primario' : ''}`, 'aria-pressed': (f.maoHabil || 'direita') === v }))),
     h('p', { class: 'dica' }, 'Com uma arma em cada mão, a da mão hábil ataca com −20% e a da outra mão com −40%.'),
+    h('div', { class: 'barra', role: 'group', 'aria-label': 'Gênero' }, h('strong', {}, icone('user'), ' Gênero *'),
+      GENEROS.map(g => botao(g.nome, () => alterar(x => { x.genero = g.id; }), { class: `pequeno ${f.genero === g.id ? 'primario' : ''}`, 'aria-pressed': f.genero === g.id }))),
+    h('div', { class: 'barra', role: 'group', 'aria-label': 'Se atrai por' }, h('strong', {}, icone('heart'), ' Se atrai por'),
+      GENEROS.map(g => {
+        const on = (f.atracao || []).includes(g.id);
+        return botao(g.plural, () => alterar(x => { const a = new Set(x.atracao || []); on ? a.delete(g.id) : a.add(g.id); x.atracao = [...a]; }), { class: `pequeno ${on ? 'primario' : ''}`, 'aria-pressed': on });
+      })),
+    h('p', { class: 'dica' }, 'A Sedução só funciona em quem se atrai pelo gênero de quem seduz (nos dois sentidos). Sem nenhuma marcada, ninguém consegue seduzir o personagem.'),
     titulo('De onde você veio?', 'compass', 'h4'),
     h('div', { class: 'cartoes' }, sis.origens.map(o => cartaoEscolha(f.origem === o.nome, () => alterar(x => { x.origem = o.nome; }), h('strong', {}, o.nome), h('p', {}, o.descricao)))),
     h('label', {}, 'Família (quem te criou?)', h('textarea', { rows: 2, 'data-key': 'cr:familia', value: f.familia, oninput: e => { f.familia = e.target.value; salvarRascunho(); } })),

@@ -82,6 +82,7 @@ export function novaFicha(sistema, campanha) {
     dinheiro: r.creditosIniciais ?? 0,
     marcadores: [],
     maoHabil: 'direita',
+    genero: '',
     background: '', anotacoes: '', foto: null,
     xp: 0, backups: [],
   };
@@ -327,13 +328,22 @@ export function ganhosDeClasse(ficha, sistema) {
   const esp = classe.especializacoes.find(e => e.id === ficha.especializacao);
   const ref = esp || classe.especializacoes[0];
   const limite = esp ? ficha.nivel : Math.min(ficha.nivel, (regras(sistema).nivelEspecializacao ?? 5) - 1);
+  // Acha o texto de cada ganho sem ligar para acento, maiúsculas ou o que vem entre parênteses/colchetes;
+  // procura nas características, nas habilidades das especializações e nas vantagens da classe.
+  const chave = nome => semAcento(nome).replace(/\s*[([].*$/, '').replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
   const descricoes = new Map();
-  for (const x of [...classe.caracteristicas, ...classe.especializacoes.flatMap(e => e.habilidades)]) {
-    const chave = x.nome.toLowerCase().replace(/\s*\(.*|\s*\[.*/g, '').trim();
-    if (!descricoes.has(chave)) descricoes.set(chave, x.descricao);
+  for (const x of [...classe.caracteristicas, ...(esp?.habilidades || []), ...classe.especializacoes.flatMap(e => e.habilidades), ...(classe.vantagens || [])]) {
+    if (x.descricao && !descricoes.has(chave(x.nome))) descricoes.set(chave(x.nome), x.descricao);
   }
+  // Alguns ganhos estão no livro dentro do texto de outra habilidade ("… Nível 6: O Show Tem Que Continuar. texto …").
+  const todoTexto = [...classe.caracteristicas, ...classe.especializacoes.flatMap(e => e.habilidades), ...(classe.vantagens || [])].map(x => x.descricao || '').join(' ') + ' ' + (classe.extras || '');
+  const dentroDeOutro = nome => {
+    const esc = nome.replace(/\s*[([].*$/, '').trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const m = new RegExp(`N[íi]vel\\s*\\d+\\s*[:.]?\\s*${esc}\\s*[.:]\\s*(.+?)(?=\\s*N[íi]vel\\s*\\d+\\s*[:.]|$)`, 'i').exec(todoTexto);
+    return m ? m[1].trim() : '';
+  };
   return (ref?.progressao || []).filter(l => l.nivel <= limite).flatMap(l => l.ganhos.map(nome => ({
-    nivel: l.nivel, nome, descricao: descricoes.get(nome.toLowerCase()) || '',
+    nivel: l.nivel, nome, descricao: descricoes.get(chave(nome)) || dentroDeOutro(nome),
   })));
 }
 
@@ -368,6 +378,7 @@ export function problemasFicha(ficha, sistema, campanha, { apenasPontos = false 
   if (apenasPontos) return lista;
   if ((ficha.defeitos || []).length < (r.defeitosMinimos ?? 0)) lista.push(`Escolha ao menos ${r.defeitosMinimos} defeito.`);
   if (!ficha.profissao) lista.push('Escolha uma profissão.');
+  if (!ficha.genero) lista.push('Escolha o gênero do personagem (passo Identidade).');
   if (ficha.classe && ficha.nivel < (r.nivelClasse ?? 3)) lista.push(`Classe só a partir do nível ${r.nivelClasse}.`);
   if (ficha.especializacao && ficha.nivel < (r.nivelEspecializacao ?? 5)) lista.push(`Especialização só a partir do nível ${r.nivelEspecializacao}.`);
   const disp = new Set(vantagensDisponiveis(ficha, sistema).map(v => v.id));
@@ -471,4 +482,13 @@ export function estadoCarga(peso, FOR) {
     supercarregado: 'Supercarregado: só 1 passo (1,5 m) por turno e não corre. A cada turno, teste de FOR muito difícil; se falhar, solta o peso que puder ou fica Esmagado (1 PV por 20 kg excedentes por turno).',
   }[nivel];
   return { cargaCapacidade: capacidade, cargaLevantamento: levantamento, cargaNivel: nivel, cargaEfeito: efeito };
+}
+
+// Gênero do personagem e por quais gêneros ele se atrai (Sedução só funciona em quem se atrai pelo gênero de quem seduz).
+// atracao: lista de gêneros; [] = não se atrai por ninguém; sem o campo = ainda não definido (não limita).
+export const GENEROS = [{ id: 'masculino', nome: 'Masculino', plural: 'Homens' }, { id: 'feminino', nome: 'Feminino', plural: 'Mulheres' }, { id: 'outro', nome: 'Outro', plural: 'Outros gêneros' }];
+export function podeSeduzir(autor, alvo) {
+  if (!Array.isArray(alvo?.atracao) || !autor?.genero) return { ok: true };
+  if (alvo.atracao.includes(autor.genero)) return { ok: true };
+  return { ok: false, motivo: `${alvo.nome} não se atrai por ${GENEROS.find(g => g.id === autor.genero)?.plural.toLowerCase() || 'esse gênero'}: Sedução não funciona.` };
 }

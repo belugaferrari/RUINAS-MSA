@@ -2,7 +2,7 @@ import { h, campo, botao, selecao, aviso, confirmar, pedirTexto, formatarData, v
 import { efeitosIcones } from './efeitos.js';
 import { estado, render } from '../estado.js';
 import { acao, enviarArquivo } from '../api.js';
-import { derivados, slotsOcupados, ganhosDeClasse, pontosGastos, pontosPericiaTotal, vantagensDisponiveis, acharVantagem, xpParaSubir } from '/shared/regras.js';
+import { GENEROS, derivados, slotsOcupados, ganhosDeClasse, pontosGastos, pontosPericiaTotal, vantagensDisponiveis, acharVantagem, xpParaSubir } from '/shared/regras.js';
 import { painelPericias } from './pericias.js';
 import { bonecoView } from './boneco.js';
 import { prepararTeste } from './dados.js';
@@ -264,11 +264,26 @@ export function barraXp(p) {
     pronto ? h('span', { class: 'selo ok' }, `pode subir para o nível ${p.nivel + 1}`) : null);
 }
 
+// Gênero e atração: escolhidos na criação; depois só o mestre muda (limitam a Sedução).
+function generoView(p) {
+  const mestre = estado.campanha.papel === 'mestre';
+  const nome = id => GENEROS.find(g => g.id === id)?.nome || '—';
+  const atr = Array.isArray(p.atracao) ? (p.atracao.length ? p.atracao.map(id => GENEROS.find(g => g.id === id)?.plural).join(', ') : 'ninguém') : 'não definido';
+  if (!mestre) return h('p', { class: 'meta' }, icone('user'), ` Gênero: ${nome(p.genero)} · Se atrai por: ${atr}`);
+  return h('div', { class: 'grade2' },
+    h('label', {}, 'Gênero', selecao([{ valor: '', rotulo: '—' }, ...GENEROS.map(g => ({ valor: g.id, rotulo: g.nome }))], p.genero || '', v => atualizar(p, { genero: v }))),
+    h('div', { role: 'group', 'aria-label': 'Se atrai por' }, h('small', {}, 'Se atrai por'), h('div', { class: 'barra' }, GENEROS.map(g => {
+      const on = (p.atracao || []).includes(g.id);
+      return h('label', { class: 'linha' }, h('input', { type: 'checkbox', checked: on, onchange: () => { const a = new Set(p.atracao || []); on ? a.delete(g.id) : a.add(g.id); atualizar(p, { atracao: [...a] }); } }), g.plural);
+    }))));
+}
+
 function identidade(p) {
   const sis = estado.sistema;
   const linha = (rot, k) => h('label', {}, rot, campo(`${p.id}:${k}`, p[k], v => atualizar(p, { [k]: v })));
   return h('div', { class: 'form' },
     h('div', { class: 'grade3' }, linha('Idade', 'idade'), linha('Peso', 'peso'), linha('Tamanho', 'altura')),
+    generoView(p),
     h('div', { class: 'grade2' },
       h('label', {}, 'Origem', selecao([{ valor: '', rotulo: '—' }, ...sis.origens.map(o => o.nome)], p.origem, v => atualizar(p, { origem: v }))),
       h('label', {}, 'Motivação', escolhaComOutra(`${p.id}:motivacao`, sis.motivacoes, p.motivacao, v => atualizar(p, { motivacao: v }),

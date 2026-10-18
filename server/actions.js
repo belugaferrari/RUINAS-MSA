@@ -2,7 +2,8 @@ import { db, save, uid } from './db.js';
 import { sistema, idSistema } from './sistema.js';
 import { resolverAtaque, aplicarAtaque, armasDisponiveis, opcoesDefesa, sobrevida, rolarIniciativa, resolverManipulacao, modHumorTestes, humorDe, espectroDe, humorAparente } from '../shared/combate.js';
 import { sincronizarEfeitos, passarTurnoEfeitos, efeitosAoAgir } from '../shared/efeitos.js';
-import { itemAberto, itemVisivel, xpParaSubir, novaFicha, podeEquipar, rolarDado, rolarAtributosCriacao, testeDMil, gerarEncontro, derivados, problemasFicha, LIMITE_SALA } from '../shared/regras.js';
+import { fichasDeTeste, relatorioFicha } from '../shared/fichasTeste.js';
+import { podeSeduzir, itemAberto, itemVisivel, xpParaSubir, novaFicha, podeEquipar, rolarDado, rolarAtributosCriacao, testeDMil, gerarEncontro, derivados, problemasFicha, LIMITE_SALA } from '../shared/regras.js';
 
 const GRUPO_ENCONTROS = 'encontros';
 const MAX_LOG = 100;
@@ -61,7 +62,7 @@ export function resumoCampanha(c) {
 const nomeUsuario = id => db.users.find(u => u.id === id)?.name ?? null;
 
 function fichaPublica(p, sis) {
-  return { id: p.id, tipo: p.tipo, nome: p.nome, classe: p.classe, especializacao: p.especializacao, profissao: p.profissao, nivel: p.nivel, foto: p.foto, humor: humorAparente(p), criatura: !!p.criatura, donoId: p.donoId, dono: nomeUsuario(p.donoId),
+  return { id: p.id, tipo: p.tipo, nome: p.nome, classe: p.classe, especializacao: p.especializacao, profissao: p.profissao, nivel: p.nivel, foto: p.foto, humor: humorAparente(p), criatura: !!p.criatura, donoId: p.donoId, dono: nomeUsuario(p.donoId), genero: p.genero || '', atracao: p.atracao,
     // Efeitos que se veem de fora (sangrando, caído, aturdido…), com a contagem de turnos.
     semPv: !!p.pv && p.pv.atual <= 0,
     ...efeitosPublicos(p, sis) };
@@ -735,6 +736,21 @@ export const acoes = {
     if (c.relacoes[de]) delete c.relacoes[de][para];
   },
 
+  // Fichas de teste: um PJ livre (sem dono) por classe, no nível pedido, para testar as habilidades na mesa.
+  'teste.fichas'(c, { nivel = 6 }, ctx) {
+    exigirMestre(ctx);
+    const sis = sistema(c.sistema);
+    const n = Math.max(3, Math.min(20, parseInt(nivel, 10) || 6));
+    const relatorio = [];
+    for (const f of fichasDeTeste(sis, n, c)) {
+      const p = { ...f, id: uid(), tipo: 'pj', donoId: null, backups: [], itens: [], dinheiro: sis.regras?.creditosIniciais ?? 0, xp: 0 };
+      c.personagens.push(p);
+      const r = relatorioFicha(p, sis, c);
+      relatorio.push({ nome: p.nome, avisos: r.avisos, lembretes: r.lembretes.length, comEfeito: r.comEfeito, total: r.total });
+    }
+    return { relatorio };
+  },
+
   'mapa.definir'(c, { imagemId }, ctx) {
     exigirMestre(ctx);
     c.mapa ||= novoMapa();
@@ -1169,6 +1185,8 @@ export const acoes = {
     const b = personagem(c, alvo);
     exigirDonoOuMestre(ctx, a);
     if (a.id === b.id) throw erro('Escolha outro alvo.');
+    // Sedução só funciona em quem se atrai pelo gênero de quem seduz.
+    if (sub === 'manipulacao.seducao') { const ps = podeSeduzir(a, b); if (!ps.ok) throw erro(ps.motivo); }
     // Espectro: como o alvo enxerga quem manipula (mapa de relacionamento).
     const espectro = espectroDe(c.relacoes[b.id]?.[a.id]?.tipo, sis);
     let r;

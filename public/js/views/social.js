@@ -4,7 +4,7 @@
 import { h, botao, aviso, icone, titulo, confirmar, vazio, janela } from '../ui.js';
 import { estado, render, personagemPorId } from '../estado.js';
 import { acao } from '../api.js';
-import { derivados, listaHabilidades, efeitosHabilidade } from '/shared/regras.js';
+import { derivados, listaHabilidades, efeitosHabilidade, podeSeduzir } from '/shared/regras.js';
 import { resistenciaManipulacao } from '/shared/combate.js';
 import { controladoNaSala, nomeControlado } from './batalha.js';
 import { humorCartao, nomeHumor, nomeSub, reboteTexto, alvoDe, marcarAlvo } from './combate.js';
@@ -93,8 +93,10 @@ function manipulacoes(p, b, mestre) {
     }, h('strong', {}, nomeSub(id)), h('small', {}, `${d.subpericias[id] ?? 0}%`)))),
     h('div', { class: 'causar' },
       h('small', {}, `${nomeSub(sub)}: o que causar em ${b?.nome || 'o alvo'}?`),
+      // Sedução: só em quem se atrai pelo gênero de quem seduz.
+      sub === 'manipulacao.seducao' && b && !podeSeduzir(p, b).ok ? h('p', { class: 'alerta' }, icone('heart-crack'), ` ${podeSeduzir(p, b).motivo}`) : null,
       h('div', { class: 'barra' }, regra.causa.map(id => botao(id === 'ler' ? 'Ler o humor real' : nomeHumor(id), () => manipular(id),
-        { class: 'pequeno primario', icone: 'drama', disabled: !b, title: `${p.nome} usa ${nomeSub(sub)} em ${b?.nome || 'o alvo'}` })))),
+        { class: 'pequeno primario', icone: 'drama', disabled: !b || (sub === 'manipulacao.seducao' && !podeSeduzir(p, b).ok), title: `${p.nome} usa ${nomeSub(sub)} em ${b?.nome || 'o alvo'}` })))),
     h('p', { class: 'dica' }, `Se falhar (rebote): ${reboteTexto(regra)}.`),
     b ? botao('Agredir', async () => {
       const custo = sis.social?.agressao?.dano || '1d6';

@@ -10,7 +10,7 @@ const { novaCampanha, executar, entrarNaCampanha, visaoPara } = await import('..
 const { sistema } = await import('../server/sistema.js');
 const sis = sistema();
 const defeito = sis.defeitos.find(d => d.tipo === 'leve').id;
-const fichaValida = extra => ({ nome: 'Lia', profissao: 'batedor', defeitos: [defeito], ...extra });
+const fichaValida = extra => ({ nome: 'Lia', profissao: 'batedor', genero: 'feminino', defeitos: [defeito], ...extra });
 
 const mestre = { id: 'm', name: 'Mestre' };
 const ana = { id: 'a', name: 'Ana' };
@@ -254,4 +254,19 @@ test('mapa: marcações secretas e NPC fantasma só aparecem para o mestre', () 
   assert.ok(c.mapa.pecas[id].oculto, 'mover não revela o fantasma');
   executar(c, 'mapa.desmarcar', { id: c.mapa.marcas[0].id }, ctxM);
   assert.equal(c.mapa.marcas.length, 0);
+});
+
+test('Sedução só em quem se atrai pelo gênero de quem seduz; fichas de teste nível 6 sem erro de pontos', async () => {
+  const { podeSeduzir } = await import('../shared/regras.js');
+  const homem = { nome: 'Rui', genero: 'masculino' };
+  assert.ok(podeSeduzir(homem, { nome: 'Ana', atracao: ['masculino'] }).ok);
+  assert.ok(!podeSeduzir(homem, { nome: 'Bia', atracao: ['feminino'] }).ok);
+  assert.ok(!podeSeduzir(homem, { nome: 'Caio', atracao: [] }).ok, 'quem não se atrai por ninguém');
+  assert.ok(podeSeduzir(homem, { nome: 'NPC sem dados' }).ok, 'sem atração definida não limita');
+  const m = { id: 'm6', name: 'M6' };
+  const c = novaCampanha(m, { nome: 'Teste 6', maxJogadores: 2, nivel: 1, padraoMSA: true });
+  const { relatorio } = executar(c, 'teste.fichas', { nivel: 6 }, { user: m, mestre: true });
+  assert.equal(relatorio.length, sis.classes.length);
+  for (const r of relatorio) assert.ok(!r.avisos.some(a => a.startsWith('Pontos')), `${r.nome}: ${r.avisos.join('; ')}`);
+  assert.equal(c.personagens.filter(p => p.nivel === 6 && p.tipo === 'pj' && !p.donoId).length, sis.classes.length);
 });
