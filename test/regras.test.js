@@ -253,3 +253,18 @@ test('carga: 40 kg com FOR 10, dobra a cada 6 de FOR; levantamento é o dobro', 
   assert.equal(R.estadoCarga(50, 10).cargaNivel, 'sobrecarregado');
   assert.equal(R.estadoCarga(81, 10).cargaNivel, 'supercarregado');
 });
+
+test('ganhos de classe: todos com texto no nível 20, mesmo com grafia diferente no livro (Artificie/Gerigonça)', async () => {
+  const { fichaDeTeste } = await import('../shared/fichasTeste.js');
+  for (const id of ['msa', 'mss']) {
+    const s = sistema(id);
+    for (const c of s.classes) for (const e of c.especializacoes) {
+      const sem = R.ganhosDeClasse(fichaDeTeste(s, c, e, 20), s).filter(g => !g.descricao && !/vantagem extra|^\+\d|atributo/i.test(g.nome));
+      assert.deepEqual(sem.map(g => g.nome), [], `${id} · ${c.nome} · ${e.nome}`);
+    }
+  }
+  const s = sistema('mss');
+  const inv = s.classes.find(c => /Inventor/.test(c.nome));
+  const g = R.ganhosDeClasse(fichaDeTeste(s, inv, inv.especializacoes.find(e => /ARMEIRO/.test(e.nome)), 8), s).find(x => /Geringon/.test(x.nome));
+  assert.match(g.descricao, /1D4 de um elemento/);
+});

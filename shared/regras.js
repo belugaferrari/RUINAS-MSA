@@ -342,9 +342,33 @@ export function ganhosDeClasse(ficha, sistema) {
     const m = new RegExp(`N[íi]vel\\s*\\d+\\s*[:.]?\\s*${esc}\\s*[.:]\\s*(.+?)(?=\\s*N[íi]vel\\s*\\d+\\s*[:.]|$)`, 'i').exec(todoTexto);
     return m ? m[1].trim() : '';
   };
+  // O livro às vezes escreve o nome diferente da tabela da classe ("Artificie"/"Artífice", "Gerigonça"/"Geringonça"):
+  // sem achar o nome exato, aceita o nome mais parecido com até 2 letras de diferença.
+  const parecido = nome => {
+    const k = chave(nome);
+    if (k.length < 8) return '';
+    let melhor = null;
+    for (const [outra, desc] of descricoes) {
+      const d = distancia(k, outra);
+      if (d <= 2 && (!melhor || d < melhor.d)) melhor = { d, desc };
+    }
+    return melhor?.desc || '';
+  };
   return (ref?.progressao || []).filter(l => l.nivel <= limite).flatMap(l => l.ganhos.map(nome => ({
-    nivel: l.nivel, nome, descricao: descricoes.get(chave(nome)) || dentroDeOutro(nome),
+    nivel: l.nivel, nome, descricao: descricoes.get(chave(nome)) || dentroDeOutro(nome) || parecido(nome),
   })));
+}
+
+// Distância de edição (quantas letras trocar, pôr ou tirar para uma palavra virar a outra).
+function distancia(a, b) {
+  if (Math.abs(a.length - b.length) > 2) return 99;
+  let ant = Array.from({ length: b.length + 1 }, (_, j) => j);
+  for (let i = 1; i <= a.length; i++) {
+    const atual = [i];
+    for (let j = 1; j <= b.length; j++) atual[j] = Math.min(ant[j] + 1, atual[j - 1] + 1, ant[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    ant = atual;
+  }
+  return ant[b.length];
 }
 
 // Validação da ficha conforme os limites (usada na criação, no servidor e na tela).
