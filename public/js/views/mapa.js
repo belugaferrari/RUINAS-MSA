@@ -4,6 +4,8 @@
 import { h, botao, selecao, aviso, icone, titulo, vazio, passador, pedirTexto, janela } from '../ui.js';
 import { estado, render, personagemPorId } from '../estado.js';
 import { acao } from '../api.js';
+import { derivados } from '/shared/regras.js';
+import { restricaoMovimento } from '/shared/efeitos.js';
 
 export const METROS_POR_QUADRADO = 1.5;
 
@@ -106,17 +108,21 @@ function quadradoDoPonto(quadro, g, x, y) {
 function peao(x, g, mover, sel) {
   const { p } = x;
   const semPv = p.semPv || (p.pv && p.pv.atual <= 0);
+  // Movimento limitado por efeito (ou carga, para quem vê os itens): círculo em volta do peão para lembrar.
+  const mov = restricaoMovimento(p, estado.sistema, p.itens && p.atributos ? derivados(p, estado.sistema) : null);
+  const avisoMov = mov.nivel ? ` — ${mov.nivel === 'preso' ? 'não pode se mover' : 'movimento limitado'}: ${mov.motivos.join(', ')}` : '';
   // Quem só vê (jogadores) recebe uma figura, não um botão.
   const el = h(mover ? 'button' : 'span', {
-    type: mover ? 'button' : null, role: mover ? null : 'img', class: `peao ${p.tipo} ${sel === p.id ? 'escolhido' : ''} ${semPv ? 'sem-pv' : ''} ${x.oculto ? 'oculto' : ''}`,
-    'data-pid': p.id, style: { '--col': x.col, '--lin': x.lin }, title: x.oculto ? `${p.nome} (invisível para os jogadores)` : p.nome, 'aria-label': `${p.nome} (coluna ${x.col + 1}, linha ${x.lin + 1})`,
+    type: mover ? 'button' : null, role: mover ? null : 'img', class: `peao ${p.tipo} ${sel === p.id ? 'escolhido' : ''} ${semPv ? 'sem-pv' : ''} ${x.oculto ? 'oculto' : ''} ${mov.nivel ? `mov-${mov.nivel}` : ''}`,
+    'data-pid': p.id, style: { '--col': x.col, '--lin': x.lin }, title: `${p.nome}${x.oculto ? ' (invisível para os jogadores)' : ''}${avisoMov}`, 'aria-label': `${p.nome} (coluna ${x.col + 1}, linha ${x.lin + 1})${avisoMov}`,
     onclick: mover ? e => {
       e.stopPropagation();
       if (e.currentTarget.dataset.arrastou) { delete e.currentTarget.dataset.arrastou; return; }
       estado.sel.mapaSel = sel === p.id ? null : p.id;
       render();
     } : null,
-  }, h('span', { class: 'rosto' }, p.foto ? h('img', { src: p.foto, alt: '', draggable: 'false' }) : p.nome.slice(0, 1)),
+  }, mov.nivel ? h('span', { class: 'peao-restricao', 'aria-hidden': 'true' }, h('span', { class: 'cadeado' }, icone(mov.nivel === 'preso' ? 'lock' : 'footprints'))) : null,
+    h('span', { class: 'rosto' }, p.foto ? h('img', { src: p.foto, alt: '', draggable: 'false' }) : p.nome.slice(0, 1)),
     h('small', { class: 'peao-nome' }, p.nome));
   if (mover) arrastavel(el, p, g);
   return el;

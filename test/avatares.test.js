@@ -13,3 +13,12 @@ test('avatares prontos: ~100, ids únicos, todos os grupos e SVG sem valores que
   }
   assert.ok(AVATARES.some(a => a.genero === 'feminino') && AVATARES.some(a => a.genero === 'masculino'));
 });
+
+test('restrição de movimento: preso (deslocamento 0), restrito (anda menos) e carga', async () => {
+  const { restricaoMovimento } = await import('../shared/efeitos.js');
+  const sis = { condicoes: [{ id: 'paralisado', nome: 'Paralisado', movimento: 'preso' }, { id: 'caido', nome: 'Caído', movimento: 'restrito' }, { id: 'dor', nome: 'Dor' }] };
+  assert.equal(restricaoMovimento({ marcadores: ['Dor'] }, sis).nivel, null);
+  assert.deepEqual(restricaoMovimento({ marcadores: ['Caído'] }, sis), { nivel: 'restrito', motivos: ['Caído'] });
+  assert.equal(restricaoMovimento({ marcadores: ['Caído', 'Paralisado'] }, sis).nivel, 'preso');
+  assert.deepEqual(restricaoMovimento({ marcadores: [] }, sis, { cargaNivel: 'sobrecarregado' }), { nivel: 'restrito', motivos: ['Sobrecarregado'] });
+});

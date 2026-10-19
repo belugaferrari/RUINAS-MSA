@@ -6,6 +6,7 @@ import { GENEROS, derivados, slotsOcupados, ganhosDeClasse, pontosGastos, pontos
 import { painelPericias } from './pericias.js';
 import { bonecoView } from './boneco.js';
 import { escolherAvatar } from './avatares.js';
+import { botaoExpandir, inventarioExpandido } from './inventarioExpandido.js';
 import { prepararTeste } from './dados.js';
 
 export const ICONE_TIPO = {
@@ -488,7 +489,9 @@ export function equipamento(p, mestre, filtro = null) {
   const uso = slotsOcupados(p);
   const itens = (p.itens || []).filter(i => !filtro || filtro(i));
   return h('div', {},
-    filtro ? null : h('div', { class: 'slots' }, sis.slots.map(s => h('span', { class: `selo ${(uso[s.id] || 0) >= s.capacidade ? 'cheio' : ''}` }, `${s.nome} ${uso[s.id] || 0}/${s.capacidade}`))),
+    filtro ? null : h('div', { class: 'slots' }, sis.slots.map(s => h('span', { class: `selo ${(uso[s.id] || 0) >= s.capacidade ? 'cheio' : ''}` }, `${s.nome} ${uso[s.id] || 0}/${s.capacidade}`)),
+      h('span', { class: 'espaco' }), botaoExpandir(p)),
+    filtro ? null : inventarioExpandido(p, mestre),
     itens.length ? tabela(['Item', 'Slot', 'Durab.', 'Dano/Def.', 'Bônus', 'Venda', ''], itens.map(i => ({
       class: i.equipado ? 'equipado' : null,
       celulas: [

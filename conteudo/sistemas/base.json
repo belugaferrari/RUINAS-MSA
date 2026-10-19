@@ -1108,7 +1108,7 @@
    "cor": "#d6a03a"
   },
   {
-   "id": "exausto",
+   "id": "exausto", "movimento": "restrito",
    "nome": "Exausto",
    "grupo": "Fadiga",
    "efeitos": "−20% em todos os testes; não corre nem carrega acima do carregamento.",
@@ -1177,7 +1177,7 @@
    "cor": "#c9785a"
   },
   {
-   "id": "membros-inferiores",
+   "id": "membros-inferiores", "movimento": "restrito",
    "nome": "Dano a membros inferiores",
    "grupo": "Dano",
    "efeitos": "Deslocamento −3 m; disparada causa Dor.",
@@ -1185,7 +1185,7 @@
    "cor": "#a8865a"
   },
   {
-   "id": "caido",
+   "id": "caido", "movimento": "restrito",
    "nome": "Caído",
    "grupo": "Mobilidade",
    "efeitos": "Ataques físicos contra ele têm vantagem; os dele, desvantagem; cobertura parcial contra tiros.",
@@ -1193,7 +1193,7 @@
    "cor": "#8a8a8a"
   },
   {
-   "id": "paralisado",
+   "id": "paralisado", "movimento": "preso",
    "nome": "Paralisado",
    "grupo": "Mobilidade",
    "efeitos": "Deslocamento 0; não move o corpo.",
@@ -1201,7 +1201,7 @@
    "cor": "#6fb8ff"
   },
   {
-   "id": "enraizado",
+   "id": "enraizado", "movimento": "preso",
    "nome": "Enraizado",
    "grupo": "Mobilidade",
    "efeitos": "Deslocamento 0; braços livres.",
@@ -1209,7 +1209,7 @@
    "cor": "#6b8f3a"
   },
   {
-   "id": "desorientado",
+   "id": "desorientado", "movimento": "restrito",
    "nome": "Desorientado",
    "grupo": "Mobilidade",
    "efeitos": "Move-se em direção aleatória (1d8 por passo).",
@@ -1226,7 +1226,7 @@
    "cor": "#f2d64a"
   },
   {
-   "id": "vertigem",
+   "id": "vertigem", "movimento": "restrito",
    "nome": "Vertigem",
    "grupo": "Mobilidade",
    "efeitos": "Aturdido; ao se mover, teste de AGI difícil ou cai.",
@@ -1234,7 +1234,7 @@
    "cor": "#3ad6c2"
   },
   {
-   "id": "imobilizado",
+   "id": "imobilizado", "movimento": "preso",
    "nome": "Imobilizado",
    "grupo": "Mobilidade",
    "efeitos": "Não ataca; ataques contra ele têm vantagem.",
@@ -1242,7 +1242,7 @@
    "cor": "#4f7fd6"
   },
   {
-   "id": "desmaiado",
+   "id": "desmaiado", "movimento": "preso",
    "nome": "Desmaiado",
    "grupo": "Estado",
    "efeitos": "Não pode ser controlado; perde 1 PV por turno abaixo de 0.",

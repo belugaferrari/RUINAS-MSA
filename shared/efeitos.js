@@ -92,3 +92,23 @@ export function efeitosVisiveis(p, sistema) {
     };
   });
 }
+
+// Restrição de movimento (para o círculo no peão do mapa): "preso" = deslocamento 0 (Paralisado, Enraizado,
+// Imobilizado, Desmaiado); "restrito" = anda menos ou mal (membros inferiores, Caído, Exausto, Desorientado, Vertigem)
+// ou carga acima do normal (só para quem enxerga os itens do personagem).
+export function restricaoMovimento(p, sistema, derivadosFicha = null) {
+  const motivos = [];
+  let nivel = null;
+  for (const e of condicoesAtivas(p, sistema)) {
+    if (!e.movimento) continue;
+    motivos.push(e.nome);
+    if (e.movimento === 'preso') nivel = 'preso';
+    else nivel ||= 'restrito';
+  }
+  const carga = derivadosFicha?.cargaNivel;
+  if (carga && carga !== 'normal') {
+    motivos.push(carga === 'supercarregado' ? 'Supercarregado' : 'Sobrecarregado');
+    nivel ||= 'restrito';
+  }
+  return { nivel, motivos };
+}
