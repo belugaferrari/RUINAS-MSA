@@ -48,14 +48,15 @@ function iconeEfeito(p, e, mestre) {
   const turnos = e.turnos != null
     ? (e.sangra ? `próxima perda de PV em ${e.turnos} turno(s) · ${e.sangra.perdidos}/${e.sangra.maximo} PV perdidos` : `faltam ${e.turnos} turno(s)`)
     : 'até alguém tirar';
-  const titulo = `${e.nome}${e.qtd > 1 ? ` ×${e.qtd}` : ''} — ${e.efeitos || ''} (${turnos})`;
+  const suspenso = p.emCombate && e.grupo === 'Necessidades';
+  const titulo = `${e.nome}${e.qtd > 1 ? ` ×${e.qtd}` : ''} — ${e.efeitos || ''} (${turnos})${suspenso ? ' — suspenso durante o combate' : ''}`;
   const conteudo = [
     h('span', { class: 'efeito-desenho', 'aria-hidden': 'true' }, icone(e.icone)),
     e.turnos != null ? h('span', { class: 'efeito-turnos', 'aria-hidden': 'true' }, String(e.turnos)) : null,
     e.qtd > 1 ? h('span', { class: 'efeito-qtd', 'aria-hidden': 'true' }, `×${e.qtd}`) : null,
   ];
   const props = {
-    class: `efeito-icone ef-${e.id} grupo-${(e.grupo || '').toLowerCase().replace(/\s+/g, '-')} ${animando ? 'chegou' : ''}`,
+    class: `efeito-icone ef-${e.id} grupo-${(e.grupo || '').toLowerCase().replace(/\s+/g, '-')} ${animando ? 'chegou' : ''} ${suspenso ? 'suspenso' : ''}`,
     title: titulo, 'aria-label': `${titulo}. Clique para ler`,
     // A animação continua de onde estava mesmo se a tela for redesenhada no meio; cada efeito tem a sua cor.
     style: { ...(e.cor ? { '--cor-ef': e.cor } : {}), ...(animando ? { animationDelay: `-${passou}ms` } : {}) },

@@ -162,8 +162,9 @@ Regra combinada: **o livro é mais atual**; das planilhas só entra o que o livr
 - O mestre passa o tempo de 6 em 6 horas (botão "+6 h" no topo). Cada personagem-jogador conta horas sem comer, sem beber e sem descanso longo (livro, Necessidades): 24 h sem beber = Sede (+1 a cada 12 h; beber tira na hora); 24 h sem comer = CONS% ND 90 (+10 a cada 2 h) para não ficar com Fome (+1 a cada 24 h); 24 h sem descanso longo = Sono (+1 a cada 24 h; some com o descanso longo).
 - Caos meteorológico (livro): 2d20 (dias de estabilidade e clima pela tabela); a cada novo dia do relógio, 1d6 — se der 1, relança; acabou a estabilidade, relança. Jogadores veem o dia, a hora e o clima.
 
-**Provisório — conferir**
+**Confirmado pelo autor (19/10)**
 - Comer (botão ou descanso curto) zera as horas sem comer e tira a Fome toda.
-- O descanso longo não avança o relógio sozinho (o mestre passa o tempo).
-- Os efeitos das Necessidades continuam valendo durante o combate (o livro diz que não afetam na luta e pedem teste de CONS difícil no fim).
-- Vantagens como Absorver Nutrientes (12 h a mais para a fome) ainda não mudam a contagem sozinhas.
+- O descanso longo não avança o relógio (o mestre passa o tempo).
+- Durante o combate os efeitos das Necessidades (Fome, Sede, Sono, Doença, Friagem) ficam suspensos; no fim do combate, quem tinha algum faz CONS% difícil (ND 100) — falhou: Exausto + Marcador de Vulnerabilidade.
+- Automáticos: Absorver Nutrientes (fome só com 36 h; descanso curto 2 PV), Metabolismo Acelerado (defeito: fome com 12 h; transmorfo: descanso curto 2 PV e +1 PV por dado), Apoteose Sintética (imune a Fome, Sede e Sono), Mutações Decrépitas (não acumula Fome, Sede e Sono), Raquítico (+25% contra a fome), Soldado de Campanha e Marcha (vantagem contra fadiga; Soldado também contra doença e sem ônus de Conforto/Ergonomia), Regeneração Lenta (metade nos descansos), Insônia (CAR% difícil no descanso longo; falhou: metade e Sono), Insônia pós-traumática (1d10 < 5: vale como descanso curto e Sono).
+- Só lembrete (dependem da situação): Habitat magnífico, Ligação natural, Hibernação, Glutão, Pele de Jardim, Vigia, Guarda de posto.

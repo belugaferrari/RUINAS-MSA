@@ -3,7 +3,7 @@ import { sistema, idSistema } from './sistema.js';
 import { resolverAtaque, aplicarAtaque, armasDisponiveis, opcoesDefesa, sobrevida, rolarIniciativa, resolverManipulacao, modHumorTestes, humorDe, espectroDe, humorAparente } from '../shared/combate.js';
 import { sincronizarEfeitos, passarTurnoEfeitos, efeitosAoAgir, cargaNoTurno, descansar } from '../shared/efeitos.js';
 import { fichasDeTeste, relatorioFicha } from '../shared/fichasTeste.js';
-import { passarNecessidades, comer, beber, dormir, rolarCaos, climaDoDia, descreverRelogio } from '../shared/tempo.js';
+import { passarNecessidades, comer, beber, dormir, rolarCaos, climaDoDia, descreverRelogio, fimDoCombate } from '../shared/tempo.js';
 import { podeSeduzir, itemAberto, itemVisivel, xpParaSubir, novaFicha, podeEquipar, rolarDado, rolarAtributosCriacao, testeDMil, gerarEncontro, derivados, problemasFicha, LIMITE_SALA, desgastarItem, repararItem, listaHabilidades } from '../shared/regras.js';
 
 const GRUPO_ENCONTROS = 'encontros';
@@ -197,12 +197,8 @@ function novoDiaClima(c) {
   return c.clima;
 }
 
-// Vantagens, defeitos e habilidades que mudam o descanso: o app lembra o mestre (ainda não aplica sozinho).
+// Habilidades que mudam o descanso só em certas situações: o app lembra o mestre (as outras já são automáticas).
 const LEMBRETES_DESCANSO = [
-  [/regenera[cç][aã]o lenta/i, 'Regeneração Lenta: recupera metade dos PV'],
-  [/ins[oô]nia/i, 'Insônia: teste de CAR% difícil (falhou: metade da regeneração e fica com Sono)', 'longo'],
-  [/metabolismo acelerado/i, 'Metabolismo Acelerado: 2 PV no descanso curto e +1 PV por dado', null],
-  [/soldado de campanha/i, 'Soldado de Campanha: sem ônus por dormir sem Conforto ou Ergonomia', 'longo'],
   [/habitat magn[ií]fico/i, 'Habitat magnífico: +2 PV por dado em terreno natural', 'longo'],
   [/liga[cç][aã]o natural/i, 'Ligação natural: avança o dado de regeneração dormindo na natureza', 'longo'],
 ];
@@ -337,9 +333,20 @@ function entrarNoCombate(c, s, p) {
   const atual = s.combate.ordem[s.combate.vez]?.id;
   const r = rolarIniciativa(p, sis);
   s.combate.ordem.push({ id: p.id, ini: r.total, agi: r.agi });
+  p.emCombate = true;
   ordenarIniciativa(s.combate);
   s.combate.vez = Math.max(0, s.combate.ordem.findIndex(o => o.id === atual));
   registrar(s.log, { autor: p.nome, rotulo: `${p.nome} entrou no combate`, texto: `iniciativa ${r.total}` });
+}
+
+// Fim do combate para um personagem: as Necessidades voltam e ele faz o teste de CONS difícil (livro).
+function terminarCombatePara(c, p) {
+  if (!p?.emCombate) return;
+  const sis = sistema(c.sistema);
+  delete p.emCombate;
+  const nota = fimDoCombate(p, sis, derivados(p, sis).percentual.CONS ?? 0);
+  sincronizarEfeitos(p, sis);
+  if (nota) registrar(c.salas.batalha.log, { autor: p.nome, rotulo: 'Fim do combate — Necessidades', texto: nota });
 }
 
 function sairDoCombate(s, id) {
@@ -376,6 +383,7 @@ function iniciarCombate(c) {
     return { id: p.id, ini: r.total, agi: r.agi, dados: r.dados };
   });
   s.combate = { rodada: 1, turno: 1, vez: 0, ordem };
+  for (const p of vivos) p.emCombate = true;
   ordenarIniciativa(s.combate);
   s.ativo = s.combate.ordem[0].id;
   const nomes = s.combate.ordem.map(o => `${c.personagens.find(p => p.id === o.id).nome} ${o.ini}`);
@@ -929,6 +937,7 @@ export const acoes = {
     s.participantes = s.participantes.filter(x => x !== id);
     if (s.ativo === id) s.ativo = null;
     sairDoCombate(s, id);
+    terminarCombatePara(c, c.personagens.find(p => p.id === id));
   },
 
   'sala.acionar'(c, { sala: nome, id }, ctx) {
@@ -1075,7 +1084,9 @@ export const acoes = {
     const s = c.salas.batalha;
     if (!s.combate) return;
     registrar(s.log, { autor: 'Mestre', rotulo: 'Combate encerrado', texto: `após ${s.combate.rodada} rodada(s)` });
+    const ids = s.combate.ordem.map(o => o.id);
     s.combate = null;
+    for (const id of ids) terminarCombatePara(c, c.personagens.find(p => p.id === id));
     s.ativo = null;
   },
 
@@ -1235,7 +1246,7 @@ export const acoes = {
         if (tirados.length) notas.push(`guardou para dormir: ${tirados.map(i => i.nome).join(', ')}`);
       }
       const d = derivados(p, sis);
-      notas.push(...descansar(p, sis, tipo, d.pvMax, { confortavel, abrigado, ergonomico, interrompido }, d.percentual.CONS ?? 0));
+      notas.push(...descansar(p, sis, tipo, d.pvMax, { confortavel, abrigado, ergonomico, interrompido, CAR: d.percentual.CAR ?? 0 }, d.percentual.CONS ?? 0));
       // Descanso curto é a refeição (meia ração); o longo, se não foi interrompido, tira o Sono.
       if (tipo === 'curto') notas.push(comer(p, sis));
       if (tipo === 'longo' && !interrompido) { const dormiu = dormir(p, sis); if (dormiu) notas.push(dormiu); else (p.necessidades ||= { comida: 0, agua: 0, sono: 0 }).sono = 0; }

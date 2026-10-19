@@ -2,6 +2,7 @@
 // p.efeitos guarda os contadores de turno de cada um, por id da condição.
 // A contagem anda no fim do turno de quem sofre o efeito (controle de turno do Campo de Batalha).
 import { rolarDado, condicoesAtivas, testeDMil } from './regras.js';
+import { regrasNecessidades, testeVantagem } from './tempo.js';
 
 const semAcento = s => String(s || '').normalize('NFKD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
 const rolar = (v, rng) => (typeof v === 'number' ? v : rolarDado(String(v), rng).total);
@@ -150,23 +151,51 @@ export function descansar(p, sistema, tipo, pvMax, cond = {}, percentualCONS = 0
     p.pv.atual = Math.min(pvMax ?? p.pv.max, p.pv.atual + n);
     notas.push(p.pv.atual > antes ? `+${p.pv.atual - antes} PV (${p.pv.atual}/${p.pv.max})` : 'PV já no máximo');
   };
-  if (!longo) { ganharPv(1); return notas; }
-  // PV: 1d4 por nível (metade dos dados se o sono foi interrompido), −1 por dado para cada critério que faltar.
+  // Vantagens e defeitos: Absorver Nutrientes / Metabolismo Acelerado (curto 2 PV, +1 por dado), Regeneração Lenta (metade),
+  // Soldado de Campanha (sem ônus de Conforto/Ergonomia; vantagem contra doença), Insônia e Insônia pós-traumática.
+  const m = regrasNecessidades(p, sistema);
+  const metade = n => (m.regenMetade ? Math.floor(n / 2) : n);
+  const sono = () => { const c = (sistema.condicoes || []).find(x => x.id === 'sono'); if (c) (p.marcadores ||= []).push(c.nome); };
+  if (!longo) {
+    ganharPv(metade(m.curtoPv));
+    if (m.regenMetade) notas.push('Regeneração Lenta: metade');
+    return notas;
+  }
+  if (m.insoniaPos && !cond.interrompido) {
+    const d10 = rolarDado('1d10', rng).total;
+    if (d10 < 5) {
+      ganharPv(metade(m.curtoPv));
+      sono();
+      notas.push(`Insônia pós-traumática (1d10 = ${d10}): o descanso conta só como curto e fica com Sono`);
+      return notas;
+    }
+    notas.push(`Insônia pós-traumática (1d10 = ${d10}): dormiu`);
+  }
+  let reduzir = 1;
+  if (m.insonia && !cond.interrompido) {
+    const t = testeDMil(cond.CAR ?? 0, 100, sistema, { rng });
+    if (!t.sucesso) { reduzir = 2; sono(); }
+    notas.push(`Insônia: CAR% ${t.total} × ND 100 — ${t.sucesso ? 'dormiu bem' : 'metade da regeneração e fica com Sono'}`);
+  }
+  // PV: 1d4 por nível, −1 por dado para cada critério que faltar (mínimo geral 1).
   const protecao = (p.itens || []).some(i => i.equipado && i.tipo === 'defesa' && i.slot !== 'maos');
   const confortavel = cond.confortavel !== false && !protecao;
-  const faltam = [!confortavel && (protecao && cond.confortavel !== false ? 'Conforto (dormiu com proteção)' : 'Conforto'), cond.abrigado === false && 'Abrigo', cond.ergonomico === false && 'Ergonomia'].filter(Boolean);
+  const faltam = [!confortavel && !m.semOnusConfortoErgo && (protecao && cond.confortavel !== false ? 'Conforto (dormiu com proteção)' : 'Conforto'), cond.abrigado === false && 'Abrigo', cond.ergonomico === false && !m.semOnusConfortoErgo && 'Ergonomia'].filter(Boolean);
+  if (m.semOnusConfortoErgo && (!confortavel || cond.ergonomico === false)) notas.push('Soldado de Campanha: sem ônus de Conforto/Ergonomia');
   const nivel = Math.max(1, p.nivel || 1);
   // Interrompido (autor): d2 por nível em vez de d4, e só 1 de Sanidade.
   const dados = nivel;
   const dado = cond.interrompido ? 'd2' : 'd4';
   const r = rolarDado(`${dados}${dado}`, rng);
-  const pv = Math.max(1, r.total - faltam.length * dados);
-  ganharPv(pv);
+  const pv = Math.floor(metade(Math.max(1, r.total + (m.pvPorDado - faltam.length) * dados)) / reduzir);
+  ganharPv(Math.max(pv, 1));
   if (faltam.length) notas.push(`sem ${faltam.join(', ')}: −${faltam.length * dados} PV (${dados}${dado} = ${r.total})`);
+  if (m.pvPorDado) notas.push(`Metabolismo Acelerado: +${m.pvPorDado * dados} PV`);
+  if (m.regenMetade) notas.push('Regeneração Lenta: metade');
   if (cond.interrompido) notas.push(`descanso interrompido: ${dados}d2 de PV e 1 de Sanidade`);
   // Sanidade: 1d6 (interrompido: 1).
   if (p.sanidade) {
-    const ganho = cond.interrompido ? 1 : rolarDado('1d6', rng).total;
+    const ganho = cond.interrompido ? 1 : Math.max(reduzir === 2 ? 0 : 1, Math.floor(rolarDado('1d6', rng).total / reduzir));
     const antes = p.sanidade.atual;
     p.sanidade.atual = Math.min(p.sanidade.max, p.sanidade.atual + ganho);
     if (p.sanidade.atual > antes) notas.push(`+${p.sanidade.atual - antes} Sanidade`);
@@ -178,14 +207,14 @@ export function descansar(p, sistema, tipo, pvMax, cond = {}, percentualCONS = 0
   const gen = qtd('genetico');
   const doente = qtd('doenca') > 0;
   const doenca = (sistema.condicoes || []).find(c => c.id === 'doenca');
-  const teste = nd => { const t = testeDMil(percentualCONS, nd, sistema, { rng }); return { ...t, txt: `CONS% ${t.total} × ND ${nd}` }; };
+  const teste = (nd, vant = false) => { const t = testeVantagem(percentualCONS, nd, sistema, vant, rng); return { ...t, txt: `CONS% ${t.total} × ND ${nd}${t.vantagem ? ' com vantagem' : ''}` }; };
   if (vul) {
     // Já doente: ND 70 + 10 × marcadores (livro, Doença). Saudável: ND 40 + 10 × marcadores (autor, provisório).
-    const t = teste((doente ? 70 : 40) + 10 * vul);
+    const t = teste((doente ? 70 : 40) + 10 * vul, m.vantagemDoenca);
     if (!t.sucesso && doenca) p.marcadores.push(doenca.nome);
     notas.push(`${vul} marcador(es) de vulnerabilidade: ${t.txt} — ${t.sucesso ? 'resistiu' : doente ? 'a Doença se agravou' : 'ficou Doente'}`);
   } else if (doente) {
-    const t = teste(70);
+    const t = teste(70, m.vantagemDoenca);
     if (t.sucesso && doenca) tirarCondicao(p, doenca);
     notas.push(`Doença sem novos marcadores: ${t.txt} — ${t.sucesso ? 'curou-se' : 'continua doente'}`);
   }

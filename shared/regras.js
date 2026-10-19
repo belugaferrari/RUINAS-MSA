@@ -258,7 +258,8 @@ export function derivados(ficha, sistema) {
   const hab = bonusHabilidades(ficha, sistema);
   const racial = sistema.raca?.modificadores || {};
   // Condições (Fome, Cansado, Sono…): mudam atributos e somam/subtraem % nos testes.
-  const condicoes = condicoesAtivas(ficha, sistema);
+  // Durante o combate os efeitos das Necessidades (Fome, Sede, Sono, Doença, Friagem) ficam suspensos (livro).
+  const condicoes = condicoesAtivas(ficha, sistema).filter(c => !(ficha.emCombate && c.grupo === 'Necessidades'));
   const condAtr = {}, condTesteAtr = {}, condPericia = {};
   let condTestes = 0;
   for (const c of condicoes) {

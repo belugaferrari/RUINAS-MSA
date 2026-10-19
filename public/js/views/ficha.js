@@ -178,6 +178,7 @@ function necessidadesView(p) {
   const item = (ic, rotulo, horas, limite) => h('span', { class: `necessidade ${horas >= limite ? 'alerta' : horas >= limite - 6 ? 'aviso' : ''}`, title: `${rotulo}: ${horas} h (efeito a partir de ${limite} h)` },
     icone(ic), ` ${horas} h`);
   return h('div', { class: 'necessidades' },
+    p.emCombate ? h('p', { class: 'dica' }, icone('swords'), ' Em combate: Fome, Sede, Sono, Doença e Friagem ficam suspensos. No fim, teste de CONS% difícil (falhou: Exausto + Marcador de Vulnerabilidade).') : null,
     h('div', { class: 'barra' },
       item('utensils-crossed', 'Sem comer', n.comida, 24), item('cup-soda', 'Sem beber', n.agua, 24), item('bed', 'Sem descanso longo', n.sono, 24),
       h('span', { class: 'espaco' }),

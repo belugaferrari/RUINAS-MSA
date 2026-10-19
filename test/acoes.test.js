@@ -354,3 +354,47 @@ test('relógio (+6 h): Sede, Fome (teste) e Sono; comer/beber/descanso zeram; ca
   assert.equal(dia.clima.dias, 4);
   assert.ok(T.climaDoDia({ ...clima, dias: 5 }, () => 0).mudou, '1d6 = 1 muda o tempo');
 });
+
+test('necessidades: suspensas no combate (teste de CONS no fim) e vantagens/defeitos automáticos', async () => {
+  const T = await import('../shared/tempo.js');
+  const { descansar } = await import('../shared/efeitos.js');
+  const R = await import('../shared/regras.js');
+  const def = (nome, descricao = '') => ({ id: nome, nome, descricao });
+  const s = { ...sis, defeitos: [def('Regeneração Lenta'), def('Absorver Nutrientes'), def('Apoteose Sintética'), def('Mutações Decrépitas'),
+    def('Metabolismo Acelerado', 'Você passa a ser suscetível a fome a partir de 12horas sem comer.'), def('Soldado de Campanha'), def('Insônia pós traumática')] };
+  const pj = (defeitos, extra = {}) => ({ nome: 'X', nivel: 2, atributos: { FOR: 10, CONS: 10 }, defeitos, marcadores: [], pv: { max: 30, atual: 1 }, ...extra });
+  // Fome em 36 h com Absorver Nutrientes; 12 h com Metabolismo Acelerado (teste com rng alto falha? usa CONS% 0).
+  const a = pj(['Absorver Nutrientes']);
+  T.passarNecessidades(a, s, 30, 0, () => 0.99);
+  assert.ok(!a.marcadores.includes('Fome'), 'ainda não testou a fome antes de 36 h');
+  const mt = pj(['Metabolismo Acelerado']);
+  T.passarNecessidades(mt, s, 12, 0, () => 0.5);
+  assert.ok(mt.marcadores.includes('Fome'), 'com 12 h já testa (e falha com CONS% 0)');
+  // Apoteose Sintética: imune; Mutações Decrépitas: não acumula.
+  const ap = pj(['Apoteose Sintética']);
+  T.passarNecessidades(ap, s, 72, 0);
+  assert.deepEqual(ap.marcadores, []);
+  const md = pj(['Mutações Decrépitas']);
+  T.passarNecessidades(md, s, 72, 0, () => 0.5);
+  assert.equal(md.marcadores.filter(x => x === 'Sede').length, 1);
+  assert.equal(md.marcadores.filter(x => x === 'Sono').length, 1);
+  // Descanso: Regeneração Lenta (metade), Absorver Nutrientes (curto 2 PV), Soldado de Campanha (sem ônus de conforto/ergonomia).
+  const rl = pj(['Regeneração Lenta']);
+  descansar(rl, s, 'longo', 30, {}, 0, () => 0.99);
+  assert.equal(rl.pv.atual, 1 + 4, '2d4 = 8, metade = 4');
+  const an = pj(['Absorver Nutrientes']);
+  descansar(an, s, 'curto', 30);
+  assert.equal(an.pv.atual, 3);
+  const sc = pj(['Soldado de Campanha']);
+  descansar(sc, s, 'longo', 30, { confortavel: false, ergonomico: false }, 0, () => 0.99);
+  assert.equal(sc.pv.atual, 9, 'sem ônus: 2d4 = 8');
+  // Combate: Necessidades suspensas; no fim, teste de CONS difícil.
+  const cb = pj([], { marcadores: ['Fome', 'Sede'] });
+  const fora = R.derivados(cb, s).atributos.CONS;
+  cb.emCombate = true;
+  assert.equal(R.derivados(cb, s).atributos.CONS, fora + 2, 'Fome e Sede suspensas');
+  const nota = T.fimDoCombate(cb, s, 0, () => 0.5);
+  assert.ok(!cb.emCombate);
+  assert.match(nota, /Exausto/);
+  assert.ok(cb.marcadores.includes('Exausto') && cb.marcadores.some(m => /vulnerabilidade/i.test(m)));
+});

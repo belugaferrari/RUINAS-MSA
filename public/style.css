@@ -1166,3 +1166,5 @@ span.peao { display: grid; }
   .relogio-chip { min-height: var(--toque); min-width: var(--toque); justify-content: center; padding: .3em; }
   .relogio-topo > button:not(.relogio-chip) { display: none; }
 }
+
+.efeito-icone.suspenso { opacity: .4; filter: grayscale(.8); }
