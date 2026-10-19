@@ -135,8 +135,8 @@ export function cargaNoTurno(p, d) {
 
 // Descanso (livro, "Descansos, regeneração e outras regras"):
 // · Curto (refeição de meia ração + 1 hora): 1 PV.
-// · Longo (6 h de sono, ou 8 h em até duas partes): 1d4 PV por nível e 1d6 de Sanidade. Sono interrompido sem voltar
-//   a dormir: metade dos dados (arredondado para baixo). Sem Conforto (roupas), Abrigo (frio/chuva) ou Ergonomia
+// · Longo (6 h de sono, ou 8 h em até duas partes): 1d4 PV por nível e 1d6 de Sanidade. Interrompido (sem voltar
+//   a dormir): 1d2 PV por nível e 1 de Sanidade (autor). Sem Conforto (roupas), Abrigo (frio/chuva) ou Ergonomia
 //   (acolchoado): −1 PV por dado lançado para cada critério que faltar, com mínimo geral de 1 PV.
 //   Itens de proteção equipados tiram o Conforto. Testes dos marcadores: vulnerabilidade (doença) e genéticos (mutação);
 //   depois todos os marcadores são zerados. As capacidades dos atributos voltam.
@@ -156,16 +156,17 @@ export function descansar(p, sistema, tipo, pvMax, cond = {}, percentualCONS = 0
   const confortavel = cond.confortavel !== false && !protecao;
   const faltam = [!confortavel && (protecao && cond.confortavel !== false ? 'Conforto (dormiu com proteção)' : 'Conforto'), cond.abrigado === false && 'Abrigo', cond.ergonomico === false && 'Ergonomia'].filter(Boolean);
   const nivel = Math.max(1, p.nivel || 1);
-  const dados = cond.interrompido ? Math.max(1, Math.floor(nivel / 2)) : nivel;
-  const r = rolarDado(`${dados}d4`, rng);
+  // Interrompido (autor): d2 por nível em vez de d4, e só 1 de Sanidade.
+  const dados = nivel;
+  const dado = cond.interrompido ? 'd2' : 'd4';
+  const r = rolarDado(`${dados}${dado}`, rng);
   const pv = Math.max(1, r.total - faltam.length * dados);
   ganharPv(pv);
-  if (faltam.length) notas.push(`sem ${faltam.join(', ')}: −${faltam.length * dados} PV (${dados}d4 = ${r.total})`);
-  if (cond.interrompido) notas.push(`sono interrompido: ${dados}d4 em vez de ${nivel}d4`);
-  // Sanidade: 1d6 (metade se interrompido).
+  if (faltam.length) notas.push(`sem ${faltam.join(', ')}: −${faltam.length * dados} PV (${dados}${dado} = ${r.total})`);
+  if (cond.interrompido) notas.push(`descanso interrompido: ${dados}d2 de PV e 1 de Sanidade`);
+  // Sanidade: 1d6 (interrompido: 1).
   if (p.sanidade) {
-    const d6 = rolarDado('1d6', rng).total;
-    const ganho = cond.interrompido ? Math.floor(d6 / 2) : d6;
+    const ganho = cond.interrompido ? 1 : rolarDado('1d6', rng).total;
     const antes = p.sanidade.atual;
     p.sanidade.atual = Math.min(p.sanidade.max, p.sanidade.atual + ganho);
     if (p.sanidade.atual > antes) notas.push(`+${p.sanidade.atual - antes} Sanidade`);
@@ -179,7 +180,8 @@ export function descansar(p, sistema, tipo, pvMax, cond = {}, percentualCONS = 0
   const doenca = (sistema.condicoes || []).find(c => c.id === 'doenca');
   const teste = nd => { const t = testeDMil(percentualCONS, nd, sistema, { rng }); return { ...t, txt: `CONS% ${t.total} × ND ${nd}` }; };
   if (vul) {
-    const t = teste(70 + 10 * vul);
+    // Já doente: ND 70 + 10 × marcadores (livro, Doença). Saudável: ND 40 + 10 × marcadores (autor, provisório).
+    const t = teste((doente ? 70 : 40) + 10 * vul);
     if (!t.sucesso && doenca) p.marcadores.push(doenca.nome);
     notas.push(`${vul} marcador(es) de vulnerabilidade: ${t.txt} — ${t.sucesso ? 'resistiu' : doente ? 'a Doença se agravou' : 'ficou Doente'}`);
   } else if (doente) {

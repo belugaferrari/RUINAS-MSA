@@ -298,7 +298,7 @@ test('PV persistentes/permanentes baixam o máximo; descanso do grupo; capacidad
   assert.throws(() => executar(c, 'descanso.fazer', { tipo: 'curto' }, { user: { id: 'x' }, mestre: false }));
 });
 
-test('durabilidade (livro, cap. 5): desgaste com DS maior, quebra em 0, reparo 1 por desgaste; consumíveis sem contagem', async () => {
+test('durabilidade (livro, cap. 5): desgaste com DS maior, quebra em 0, reparo nunca dois seguidos; consumíveis sem contagem', async () => {
   const R = await import('../shared/regras.js');
   const it = { nome: 'Faca', durabilidade: 2 };
   assert.equal(R.desgastarItem(it, 2), null, 'DS igual não desgasta');
@@ -307,12 +307,50 @@ test('durabilidade (livro, cap. 5): desgaste com DS maior, quebra em 0, reparo 1
   assert.equal(R.durabilidadeDe(it).quebrado, true);
   assert.equal(R.desgastarItem(it, 9), null, 'quebrado não perde mais');
   R.repararItem(it);
+  assert.equal(it.durabilidadeAtual, 1);
+  assert.throws(() => R.repararItem(it), /duas vezes seguidas/, 'caiu 2, sobe só 1');
+  R.desgastarItem(it, 10);
   R.repararItem(it);
-  assert.equal(it.durabilidadeAtual, 2);
-  assert.throws(() => R.repararItem(it));
+  assert.equal(it.durabilidadeAtual, 1);
   const sem = { nome: 'Lança', durabilidade: 5 };
   assert.match(R.desgastarItem(sem, 1, { semPrerequisito: true }), /perdeu 1/, 'sem pré-requisito, qualquer falha desgasta');
   assert.equal(R.durabilidadeDe({ consumivel: true }).texto, 'Consumível');
   const cons = sis.itens.filter(i => i.consumivel);
   assert.ok(cons.every(i => i.durabilidade == null));
+});
+
+test('relógio (+6 h): Sede, Fome (teste) e Sono; comer/beber/descanso zeram; caos meteorológico; limites do descanso do jogador', async () => {
+  const T = await import('../shared/tempo.js');
+  const m = { id: 'm8', name: 'M8' };
+  const c = novaCampanha(m, { nome: 'Teste 8', maxJogadores: 2, nivel: 1, padraoMSA: true });
+  executar(c, 'teste.fichas', { nivel: 3 }, { user: m, mestre: true });
+  const p = c.personagens[0];
+  for (let i = 0; i < 4; i++) executar(c, 'tempo.passar', { horas: 6 }, { user: m, mestre: true });
+  assert.equal(c.relogio.horas, 24);
+  assert.deepEqual([p.necessidades.comida, p.necessidades.agua, p.necessidades.sono], [24, 24, 24]);
+  assert.ok(p.marcadores.includes('Sede') && p.marcadores.includes('Sono'));
+  executar(c, 'necessidade.beber', { id: p.id }, { user: m, mestre: true });
+  assert.ok(!p.marcadores.includes('Sede'));
+  for (let i = 0; i < 2; i++) executar(c, 'tempo.passar', { horas: 6 }, { user: m, mestre: true });
+  assert.equal(p.marcadores.filter(x => x === 'Sede').length, 0, '12 h depois de beber ainda sem sede');
+  // Jogador: 1 descanso longo por dia.
+  const j = { id: 'j8', name: 'J8' };
+  p.donoId = j.id;
+  executar(c, 'descanso.fazer', { tipo: 'longo', ids: [p.id] }, { user: j, mestre: false });
+  assert.equal(p.necessidades.sono, 0);
+  assert.ok(!p.marcadores.includes('Sono'));
+  assert.throws(() => executar(c, 'descanso.fazer', { tipo: 'longo', ids: [p.id] }, { user: j, mestre: false }), /já fez o descanso longo/);
+  assert.throws(() => executar(c, 'descanso.fazer', { tipo: 'longo', ids: [c.personagens[1].id] }, { user: j, mestre: false }));
+  executar(c, 'descanso.fazer', { tipo: 'curto', ids: [p.id] }, { user: j, mestre: false });
+  assert.equal(p.necessidades.comida, 0, 'descanso curto é a refeição');
+  // Confortável: tira armadura e armas.
+  p.itens = [{ uid: 'a', nome: 'Espada', tipo: 'arma', equipado: true }, { uid: 'b', nome: 'Couraça', tipo: 'defesa', slot: 'corpo', equipado: true }];
+  executar(c, 'descanso.fazer', { tipo: 'longo', ids: [p.id], confortavel: true }, { user: m, mestre: true });
+  assert.ok(p.itens.every(i => !i.equipado));
+  // Caos meteorológico
+  const { clima } = executar(c, 'clima.caos', {}, { user: m, mestre: true });
+  assert.ok(clima.dias >= 1 && clima.dias <= 20 && T.CLIMAS.some(x => x.nome === clima.nome));
+  const dia = T.climaDoDia({ ...clima, dias: 5 }, () => 0.5);
+  assert.equal(dia.clima.dias, 4);
+  assert.ok(T.climaDoDia({ ...clima, dias: 5 }, () => 0).mudou, '1d6 = 1 muda o tempo');
 });

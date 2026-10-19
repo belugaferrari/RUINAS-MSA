@@ -3,6 +3,7 @@ import { sistema, idSistema } from './sistema.js';
 import { resolverAtaque, aplicarAtaque, armasDisponiveis, opcoesDefesa, sobrevida, rolarIniciativa, resolverManipulacao, modHumorTestes, humorDe, espectroDe, humorAparente } from '../shared/combate.js';
 import { sincronizarEfeitos, passarTurnoEfeitos, efeitosAoAgir, cargaNoTurno, descansar } from '../shared/efeitos.js';
 import { fichasDeTeste, relatorioFicha } from '../shared/fichasTeste.js';
+import { passarNecessidades, comer, beber, dormir, rolarCaos, climaDoDia, descreverRelogio } from '../shared/tempo.js';
 import { podeSeduzir, itemAberto, itemVisivel, xpParaSubir, novaFicha, podeEquipar, rolarDado, rolarAtributosCriacao, testeDMil, gerarEncontro, derivados, problemasFicha, LIMITE_SALA, desgastarItem, repararItem, listaHabilidades } from '../shared/regras.js';
 
 const GRUPO_ENCONTROS = 'encontros';
@@ -106,6 +107,7 @@ export function visaoPara(c, user, area) {
     id: c.id, nome: c.nome, nivel: c.nivel, padraoMSA: c.padraoMSA, pontos: c.pontos, aberta: c.aberta, sistema: idSistema(c.sistema),
     lojaAberta: c.lojaAberta, dadosNaTela: c.dadosNaTela !== false, itensRarosVisiveis: !!c.itensRarosVisiveis, itensLiberados: c.itensLiberados || [], maxJogadores: c.maxJogadores, papel: 'jogador',
     lore: c.lore,
+    relogio: c.relogio || { horas: 0 }, clima: c.clima || null,
     personagens,
     relacoes: Object.fromEntries([...meus].map(id => [id, c.relacoes[id] || {}])),
     imagens: c.imagens.filter(i => i.mostrando),
@@ -182,6 +184,17 @@ function recalcularMaximos(p, sis) {
     t.atual = k === 'humanidade' ? Math.min(novo, t.atual) : t.atual + (novo - t.max);
     t.max = novo;
   }
+}
+
+// Clima: um novo dia confere o caos meteorológico (1d6 enquanto estável; 1 = muda; acabou a estabilidade = relança).
+const textoClima = k => `${k.nome}${k.intempere ? ' (intempérie)' : ''}: ${k.texto} Estável por ${k.dias} dia(s). [2d20: ${k.dados.join(', ')}]`;
+function novoDiaClima(c) {
+  if (!c.clima) return null;
+  const r = climaDoDia(c.clima);
+  c.clima = { ...r.clima, desde: r.mudou ? c.relogio.horas : c.clima.desde };
+  registrar(c.log, { autor: 'Mestre', rotulo: `Clima — ${descreverRelogio(c.relogio.horas)}`,
+    texto: r.mudou ? `${r.motivo}. ${textoClima(c.clima)}` : `1d6 = ${r.d6}: o tempo segue ${c.clima.nome.toLowerCase()} (mais ${c.clima.dias} dia(s)).` });
+  return c.clima;
 }
 
 // Vantagens, defeitos e habilidades que mudam o descanso: o app lembra o mestre (ainda não aplica sozinho).
@@ -1196,21 +1209,93 @@ export const acoes = {
   // Descanso curto ou longo (mestre): regenera PV (e Sanidade no longo), testa os marcadores, recarrega capacidades.
   // Sem "ids", vale para todos os personagens-jogador da campanha.
   'descanso.fazer'(c, { tipo, ids, confortavel = true, abrigado = true, ergonomico = true, interrompido = false }, ctx) {
-    exigirMestre(ctx);
     if (!['curto', 'longo'].includes(tipo)) throw erro('Escolha descanso curto ou longo.');
     const sis = sistema(c.sistema);
+    // Sem "ids": todos os personagens-jogador (só o mestre). O jogador descansa os próprios personagens,
+    // no máximo 1 descanso longo e 2 curtos (refeições) por dia do relógio da campanha.
+    if (!ctx.mestre && !ids?.length) throw erro('Escolha o personagem que vai descansar.');
     const alvos = (ids?.length ? ids.map(id => personagem(c, id)) : c.personagens.filter(p => p.tipo === 'pj'));
     if (!alvos.length) throw erro('Nenhum personagem para descansar.');
+    for (const p of alvos) exigirDonoOuMestre(ctx, p);
+    const dia = Math.floor((c.relogio?.horas || 0) / 24);
+    if (!ctx.mestre) {
+      for (const p of alvos) {
+        const usos = p.descansosDoDia?.dia === dia ? p.descansosDoDia : { dia, curto: 0, longo: 0 };
+        if (tipo === 'longo' && usos.longo >= 1) throw erro(`${p.nome} já fez o descanso longo de hoje. Peça ao mestre para passar o tempo.`);
+        if (tipo === 'curto' && usos.curto >= 2) throw erro(`${p.nome} já fez as 2 refeições (descansos curtos) de hoje.`);
+      }
+    }
     const linhas = [];
     for (const p of alvos) {
+      const notas = [];
+      // Confortável: dorme sem armadura nem armas (são tiradas antes de dormir).
+      if (tipo === 'longo' && confortavel) {
+        const tirados = (p.itens || []).filter(i => i.equipado && (i.tipo === 'defesa' || i.tipo === 'arma'));
+        for (const i of tirados) i.equipado = false;
+        if (tirados.length) notas.push(`guardou para dormir: ${tirados.map(i => i.nome).join(', ')}`);
+      }
       const d = derivados(p, sis);
-      const notas = descansar(p, sis, tipo, d.pvMax, { confortavel, abrigado, ergonomico, interrompido }, d.percentual.CONS ?? 0);
+      notas.push(...descansar(p, sis, tipo, d.pvMax, { confortavel, abrigado, ergonomico, interrompido }, d.percentual.CONS ?? 0));
+      // Descanso curto é a refeição (meia ração); o longo, se não foi interrompido, tira o Sono.
+      if (tipo === 'curto') notas.push(comer(p, sis));
+      if (tipo === 'longo' && !interrompido) { const dormiu = dormir(p, sis); if (dormiu) notas.push(dormiu); else (p.necessidades ||= { comida: 0, agua: 0, sono: 0 }).sono = 0; }
       sincronizarEfeitos(p, sis);
       notas.push(...lembretesDescanso(p, sis, tipo));
-      linhas.push(`${p.nome}: ${notas.join(', ') || 'nada a recuperar'}`);
+      const usos = p.descansosDoDia?.dia === dia ? p.descansosDoDia : { dia, curto: 0, longo: 0 };
+      usos[tipo] += 1;
+      p.descansosDoDia = usos;
+      linhas.push(`${p.nome}: ${notas.filter(Boolean).join(', ') || 'nada a recuperar'}`);
     }
-    registrar(c.log, { autor: 'Mestre', rotulo: `Descanso ${tipo}`, texto: linhas.join(' · ') });
+    const nome = tipo === 'longo' ? (interrompido ? 'Descanso longo interrompido' : 'Descanso longo') : 'Descanso curto';
+    registrar(c.log, { autor: ctx.mestre ? 'Mestre' : alvos[0].nome, rotulo: nome, texto: linhas.join(' · ') });
     return { linhas };
+  },
+
+  // Relógio da campanha: o mestre passa o tempo de 6 em 6 horas. Cada personagem-jogador conta as horas sem comer,
+  // sem beber e sem dormir (Fome, Sede, Sono). Virou o dia: confere o clima (caos meteorológico).
+  'tempo.passar'(c, { horas = 6 }, ctx) {
+    exigirMestre(ctx);
+    const h = Math.max(1, Math.min(24, parseInt(horas, 10) || 6));
+    const sis = sistema(c.sistema);
+    c.relogio ||= { horas: 0 };
+    const diaAntes = Math.floor(c.relogio.horas / 24);
+    c.relogio.horas += h;
+    const linhas = [];
+    for (const p of c.personagens.filter(x => x.tipo === 'pj' && !(x.marcadores || []).includes('Morto'))) {
+      const notas = passarNecessidades(p, sis, h, derivados(p, sis).percentual.CONS ?? 0);
+      sincronizarEfeitos(p, sis);
+      if (notas.length) linhas.push(`${p.nome}: ${notas.join(', ')}`);
+    }
+    registrar(c.log, { autor: 'Mestre', rotulo: `+${h} h — ${descreverRelogio(c.relogio.horas)}`, texto: linhas.join(' · ') || 'ninguém sofreu com fome, sede ou sono' });
+    let clima = null;
+    for (let d = diaAntes; d < Math.floor(c.relogio.horas / 24); d++) clima = novoDiaClima(c);
+    return { relogio: c.relogio, linhas, clima };
+  },
+
+  // Caos meteorológico (2d20): o mestre lança quando quiser (ex.: no começo da campanha).
+  'clima.caos'(c, d, ctx) {
+    exigirMestre(ctx);
+    c.clima = { ...rolarCaos(), desde: c.relogio?.horas || 0 };
+    registrar(c.log, { autor: 'Mestre', rotulo: 'Caos meteorológico', texto: textoClima(c.clima) });
+    return { clima: c.clima };
+  },
+
+  // Comer / beber fora do descanso.
+  'necessidade.comer'(c, { id }, ctx) {
+    const p = personagem(c, id);
+    exigirDonoOuMestre(ctx, p);
+    const sis = sistema(c.sistema);
+    const texto = comer(p, sis);
+    sincronizarEfeitos(p, sis);
+    registrar(c.log, { autor: p.nome, rotulo: 'Refeição', texto: `${p.nome} ${texto}.` });
+  },
+  'necessidade.beber'(c, { id }, ctx) {
+    const p = personagem(c, id);
+    exigirDonoOuMestre(ctx, p);
+    const sis = sistema(c.sistema);
+    const texto = beber(p, sis);
+    sincronizarEfeitos(p, sis);
+    registrar(c.log, { autor: p.nome, rotulo: 'Água', texto: `${p.nome} ${texto}.` });
   },
 
   // PV persistentes (perdidos até o efeito acabar) e permanentes (nunca voltam): baixam o PV máximo e o atual junto.

@@ -48,7 +48,7 @@ test('regras gerais: deslocamento, PV persistentes/permanentes, descanso e Esmag
   assert.equal(q2.pv.atual, 1, '4d4 = 4, −2 por dado = −8: mínimo geral 1');
   const q3 = { nivel: 4, pv: { max: 40, atual: 0 }, itens: [{ tipo: 'defesa', slot: 'corpo', equipado: true }] };
   const n3 = descansar(q3, sisM, 'longo', 40, { interrompido: true }, 0, () => 0.99);
-  assert.equal(q3.pv.atual, 6, 'interrompido: 2d4 = 8, sem Conforto pela armadura: −2');
+  assert.equal(q3.pv.atual, 4, 'interrompido: 4d2 = 8, sem Conforto pela armadura: −4');
   assert.ok(n3.some(x => /dormiu com proteção/.test(x)));
   descansar(p, sisM, 'curto', 14);
   assert.equal(p.pv.atual, 14);

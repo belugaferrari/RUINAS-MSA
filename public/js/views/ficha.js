@@ -166,8 +166,24 @@ function estadoCompacto(p, d) {
     temporarios(p),
     condicoesView(p, d),
     perdasPv(p, d, false),
+    necessidadesView(p),
     cargaView(d),
     deslocamentoView(d));
+}
+
+// Necessidades (o mestre passa o tempo): horas sem comer, sem beber e sem descanso longo; comer, beber e descansar.
+function necessidadesView(p) {
+  if (p.tipo !== 'pj') return null;
+  const n = p.necessidades || { comida: 0, agua: 0, sono: 0 };
+  const item = (ic, rotulo, horas, limite) => h('span', { class: `necessidade ${horas >= limite ? 'alerta' : horas >= limite - 6 ? 'aviso' : ''}`, title: `${rotulo}: ${horas} h (efeito a partir de ${limite} h)` },
+    icone(ic), ` ${horas} h`);
+  return h('div', { class: 'necessidades' },
+    h('div', { class: 'barra' },
+      item('utensils-crossed', 'Sem comer', n.comida, 24), item('cup-soda', 'Sem beber', n.agua, 24), item('bed', 'Sem descanso longo', n.sono, 24),
+      h('span', { class: 'espaco' }),
+      botao('Comer', () => acao('necessidade.comer', { id: p.id }), { class: 'pequeno', icone: 'utensils', title: 'Fez uma refeição (zera as horas sem comer e tira a Fome)' }),
+      botao('Beber', () => acao('necessidade.beber', { id: p.id }), { class: 'pequeno', icone: 'cup-soda', title: 'Bebeu água (a Sede acaba na hora)' }),
+      botao('Descansar…', () => abrirDescanso({ ids: [p.id], quem: p.nome }), { class: 'pequeno', icone: 'bed', title: 'Descanso curto, longo ou interrompido' })));
 }
 
 // PV persistentes (até o efeito acabar) e permanentes (nunca voltam): baixam o PV máximo. Só o mestre muda.
@@ -357,6 +373,7 @@ function trilhas(p, mestre) {
         campo(`${p.id}:${k}:max`, p[k]?.max, v => atualizar(p, { [k]: { ...p[k], max: v } }), { tipo: 'number', min: 0 })))) : null,
     mestre ? perdasPv(p, derivados(p, estado.sistema), true) : perdasPv(p, derivados(p, estado.sistema), false),
     condicoesView(p, derivados(p, estado.sistema)),
+    necessidadesView(p),
     cargaView(derivados(p, estado.sistema)),
     deslocamentoView(derivados(p, estado.sistema)));
 }

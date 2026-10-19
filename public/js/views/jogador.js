@@ -1,3 +1,4 @@
+import { relogioTopo } from './tempo.js';
 import { h, abas, botao, selecao, aviso, confirmar, vazio, formatarData, icone, titulo, passador } from '../ui.js';
 import { derivados, ganhosDeClasse, pontosGastos, pontosPericiaTotal, pontosDoNivel, pontosVantagemExtra, problemasFicha, vantagensDisponiveis, acharVantagem, xpParaSubir } from '/shared/regras.js';
 import { painelPericias } from './pericias.js';
@@ -38,7 +39,7 @@ export function telaJogador() {
 
   const aba = estado.aba || 'ficha';
   return h('div', {},
-    topo(voltar, nomeCampanha,
+    topo(voltar, nomeCampanha, relogioTopo(false),
       meus.length > 1
         ? selecao(meus.map(p => ({ valor: p.id, rotulo: p.nome })), atual.id, v => { estado.sel.personagem = v; render(); }, { 'aria-label': 'Personagem' })
         : h('span', { class: 'personagem-atual' }, atual.foto ? h('img', { class: 'mini-foto', src: atual.foto, alt: '' }) : icone('user'), atual.nome),

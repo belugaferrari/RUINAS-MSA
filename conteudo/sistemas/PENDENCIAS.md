@@ -145,12 +145,25 @@ Regra combinada: **o livro é mais atual**; das planilhas só entra o que o livr
 - Curto: 1 PV. Longo: 1d4 PV por nível e 1d6 de Sanidade; sem Conforto (roupas), Abrigo ou Ergonomia: −1 PV por dado para cada critério que faltar (mínimo geral 1 PV); itens de proteção equipados tiram o Conforto. Testes dos marcadores no descanso longo e depois os marcadores são zerados. Dor e Trauma profundo NÃO terminam no descanso (correção: a versão anterior usava a planilha).
 - Lembretes (não automáticos): Regeneração Lenta, Insônia, Metabolismo Acelerado, Soldado de Campanha, Habitat magnífico, Ligação natural; Primeiros Socorros (+1 PV nos próximos 3 descansos).
 
+**Respostas do autor (19/10)**
+- Descanso interrompido: botão próprio; 1d2 PV por nível e 1 de Sanidade (o Sono não some).
+- Descanso longo pelo jogador: janela para confirmar Conforto, Abrigo e Ergonomia; com Conforto, a armadura e as armas equipadas são guardadas antes de dormir. O jogador faz 1 descanso longo e 2 curtos por dia do relógio; o mestre não tem limite.
+
 **Provisório — conferir**
-- **Marcador de vulnerabilidade sem estar doente**: o livro só descreve o teste de quem já está Doente (CONS% ND 70 + 10 × marcadores; falha agrava). O app usa o mesmo ND para quem não está doente e, na falha, ele fica Doente.
-- **Sono interrompido**: "metade dos dados" — o app usa metade dos d4 de PV (mínimo 1 dado) e metade do 1d6 de Sanidade.
-- **Mutação temporária** (falha no teste dos marcadores genéticos, ND 50 + 5 × marcadores): o app só avisa; o mestre escolhe a mutação.
+- **Marcador de vulnerabilidade sem estar doente**: CONS% ND 40 + 10 × marcadores (o autor vai confirmar a regra); falha → Doente. Já doente: ND 70 + 10 × marcadores (livro).
+- **Mutação temporária** (falha nos marcadores genéticos): o app só avisa. **LEMBRAR O AUTOR: mandar a TABELA DE MUTAÇÕES (100 mutações)** para o app sortear.
 
 ## Durabilidade (livro, cap. 5) — 19/10
 - Falha usando o item: se o DS for maior que a durabilidade atual, perde 1; sem os pré-requisitos, qualquer falha desgasta; em 0 quebra (arma quebrada não ataca). No combate MSS a arma do ataque que falhou desgasta sozinha; fora dele, o botão "falhou usando" pede o DS.
-- Reparo: +1 por desgaste (cada desgaste só pode ser reparado uma vez) e nunca acima da original.
+- Reparo (autor): +1, nunca acima da original e nunca dois seguidos — depois de um reparo, só depois de um novo desgaste (caiu 3, sobe só 1), salvo habilidades.
 - "C" na planilha = Consumível (233 itens) e "AC" = Autoconsumível (1 item): ficam sem contagem (antes tinham virado durabilidade 1). 2 itens estão sem durabilidade na planilha: Ampola de Absorção de Chamas e Bateria de Lítio Reciclada.
+
+## Relógio e clima (19/10)
+- O mestre passa o tempo de 6 em 6 horas (botão "+6 h" no topo). Cada personagem-jogador conta horas sem comer, sem beber e sem descanso longo (livro, Necessidades): 24 h sem beber = Sede (+1 a cada 12 h; beber tira na hora); 24 h sem comer = CONS% ND 90 (+10 a cada 2 h) para não ficar com Fome (+1 a cada 24 h); 24 h sem descanso longo = Sono (+1 a cada 24 h; some com o descanso longo).
+- Caos meteorológico (livro): 2d20 (dias de estabilidade e clima pela tabela); a cada novo dia do relógio, 1d6 — se der 1, relança; acabou a estabilidade, relança. Jogadores veem o dia, a hora e o clima.
+
+**Provisório — conferir**
+- Comer (botão ou descanso curto) zera as horas sem comer e tira a Fome toda.
+- O descanso longo não avança o relógio sozinho (o mestre passa o tempo).
+- Os efeitos das Necessidades continuam valendo durante o combate (o livro diz que não afetam na luta e pedem teste de CONS difícil no fim).
+- Vantagens como Absorver Nutrientes (12 h a mais para a fome) ainda não mudam a contagem sozinhas.

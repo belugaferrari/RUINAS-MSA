@@ -13,6 +13,7 @@ import { confrontoView } from './confronto.js';
 import { criacaoView, iniciarCriacao } from './criacao.js';
 import { versaoApp } from './versao.js';
 import { mapaView } from './mapa.js';
+import { relogioTopo } from './tempo.js';
 
 const ABAS = [
   ['jogadores', 'Jogadores', 'users'], ['npcs', 'NPCs', 'ghost'], ['imagens', 'Imagens', 'image'], ['social', 'Sala Social', 'drama'],
@@ -32,6 +33,7 @@ export function telaMestre() {
         carregarSaguao();
       }, { class: 'pequeno compacto', icone: 'arrow-left', title: 'Voltar às campanhas', 'aria-label': 'Voltar às campanhas' }),
       h('strong', { class: 'nome-campanha' }, c.nome),
+      relogioTopo(true),
       h('label', { class: 'linha interruptor' },
         h('input', { type: 'checkbox', checked: c.aberta, onchange: e => acao('campanha.atualizar', { aberta: e.target.checked }).catch(err => aviso(err.message, 'erro')) }),
         icone(c.aberta ? 'lock-open' : 'lock'), h('span', {}, c.aberta ? 'Aberta' : 'Fechada'))),

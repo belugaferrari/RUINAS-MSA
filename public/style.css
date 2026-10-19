@@ -1145,3 +1145,24 @@ span.peao { display: grid; }
 .inv-dur { grid-template-columns: auto 1fr auto auto; }
 .inv-dur.quebrado strong { color: #ff6a5a; }
 .inv-dur-nota { grid-column: 1 / -1; color: var(--suave); font-size: .78em; }
+
+/* Relógio e clima no topo */
+.relogio-topo { display: inline-flex; align-items: center; gap: .3em; }
+.relogio-chip { display: inline-flex; align-items: center; gap: .3em; padding: .2em .6em; min-height: 0; border-radius: 999px; font-size: .85em;
+  background: var(--painel2); border: 1px solid var(--borda); color: var(--texto); white-space: nowrap; }
+.relogio-chip .sep { opacity: .5; }
+.relogio-chip.intempere { border-color: #d9773a; color: #ffc49a; }
+.clima-cartao { padding: .6em .8em; border-radius: 8px; border: 1px solid var(--borda); background: var(--painel2); margin: .4em 0; }
+.clima-cartao.intempere { border-color: #d9773a; }
+.clima-cartao p { margin: .3em 0; }
+/* Necessidades na ficha */
+.necessidades { margin-top: .5em; }
+.necessidade { display: inline-flex; align-items: center; gap: .2em; font-size: .88em; padding: .1em .45em; border-radius: 6px; background: rgba(0, 0, 0, .25); }
+.necessidade.aviso { color: #ffc46a; }
+.necessidade.alerta { color: #ff7a6a; background: rgba(224, 90, 79, .15); }
+@media (max-width: 600px) {
+  /* No celular o relógio vira só um ícone (toque abre o tempo e o clima, com "Passar 6 horas" para o mestre). */
+  .relogio-chip > span, .relogio-chip .sep { display: none; }
+  .relogio-chip { min-height: var(--toque); min-width: var(--toque); justify-content: center; padding: .3em; }
+  .relogio-topo > button:not(.relogio-chip) { display: none; }
+}

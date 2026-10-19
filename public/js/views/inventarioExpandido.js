@@ -128,7 +128,7 @@ function cartaoItem(p, i, mestre) {
       }, { class: 'pequeno perigo', icone: 'trash-2' })));
 }
 
-// Durabilidade (livro, cap. 5): barra, quebrado em 0, reparo (+1 por desgaste) e "falhou usando" (compara o DS).
+// Durabilidade (livro, cap. 5): barra, quebrado em 0, reparo (+1, nunca dois seguidos) e "falhou usando" (compara o DS).
 function durabilidadeView(p, i, mestre) {
   const d = durabilidadeDe(i);
   if (d.tipo !== 'normal') {
@@ -146,10 +146,10 @@ function durabilidadeView(p, i, mestre) {
     h('span', { class: 'inv-dur-botoes' },
       botao('', falhou, { class: 'pequeno', icone: 'dice-5', title: `Falhou um teste usando ${i.nome}: informar o DS` }),
       botao('', () => acao('item.reparar', { id: p.id, uid: i.uid }).then(r => aviso(r.texto)).catch(e => aviso(e.message, 'erro')),
-        { class: 'pequeno', icone: 'wrench', disabled: !d.pendentes || d.atual >= d.max, title: d.pendentes ? `Reparo feito (Engenharia): +1 (${d.pendentes} desgaste(s) ainda reparável(is))` : 'Nada a reparar: cada desgaste só pode ser reparado uma vez' }),
+        { class: 'pequeno', icone: 'wrench', disabled: !d.reparavel, title: d.reparavel ? 'Reparo feito (Engenharia): +1' : 'Nada a reparar agora: depois de um reparo, só depois de um novo desgaste' }),
       mestre ? botao('', () => acao('item.durabilidade', { id: p.id, uid: i.uid, valor: Math.max(0, d.atual - 1) }), { class: 'pequeno', icone: 'minus', title: `Mestre: tirar 1 de durabilidade de ${i.nome}` }) : null,
       mestre ? botao('', () => acao('item.durabilidade', { id: p.id, uid: i.uid, valor: Math.min(d.max, d.atual + 1) }), { class: 'pequeno', icone: 'plus', title: `Mestre: devolver 1 de durabilidade de ${i.nome}` }) : null),
-    d.pendentes ? h('small', { class: 'inv-dur-nota' }, `${d.pendentes} desgaste(s) ainda pode(m) ser reparado(s)`) : null);
+    d.reparavel ? h('small', { class: 'inv-dur-nota' }, 'Pode receber 1 reparo (não dá para reparar dois seguidos).') : null);
 }
 
 function nomePericia(id, sis) {
