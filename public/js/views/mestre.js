@@ -1,3 +1,4 @@
+import { abrirDescanso } from './descanso.js';
 import { h, abas, botao, campo, selecao, aviso, confirmar, pedirTexto, janela, vazio, icone, titulo } from '../ui.js';
 import { efeitosIcones, marcadoresLivres } from './efeitos.js';
 import { estado, mudar, render, personagemPorId } from '../estado.js';
@@ -286,13 +287,10 @@ function suportesView() {
 // Fichas de teste: um PJ livre por classe (nível escolhido) e o relatório do que pode dar problema nas habilidades.
 // Descanso do grupo: vale para todos os personagens-jogador da campanha.
 function descansoView() {
-  const fazer = tipo => acao('descanso.fazer', { tipo }).then(r => janela(`Descanso ${tipo}`, h('ul', {}, r.linhas.map(l => h('li', {}, l))), [['OK', () => true]]));
   return h('section', { class: 'bloco' },
     titulo('Descanso do grupo', 'bed'),
-    h('p', { class: 'dica' }, 'Curto: +1 PV e +1 Sanidade. Longo (completo): +1d4 × nível de PV, +2 Sanidade e as capacidades dos atributos recarregam. Os dois terminam Dor e Trauma profundo; o PV nunca passa do máximo (que já desconta os PV persistentes e permanentes). Para um personagem só, use os botões na ficha dele.'),
-    h('div', { class: 'barra' },
-      botao('Descanso curto', () => fazer('curto'), { icone: 'coffee' }),
-      botao('Descanso longo', () => fazer('longo'), { class: 'primario', icone: 'bed' })));
+    h('p', { class: 'dica' }, 'Regenera PV e Sanidade e faz os testes dos marcadores de todos os personagens-jogador, pelas regras do livro. Para um personagem só, use o botão na ficha dele.'),
+    botao('Descansar…', () => abrirDescanso(), { class: 'primario', icone: 'bed' }));
 }
 
 function fichasTesteView() {

@@ -1139,3 +1139,9 @@ span.peao { display: grid; }
 .deslocamento small { color: var(--suave); }
 .deslocamento.limitado { color: #ffb52e; }
 .deslocamento.preso { color: #ff6a5a; }
+.descanso fieldset { border: 1px solid var(--borda); border-radius: 8px; padding: .4em .7em; display: flex; flex-direction: column; gap: .3em; margin: .5em 0; }
+.descanso legend { color: var(--ouro); padding: 0 .3em; }
+.lista-descanso li { margin-bottom: .35em; }
+.inv-dur { grid-template-columns: auto 1fr auto auto; }
+.inv-dur.quebrado strong { color: #ff6a5a; }
+.inv-dur-nota { grid-column: 1 / -1; color: var(--suave); font-size: .78em; }

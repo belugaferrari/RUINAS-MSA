@@ -1,10 +1,10 @@
 // Inventário expandido: tela cheia com um cartão por item mostrando tudo o que importa —
 // durabilidade, peso, preço e venda, maestria, slot, dano/defesa, alcance, munição, efeitos, bônus, requisitos,
 // produção… Filtra (todos, equipados, guardados), ordena e busca. Abre por cima da ficha e acompanha as mudanças.
-import { h, botao, icone, confirmar, aviso } from '../ui.js';
+import { h, botao, icone, confirmar, aviso, pedirTexto } from '../ui.js';
 import { estado, render } from '../estado.js';
 import { acao } from '../api.js';
-import { derivados, slotsOcupados } from '/shared/regras.js';
+import { derivados, slotsOcupados, durabilidadeDe } from '/shared/regras.js';
 import { ICONE_TIPO, cargaView } from './ficha.js';
 import { maoDoItem } from './boneco.js';
 
@@ -20,7 +20,7 @@ const ORDENS = [
   ['durabilidade', 'Durabilidade', (a, b) => fracDur(a) - fracDur(b)],
   ['raridade', 'Raridade', (a, b) => Object.keys(COR_RARIDADE).indexOf(b.raridade) - Object.keys(COR_RARIDADE).indexOf(a.raridade)],
 ];
-const fracDur = i => (i.durabilidade ? (i.durabilidadeAtual ?? i.durabilidade) / i.durabilidade : 1);
+const fracDur = i => (i.durabilidade ? (i.durabilidadeAtual ?? i.durabilidade) / i.durabilidade : 2);
 
 export const abrirInventario = p => { estado.sel.invExpandido = p.id; render(); };
 const fechar = () => { estado.sel.invExpandido = null; render(); };
@@ -74,8 +74,6 @@ export function inventarioExpandido(p, mestre) {
 function cartaoItem(p, i, mestre) {
   const sis = estado.sistema;
   const cor = COR_RARIDADE[i.raridade] || '#8a7a62';
-  const durAtual = i.durabilidadeAtual ?? i.durabilidade;
-  const fr = fracDur(i);
   const slot = sis.slots.find(s => s.id === i.slot);
   const onde = i.equipado
     ? (i.slot === 'maos' ? ((i.ocupa ?? 1) >= 2 ? 'Nas duas mãos' : maoDoItem(p, i) === 1 ? 'Na mão esquerda' : 'Na mão direita') : `Em: ${slot?.nome || i.slot}`)
@@ -97,13 +95,7 @@ function cartaoItem(p, i, mestre) {
         i.raridade ? h('span', { class: 'inv-raridade' }, i.raridade) : null,
         i.qualidade ? h('span', { class: 'selo' }, i.qualidade) : null)),
     h('p', { class: `inv-onde ${i.equipado ? 'ok' : ''}` }, icone(i.equipado ? 'shirt' : 'backpack'), ` ${onde}`),
-    i.durabilidade ? h('div', { class: 'inv-dur', title: `Durabilidade ${durAtual}/${i.durabilidade}` },
-      h('small', {}, icone('shield-half'), ' Durabilidade'),
-      h('div', { class: `inv-dur-barra ${fr <= .25 ? 'baixa' : fr <= .5 ? 'media' : ''}` }, h('span', { style: { width: `${Math.max(0, Math.min(100, fr * 100))}%` } })),
-      h('strong', {}, `${durAtual}/${i.durabilidade}`),
-      mestre ? h('span', { class: 'inv-dur-botoes' },
-        botao('', () => acao('item.durabilidade', { id: p.id, uid: i.uid, valor: Math.max(0, durAtual - 1) }), { class: 'pequeno', icone: 'minus', title: `Gastar 1 de durabilidade de ${i.nome}` }),
-        botao('', () => acao('item.durabilidade', { id: p.id, uid: i.uid, valor: Math.min(i.durabilidade, durAtual + 1) }), { class: 'pequeno', icone: 'plus', title: `Consertar 1 de durabilidade de ${i.nome}` })) : null) : null,
+    durabilidadeView(p, i, mestre),
     h('div', { class: 'inv-attrs' },
       atributo('Peso', i.peso != null ? `${i.peso} kg` : null, 'weight'),
       atributo('Preço', i.preco, 'tag'),
@@ -134,6 +126,30 @@ function cartaoItem(p, i, mestre) {
       botao('Descartar', async () => {
         if (await confirmar(`Descartar ${i.nome}?`)) { await acao('item.remover', { id: p.id, uid: i.uid }); aviso(`${i.nome} descartado.`); }
       }, { class: 'pequeno perigo', icone: 'trash-2' })));
+}
+
+// Durabilidade (livro, cap. 5): barra, quebrado em 0, reparo (+1 por desgaste) e "falhou usando" (compara o DS).
+function durabilidadeView(p, i, mestre) {
+  const d = durabilidadeDe(i);
+  if (d.tipo !== 'normal') {
+    return d.tipo === 'sem' ? null : h('p', { class: 'inv-onde' }, icone('package'), ` ${d.texto}${d.tipo === 'consumivel' ? ': some ao ser usado' : ': estraga sozinho com o tempo, mesmo sem uso'}`);
+  }
+  const fr = d.max ? d.atual / d.max : 1;
+  const falhou = async () => {
+    const ds = await pedirTexto(`Falhou usando ${i.nome}`, 'Qual foi o DS (1 a 10)? Se o DS for maior que a durabilidade atual, o item perde 1.');
+    if (ds) aviso((await acao('item.falha', { id: p.id, uid: i.uid, ds })).texto);
+  };
+  return h('div', { class: `inv-dur ${d.quebrado ? 'quebrado' : ''}`, title: `Durabilidade ${d.texto}. Falhou usando o item: se o DS for maior que a durabilidade atual, perde 1. Em 0, quebra.` },
+    h('small', {}, icone('shield-half'), ' Durabilidade'),
+    h('div', { class: `inv-dur-barra ${fr <= .25 ? 'baixa' : fr <= .5 ? 'media' : ''}` }, h('span', { style: { width: `${Math.max(0, Math.min(100, fr * 100))}%` } })),
+    h('strong', {}, d.quebrado ? `QUEBRADO 0/${d.max}` : d.texto),
+    h('span', { class: 'inv-dur-botoes' },
+      botao('', falhou, { class: 'pequeno', icone: 'dice-5', title: `Falhou um teste usando ${i.nome}: informar o DS` }),
+      botao('', () => acao('item.reparar', { id: p.id, uid: i.uid }).then(r => aviso(r.texto)).catch(e => aviso(e.message, 'erro')),
+        { class: 'pequeno', icone: 'wrench', disabled: !d.pendentes || d.atual >= d.max, title: d.pendentes ? `Reparo feito (Engenharia): +1 (${d.pendentes} desgaste(s) ainda reparável(is))` : 'Nada a reparar: cada desgaste só pode ser reparado uma vez' }),
+      mestre ? botao('', () => acao('item.durabilidade', { id: p.id, uid: i.uid, valor: Math.max(0, d.atual - 1) }), { class: 'pequeno', icone: 'minus', title: `Mestre: tirar 1 de durabilidade de ${i.nome}` }) : null,
+      mestre ? botao('', () => acao('item.durabilidade', { id: p.id, uid: i.uid, valor: Math.min(d.max, d.atual + 1) }), { class: 'pequeno', icone: 'plus', title: `Mestre: devolver 1 de durabilidade de ${i.nome}` }) : null),
+    d.pendentes ? h('small', { class: 'inv-dur-nota' }, `${d.pendentes} desgaste(s) ainda pode(m) ser reparado(s)`) : null);
 }
 
 function nomePericia(id, sis) {

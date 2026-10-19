@@ -2,10 +2,11 @@ import { h, campo, botao, selecao, aviso, confirmar, pedirTexto, formatarData, v
 import { efeitosIcones } from './efeitos.js';
 import { estado, render } from '../estado.js';
 import { acao, enviarArquivo } from '../api.js';
-import { GENEROS, derivados, slotsOcupados, ganhosDeClasse, pontosGastos, pontosPericiaTotal, vantagensDisponiveis, acharVantagem, xpParaSubir } from '/shared/regras.js';
+import { GENEROS, durabilidadeDe, derivados, slotsOcupados, ganhosDeClasse, pontosGastos, pontosPericiaTotal, vantagensDisponiveis, acharVantagem, xpParaSubir } from '/shared/regras.js';
 import { painelPericias } from './pericias.js';
 import { bonecoView } from './boneco.js';
 import { escolherAvatar } from './avatares.js';
+import { abrirDescanso } from './descanso.js';
 import { botaoExpandir, inventarioExpandido } from './inventarioExpandido.js';
 import { prepararTeste } from './dados.js';
 
@@ -531,9 +532,9 @@ export function equipamento(p, mestre, filtro = null) {
       celulas: [
         h('span', { class: 'item-nome' }, icone(ICONE_TIPO[i.tipo] || 'tag'), i.nome, i.equipado ? h('span', { class: 'selo ok' }, 'equipado') : null),
         [sis.slots.find(s => s.id === i.slot)?.nome || '—', i.ocupa > 1 ? ` (${i.ocupa})` : ''],
-        mestre
+        mestre && durabilidadeDe(i).tipo === 'normal'
           ? campo(`${p.id}:dur:${i.uid}`, i.durabilidadeAtual ?? i.durabilidade, v => acao('item.durabilidade', { id: p.id, uid: i.uid, valor: v }), { tipo: 'number', class: 'num', 'aria-label': `Durabilidade de ${i.nome}` })
-          : `${i.durabilidadeAtual ?? i.durabilidade}/${i.durabilidade}`,
+          : durabilidadeDe(i).quebrado ? h('span', { class: 'selo perigo' }, 'quebrado') : durabilidadeDe(i).texto,
         [[i.dano, i.defesa ? `Def ${i.defesa}` : null].filter(Boolean).join(' · ') || '—', municaoView(p, i, mestre)],
         Object.entries(i.bonus || {}).map(([k, v]) => `${k} ${v > 0 ? '+' : ''}${v}`).join(', ') || '—',
         h('span', { class: 'moeda' }, icone('coins'), i.venda ?? '—'),
@@ -576,8 +577,7 @@ function controleMestre(p) {
       p.tipo === 'pj' && p.donoId ? botao('Liberar do jogador', async () => {
         if (await confirmar(`Tirar ${p.nome} do controle de ${p.dono}?`)) await acao('personagem.liberar', { id: p.id });
       }, { icone: 'user-round-x' }) : null,
-      botao('Descanso curto', () => acao('descanso.fazer', { tipo: 'curto', ids: [p.id] }).then(r => aviso(r.linhas.join(' · '))), { icone: 'coffee', title: '+1 PV, +1 Sanidade; termina Dor e Trauma profundo' }),
-      botao('Descanso longo', () => acao('descanso.fazer', { tipo: 'longo', ids: [p.id] }).then(r => aviso(r.linhas.join(' · '))), { icone: 'bed', title: '+1d4 × nível PV, +2 Sanidade; termina Dor e Trauma profundo; recarrega as capacidades' }),
+      botao('Descanso…', () => abrirDescanso({ ids: [p.id], quem: p.nome }), { icone: 'bed', title: 'Descanso curto ou longo só deste personagem' }),
       botao('Duplicar', () => acao('personagem.duplicar', { id: p.id }), { icone: 'copy' }),
       botao('Apagar ficha', async () => {
         if (await confirmar(`Apagar a ficha de ${p.nome}?`)) {

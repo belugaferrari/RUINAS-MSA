@@ -91,7 +91,7 @@ Regra combinada: **o livro é mais atual**; das planilhas só entra o que o livr
 - O app deduz das colunas: tipo (Finalidade/Categoria), slot (arma = mãos; escudo = mãos; capacete = cabeça; armadura = corpo; vestuário = vestimenta; acessório = joias), mãos = MAESTRIA 2 → duas mãos, IP ("IP +N", "Defesa +N", "RD N" nos efeitos), bônus de atributo ("CAR +1", "Penalidade AGI -1"), penetração ("Ignora RD N"), perícia (Pericia Base + Subgrupo; nomes antigos como "Combate / Haste" viram Arma Branca › Lança).
 - Colunas opcionais "App: …" corrigem a dedução item a item (tipo, slot, mãos, IP, bônus, alcance, capacidade de munição, tipo de munição, quantidade, efeito de dano, em revisão).
 - **Munição**: as planilhas não têm capacidade do pente; armas sem "App: capacidade (balas)" não contam balas.
-- **"Defesa +N"** (coluna Efeitos da planilha de itens, ex.: Armadura Completa de Aço "Defesa +6") foi tratado como IP. O autor vai conferir no livro (19/10).
+- **"Defesa +N"** (coluna Efeitos da planilha de itens) segue como IP por enquanto. O autor pediu para não considerar ainda: os itens estão em revisão (19/10).
 - Na criação ficam de fora itens Raros, Lendários, Únicos e Ilegais (planilha de regras gerais: créditos iniciais não compram raros). Créditos iniciais: 300 (livro), não 400 (planilha).
 - 23 armas ainda sem perícia reconhecida (ex.: "Ciências / Psiquismo", "Armadilhas / Explosivos"); usam o ataque desarmado até ganharem perícia.
 - 3 danos não roláveis ("Variável", "Vício ND30") ficam só como texto.
@@ -100,8 +100,8 @@ Regra combinada: **o livro é mais atual**; das planilhas só entra o que o livr
 - Adotado (o livro não trazia o número): margem do efeito de dano por tipo — Corte 2, Perfuração 3, Concussão 1, Elétrico 2, Calor 4, Frio 2, Ácido 8 (DS ≤ margem aplica o efeito). Penetração N ignora N pontos de IP (também está no livro).
 - Ignorado por conflito com o livro: PV = FOR + CONS; acerto crítico em 1–5 e erro em 96–100; morto em −10 PV; Amigável/Indisposto ±5%; Abalado < 20 / Instável < 12 / Surtado < 6; créditos iniciais 400.
 - Já usado no app: carga (carregamento = 40 × 2^((FOR−10)/6), levantamento = 2×, sobrecarregado/supercarregado; o círculo do mapa lembra o deslocamento menor).
-- **Já usado no app (19/10):** deslocamento (9 m = 6 quadrados; −3 m por membro inferior ferido, −4,5 m sobrecarregado, 1 passo supercarregado, 0 se preso); Esmagado (condição; perde 1 PV por 20 kg acima do levantamento no fim do turno); lembrete do teste de FOR do Supercarregado (+5% por turno); Dureza dos itens (coluna "App: dureza" ou "Dureza N" nos efeitos); PV persistentes e permanentes (baixam o PV máximo; o mestre lança na ficha); regeneração no descanso (longo 1d4 × nível PV e +2 Sanidade; curto 1 PV e +1 Sanidade; termina Dor e Trauma profundo); capacidades com usos = MOD por descanso longo.
-- Ainda não usado no app: arrastar (trenó), Dureza no dano automático (nenhum item da planilha tem Dureza ainda), PVs persistentes/permanentes, regeneração (1d4 × nível no descanso longo), deslocamento 9 m, capacidades com descrição.
+- **Já usado no app (19/10):** deslocamento (9 m = 6 quadrados; −3 m por membro inferior ferido, −4,5 m sobrecarregado, 1 passo supercarregado, 0 se preso); Esmagado (perde 1 PV por 20 kg acima do levantamento no fim do turno); lembrete do teste de FOR do Supercarregado (+5% por turno); Dureza dos itens (coluna "App: dureza" ou "Dureza N"); PV persistentes e permanentes (baixam o PV máximo; o mestre lança); capacidades com usos = MOD por descanso longo.
+- Ainda não usado no app: arrastar (trenó), Dureza no dano automático (nenhum item da planilha tem Dureza ainda), regeneração de SAN da planilha (o livro manda: 1d6 no descanso longo).
 
 **Armadilhas** (planilha lida; ainda não automatizadas)
 - 7 armadilhas prontas (Alarme de Latas, Buraco de Estacas, Pêndulo de Sucata, Garra Enferrujada, Chicote de Espinhos, Rede de Queda, Mina Química Improvisada), tabelas de gatilho, área, progressão de dano e efeitos com modificador de ND.
@@ -140,3 +140,17 @@ Regra combinada: **o livro é mais atual**; das planilhas só entra o que o livr
 - PV máximo não muda com a CONS reduzida por condição (provisório).
 - Trauma profundo: −20% nos testes (planilha de regras gerais; o livro só diz "volta o ônus do trauma").
 
+
+## Descanso (livro, "Descansos, regeneração e outras regras") — 19/10
+- Curto: 1 PV. Longo: 1d4 PV por nível e 1d6 de Sanidade; sem Conforto (roupas), Abrigo ou Ergonomia: −1 PV por dado para cada critério que faltar (mínimo geral 1 PV); itens de proteção equipados tiram o Conforto. Testes dos marcadores no descanso longo e depois os marcadores são zerados. Dor e Trauma profundo NÃO terminam no descanso (correção: a versão anterior usava a planilha).
+- Lembretes (não automáticos): Regeneração Lenta, Insônia, Metabolismo Acelerado, Soldado de Campanha, Habitat magnífico, Ligação natural; Primeiros Socorros (+1 PV nos próximos 3 descansos).
+
+**Provisório — conferir**
+- **Marcador de vulnerabilidade sem estar doente**: o livro só descreve o teste de quem já está Doente (CONS% ND 70 + 10 × marcadores; falha agrava). O app usa o mesmo ND para quem não está doente e, na falha, ele fica Doente.
+- **Sono interrompido**: "metade dos dados" — o app usa metade dos d4 de PV (mínimo 1 dado) e metade do 1d6 de Sanidade.
+- **Mutação temporária** (falha no teste dos marcadores genéticos, ND 50 + 5 × marcadores): o app só avisa; o mestre escolhe a mutação.
+
+## Durabilidade (livro, cap. 5) — 19/10
+- Falha usando o item: se o DS for maior que a durabilidade atual, perde 1; sem os pré-requisitos, qualquer falha desgasta; em 0 quebra (arma quebrada não ataca). No combate MSS a arma do ataque que falhou desgasta sozinha; fora dele, o botão "falhou usando" pede o DS.
+- Reparo: +1 por desgaste (cada desgaste só pode ser reparado uma vez) e nunca acima da original.
+- "C" na planilha = Consumível (233 itens) e "AC" = Autoconsumível (1 item): ficam sem contagem (antes tinham virado durabilidade 1). 2 itens estão sem durabilidade na planilha: Ampola de Absorção de Chamas e Bateria de Lítio Reciclada.

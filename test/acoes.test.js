@@ -297,3 +297,22 @@ test('PV persistentes/permanentes baixam o máximo; descanso do grupo; capacidad
   }
   assert.throws(() => executar(c, 'descanso.fazer', { tipo: 'curto' }, { user: { id: 'x' }, mestre: false }));
 });
+
+test('durabilidade (livro, cap. 5): desgaste com DS maior, quebra em 0, reparo 1 por desgaste; consumíveis sem contagem', async () => {
+  const R = await import('../shared/regras.js');
+  const it = { nome: 'Faca', durabilidade: 2 };
+  assert.equal(R.desgastarItem(it, 2), null, 'DS igual não desgasta');
+  assert.match(R.desgastarItem(it, 3), /perdeu 1/);
+  assert.match(R.desgastarItem(it, 5), /quebrou/);
+  assert.equal(R.durabilidadeDe(it).quebrado, true);
+  assert.equal(R.desgastarItem(it, 9), null, 'quebrado não perde mais');
+  R.repararItem(it);
+  R.repararItem(it);
+  assert.equal(it.durabilidadeAtual, 2);
+  assert.throws(() => R.repararItem(it));
+  const sem = { nome: 'Lança', durabilidade: 5 };
+  assert.match(R.desgastarItem(sem, 1, { semPrerequisito: true }), /perdeu 1/, 'sem pré-requisito, qualquer falha desgasta');
+  assert.equal(R.durabilidadeDe({ consumivel: true }).texto, 'Consumível');
+  const cons = sis.itens.filter(i => i.consumivel);
+  assert.ok(cons.every(i => i.durabilidade == null));
+});

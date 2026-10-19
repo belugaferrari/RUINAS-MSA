@@ -542,3 +542,34 @@ export function podeSeduzir(autor, alvo) {
   if (alvo.atracao.includes(autor.genero)) return { ok: true };
   return { ok: false, motivo: `${alvo.nome} não se atrai por ${GENEROS.find(g => g.id === autor.genero)?.plural.toLowerCase() || 'esse gênero'}: Sedução não funciona.` };
 }
+
+// ---------- Durabilidade (livro, cap. 5) ----------
+// Falhou num teste usando o item: se o DS for MAIOR que a durabilidade atual, perde 1 (sem os pré-requisitos, qualquer falha
+// desgasta). Em 0, quebra. Cada reparo (Engenharia) recupera 1 ponto, no máximo 1 por desgaste e nunca acima da original.
+// "C" = consumível (some ao usar); "AC" = autoconsumível (estraga sozinho com o tempo) — esses não têm contagem.
+export function durabilidadeDe(i) {
+  if (i.consumivel) return { tipo: 'consumivel', texto: 'Consumível' };
+  if (i.autoConsumivel) return { tipo: 'auto', texto: 'Autoconsumível' };
+  if (i.durabilidade == null) return { tipo: 'sem', texto: '—' };
+  const atual = i.durabilidadeAtual ?? i.durabilidade;
+  return { tipo: 'normal', atual, max: i.durabilidade, quebrado: atual <= 0, pendentes: i.desgastes || 0, texto: `${atual}/${i.durabilidade}` };
+}
+
+export function desgastarItem(i, ds, { semPrerequisito = false } = {}) {
+  const d = durabilidadeDe(i);
+  if (d.tipo !== 'normal' || d.quebrado) return null;
+  if (!semPrerequisito && !(ds > d.atual)) return null;
+  i.durabilidadeAtual = d.atual - 1;
+  i.desgastes = (i.desgastes || 0) + 1;
+  return i.durabilidadeAtual <= 0 ? `${i.nome} quebrou (durabilidade 0)` : `${i.nome} perdeu 1 de durabilidade (DS ${ds} > ${d.atual}): ${i.durabilidadeAtual}/${i.durabilidade}`;
+}
+
+export function repararItem(i) {
+  const d = durabilidadeDe(i);
+  if (d.tipo !== 'normal') throw new Error(`${i.nome} não tem durabilidade para reparar.`);
+  if (d.atual >= d.max) throw new Error(`${i.nome} já está com a durabilidade original.`);
+  if (!d.pendentes) throw new Error(`${i.nome}: cada desgaste só pode ser reparado uma vez (o resto da perda é permanente).`);
+  i.durabilidadeAtual = d.atual + 1;
+  i.desgastes = d.pendentes - 1;
+  return `${i.nome} reparado: ${i.durabilidadeAtual}/${i.durabilidade}`;
+}

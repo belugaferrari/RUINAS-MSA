@@ -1,7 +1,7 @@
 // Efeitos com tempo (Sangramento, Dor, Aturdido…): os marcadores dizem QUAIS efeitos o personagem tem;
 // p.efeitos guarda os contadores de turno de cada um, por id da condição.
 // A contagem anda no fim do turno de quem sofre o efeito (controle de turno do Campo de Batalha).
-import { rolarDado, condicoesAtivas } from './regras.js';
+import { rolarDado, condicoesAtivas, testeDMil } from './regras.js';
 
 const semAcento = s => String(s || '').normalize('NFKD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
 const rolar = (v, rng) => (typeof v === 'number' ? v : rolarDado(String(v), rng).total);
@@ -133,34 +133,73 @@ export function cargaNoTurno(p, d) {
   return notas;
 }
 
-// Descanso (planilha de regras gerais; o livro não traz números):
-// · PV: longo completo recupera 1d4 × nível; curto, 1 PV. Nunca passa do máximo (que já desconta PV persistentes/permanentes).
-// · Sanidade: longo +2, curto +1.
-// · Termina o que dura "até o próximo descanso" (Dor, Trauma profundo).
-// · Longo: devolve os usos das capacidades dos atributos.
-export function descansar(p, sistema, tipo, pvMax, rng = Math.random) {
+// Descanso (livro, "Descansos, regeneração e outras regras"):
+// · Curto (refeição de meia ração + 1 hora): 1 PV.
+// · Longo (6 h de sono, ou 8 h em até duas partes): 1d4 PV por nível e 1d6 de Sanidade. Sono interrompido sem voltar
+//   a dormir: metade dos dados (arredondado para baixo). Sem Conforto (roupas), Abrigo (frio/chuva) ou Ergonomia
+//   (acolchoado): −1 PV por dado lançado para cada critério que faltar, com mínimo geral de 1 PV.
+//   Itens de proteção equipados tiram o Conforto. Testes dos marcadores: vulnerabilidade (doença) e genéticos (mutação);
+//   depois todos os marcadores são zerados. As capacidades dos atributos voltam.
+// cond: { confortavel, abrigado, ergonomico, interrompido }; percentualCONS: CONS% para os testes dos marcadores.
+export function descansar(p, sistema, tipo, pvMax, cond = {}, percentualCONS = 0, rng = Math.random) {
   const notas = [];
   const longo = tipo === 'longo';
-  if (p.pv) {
-    const ganho = longo ? rolarDado(`${Math.max(1, p.nivel || 1)}d4`, rng).total : 1;
+  const ganharPv = n => {
+    if (!p.pv || n <= 0) return;
     const antes = p.pv.atual;
-    p.pv.atual = Math.min(pvMax ?? p.pv.max, p.pv.atual + ganho);
-    if (p.pv.atual > antes) notas.push(`+${p.pv.atual - antes} PV (${p.pv.atual}/${p.pv.max})`);
-  }
+    p.pv.atual = Math.min(pvMax ?? p.pv.max, p.pv.atual + n);
+    notas.push(p.pv.atual > antes ? `+${p.pv.atual - antes} PV (${p.pv.atual}/${p.pv.max})` : 'PV já no máximo');
+  };
+  if (!longo) { ganharPv(1); return notas; }
+  // PV: 1d4 por nível (metade dos dados se o sono foi interrompido), −1 por dado para cada critério que faltar.
+  const protecao = (p.itens || []).some(i => i.equipado && i.tipo === 'defesa' && i.slot !== 'maos');
+  const confortavel = cond.confortavel !== false && !protecao;
+  const faltam = [!confortavel && (protecao && cond.confortavel !== false ? 'Conforto (dormiu com proteção)' : 'Conforto'), cond.abrigado === false && 'Abrigo', cond.ergonomico === false && 'Ergonomia'].filter(Boolean);
+  const nivel = Math.max(1, p.nivel || 1);
+  const dados = cond.interrompido ? Math.max(1, Math.floor(nivel / 2)) : nivel;
+  const r = rolarDado(`${dados}d4`, rng);
+  const pv = Math.max(1, r.total - faltam.length * dados);
+  ganharPv(pv);
+  if (faltam.length) notas.push(`sem ${faltam.join(', ')}: −${faltam.length * dados} PV (${dados}d4 = ${r.total})`);
+  if (cond.interrompido) notas.push(`sono interrompido: ${dados}d4 em vez de ${nivel}d4`);
+  // Sanidade: 1d6 (metade se interrompido).
   if (p.sanidade) {
+    const d6 = rolarDado('1d6', rng).total;
+    const ganho = cond.interrompido ? Math.floor(d6 / 2) : d6;
     const antes = p.sanidade.atual;
-    p.sanidade.atual = Math.min(p.sanidade.max, p.sanidade.atual + (longo ? 2 : 1));
+    p.sanidade.atual = Math.min(p.sanidade.max, p.sanidade.atual + ganho);
     if (p.sanidade.atual > antes) notas.push(`+${p.sanidade.atual - antes} Sanidade`);
   }
-  for (const c of condicoesAtivas(p, sistema).filter(x => x.terminaNoDescanso)) {
-    tirarCondicao(p, c);
-    if (p.efeitos) delete p.efeitos[c.id];
-    notas.push(`${c.nome} terminou`);
+  // Testes dos marcadores (CONS%) e depois zera os marcadores.
+  const ativas = condicoesAtivas(p, sistema);
+  const qtd = id => ativas.find(c => c.id === id)?.qtd || 0;
+  const vul = qtd('vulnerabilidade');
+  const gen = qtd('genetico');
+  const doente = qtd('doenca') > 0;
+  const doenca = (sistema.condicoes || []).find(c => c.id === 'doenca');
+  const teste = nd => { const t = testeDMil(percentualCONS, nd, sistema, { rng }); return { ...t, txt: `CONS% ${t.total} × ND ${nd}` }; };
+  if (vul) {
+    const t = teste(70 + 10 * vul);
+    if (!t.sucesso && doenca) p.marcadores.push(doenca.nome);
+    notas.push(`${vul} marcador(es) de vulnerabilidade: ${t.txt} — ${t.sucesso ? 'resistiu' : doente ? 'a Doença se agravou' : 'ficou Doente'}`);
+  } else if (doente) {
+    const t = teste(70);
+    if (t.sucesso && doenca) tirarCondicao(p, doenca);
+    notas.push(`Doença sem novos marcadores: ${t.txt} — ${t.sucesso ? 'curou-se' : 'continua doente'}`);
   }
-  if (longo && p.capacidadesUsadas && Object.keys(p.capacidadesUsadas).length) {
+  if (gen) {
+    const t = teste(50 + 5 * gen);
+    notas.push(`${gen} marcador(es) genético(s): ${t.txt} — ${t.sucesso ? 'resistiu' : 'sofre uma MUTAÇÃO TEMPORÁRIA (o mestre escolhe)'}`);
+  }
+  for (const id of ['vulnerabilidade', 'genetico']) {
+    const c = (sistema.condicoes || []).find(x => x.id === id);
+    if (c && qtd(id)) tirarCondicao(p, c);
+  }
+  if (vul || gen) notas.push('marcadores zerados');
+  if (p.capacidadesUsadas && Object.keys(p.capacidadesUsadas).length) {
     p.capacidadesUsadas = {};
     notas.push('capacidades recarregadas');
   }
-  if (longo && (p.sanidade?.temporario || p.humanidade?.temporario)) notas.push('falta o teste de Consciência (dano temporário)');
+  if (p.sanidade?.temporario || p.humanidade?.temporario) notas.push('falta o teste de Consciência (dano temporário)');
   return notas;
 }

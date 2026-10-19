@@ -1117,7 +1117,7 @@
    "cor": "#e07a2a"
   },
   {
-   "id": "dor", "terminaNoDescanso": true,
+   "id": "dor",
    "nome": "Dor",
    "grupo": "Dano",
    "efeitos": "FOR −2 por 1D4 turnos (acumula até 3 vezes).",
@@ -1314,7 +1314,7 @@
    "cor": "#8a4fd6"
   },
   {
-   "id": "trauma-profundo", "terminaNoDescanso": true,
+   "id": "trauma-profundo",
    "nome": "Trauma profundo",
    "grupo": "Mental",
    "efeitos": "Algo fez lembrar o antigo Trauma Agudo: volta o ônus dele até o próximo descanso (curto ou longo) — INT −5, WILL −5 e −20% em todos os testes. Para superar: enfrentar o trauma em jogo ou passar em WILL% ND 150 (uma vez por descanso longo).",

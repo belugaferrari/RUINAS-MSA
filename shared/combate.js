@@ -41,7 +41,8 @@ const tem = (p, nome) => (p?.marcadores || []).some(m => String(m).toLowerCase()
 // Armas que o personagem pode usar agora: as equipadas, mais o ataque desarmado.
 export function armasDisponiveis(p, sistema) {
   const cfg = sistema.combate;
-  const armas = (p.itens || []).filter(i => i.equipado && i.tipo === 'arma' && i.dano).map(i => ({
+  // Arma quebrada (durabilidade 0) não ataca até ser reparada.
+  const armas = (p.itens || []).filter(i => i.equipado && i.tipo === 'arma' && i.dano && !(i.durabilidade != null && (i.durabilidadeAtual ?? i.durabilidade) <= 0)).map(i => ({
     uid: i.uid, nome: i.nome, dano: i.dano, pericia: i.pericia || null, tipoDano: i.tipoDano || 'Físico',
     efeitoDano: i.efeitoDano ?? cfg.chancePorTipo?.[i.tipoDano] ?? cfg.efeitoPadrao, penetracao: i.penetracao || 0, alcance: i.alcance || (i.pericia?.startsWith('armas-de-fogo') ? 'distancia' : 'corpo'),
     // Cadência: quantos disparos (balas e danos) por ataque — da arma ou da subperícia (ex.: Rifle de Assalto 2).

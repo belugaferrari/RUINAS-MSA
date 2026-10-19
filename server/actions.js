@@ -3,7 +3,7 @@ import { sistema, idSistema } from './sistema.js';
 import { resolverAtaque, aplicarAtaque, armasDisponiveis, opcoesDefesa, sobrevida, rolarIniciativa, resolverManipulacao, modHumorTestes, humorDe, espectroDe, humorAparente } from '../shared/combate.js';
 import { sincronizarEfeitos, passarTurnoEfeitos, efeitosAoAgir, cargaNoTurno, descansar } from '../shared/efeitos.js';
 import { fichasDeTeste, relatorioFicha } from '../shared/fichasTeste.js';
-import { podeSeduzir, itemAberto, itemVisivel, xpParaSubir, novaFicha, podeEquipar, rolarDado, rolarAtributosCriacao, testeDMil, gerarEncontro, derivados, problemasFicha, LIMITE_SALA } from '../shared/regras.js';
+import { podeSeduzir, itemAberto, itemVisivel, xpParaSubir, novaFicha, podeEquipar, rolarDado, rolarAtributosCriacao, testeDMil, gerarEncontro, derivados, problemasFicha, LIMITE_SALA, desgastarItem, repararItem, listaHabilidades } from '../shared/regras.js';
 
 const GRUPO_ENCONTROS = 'encontros';
 const MAX_LOG = 100;
@@ -184,23 +184,49 @@ function recalcularMaximos(p, sis) {
   }
 }
 
+// Vantagens, defeitos e habilidades que mudam o descanso: o app lembra o mestre (ainda não aplica sozinho).
+const LEMBRETES_DESCANSO = [
+  [/regenera[cç][aã]o lenta/i, 'Regeneração Lenta: recupera metade dos PV'],
+  [/ins[oô]nia/i, 'Insônia: teste de CAR% difícil (falhou: metade da regeneração e fica com Sono)', 'longo'],
+  [/metabolismo acelerado/i, 'Metabolismo Acelerado: 2 PV no descanso curto e +1 PV por dado', null],
+  [/soldado de campanha/i, 'Soldado de Campanha: sem ônus por dormir sem Conforto ou Ergonomia', 'longo'],
+  [/habitat magn[ií]fico/i, 'Habitat magnífico: +2 PV por dado em terreno natural', 'longo'],
+  [/liga[cç][aã]o natural/i, 'Ligação natural: avança o dado de regeneração dormindo na natureza', 'longo'],
+];
+function lembretesDescanso(p, sis, tipo) {
+  const nomes = [...listaHabilidades(p, sis).map(x => x.nome), ...(p.defeitos || []).map(id => sis.defeitos?.find(d => d.id === id)?.nome || id)].join(' | ');
+  return LEMBRETES_DESCANSO.filter(([re, , so]) => re.test(nomes) && (!so || so === tipo)).map(([, txt]) => `lembrete: ${txt}`);
+}
+
 // Ajustes de dados quando uma regra muda (cada um roda uma vez por campanha).
 // pv-for-cons: o PV passou a ser FOR + CONS no 1º nível, +5 por nível. Mantém o dano já tomado.
+// durabilidade-consumiveis: itens "C"/"AC" deixam de ter durabilidade 1.
 export function migrarCampanhas() {
   let mudou = false;
   for (const c of db.campaigns) {
     c.migracoes ||= [];
-    if (c.migracoes.includes('pv-for-cons')) continue;
-    const sis = sistema(c.sistema);
-    for (const p of c.personagens) {
-      if (!p.atributos || !p.pv) continue;
-      const novo = derivados(p, sis).pvMax;
-      if (novo === p.pv.max) continue;
-      const delta = novo - p.pv.max;
-      p.pv = { ...p.pv, max: novo, atual: p.pv.atual + delta };
+    if (!c.migracoes.includes('pv-for-cons')) {
+      const sis = sistema(c.sistema);
+      for (const p of c.personagens) {
+        if (!p.atributos || !p.pv) continue;
+        const novo = derivados(p, sis).pvMax;
+        if (novo === p.pv.max) continue;
+        const delta = novo - p.pv.max;
+        p.pv = { ...p.pv, max: novo, atual: p.pv.atual + delta };
+      }
+      c.migracoes.push('pv-for-cons');
+      mudou = true;
     }
-    c.migracoes.push('pv-for-cons');
-    mudou = true;
+    // Durabilidade "C" (consumível) e "AC" (autoconsumível) tinham virado 1 nos itens dos personagens.
+    if (!c.migracoes.includes('durabilidade-consumiveis')) {
+      for (const p of c.personagens) for (const i of p.itens || []) {
+        const v = String(i.planilha?.Durabilidade ?? '').trim().toUpperCase();
+        if (v === 'C') Object.assign(i, { durabilidade: null, durabilidadeAtual: null, consumivel: true });
+        else if (v === 'AC') Object.assign(i, { durabilidade: null, durabilidadeAtual: null, autoConsumivel: true });
+      }
+      c.migracoes.push('durabilidade-consumiveis');
+      mudou = true;
+    }
   }
   if (mudou) save();
 }
@@ -369,6 +395,12 @@ function resolverPendente(c, s, pend, defesa, sis) {
   }
   s.pendentes = (s.pendentes || []).filter(x => x.id !== pend.id);
   const notas = aplicarAtaque(a, b, r);
+  // Ataque que falhou: a arma usada pode perder durabilidade (DS maior que a durabilidade atual).
+  if (!r.sucesso) {
+    const usada = (a.itens || []).find(i => i.uid === pend.opcoes?.armaUid);
+    const nota = usada && desgastarItem(usada, r.ds);
+    if (nota) notas.push(nota);
+  }
   // Efeito novo: Queimadura dá Vulnerabilidade; novo Corte reinicia a contagem do Sangramento.
   if (r.efeito === 'Queimadura') (b.marcadores ||= []).push('Vulnerabilidade');
   const condEfeito = r.efeito && (sis.condicoes || []).find(x => x.nome === r.efeito);
@@ -665,6 +697,30 @@ export const acoes = {
     if (it.capacidade) it.carregada = Math.max(0, Math.min(it.capacidade, (it.carregada || 0) + n));
     else if (it.tipo === 'municao') it.quantidade = Math.max(0, (it.quantidade || 0) + n);
     else throw erro('Este item não usa munição.');
+  },
+
+  // Reparo (Engenharia, feito na mesa): +1 de durabilidade, no máximo 1 por desgaste e nunca acima da original.
+  'item.reparar'(c, { id, uid: itemUid }, ctx) {
+    const p = personagem(c, id);
+    exigirDonoOuMestre(ctx, p);
+    const it = p.itens.find(i => i.uid === itemUid);
+    if (!it) throw erro('Item não encontrado.');
+    let texto;
+    try { texto = repararItem(it); } catch (e) { throw erro(e.message); }
+    registrar(c.log, { autor: p.nome, rotulo: 'Reparo', texto });
+    return { texto };
+  },
+
+  // Falha num teste usando o item (fora do combate automático): o app compara o DS e desgasta se for o caso.
+  'item.falha'(c, { id, uid: itemUid, ds, semPrerequisito }, ctx) {
+    const p = personagem(c, id);
+    exigirDonoOuMestre(ctx, p);
+    const it = p.itens.find(i => i.uid === itemUid);
+    if (!it) throw erro('Item não encontrado.');
+    const n = Math.max(1, Math.min(10, parseInt(ds, 10) || 0));
+    const texto = desgastarItem(it, n, { semPrerequisito: !!semPrerequisito }) || `${it.nome} aguentou (DS ${n} não passou da durabilidade).`;
+    registrar(c.log, { autor: p.nome, rotulo: 'Durabilidade', texto });
+    return { texto };
   },
 
   'item.durabilidade'(c, { id, uid: itemUid, valor }, ctx) {
@@ -1137,9 +1193,9 @@ export const acoes = {
     registrar(c.salas.social.log, { autor: p.nome, rotulo: `Humor de ${p.nome}`, texto: p.humorAparente ? `${texto} (por trás da máscara)` : texto, privadoPara: p.humorAparente ? (p.donoId || ctx.user.id) : null });
   },
 
-  // Descanso curto ou longo (mestre): regenera PV e Sanidade, termina o que dura até o descanso, recarrega capacidades.
+  // Descanso curto ou longo (mestre): regenera PV (e Sanidade no longo), testa os marcadores, recarrega capacidades.
   // Sem "ids", vale para todos os personagens-jogador da campanha.
-  'descanso.fazer'(c, { tipo, ids }, ctx) {
+  'descanso.fazer'(c, { tipo, ids, confortavel = true, abrigado = true, ergonomico = true, interrompido = false }, ctx) {
     exigirMestre(ctx);
     if (!['curto', 'longo'].includes(tipo)) throw erro('Escolha descanso curto ou longo.');
     const sis = sistema(c.sistema);
@@ -1147,7 +1203,10 @@ export const acoes = {
     if (!alvos.length) throw erro('Nenhum personagem para descansar.');
     const linhas = [];
     for (const p of alvos) {
-      const notas = descansar(p, sis, tipo, derivados(p, sis).pvMax);
+      const d = derivados(p, sis);
+      const notas = descansar(p, sis, tipo, d.pvMax, { confortavel, abrigado, ergonomico, interrompido }, d.percentual.CONS ?? 0);
+      sincronizarEfeitos(p, sis);
+      notas.push(...lembretesDescanso(p, sis, tipo));
       linhas.push(`${p.nome}: ${notas.join(', ') || 'nada a recuperar'}`);
     }
     registrar(c.log, { autor: 'Mestre', rotulo: `Descanso ${tipo}`, texto: linhas.join(' · ') });

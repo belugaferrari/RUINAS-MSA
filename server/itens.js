@@ -126,7 +126,9 @@ export function converterLinha(l, sis, { revisao = false } = {}) {
     finalidade: txt(l.Finalidade), categoria: txt(l.Categoria), subcategoria: txt(l.Subcategoria),
     qualidade: txt(l.Qualidade), raridade: txt(l.Raridade), regiao: txt(l.Região),
     preco, venda: Math.floor(preco / 2), peso: num(l['Peso (kg)']) ?? 0,
-    durabilidade: Math.max(1, Math.round(num(l.Durabilidade) ?? 1)),
+    // Durabilidade (livro, cap. 5): número de 1 a 9+; "C" = consumível (some ao usar); "AC" = autoconsumível (estraga sozinho com o tempo).
+    durabilidade: ['c', 'ac'].includes(sem(l.Durabilidade)) || num(l.Durabilidade) == null ? null : Math.max(1, Math.round(num(l.Durabilidade))),
+    ...(sem(l.Durabilidade) === 'c' ? { consumivel: true } : sem(l.Durabilidade) === 'ac' ? { autoConsumivel: true } : {}),
     slot: app.slot ? sem(app.slot) : deduzirSlot(tipo, nome, l.Categoria, l.Subcategoria),
     ocupa: num(app.ocupa) ?? (tipo === 'arma' && maestria >= 2 ? 2 : 1),
     maestria, requisitos: txt(l['Pré requisitos']),
