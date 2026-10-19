@@ -164,7 +164,31 @@ function estadoCompacto(p, d) {
     efeitosIcones(p, { grande: true }),
     temporarios(p),
     condicoesView(p, d),
-    cargaView(d));
+    perdasPv(p, d, false),
+    cargaView(d),
+    deslocamentoView(d));
+}
+
+// PV persistentes (até o efeito acabar) e permanentes (nunca voltam): baixam o PV máximo. Só o mestre muda.
+function perdasPv(p, d, mestre) {
+  if (mestre) {
+    return h('div', { class: 'grade3 mini' },
+      h('label', { title: 'PV perdidos até o efeito que os causou acabar (ex.: implante, mutação). Baixam o PV máximo.' }, 'PV persistentes',
+        campo(`${p.id}:pv:persistente`, d.pvPersistente, v => acao('pv.perdas', { id: p.id, persistente: v }), { tipo: 'number', min: 0 })),
+      h('label', { title: 'PV que nunca mais voltam. Baixam o PV máximo.' }, 'PV permanentes',
+        campo(`${p.id}:pv:permanente`, d.pvPermanente, v => acao('pv.perdas', { id: p.id, permanente: v }), { tipo: 'number', min: 0 })));
+  }
+  if (!d.pvPersistente && !d.pvPermanente) return null;
+  return h('p', { class: 'meta' }, icone('heart-crack'),
+    ` PV máximo ${d.pvMax} de ${d.pvBase}: ${[d.pvPersistente ? `−${d.pvPersistente} persistentes (voltam quando o efeito acabar)` : null, d.pvPermanente ? `−${d.pvPermanente} permanentes` : null].filter(Boolean).join(', ')}.`);
+}
+
+// Deslocamento por turno (9 m = 6 quadrados para humanos), com o que está reduzindo.
+export function deslocamentoView(d) {
+  const limitado = d.deslocamento < d.deslocamentoBase;
+  return h('p', { class: `deslocamento ${d.deslocamento === 0 ? 'preso' : limitado ? 'limitado' : ''}`, title: 'Ação de movimento: quanto anda por turno. Cada quadrado do mapa = 1,5 m (diagonal conta 1).' },
+    icone('footprints'), h('strong', {}, ` Deslocamento ${String(d.deslocamento).replace('.', ',')} m`), ` (${d.deslocamentoQuadrados} quadrado${d.deslocamentoQuadrados === 1 ? '' : 's'})`,
+    d.deslocamentoMotivos.length ? h('small', {}, ` — ${d.deslocamentoMotivos.join(', ')}`) : null);
 }
 
 function atributosCompactos(p, d, testar) {
@@ -330,8 +354,10 @@ function trilhas(p, mestre) {
     mestre ? h('div', { class: 'grade3 mini' },
       ...['pv', 'sanidade'].map(k => h('label', {}, `${k === 'pv' ? 'PV' : k[0].toUpperCase() + k.slice(1)} máx.`,
         campo(`${p.id}:${k}:max`, p[k]?.max, v => atualizar(p, { [k]: { ...p[k], max: v } }), { tipo: 'number', min: 0 })))) : null,
+    mestre ? perdasPv(p, derivados(p, estado.sistema), true) : perdasPv(p, derivados(p, estado.sistema), false),
     condicoesView(p, derivados(p, estado.sistema)),
-    cargaView(derivados(p, estado.sistema)));
+    cargaView(derivados(p, estado.sistema)),
+    deslocamentoView(derivados(p, estado.sistema)));
 }
 
 function estagioHumanidade(p) {
@@ -477,9 +503,17 @@ function vantagensView(p, d, mestre) {
     h('details', { open: !!estado.sel.capAbertas, ontoggle: e => { estado.sel.capAbertas = e.target.open; } },
       h('summary', {}, icone('zap'), ` Capacidades (usos por descanso longo = MOD) · ${sis.capacidades.filter(c => (d.mod[c.atributo] ?? 0) > 0).length} disponíveis`),
       seloRevisao(true, 'regras das capacidades em revisão'),
-      h('ul', { class: 'lista-regras' }, sis.capacidades.map(c => h('li', { title: c.descricao },
-        h('span', { class: 'selo' }, c.atributo), ' ', h('strong', {}, c.nome), h('span', { class: 'selo ok' }, `${Math.max(0, d.mod[c.atributo] ?? 0)}×`),
-        h('small', { class: 'bloco-texto' }, c.descricao))))),
+      h('ul', { class: 'lista-regras' }, sis.capacidades.map(c => {
+        const total = Math.max(0, d.mod[c.atributo] ?? 0);
+        const usados = p.capacidadesUsadas?.[c.nome] || 0;
+        return h('li', { title: c.descricao },
+          h('span', { class: 'selo' }, c.atributo), ' ', h('strong', {}, c.nome),
+          h('span', { class: `selo ${total - usados > 0 ? 'ok' : ''}`, title: 'Usos que restam até o próximo descanso longo' }, `${Math.max(0, total - usados)}/${total}`),
+          total ? botao('Usar', () => acao('capacidade.usar', { id: p.id, nome: c.nome }).catch(e => aviso(e.message, 'erro')),
+            { class: 'pequeno', icone: 'zap', disabled: usados >= total, title: `Usar ${c.nome} (gasta 1 uso até o descanso longo)` }) : null,
+          usados && mestre ? botao('', () => acao('capacidade.usar', { id: p.id, nome: c.nome, devolver: true }), { class: 'pequeno', icone: 'undo-2', title: `Devolver 1 uso de ${c.nome}` }) : null,
+          h('small', { class: 'bloco-texto' }, c.descricao));
+      }))),
     titulo(`Habilidade única (${sis.raca.nome})`, 'crown', 'h4'),
     h('p', {}, h('strong', {}, sis.raca.habilidadeUnica.nome), ': ', sis.raca.habilidadeUnica.descricao, seloRevisao(sis.raca.habilidadeUnica.revisao)));
 }
@@ -542,6 +576,8 @@ function controleMestre(p) {
       p.tipo === 'pj' && p.donoId ? botao('Liberar do jogador', async () => {
         if (await confirmar(`Tirar ${p.nome} do controle de ${p.dono}?`)) await acao('personagem.liberar', { id: p.id });
       }, { icone: 'user-round-x' }) : null,
+      botao('Descanso curto', () => acao('descanso.fazer', { tipo: 'curto', ids: [p.id] }).then(r => aviso(r.linhas.join(' · '))), { icone: 'coffee', title: '+1 PV, +1 Sanidade; termina Dor e Trauma profundo' }),
+      botao('Descanso longo', () => acao('descanso.fazer', { tipo: 'longo', ids: [p.id] }).then(r => aviso(r.linhas.join(' · '))), { icone: 'bed', title: '+1d4 × nível PV, +2 Sanidade; termina Dor e Trauma profundo; recarrega as capacidades' }),
       botao('Duplicar', () => acao('personagem.duplicar', { id: p.id }), { icone: 'copy' }),
       botao('Apagar ficha', async () => {
         if (await confirmar(`Apagar a ficha de ${p.nome}?`)) {

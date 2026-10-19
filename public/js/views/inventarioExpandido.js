@@ -114,6 +114,8 @@ function cartaoItem(p, i, mestre) {
       atributo('Defesa', i.defesa ? `IP ${i.defesa}` : null, 'shield'),
       atributo('Alcance', i.alcance ? (i.alcance === 'corpo' ? 'Corpo a corpo' : i.alcance) : null, 'ruler'),
       atributo('Penetração', i.penetracao, 'crosshair'),
+      i.dureza ? h('div', { class: 'inv-attr', title: `Dureza ${i.dureza}: dano até ${i.dureza} não afeta o item; acima disso, dano integral.` },
+        h('small', {}, icone('shield-half'), ' Dureza'), h('strong', {}, String(i.dureza))) : null,
       atributo('Munição', i.capacidade ? `${i.carregada || 0}/${i.capacidade}` : i.tipo === 'municao' ? `${i.quantidade || 0} (${i.municao})` : null, 'target'),
       atributo('Perícia', pericia, 'dumbbell'),
       mestre ? atributo('ND identificar', i.ndIdentificar, 'search') : null),

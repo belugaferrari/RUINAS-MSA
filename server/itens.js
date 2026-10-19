@@ -16,7 +16,7 @@ export const COLUNAS = [
 export const COLUNAS_APP = [
   ['App: tipo', 'tipo'], ['App: slot', 'slot'], ['App: mãos/espaços', 'ocupa'], ['App: IP', 'defesa'], ['App: bônus', 'bonus'],
   ['App: alcance', 'alcance'], ['App: capacidade (balas)', 'capacidade'], ['App: munição (tipo)', 'municao'], ['App: quantidade', 'quantidade'],
-  ['App: efeito de dano (DS ≤)', 'efeitoDano'], ['App: cadência', 'cadencia'], ['App: em revisão', 'revisao'],
+  ['App: efeito de dano (DS ≤)', 'efeitoDano'], ['App: cadência', 'cadencia'], ['App: dureza', 'dureza'], ['App: em revisão', 'revisao'],
 ];
 
 export const ARQ_PADRAO = path.join(CONTEUDO, 'sistemas', 'itens.json');
@@ -157,6 +157,9 @@ export function converterLinha(l, sis, { revisao = false } = {}) {
   if (tipo === 'municao') { item.municao = app.municao ? String(app.municao).trim() : sem(l['Pericia - Subgrupo'] || l.Item); item.quantidade = num(app.quantidade) ?? 1; }
   if (num(app.efeitoDano)) item.efeitoDano = num(app.efeitoDano);
   if (num(app.cadencia)) item.cadencia = num(app.cadencia);
+  // Dureza X (itens muito fortes): dano até X não faz nada; acima de X, dano integral. "App: dureza" ou "Dureza N" nos efeitos.
+  const dureza = num(app.dureza) ?? num((/dureza\s*"?\s*[:+]?\s*(\d+)/i.exec(efeitos) || [])[1]);
+  if (dureza) item.dureza = dureza;
   return item;
 }
 

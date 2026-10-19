@@ -270,3 +270,30 @@ test('Sedução só em quem se atrai pelo gênero de quem seduz; fichas de teste
   for (const r of relatorio) assert.ok(!r.avisos.some(a => a.startsWith('Pontos')), `${r.nome}: ${r.avisos.join('; ')}`);
   assert.equal(c.personagens.filter(p => p.nivel === 6 && p.tipo === 'pj' && !p.donoId).length, sis.classes.length);
 });
+
+test('PV persistentes/permanentes baixam o máximo; descanso do grupo; capacidades com usos por descanso longo', () => {
+  const m = { id: 'm7', name: 'M7' };
+  const c = novaCampanha(m, { nome: 'Teste 7', maxJogadores: 2, nivel: 1, padraoMSA: true });
+  executar(c, 'teste.fichas', { nivel: 6 }, { user: m, mestre: true });
+  const p = c.personagens[0];
+  const max = p.pv.max;
+  executar(c, 'pv.perdas', { id: p.id, persistente: 3, permanente: 2 }, { user: m, mestre: true });
+  assert.equal(p.pv.max, max - 5);
+  assert.equal(p.pv.atual, max - 5);
+  // O jogador não consegue apagar as perdas mexendo no PV.
+  executar(c, 'personagem.atualizar', { id: p.id, patch: { pv: { max: p.pv.max, atual: 1 } } }, { user: m, mestre: true });
+  assert.equal(p.pv.persistente, 3);
+  executar(c, 'pv.perdas', { id: p.id, persistente: 0 }, { user: m, mestre: true });
+  assert.equal(p.pv.max, max - 2);
+  const { linhas } = executar(c, 'descanso.fazer', { tipo: 'longo' }, { user: m, mestre: true });
+  assert.equal(linhas.length, c.personagens.filter(x => x.tipo === 'pj').length);
+  assert.ok(p.pv.atual > 1 && p.pv.atual <= p.pv.max);
+  const cap = sis.capacidades.find(x => (p.atributos[x.atributo] ?? 0) >= 12);
+  if (cap) {
+    executar(c, 'capacidade.usar', { id: p.id, nome: cap.nome }, { user: m, mestre: true });
+    assert.equal(p.capacidadesUsadas[cap.nome], 1);
+    executar(c, 'descanso.fazer', { tipo: 'longo', ids: [p.id] }, { user: m, mestre: true });
+    assert.deepEqual(p.capacidadesUsadas, {});
+  }
+  assert.throws(() => executar(c, 'descanso.fazer', { tipo: 'curto' }, { user: { id: 'x' }, mestre: false }));
+});

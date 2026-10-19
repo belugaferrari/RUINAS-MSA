@@ -1,7 +1,7 @@
 import { db, save, uid } from './db.js';
 import { sistema, idSistema } from './sistema.js';
 import { resolverAtaque, aplicarAtaque, armasDisponiveis, opcoesDefesa, sobrevida, rolarIniciativa, resolverManipulacao, modHumorTestes, humorDe, espectroDe, humorAparente } from '../shared/combate.js';
-import { sincronizarEfeitos, passarTurnoEfeitos, efeitosAoAgir } from '../shared/efeitos.js';
+import { sincronizarEfeitos, passarTurnoEfeitos, efeitosAoAgir, cargaNoTurno, descansar } from '../shared/efeitos.js';
 import { fichasDeTeste, relatorioFicha } from '../shared/fichasTeste.js';
 import { podeSeduzir, itemAberto, itemVisivel, xpParaSubir, novaFicha, podeEquipar, rolarDado, rolarAtributosCriacao, testeDMil, gerarEncontro, derivados, problemasFicha, LIMITE_SALA } from '../shared/regras.js';
 
@@ -529,6 +529,8 @@ export const acoes = {
       if (p.nivel > antes.nivel) p.xp = (antes.xp || 0) - xpParaSubir(antes.nivel, sis);
     }
     if ('marcadores' in (patch || {})) sincronizarEfeitos(p, sis);
+    // PV persistentes/permanentes só mudam pelo mestre (ação pv.perdas); o jogador mexe só no PV atual.
+    if (p.pv && antes.pv) for (const k of ['persistente', 'permanente']) { if (antes.pv[k]) p.pv[k] = antes.pv[k]; else delete p.pv[k]; }
     // Habilidade ativada/desativada que muda o PV máximo: soma (ou tira) a diferença no máximo e no atual.
     if ('ativas' in (patch || {}) || 'ajustesHabilidades' in (patch || {})) {
       const delta = derivados(p, sis).habilidades.pv - derivados(antes, sis).habilidades.pv;
@@ -953,7 +955,7 @@ export const acoes = {
     const sis = sistema(c.sistema);
     // Fim do turno de quem estava agindo: os efeitos com tempo descontam um turno.
     if (atual) {
-      const notasEfeitos = passarTurnoEfeitos(atual, sis);
+      const notasEfeitos = [...passarTurnoEfeitos(atual, sis), ...cargaNoTurno(atual, derivados(atual, sis))];
       if (notasEfeitos.length) registrar(s.log, { autor: atual.nome, rotulo: 'Efeitos', texto: notasEfeitos.join(' · ') });
     }
     cb.vez++;
@@ -1133,6 +1135,56 @@ export const acoes = {
     p.humorImposto = doRebote || (ctx.mestre && h.id !== 'neutro');
     if (p.humorAparente === p.humor) p.humorAparente = null;
     registrar(c.salas.social.log, { autor: p.nome, rotulo: `Humor de ${p.nome}`, texto: p.humorAparente ? `${texto} (por trás da máscara)` : texto, privadoPara: p.humorAparente ? (p.donoId || ctx.user.id) : null });
+  },
+
+  // Descanso curto ou longo (mestre): regenera PV e Sanidade, termina o que dura até o descanso, recarrega capacidades.
+  // Sem "ids", vale para todos os personagens-jogador da campanha.
+  'descanso.fazer'(c, { tipo, ids }, ctx) {
+    exigirMestre(ctx);
+    if (!['curto', 'longo'].includes(tipo)) throw erro('Escolha descanso curto ou longo.');
+    const sis = sistema(c.sistema);
+    const alvos = (ids?.length ? ids.map(id => personagem(c, id)) : c.personagens.filter(p => p.tipo === 'pj'));
+    if (!alvos.length) throw erro('Nenhum personagem para descansar.');
+    const linhas = [];
+    for (const p of alvos) {
+      const notas = descansar(p, sis, tipo, derivados(p, sis).pvMax);
+      linhas.push(`${p.nome}: ${notas.join(', ') || 'nada a recuperar'}`);
+    }
+    registrar(c.log, { autor: 'Mestre', rotulo: `Descanso ${tipo}`, texto: linhas.join(' · ') });
+    return { linhas };
+  },
+
+  // PV persistentes (perdidos até o efeito acabar) e permanentes (nunca voltam): baixam o PV máximo e o atual junto.
+  'pv.perdas'(c, { id, persistente, permanente }, ctx) {
+    exigirMestre(ctx);
+    const sis = sistema(c.sistema);
+    const p = personagem(c, id);
+    const antes = { persistente: p.pv?.persistente || 0, permanente: p.pv?.permanente || 0 };
+    p.pv ||= { max: derivados(p, sis).pvMax, atual: derivados(p, sis).pvMax };
+    for (const [k, v] of [['persistente', persistente], ['permanente', permanente]]) {
+      if (v === undefined) continue;
+      const n = Math.max(0, parseInt(v, 10) || 0);
+      if (n) p.pv[k] = n; else delete p.pv[k];
+    }
+    recalcularMaximos(p, sis);
+    const partes = [['persistente', 'persistentes'], ['permanente', 'permanentes']].filter(([k]) => (p.pv[k] || 0) !== antes[k]).map(([k, nome]) => `${p.pv[k] || 0} PV ${nome}`);
+    if (partes.length) registrar(c.log, { autor: 'Mestre', rotulo: 'PV', texto: `${p.nome}: ${partes.join(', ')} (máx. ${p.pv.max}).` });
+  },
+
+  // Capacidades dos atributos: usos por descanso longo = MOD do atributo.
+  'capacidade.usar'(c, { id, nome, devolver }, ctx) {
+    const sis = sistema(c.sistema);
+    const p = personagem(c, id);
+    exigirDonoOuMestre(ctx, p);
+    const cap = (sis.capacidades || []).find(x => x.nome === nome);
+    if (!cap) throw erro('Capacidade não encontrada.');
+    const total = Math.max(0, derivados(p, sis).mod[cap.atributo] ?? 0);
+    p.capacidadesUsadas ||= {};
+    const usados = p.capacidadesUsadas[nome] || 0;
+    if (devolver) { p.capacidadesUsadas[nome] = Math.max(0, usados - 1); return; }
+    if (usados >= total) throw erro(`${cap.nome}: sem usos até o próximo descanso longo (${total} por descanso).`);
+    p.capacidadesUsadas[nome] = usados + 1;
+    registrar(c.log, { autor: p.nome, rotulo: 'Capacidade', texto: `${p.nome} usa ${cap.nome} (${usados + 1}/${total}).` });
   },
 
   // Teste de Consciência (descanso longo): WILL% contra ND 100. Sucesso devolve a Sanidade e a Humanidade temporárias;

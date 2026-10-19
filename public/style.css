@@ -1133,3 +1133,9 @@ span.peao { display: grid; }
   .inv-xl-grade { grid-template-columns: 1fr; padding: .6em; }
   .inv-xl-topo .slots { display: none; }
 }
+
+/* Deslocamento na ficha */
+.deslocamento { display: flex; align-items: center; flex-wrap: wrap; gap: .25em; margin: .4em 0 0; font-size: .92em; }
+.deslocamento small { color: var(--suave); }
+.deslocamento.limitado { color: #ffb52e; }
+.deslocamento.preso { color: #ff6a5a; }

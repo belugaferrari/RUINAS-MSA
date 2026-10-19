@@ -1117,7 +1117,7 @@
    "cor": "#e07a2a"
   },
   {
-   "id": "dor",
+   "id": "dor", "terminaNoDescanso": true,
    "nome": "Dor",
    "grupo": "Dano",
    "efeitos": "FOR −2 por 1D4 turnos (acumula até 3 vezes).",
@@ -1237,9 +1237,18 @@
    "id": "imobilizado", "movimento": "preso",
    "nome": "Imobilizado",
    "grupo": "Mobilidade",
-   "efeitos": "Não ataca; ataques contra ele têm vantagem.",
+   "efeitos": "Não se move nem ataca; ataques contra ele têm vantagem.",
    "icone": "link",
    "cor": "#4f7fd6"
+  },
+  {
+   "id": "esmagado", "movimento": "preso",
+   "nome": "Esmagado",
+   "grupo": "Mobilidade",
+   "efeitos": "Preso ou soterrado por um peso que não consegue levantar: não se move e perde 1 PV por turno a cada 20 kg acima do levantamento (mínimo 1).",
+   "icone": "weight",
+   "cor": "#b0503a",
+   "esmagado": true
   },
   {
    "id": "desmaiado", "movimento": "preso",
@@ -1305,7 +1314,7 @@
    "cor": "#8a4fd6"
   },
   {
-   "id": "trauma-profundo",
+   "id": "trauma-profundo", "terminaNoDescanso": true,
    "nome": "Trauma profundo",
    "grupo": "Mental",
    "efeitos": "Algo fez lembrar o antigo Trauma Agudo: volta o ônus dele até o próximo descanso (curto ou longo) — INT −5, WILL −5 e −20% em todos os testes. Para superar: enfrentar o trauma em jogo ou passar em WILL% ND 150 (uma vez por descanso longo).",

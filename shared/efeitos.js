@@ -112,3 +112,55 @@ export function restricaoMovimento(p, sistema, derivadosFicha = null) {
   }
   return { nivel, motivos };
 }
+
+// Fim do turno e a carga (planilha de regras gerais):
+// · Esmagado: perde 1 PV a cada 20 kg acima do levantamento (mínimo 1);
+// · Supercarregado: lembra o teste de FOR muito difícil, 5% mais difícil a cada turno seguido.
+//   Falhou: solta o peso que puder (e fica Exausto) ou, sem poder soltar, fica Esmagado (o mestre marca).
+export function cargaNoTurno(p, d) {
+  const notas = [];
+  const esmagado = (d.condicoes || []).some(c => c.esmagado);
+  if (esmagado && p.pv) {
+    const dano = Math.max(1, Math.floor((d.carga - d.cargaLevantamento) / 20));
+    p.pv.atual -= dano;
+    notas.push(`Esmagado: perdeu ${dano} PV (${p.pv.atual}/${p.pv.max})`);
+  }
+  if (d.cargaNivel === 'supercarregado' && !esmagado) {
+    p.turnosSupercarregado = (p.turnosSupercarregado || 0) + 1;
+    const extra = 5 * (p.turnosSupercarregado - 1);
+    notas.push(`Supercarregado: teste de FOR muito difícil${extra ? ` (mais ${extra}% difícil)` : ''}. Se falhar, solta o peso que puder e fica Exausto; sem poder soltar, fica Esmagado`);
+  } else if (p.turnosSupercarregado) delete p.turnosSupercarregado;
+  return notas;
+}
+
+// Descanso (planilha de regras gerais; o livro não traz números):
+// · PV: longo completo recupera 1d4 × nível; curto, 1 PV. Nunca passa do máximo (que já desconta PV persistentes/permanentes).
+// · Sanidade: longo +2, curto +1.
+// · Termina o que dura "até o próximo descanso" (Dor, Trauma profundo).
+// · Longo: devolve os usos das capacidades dos atributos.
+export function descansar(p, sistema, tipo, pvMax, rng = Math.random) {
+  const notas = [];
+  const longo = tipo === 'longo';
+  if (p.pv) {
+    const ganho = longo ? rolarDado(`${Math.max(1, p.nivel || 1)}d4`, rng).total : 1;
+    const antes = p.pv.atual;
+    p.pv.atual = Math.min(pvMax ?? p.pv.max, p.pv.atual + ganho);
+    if (p.pv.atual > antes) notas.push(`+${p.pv.atual - antes} PV (${p.pv.atual}/${p.pv.max})`);
+  }
+  if (p.sanidade) {
+    const antes = p.sanidade.atual;
+    p.sanidade.atual = Math.min(p.sanidade.max, p.sanidade.atual + (longo ? 2 : 1));
+    if (p.sanidade.atual > antes) notas.push(`+${p.sanidade.atual - antes} Sanidade`);
+  }
+  for (const c of condicoesAtivas(p, sistema).filter(x => x.terminaNoDescanso)) {
+    tirarCondicao(p, c);
+    if (p.efeitos) delete p.efeitos[c.id];
+    notas.push(`${c.nome} terminou`);
+  }
+  if (longo && p.capacidadesUsadas && Object.keys(p.capacidadesUsadas).length) {
+    p.capacidadesUsadas = {};
+    notas.push('capacidades recarregadas');
+  }
+  if (longo && (p.sanidade?.temporario || p.humanidade?.temporario)) notas.push('falta o teste de Consciência (dano temporário)');
+  return notas;
+}

@@ -291,7 +291,11 @@ export function derivados(ficha, sistema) {
   const nivel = ficha.nivel || 1;
   // PV (livro, Passo 6, sem o "+1" — confirmado pelo autor): FOR + CONS no 1º nível e +5 a cada nível depois.
   // Usa os atributos da ficha: condições que baixam a CONS não diminuem o PV total.
-  const pvMax = (ficha.atributos?.FOR ?? 0) + (ficha.atributos?.CONS ?? 0) + 5 * (nivel - 1) + (profissao?.extras?.pv || 0) + hab.pv;
+  const pvBase = (ficha.atributos?.FOR ?? 0) + (ficha.atributos?.CONS ?? 0) + 5 * (nivel - 1) + (profissao?.extras?.pv || 0) + hab.pv;
+  // PV persistentes (perdidos até o efeito acabar) e permanentes (nunca voltam) baixam o máximo.
+  const pvPersistente = Math.max(0, ficha.pv?.persistente || 0);
+  const pvPermanente = Math.max(0, ficha.pv?.permanente || 0);
+  const pvMax = Math.max(1, pvBase - pvPersistente - pvPermanente);
   const sanidadeMax = (ficha.atributos?.INT ?? 0) + (ficha.atributos?.WILL ?? 0) + 10;
   const san = ficha.sanidade?.atual ?? sanidadeMax;
   const estadoSanidade = [...(sistema.sanidade?.estados || [])].reverse().find(e => san < e.abaixoDe)?.nome || 'Lúcido';
@@ -303,22 +307,44 @@ export function derivados(ficha, sistema) {
   const hum = ficha.humanidade?.atual ?? humanidadeLimite;
   const estagioHumanidade = (sistema.humanidade?.estagios || []).find(e => hum >= e.min && hum <= e.max) || null;
   const equipados = (ficha.itens || []).filter(i => i.equipado);
+  const carga = estadoCarga((ficha.itens || []).reduce((s, i) => s + (i.peso || 0), 0), atributos.FOR ?? 10);
   return {
     bonus, atributos, percentual, bonusPericial, mod, pericias, subpericias, bonusProfissao,
     condicoes, condAtr, condTestes, condTesteAtr,
-    pvMax, sanidadeMax, estadoSanidade, humanidadeMax, humanidadeLimite, humanidadeMinInicial, estagioHumanidade,
+    pvMax, pvBase, pvPersistente, pvPermanente, sanidadeMax, estadoSanidade, humanidadeMax, humanidadeLimite, humanidadeMinInicial, estagioHumanidade,
     iniciativa: atributos.AGI ?? 0,
     linguasExtras: Math.max(0, mod.INT ?? 0),
     defesa: equipados.reduce((s, i) => s + ipDoItem(i).geral, 0) + (bonus.Defesa || 0),
     ip: ipPorTipo(ficha, equipados, bonus, hab),
     habilidades: hab,
     carga: (ficha.itens || []).reduce((s, i) => s + (i.peso || 0), 0),
-    ...estadoCarga((ficha.itens || []).reduce((s, i) => s + (i.peso || 0), 0), atributos.FOR ?? 10),
+    ...carga,
+    ...deslocamento(sistema, condicoes, carga.cargaNivel),
     limitePericia: limitePericia(nivel, sistema),
     atributoMax: atributoMax(nivel, sistema),
     temClasse: nivel >= (r.nivelClasse ?? 3),
     temEspecializacao: nivel >= (r.nivelEspecializacao ?? 5),
   };
+}
+
+// Deslocamento por turno (planilha de regras gerais): humano 9 m = 6 quadrados de 1,5 m.
+// Preso (Paralisado, Enraizado, Imobilizado, Desmaiado, Esmagado) = 0; Dano a membros inferiores −3 m cada;
+// Sobrecarregado −4,5 m; Supercarregado só 1 passo (1,5 m).
+export function deslocamento(sistema, condicoes, cargaNivel) {
+  const base = parseFloat(String(sistema.raca?.deslocamento || '9').replace(',', '.')) || 9;
+  const motivos = [];
+  let m = base;
+  if (condicoes.some(c => c.movimento === 'preso')) {
+    motivos.push(...condicoes.filter(c => c.movimento === 'preso').map(c => c.nome));
+    m = 0;
+  } else {
+    const pernas = condicoes.find(c => c.id === 'membros-inferiores');
+    if (pernas) { m -= 3 * pernas.qtd; motivos.push(`${pernas.nome} −${3 * pernas.qtd} m`); }
+    if (cargaNivel === 'sobrecarregado') { m -= 4.5; motivos.push('Sobrecarregado −4,5 m'); }
+    if (cargaNivel === 'supercarregado') { m = Math.min(m, 1.5); motivos.push('Supercarregado: só 1 passo'); }
+  }
+  m = Math.max(0, m);
+  return { deslocamentoBase: base, deslocamento: m, deslocamentoQuadrados: Math.floor(m / 1.5), deslocamentoMotivos: motivos };
 }
 
 // Ganhos de classe até o nível atual, pela tabela de progressão.

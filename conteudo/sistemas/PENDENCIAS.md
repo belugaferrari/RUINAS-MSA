@@ -91,7 +91,7 @@ Regra combinada: **o livro é mais atual**; das planilhas só entra o que o livr
 - O app deduz das colunas: tipo (Finalidade/Categoria), slot (arma = mãos; escudo = mãos; capacete = cabeça; armadura = corpo; vestuário = vestimenta; acessório = joias), mãos = MAESTRIA 2 → duas mãos, IP ("IP +N", "Defesa +N", "RD N" nos efeitos), bônus de atributo ("CAR +1", "Penalidade AGI -1"), penetração ("Ignora RD N"), perícia (Pericia Base + Subgrupo; nomes antigos como "Combate / Haste" viram Arma Branca › Lança).
 - Colunas opcionais "App: …" corrigem a dedução item a item (tipo, slot, mãos, IP, bônus, alcance, capacidade de munição, tipo de munição, quantidade, efeito de dano, em revisão).
 - **Munição**: as planilhas não têm capacidade do pente; armas sem "App: capacidade (balas)" não contam balas.
-- **"Defesa +N"** dos itens de proteção foi tratado como IP. Conferir.
+- **"Defesa +N"** (coluna Efeitos da planilha de itens, ex.: Armadura Completa de Aço "Defesa +6") foi tratado como IP. O autor vai conferir no livro (19/10).
 - Na criação ficam de fora itens Raros, Lendários, Únicos e Ilegais (planilha de regras gerais: créditos iniciais não compram raros). Créditos iniciais: 300 (livro), não 400 (planilha).
 - 23 armas ainda sem perícia reconhecida (ex.: "Ciências / Psiquismo", "Armadilhas / Explosivos"); usam o ataque desarmado até ganharem perícia.
 - 3 danos não roláveis ("Variável", "Vício ND30") ficam só como texto.
@@ -100,7 +100,8 @@ Regra combinada: **o livro é mais atual**; das planilhas só entra o que o livr
 - Adotado (o livro não trazia o número): margem do efeito de dano por tipo — Corte 2, Perfuração 3, Concussão 1, Elétrico 2, Calor 4, Frio 2, Ácido 8 (DS ≤ margem aplica o efeito). Penetração N ignora N pontos de IP (também está no livro).
 - Ignorado por conflito com o livro: PV = FOR + CONS; acerto crítico em 1–5 e erro em 96–100; morto em −10 PV; Amigável/Indisposto ±5%; Abalado < 20 / Instável < 12 / Surtado < 6; créditos iniciais 400.
 - Já usado no app: carga (carregamento = 40 × 2^((FOR−10)/6), levantamento = 2×, sobrecarregado/supercarregado; o círculo do mapa lembra o deslocamento menor).
-- Ainda não usado no app (sem conflito, fica para depois): esmagado (automático), Dureza, PVs persistentes/permanentes, regeneração (1d4 × nível no descanso longo), deslocamento 9 m, capacidades com descrição.
+- **Já usado no app (19/10):** deslocamento (9 m = 6 quadrados; −3 m por membro inferior ferido, −4,5 m sobrecarregado, 1 passo supercarregado, 0 se preso); Esmagado (condição; perde 1 PV por 20 kg acima do levantamento no fim do turno); lembrete do teste de FOR do Supercarregado (+5% por turno); Dureza dos itens (coluna "App: dureza" ou "Dureza N" nos efeitos); PV persistentes e permanentes (baixam o PV máximo; o mestre lança na ficha); regeneração no descanso (longo 1d4 × nível PV e +2 Sanidade; curto 1 PV e +1 Sanidade; termina Dor e Trauma profundo); capacidades com usos = MOD por descanso longo.
+- Ainda não usado no app: arrastar (trenó), Dureza no dano automático (nenhum item da planilha tem Dureza ainda), PVs persistentes/permanentes, regeneração (1d4 × nível no descanso longo), deslocamento 9 m, capacidades com descrição.
 
 **Armadilhas** (planilha lida; ainda não automatizadas)
 - 7 armadilhas prontas (Alarme de Latas, Buraco de Estacas, Pêndulo de Sucata, Garra Enferrujada, Chicote de Espinhos, Rede de Queda, Mina Química Improvisada), tabelas de gatilho, área, progressão de dano e efeitos com modificador de ND.
@@ -117,7 +118,7 @@ Regra combinada: **o livro é mais atual**; das planilhas só entra o que o livr
 
 **Provisório — conferir**
 - "Neutro" sozinho no rebote = sem efeito.
-- Dano da dissonância e da agressão: 1d6 temporário (valor ainda não definido pelo autor).
+- **Confirmado (autor, 19/10):** dano da dissonância e da agressão = 1d6 temporário.
 - Teste de Consciência que falha: a perda temporária vira permanente (uma tentativa por descanso longo).
 - Dissonância: só quando o jogador muda o humor real que foi imposto (por manipulação ou pelo mestre). A máscara não conta como quebra.
 - Agressão súbita: vale quando atacante e alvo estão os dois na Sala Social; uma vez por agressor até a sala ser esvaziada; criaturas do Livro dos Monstros não são humanas.
@@ -134,6 +135,7 @@ Regra combinada: **o livro é mais atual**; das planilhas só entra o que o livr
 - ~~Lembrar o autor: rebote de Impressionar, Interrogatório, Tortura e Etiqueta~~ — respondido (ver Sala Social).
 
 ## Condições (marcadores)
+- **Confirmado (autor, 19/10):** Imobilizado também não se move (círculo vermelho no mapa, deslocamento 0).
 - A lista vem do livro (necessidades, fadiga, dano, mobilidade, mental, estado mental, vício, marcadores). Os números entram sozinhos na ficha: atributos (ex.: Fome CONS −1), % de todos os testes (Cansado −10%), % por atributo (Alerta PER +20 / INT −20) e % de perícias (Trauma momentâneo −30% em Briga, Arma Branca e Armas de Fogo). As que acumulam (Fome, Sede, Sono, Doença, Dor, marcadores) contam cada marcação.
 - PV máximo não muda com a CONS reduzida por condição (provisório).
 - Trauma profundo: −20% nos testes (planilha de regras gerais; o livro só diz "volta o ônus do trauma").

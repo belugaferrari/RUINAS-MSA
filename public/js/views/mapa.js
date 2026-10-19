@@ -109,8 +109,10 @@ function peao(x, g, mover, sel) {
   const { p } = x;
   const semPv = p.semPv || (p.pv && p.pv.atual <= 0);
   // Movimento limitado por efeito (ou carga, para quem vê os itens): círculo em volta do peão para lembrar.
-  const mov = restricaoMovimento(p, estado.sistema, p.itens && p.atributos ? derivados(p, estado.sistema) : null);
-  const avisoMov = mov.nivel ? ` — ${mov.nivel === 'preso' ? 'não pode se mover' : 'movimento limitado'}: ${mov.motivos.join(', ')}` : '';
+  const d = p.itens && p.atributos ? derivados(p, estado.sistema) : null;
+  const mov = restricaoMovimento(p, estado.sistema, d);
+  const avisoMov = (mov.nivel ? ` — ${mov.nivel === 'preso' ? 'não pode se mover' : 'movimento limitado'}: ${mov.motivos.join(', ')}` : '')
+    + (d ? ` · deslocamento ${String(d.deslocamento).replace('.', ',')} m (${d.deslocamentoQuadrados} quadrados)` : '');
   // Quem só vê (jogadores) recebe uma figura, não um botão.
   const el = h(mover ? 'button' : 'span', {
     type: mover ? 'button' : null, role: mover ? null : 'img', class: `peao ${p.tipo} ${sel === p.id ? 'escolhido' : ''} ${semPv ? 'sem-pv' : ''} ${x.oculto ? 'oculto' : ''} ${mov.nivel ? `mov-${mov.nivel}` : ''}`,
