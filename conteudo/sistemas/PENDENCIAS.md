@@ -13,7 +13,7 @@ Pontos em que o app precisou escolher um caminho. Confira e me diga se a escolha
 | 4 | Profissão Protetor | "Salvaguarda" | Entendido como Briga › Salvaguardar |
 | 5 | Nomes nas profissões | "Encontrar armadilhas", "Engenharia Mecânica", "Manutenção de Computadores", "Identificação de objetos" | Armadilhas › Encontrar, Engenharia › Mecânica, Computação › Manutenção, Avaliação de Objetos › Identificação |
 | 6 | Humanidade (Passo 6) | "HUM = 50 + 2×CAR + 2×PER, mas você pode escolher valores melhores que esse até o limite de 51 no primeiro nível" | O app usa a fórmula (máx. 100). Não ficou claro o que é o "limite de 51" |
-| 7 | Grafia texto × tabelas de classe | Gerigonça/Geringonça, Artificie/Artífice, Ultimo/Último, Autopsia/Autópsia | O app usa a grafia das tabelas |
+| 7 | Grafia texto × tabelas de classe | Gerigonça/Geringonça, Artificie/Artífice, Ultimo/Último, Autopsia/Autópsia | **Resolvido:** o app usa a grafia das tabelas e acha o texto mesmo com até 2 letras de diferença |
 
 ## Regras que ainda não existem no livro
 - **Custo de cada vantagem**: o app considera 1 ponto por vantagem.
@@ -66,8 +66,8 @@ Ligados por `modulos.combate` / `modulos.social` em `mss.json`; no MSA ficam só
 - **Bônus geral do humor** (Apático −5, Desmotivado −5, Confiante +5, Desconfiado −5) entra sozinho nos testes D-MIL do rolador da sala e no ataque. Motivado e as desvantagens por tipo de teste ainda são aplicados à mão.
 - **Itens de exemplo** ganharam `pericia`, `tipoDano`, `efeitoDano` e `alcance` até a tabela de itens real chegar.
 
-**Aguardando o texto**
-- **Humores Raivoso e Sereno**: já aparecem na Roda do Humor, sem efeito, até chegar a descrição.
+**Resolvido**
+- **Humores Raivoso e Sereno** (autor): Raivoso = vantagem na iniciativa e R.MNP −20; Sereno = R.MNP +10 e desvantagem na iniciativa.
 
 ## Ficha, criação e evolução (15/10)
 **Confirmado pelo autor**
@@ -99,7 +99,8 @@ Regra combinada: **o livro é mais atual**; das planilhas só entra o que o livr
 **Regras gerais (planilha mais antiga que o livro)**
 - Adotado (o livro não trazia o número): margem do efeito de dano por tipo — Corte 2, Perfuração 3, Concussão 1, Elétrico 2, Calor 4, Frio 2, Ácido 8 (DS ≤ margem aplica o efeito). Penetração N ignora N pontos de IP (também está no livro).
 - Ignorado por conflito com o livro: PV = FOR + CONS; acerto crítico em 1–5 e erro em 96–100; morto em −10 PV; Amigável/Indisposto ±5%; Abalado < 20 / Instável < 12 / Surtado < 6; créditos iniciais 400.
-- Ainda não usado no app (sem conflito, fica para depois): carga (carregamento = 40 × 2^((FOR−10)/6), levantamento = 2×, sobrecarregado/supercarregado/esmagado), Dureza, PVs persistentes/permanentes, regeneração (1d4 × nível no descanso longo), deslocamento 9 m, capacidades com descrição.
+- Já usado no app: carga (carregamento = 40 × 2^((FOR−10)/6), levantamento = 2×, sobrecarregado/supercarregado; o círculo do mapa lembra o deslocamento menor).
+- Ainda não usado no app (sem conflito, fica para depois): esmagado (automático), Dureza, PVs persistentes/permanentes, regeneração (1d4 × nível no descanso longo), deslocamento 9 m, capacidades com descrição.
 
 **Armadilhas** (planilha lida; ainda não automatizadas)
 - 7 armadilhas prontas (Alarme de Latas, Buraco de Estacas, Pêndulo de Sucata, Garra Enferrujada, Chicote de Espinhos, Rede de Queda, Mina Química Improvisada), tabelas de gatilho, área, progressão de dano e efeitos com modificador de ND.
@@ -121,7 +122,7 @@ Regra combinada: **o livro é mais atual**; das planilhas só entra o que o livr
 - Dissonância: só quando o jogador muda o humor real que foi imposto (por manipulação ou pelo mestre). A máscara não conta como quebra.
 - Agressão súbita: vale quando atacante e alvo estão os dois na Sala Social; uma vez por agressor até a sala ser esvaziada; criaturas do Livro dos Monstros não são humanas.
 - O rebote e a manipulação bem-sucedida tiram a máscara do alvo (a reação aparece para todos).
-- Impressionar, Interrogatório, Tortura e Etiqueta mantêm os humores do livro e ficam sem rebote até chegar a matriz delas.
+- **Resolvido (autor):** rebote de Impressionar → Enojado, Interrogatório → Desconfiado, Tortura → Confiante, Etiqueta → Confiante (iguais para A, B e C). O rebote nunca é obrigatório ("Não reagir").
 
 ## Itens: o que os jogadores veem
 - Jogadores veem Mundano, Comum e Incomum. Acima disso só com o mestre liberando: todos de uma vez (Loja → "Jogadores veem todos os itens") ou item a item (botão "Liberar"). O servidor também não deixa comprar item escondido.
@@ -130,7 +131,7 @@ Regra combinada: **o livro é mais atual**; das planilhas só entra o que o livr
 - **Instintos**: guiam o mestre quando o personagem perde o controle (inconsciente), sem regra mecânica. O app traz uma descrição para Sobrevivente, Protetor, Altruísta e Dominador.
 - **Cadência**: como no livro — cadência 2 (Rifle de Assalto) gasta 2 balas por ataque e dá 2 danos (cada um desconta o IP; crítico, localizado e bônus entram no primeiro). Coluna opcional "App: cadência" nos itens.
 - **Humanidade 51**: limite mínimo só na criação; durante o jogo pode cair abaixo.
-- **Lembrar o autor**: rebote de Impressionar, Interrogatório, Tortura e Etiqueta ("nem toda manipulação causa rebote").
+- ~~Lembrar o autor: rebote de Impressionar, Interrogatório, Tortura e Etiqueta~~ — respondido (ver Sala Social).
 
 ## Condições (marcadores)
 - A lista vem do livro (necessidades, fadiga, dano, mobilidade, mental, estado mental, vício, marcadores). Os números entram sozinhos na ficha: atributos (ex.: Fome CONS −1), % de todos os testes (Cansado −10%), % por atributo (Alerta PER +20 / INT −20) e % de perícias (Trauma momentâneo −30% em Briga, Arma Branca e Armas de Fogo). As que acumulam (Fome, Sede, Sono, Doença, Dor, marcadores) contam cada marcação.
