@@ -182,4 +182,4 @@ Regra combinada: **o livro é mais atual**; das planilhas só entra o que o livr
 ## Escolha do humor (autor, 20/10)
 - O jogador escolhe o próprio humor só ANTES de entrar na Sala Social, entre Amigável, Neutro e Indisposto. Lá dentro só muda por manipulação, empatia natural ou mestre. Apático deixou de ser escolha livre.
 - Habilidades: Irreverente (Galante, nível 15) libera qualquer humor a qualquer momento. Outras habilidades que mexam nisso ainda precisam ser listadas.
-- **Conferir:** a máscara (humor aparente) continua podendo ser trocada dentro da sala.
+- **Confirmado (autor, 20/10):** a máscara (humor aparente) pode ser trocada dentro da sala.
