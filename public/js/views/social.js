@@ -38,8 +38,10 @@ function barraMestre(participantes) {
 function botaoEmpatiaNatural() {
   return botao('Empatia natural', async () => {
     const r = await acao('social.empatiaNatural', {});
-    janela('Empatia natural (oculta)', h('p', {}, r.texto), [['OK', () => true]]);
-  }, { class: 'pequeno', icone: 'waves', title: 'Teste oculto para todos os humanos da sala: o grupo converge ao humor que um deles mostra (fórmula provisória)' });
+    janela('Empatia natural (oculta)', h('div', {},
+      h('p', { class: 'dica' }, `${r.mudaram} personagem(ns) mudaram de humor. Os jogadores afetados recebem um aviso de que foi o clima da sala.`),
+      h('ul', { class: 'lista-descanso' }, r.linhas.map(l => h('li', {}, l)))), [['OK', () => true]]);
+  }, { class: 'pequeno', icone: 'waves', title: 'Teste oculto para todos os humanos da sala: cada um influencia os outros com o humor que mostra (CAR% + 1d100 contra o R.MNP de cada um)' });
 }
 
 // Barra superior: avatar, nome, R.MNP, humor real e aparente (só ícones; o título explica), vantagens de manipulação.
@@ -82,7 +84,9 @@ function miniCartao(eu, x, alvo) {
   const sis = estado.sistema;
   const afinidade = estado.campanha.relacoes?.[eu.id]?.[x.id]?.tipo || 'Neutro';
   const esp = { Aliado: 'a', Amigável: 'a', Rival: 'c', Inimigo: 'c' }[afinidade] || 'b';
-  const visto = x.donoId === estado.usuario.id || estado.campanha.papel === 'mestre' ? (x.humorAparente || x.humor) : x.humor;
+  const mestre = estado.campanha.papel === 'mestre';
+  const visto = x.donoId === estado.usuario.id || mestre ? (x.humorAparente || x.humor) : x.humor;
+  const real = x.humor || 'neutro';
   return h('li', { class: `mini-linha ${x.id === alvo ? 'alvo' : ''}` },
     h('button', {
       type: 'button', class: `mini-cartao ${x.id === alvo ? 'alvo' : ''} ${x.semPv || (x.pv && x.pv.atual <= 0) ? 'sem-pv' : ''}`, 'aria-pressed': x.id === alvo,
@@ -91,7 +95,12 @@ function miniCartao(eu, x, alvo) {
       h('span', { class: 'avatar rosto', 'data-pid': x.id }, x.foto ? h('img', { src: x.foto, alt: '' }) : x.nome.slice(0, 1)),
       h('span', { class: 'mini-nome' }, h('strong', {}, x.nome),
         // Sempre o humor interpretado (a máscara, se houver). O que a Empatia revela fica só no aviso e no registro de quem leu.
-        h('small', { title: 'Humor como o seu personagem interpreta (pode ser uma máscara)' }, icone(iconeHumor(visto)), ` ${nomeHumor(visto)}`)),
+        // O mestre vê os dois: o humor real e, se houver máscara, o aparente.
+        mestre
+          ? h('small', { class: 'humores-mestre' },
+            h('span', { title: 'Humor real' }, icone(iconeHumor(real)), ` ${nomeHumor(real)}`),
+            x.humorAparente ? h('span', { class: 'aparente', title: 'Humor aparente (máscara)' }, icone('drama'), ` ${nomeHumor(x.humorAparente)}`) : null)
+          : h('small', { title: 'Humor como o seu personagem interpreta (pode ser uma máscara)' }, icone(iconeHumor(visto)), ` ${nomeHumor(visto)}`)),
       x.id === alvo ? icone('crosshair') : null),
     h('div', { class: 'mini-acoes' },
       h('button', { type: 'button', class: `afinidade esp-${esp}`, title: `Como ${eu.nome} vê ${x.nome}. Clique para mudar`, 'aria-label': `Afinidade de ${eu.nome} com ${x.nome}: ${afinidade}. Mudar`,

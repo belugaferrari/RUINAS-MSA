@@ -63,17 +63,36 @@ test('regras gerais: deslocamento, PV persistentes/permanentes, descanso e Esmag
   assert.match(cargaNoTurno(r, { condicoes: [], carga: 100, cargaLevantamento: 80, cargaNivel: 'supercarregado' })[0], /5% difícil/);
 });
 
-test('empatia natural: o grupo de humanos converge ao humor mostrado por quem conduz (fórmula provisória)', async () => {
-  const { empatiaNatural } = await import('../shared/combate.js');
-  const sis = { atributos: [{ sigla: 'CAR' }], pericias: [], condicoes: [], raca: {}, regras: {} };
+test('empatia natural (regra do app): influência contra R.MNP ajustado, contagem por espectro e passo pelo Neutro', async () => {
+  const { empatiaNatural, espectroDoHumor } = await import('../shared/combate.js');
+  const fs = await import('node:fs');
+  const base = JSON.parse(fs.readFileSync(new URL('../conteudo/sistemas/base.json', import.meta.url)));
+  const sis = { atributos: [{ sigla: 'CAR' }], pericias: [], condicoes: [], raca: {}, regras: {}, teste: { passiva: { soma: 50 } }, modulos: { social: true }, social: base.social };
+  assert.equal(espectroDoHumor('confiante', sis), 'positivo');
+  assert.equal(espectroDoHumor('raivoso', sis), 'negativo');
+  assert.equal(espectroDoHumor('neutro', sis), 'neutro');
   const p = (id, car, humor, extra = {}) => ({ id, nome: id, atributos: { CAR: car }, humor, ...extra });
-  const grupo = [p('lider', 20, 'neutro', { humorAparente: 'confiante' }), p('b', 8, 'indisposto'), p('c', 9, 'amigavel', { humorAparente: 'confiante' }), p('fera', 30, 'raivoso', { criatura: true })];
-  const r = empatiaNatural(grupo, sis, () => 0.5);
-  assert.equal(r.condutor.id, 'lider', 'mesmo dado: maior CAR conduz');
-  assert.equal(r.humor, 'confiante', 'o humor mostrado (máscara) é o que contagia');
-  assert.equal(grupo[1].humor, 'confiante');
-  assert.equal(grupo[2].humor, 'confiante');
-  assert.equal(grupo[2].humorAparente, null, 'máscara igual ao novo humor some');
-  assert.equal(grupo[3].humor, 'raivoso', 'criaturas não são contagiadas');
+  // CAR 20 → CAR% 80; d100 fixo 50 → influência 130 (sem máscara). R.MNP = 0 + 50 = 50 → todos passam.
+  const grupo = [p('a', 20, 'amigavel'), p('b', 20, 'amigavel'), p('c', 20, 'desconfiado'), p('x', 10, 'indisposto'), p('ap', 10, 'apatico'), p('fera', 30, 'raivoso', { criatura: true })];
+  const r = empatiaNatural(grupo, sis, { rng: () => 0.495 });
+  const de = id => r.resultados.find(y => y.p.id === id);
+  assert.equal(de('x').para, 'neutro', 'indisposto (negativo) com 2 positivos × 1 negativo vai para o Neutro');
+  assert.equal(de('c').para, 'neutro', 'desconfiado recebe 2 amigáveis: passa pelo Neutro');
+  assert.equal(de('a').para, 'neutro', 'amigável recebe 1 positivo (b) e 2 negativos (c, x): o negativo vence, passa pelo Neutro');
+  assert.equal(de('ap').mudou, false, 'apático não é afetado');
+  assert.ok(!r.resultados.some(y => y.p.id === 'fera'), 'criaturas ficam de fora');
+  // Neutro vai direto para o humor vencedor (o que teve mais sucessos: 2 amigáveis × 1 corajoso).
+  const g2 = [p('n', 10, 'neutro'), p('a1', 20, 'amigavel'), p('a2', 20, 'amigavel'), p('co', 20, 'corajoso'), p('d', 20, 'desconfiado')];
+  const r2 = empatiaNatural(g2, sis, { rng: () => 0.495 });
+  assert.equal(r2.resultados.find(y => y.p.id === 'n').para, 'amigavel');
+  // Mesmo espectro vencendo: vai direto para o humor vencedor (corajoso → amigável).
+  assert.equal(r2.resultados.find(y => y.p.id === 'co').para, 'amigavel');
+  // Máscara: emite o aparente com −20; rival +10 no R.MNP do receptor.
+  const g3 = [p('m', 10, 'raivoso', { humorAparente: 'confiante' }), p('r', 10, 'neutro')];
+  const r3 = empatiaNatural(g3, sis, { relacoes: { r: { m: { tipo: 'Rival' } } }, rng: () => 0.5 });
+  const t = r3.resultados.find(y => y.p.id === 'r').testes[0];
+  assert.equal(t.humor, 'confiante');
+  assert.equal(t.nd, 60);
+  assert.equal(t.total, 40 + 51 - 20);
   assert.throws(() => empatiaNatural([grupo[0]], sis));
 });

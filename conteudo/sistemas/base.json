@@ -1004,6 +1004,16 @@
     }
    }
   },
+  "empatiaNatural": {
+   "_regra": "Regra do aplicativo do autor (20/10): cada humano emite o humor aparente; influência = CAR% + 1d100 + bônus gerais de Manipulação (−20 se mascarado), contra o R.MNP de cada um ajustado pela afinidade e pelo espectro do humor.",
+   "positivos": ["amigavel", "atraido", "motivado", "corajoso", "confiante", "sereno"],
+   "negativos": ["indisposto", "enojado", "desmotivado", "amedrontado", "desconfiado", "raivoso"],
+   "mascara": -20,
+   "aliado": -10,
+   "rival": 10,
+   "mesmoEspectro": -10,
+   "espectroInverso": 10
+  },
   "espectros": {
    "A": {
     "nome": "Aliado / Amigável",

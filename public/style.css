@@ -1301,3 +1301,4 @@ span.peao { display: grid; }
 .humor-icone { gap: .3em; padding: .2em .65em; }
 .manip.intuir { border-style: dashed; }
 .manip.intuir.ativa { border-style: solid; }
+.humores-mestre { display: inline-flex; flex-wrap: wrap; gap: .5em; } .humores-mestre .aparente { color: #c9b0ff; }

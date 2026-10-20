@@ -1455,21 +1455,25 @@ export const acoes = {
     return { oculto: true };
   },
 
-  // Empatia natural (mestre): teste oculto para todos os humanos da Sala Social; o grupo converge ao humor que um
-  // deles mostra. A fórmula ainda é provisória (shared/combate.js → formulaEmpatiaNatural).
+  // Empatia natural (mestre, regra do aplicativo): cada humano influencia os outros com o humor que mostra.
+  // O mestre vê tudo; quem teve o humor mudado recebe um aviso privado de que foi o clima da sala (e não manipulação).
   'social.empatiaNatural'(c, d, ctx) {
     exigirMestre(ctx);
     const sis = sistema(c.sistema);
     exigirModulo(sis, 'social');
     const participantes = c.salas.social.participantes.map(id => c.personagens.find(p => p.id === id)).filter(Boolean);
     let r;
-    try { r = empatiaNatural(participantes, sis); } catch (e) { throw erro(e.message); }
+    try { r = empatiaNatural(participantes, sis, { relacoes: c.relacoes || {} }); } catch (e) { throw erro(e.message); }
     const nomeH = id => sis.social.humores.find(x => x.id === id)?.nome || 'Neutro';
-    const texto = `${r.condutor.nome} conduz o grupo para ${nomeH(r.humor)}. `
-      + (r.mudancas.length ? `Mudaram: ${r.mudancas.map(m => `${m.nome} (${nomeH(m.de)} → ${nomeH(m.para)})`).join(', ')}.` : 'Ninguém mudou.')
-      + ` Testes: ${r.testes.map(t => `${t.nome} ${t.total}`).join(' · ')}`;
-    registrar(c.salas.social.log, { tipo: 'manipulacao', secreta: true, autor: 'Mestre', rotulo: 'Empatia natural — oculto', texto });
-    return { texto };
+    const influencias = r.emissores.filter(e => e.emite).map(e => `${e.p.nome} (${nomeH(e.humor)}) ${e.total}`).join(' · ');
+    const linhas = r.resultados.map(x => `${x.p.nome}: ${x.mudou ? `${nomeH(x.de)} → ${nomeH(x.para)}` : `fica ${nomeH(x.de)}`} (${x.motivo}; ${x.testes.filter(t => t.sucesso).length}/${x.testes.length} influências passaram do R.MNP ${x.rmnp}±)`);
+    registrar(c.salas.social.log, { tipo: 'manipulacao', secreta: true, autor: 'Mestre', rotulo: 'Empatia natural — oculto', texto: `Influências: ${influencias || 'ninguém emitiu'}. ${linhas.join(' · ')}` });
+    for (const x of r.resultados.filter(y => y.mudou)) {
+      if (!x.p.donoId) continue;
+      registrar(c.salas.social.log, { autor: x.p.nome, rotulo: 'Empatia natural', privadoPara: x.p.donoId,
+        texto: `O clima da conversa mudou ${x.p.nome}: de ${nomeH(x.de)} para ${nomeH(x.para)}. Foi a empatia natural, não uma manipulação.` });
+    }
+    return { texto: linhas.join('\n'), linhas, mudaram: r.resultados.filter(y => y.mudou).length };
   },
 
   // ---------- Confronto (Ação × Ação, fora do combate) ----------

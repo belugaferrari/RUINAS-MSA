@@ -291,36 +291,93 @@ export function resolverManipulacao(autor, alvo, sub, humorDesejado, sistema, { 
   return { ...teste, mods, sub, humorDesejado, espectro, rebote, opcoesRebote, ler: humorDesejado === 'ler' };
 }
 
-// ---------- Empatia natural ----------
-// O mestre lança um teste oculto para todos os humanos da Sala Social e o grupo converge, sem testes de quem é
-// contagiado, para o humor que um dos participantes mostra (o aparente, ou o real sem máscara).
-// FÓRMULA PROVISÓRIA (o autor vai mandar a regra): cada humano rola CAR% (D-MIL) e conduz quem tirar o maior total
-// (empate: maior CAR). Para trocar a regra, basta mudar formulaEmpatiaNatural — o resto da mecânica já usa o resultado.
-export function formulaEmpatiaNatural(humanos, sistema, rng = Math.random) {
-  const testes = humanos.map(p => {
-    const d = derivados(p, sistema);
-    const dp = 1 + Math.floor(rng() * 100);
-    return { id: p.id, nome: p.nome, car: d.atributos.CAR ?? 0, acao: d.percentual.CAR ?? 0, dp, total: (d.percentual.CAR ?? 0) + dp };
-  });
-  const ordenados = [...testes].sort((a, b) => b.total - a.total || b.car - a.car);
-  return { condutor: ordenados[0]?.id || null, testes };
+// ---------- Empatia natural (regra do aplicativo, autor 20/10) ----------
+// Tendência de quem interage socialmente a ficar com o mesmo humor. Cada humano EMITE o seu humor aparente (a máscara,
+// se houver) com uma influência = CAR% + 1d100 + bônus gerais de Manipulação (−20 se o aparente for diferente do real).
+// Cada influência é testada contra o R.MNP de cada outro humano, ajustado: aliado/amigo −10, rival/inimigo +10
+// (como o receptor vê o emissor); humor do mesmo espectro que o do receptor −10, do espectro inverso +10.
+// O receptor conta os sucessos POR ESPECTRO (positivo × negativo):
+// · vence o espectro em que ele já está → vai direto para o humor vencedor (o que teve mais sucessos; empate: maior influência);
+// · vence o espectro oposto → vai para Neutro (o passo seguinte, numa próxima rodada, leva ao humor vencedor);
+// · está Neutro → vai para o humor vencedor. Empate entre espectros ou nenhum sucesso → fica como está.
+// Neutro e Apático não emitem; Apático (desligado da empatia humana) não é afetado. Criaturas ficam de fora.
+export function espectroDoHumor(humor, sistema) {
+  const cfg = sistema.social?.empatiaNatural || {};
+  if ((cfg.positivos || []).includes(humor)) return 'positivo';
+  if ((cfg.negativos || []).includes(humor)) return 'negativo';
+  return humor === 'apatico' ? 'apatico' : 'neutro';
 }
 
-export function empatiaNatural(participantes, sistema, rng = Math.random) {
+// Bônus gerais de Manipulação: tudo o que soma na perícia base Manipulação além dos pontos e do bônus de atributo
+// (itens, habilidades ativas, condições) e o bônus geral do humor.
+export function bonusGeralManipulacao(p, sistema) {
+  const d = derivados(p, sistema);
+  const per = (sistema.pericias || []).find(x => x.id === 'manipulacao');
+  const geral = per ? (d.pericias.manipulacao ?? 0) - (p.pericias?.manipulacao ?? 0) - (d.bonusPericial[per.atributo] ?? 0) : 0;
+  return geral + modHumorTestes(p, sistema);
+}
+
+export function empatiaNatural(participantes, sistema, { relacoes = {}, rng = Math.random } = {}) {
+  const cfg = sistema.social?.empatiaNatural || {};
   const humanos = participantes.filter(p => !p.criatura && !(p.marcadores || []).includes('Morto'));
   if (humanos.length < 2) throw new Error('A empatia natural precisa de pelo menos dois humanos na Sala Social.');
-  const { condutor, testes } = formulaEmpatiaNatural(humanos, sistema, rng);
-  const lider = humanos.find(p => p.id === condutor);
-  const humor = lider.humorAparente || lider.humor || 'neutro';
-  const mudancas = [];
-  for (const p of humanos) {
-    if (p.id === lider.id || (p.humor || 'neutro') === humor) continue;
-    mudancas.push({ id: p.id, nome: p.nome, de: p.humor || 'neutro', para: humor });
-    p.humor = humor;
-    p.humorOpcoes = [];
-    // Contágio natural: não é imposto (mudar depois não causa dissonância). A máscara igual ao novo humor some.
-    p.humorImposto = false;
-    if (p.humorAparente === humor) p.humorAparente = null;
+  // 1) Influência de cada emissor (um teste só por emissor, usado contra todos).
+  const emissores = humanos.map(p => {
+    const real = p.humor || 'neutro';
+    const aparente = p.humorAparente || real;
+    const espectro = espectroDoHumor(aparente, sistema);
+    const d = derivados(p, sistema);
+    const dp = 1 + Math.floor(rng() * 100);
+    const mascara = aparente !== real ? (cfg.mascara ?? -20) : 0;
+    const bonus = bonusGeralManipulacao(p, sistema);
+    return { p, humor: aparente, espectro, car: d.percentual.CAR ?? 0, dp, bonus, mascara, total: (d.percentual.CAR ?? 0) + dp + bonus + mascara, emite: espectro === 'positivo' || espectro === 'negativo' };
+  });
+  // 2) Cada receptor contra cada emissor.
+  const resultados = [];
+  for (const r of humanos) {
+    const atual = r.humor || 'neutro';
+    const meuEsp = espectroDoHumor(atual, sistema);
+    const rmnp = resistenciaManipulacao(r, sistema);
+    const testes = [];
+    for (const e of emissores) {
+      if (e.p.id === r.id || !e.emite) continue;
+      let nd = rmnp;
+      const rel = espectroDe(relacoes[r.id]?.[e.p.id]?.tipo, sistema);
+      if (rel === 'A') nd += cfg.aliado ?? -10;
+      if (rel === 'C') nd += cfg.rival ?? 10;
+      if (meuEsp === 'positivo' || meuEsp === 'negativo') nd += e.espectro === meuEsp ? (cfg.mesmoEspectro ?? -10) : (cfg.espectroInverso ?? 10);
+      testes.push({ de: e.p.id, nome: e.p.nome, humor: e.humor, espectro: e.espectro, total: e.total, nd, sucesso: e.total >= nd });
+    }
+    let novo = atual;
+    let motivo = 'resistiu';
+    if (meuEsp === 'apatico') motivo = 'apático: desligado da empatia';
+    else {
+      const ok = testes.filter(t => t.sucesso);
+      const pos = ok.filter(t => t.espectro === 'positivo');
+      const neg = ok.filter(t => t.espectro === 'negativo');
+      if (ok.length && pos.length !== neg.length) {
+        const vence = pos.length > neg.length ? 'positivo' : 'negativo';
+        const lista = vence === 'positivo' ? pos : neg;
+        // Humor vencedor: o que teve mais sucessos; empate, a maior influência.
+        const porHumor = new Map();
+        for (const t of lista) {
+          const x = porHumor.get(t.humor) || { n: 0, max: 0 };
+          porHumor.set(t.humor, { n: x.n + 1, max: Math.max(x.max, t.total) });
+        }
+        const vencedor = [...porHumor.entries()].sort((a, b) => b[1].n - a[1].n || b[1].max - a[1].max)[0][0];
+        if (meuEsp === vence || meuEsp === 'neutro') { novo = vencedor; motivo = `${pos.length} positivo(s) × ${neg.length} negativo(s)`; }
+        else { novo = 'neutro'; motivo = `${pos.length} positivo(s) × ${neg.length} negativo(s): passa pelo Neutro`; }
+      } else if (ok.length) motivo = `empate entre os espectros (${pos.length} × ${neg.length})`;
+    }
+    resultados.push({ p: r, de: atual, para: novo, mudou: novo !== atual, motivo, rmnp, testes });
   }
-  return { condutor: lider, humor, testes, mudancas };
+  // 3) Aplica (contágio natural: não é imposto). A máscara igual ao novo humor some.
+  for (const x of resultados) {
+    if (!x.mudou) continue;
+    x.p.humor = x.para;
+    x.p.humorOpcoes = [];
+    x.p.humorImposto = false;
+    if (x.p.humorAparente === x.para) x.p.humorAparente = null;
+  }
+  return { emissores, resultados };
 }

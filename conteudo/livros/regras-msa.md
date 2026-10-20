@@ -2869,6 +2869,43 @@ Efeito: Todos os testes -10%
 
 Quando seu personagem está com uma peça de roupa danificada ou sem a peça de roupa (Dorso, Pernas e Pé) e exposto a uma intempere ele começa a sofrer o efeito de friagem. A cada 15minutos receba +1 marcador de vulnerabilidade.
 
+### EMPATIA NATURAL
+
+A ‘Empatia Natural’ expressa uma característica humana que é se conectar empaticamente aos outros seres próximos de si. Efetivamente, isso significa que existe uma TENDÊNCIA de que as pessoas que estão em uma interação social fiquem ao longo do tempo com o mesmo humor.
+
+Efetivamente no jogo isso traz duas possibilidades aos jogadores: 1. Você pode manipular o humor de outros personagens de maneira passiva e natural e 2. Quando seu humor muda, você consegue saber se você foi manipulado ou simplesmente afetado pelo humor dos outros personagens.
+
+A Empatia Natural possui a regra de mesa e a do aplicativo, que são diferentes pela complexidade. O ideal é usar a Empatia Natural sempre pelo aplicativo, porque assim nunca fica claro para o jogador a maneira como ele está sendo manipulado.
+
+#### Humores positivos e negativos
+
+Apesar da Empatia Natural ser forçada pela presença de cada ser, para as contas é como se cada humor tivesse uma influência sobre cada personagem. A ‘Empatia Natural’ usa o ‘Humor aparente’ de cada personagem como padrão e não o humor real – isso significa que você é conduzido para o humor em que o outro personagem finge estar (que pode ou não ser igual ao humor real).
+
+Humores positivos: Amigável, Atraído, Motivado, Corajoso, Confiante (Crédulo) e Sereno.
+
+Humores negativos: Indisposto, Enojado, Desmotivado, Amedrontado (Medo), Desconfiado (Incrédulo) e Raivoso.
+
+Os únicos 2 humores que não estão aqui são Neutro e Apático. Neutro é uma passagem entre o positivo e o negativo e Apático é o estado quando o personagem se desconecta da empatia humana.
+
+#### Regra do aplicativo
+
+A regra do aplicativo é mais complexa e age em camadas. Ela depende do Carisma do personagem, do humor real, do humor aparente, da afinidade entre os personagens, de influências individuais e possivelmente de outras habilidades únicas que cada personagem possa vir a ter.
+
+Primeiro, cada personagem faz um teste para saber o quanto seu humor influencia os demais personagens que estão interagindo: CAR% + 1D100 + Bônus gerais de Manipulação. Caso o humor aparente seja diferente do humor real do personagem, adicione um modificador de −20.
+
+Esse valor é testado individualmente contra o R.MNP de cada personagem, porém o R.MNP sofre os seguintes fatores, a depender do humor e da afinidade com o ‘humor emissor’:
+
+- Se for de um aliado ou amigo: −10 R.MNP.
+- Se for de um humor no mesmo espectro que o seu: −10 R.MNP.
+- Se vier de um rival ou inimigo: +10 R.MNP.
+- Se o humor for de um espectro inverso ao seu atual: +10 R.MNP.
+
+Cada personagem gera 1 teste de influência contra o seu personagem. Contam-se os sucessos POR ESPECTRO primeiro, para saber para onde seu humor está tendendo. Exemplo: seu personagem está INDISPOSTO (espectro negativo). Dos 8 outros personagens na interação, ele resistiu a 3 Empatias Naturais. Das outras 5, duas eram do espectro negativo (Desconfiado) e três do espectro positivo (2 Amigáveis e 1 Corajoso). Assim, seu humor se desloca no caminho do espectro positivo, saindo de Indisposto para Neutro. Caso o espectro negativo tivesse maior influência, como você já estava no espectro negativo, você seria deslocado diretamente para o humor vencedor (Desconfiado). Se o mesmo resultado se repetir na próxima parada de Empatia Natural, seu personagem se desloca para Amigável, que tem maior influência que Corajoso.
+
+#### Regra de mesa
+
+A regra de mesa é bem mais simples. Coloque um avatar de cada personagem dentro de uma Roda do Humor. Todos jogam CAR% + 1D100 + Bônus gerais de Manipulação. Se alguém tiver um resultado menor que a própria R.MNP, desloca-se um passo na direção de quem teve o maior resultado. Se você superou a própria R.MNP, conte quantos personagens há em cada espectro: se for o seu espectro, fique parado; se for o espectro oposto, ande para o Neutro; e se você estiver Neutro, ande para o humor do maior resultado.
+
 ### SANIDADE (SAN)
 
 Sua Sanidade mede sua resiliência ao horror. O quanto sua mente consegue se manter integra diante de um mundo distorcido que exige muito para sobreviver.

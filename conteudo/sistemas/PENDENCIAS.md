@@ -168,3 +168,13 @@ Regra combinada: **o livro é mais atual**; das planilhas só entra o que o livr
 - Durante o combate os efeitos das Necessidades (Fome, Sede, Sono, Doença, Friagem) ficam suspensos; no fim do combate, quem tinha algum faz CONS% difícil (ND 100) — falhou: Exausto + Marcador de Vulnerabilidade.
 - Automáticos: Absorver Nutrientes (fome só com 36 h; descanso curto 2 PV), Metabolismo Acelerado (defeito: fome com 12 h; transmorfo: descanso curto 2 PV e +1 PV por dado), Apoteose Sintética (imune a Fome, Sede e Sono), Mutações Decrépitas (não acumula Fome, Sede e Sono), Raquítico (+25% contra a fome), Soldado de Campanha e Marcha (vantagem contra fadiga; Soldado também contra doença e sem ônus de Conforto/Ergonomia), Regeneração Lenta (metade nos descansos), Insônia (CAR% difícil no descanso longo; falhou: metade e Sono), Insônia pós-traumática (1d10 < 5: vale como descanso curto e Sono).
 - Só lembrete (dependem da situação): Habitat magnífico, Ligação natural, Hibernação, Glutão, Pele de Jardim, Vigia, Guarda de posto.
+
+## Empatia natural (regra do aplicativo, autor 20/10)
+- Cada humano emite o humor APARENTE com influência = CAR% + 1d100 + bônus gerais de Manipulação (−20 se mascarado), contra o R.MNP de cada receptor (aliado/amigo −10, rival/inimigo +10, mesmo espectro −10, espectro inverso +10). Conta-se os sucessos por espectro: vence o seu → vai para o humor vencedor (mais sucessos; empate, maior influência); vence o oposto → Neutro; Neutro → humor vencedor. Quem muda recebe aviso privado de que foi o clima da sala. Texto no livro de regras (MSA e MSS), antes de Sanidade.
+
+**Provisório — conferir**
+- "Bônus gerais de Manipulação" = o que soma na perícia base Manipulação além dos pontos e do bônus de atributo (itens, habilidades ativas, condições) + o bônus geral do humor.
+- Empate entre os espectros (mesmo número de sucessos) → o humor não muda.
+- Neutro e Apático não emitem; Apático não é afetado; criaturas ficam de fora.
+- A afinidade usada é a de como o RECEPTOR vê o emissor.
+- O contágio natural não deixa o humor "imposto" (mudar depois não causa dissonância).
