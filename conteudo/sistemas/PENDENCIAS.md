@@ -170,11 +170,11 @@ Regra combinada: **o livro é mais atual**; das planilhas só entra o que o livr
 - Só lembrete (dependem da situação): Habitat magnífico, Ligação natural, Hibernação, Glutão, Pele de Jardim, Vigia, Guarda de posto.
 
 ## Empatia natural (regra do aplicativo, autor 20/10)
-- Cada humano emite o humor APARENTE com influência = CAR% + 1d100 + bônus gerais de Manipulação (−20 se mascarado), contra o R.MNP de cada receptor (aliado/amigo −10, rival/inimigo +10, mesmo espectro −10, espectro inverso +10). Conta-se os sucessos por espectro: vence o seu → vai para o humor vencedor (mais sucessos; empate, maior influência); vence o oposto → Neutro; Neutro → humor vencedor. Quem muda recebe aviso privado de que foi o clima da sala. Texto no livro de regras (MSA e MSS), antes de Sanidade.
+- Cada humano emite o humor APARENTE com influência = CAR% + 1d100 + bônus gerais de Manipulação (−20 se mascarado), contra o R.MNP de cada receptor (aliado/amigo −10, rival/inimigo +10, mesmo espectro −10, espectro inverso +10). Conta-se os sucessos por espectro: vence o seu → vai para o humor vencedor (mais sucessos; empate, maior influência); vence o oposto → Neutro; Neutro → humor vencedor. O jogador NÃO é avisado: não sabe se mudou por manipulação ou pela empatia natural (autor, 20/10). Texto no livro de regras (MSA e MSS), antes de Sanidade.
 
 **Provisório — conferir**
 - "Bônus gerais de Manipulação" = o que soma na perícia base Manipulação além dos pontos e do bônus de atributo (itens, habilidades ativas, condições) + o bônus geral do humor.
 - Empate entre os espectros (mesmo número de sucessos) → o humor não muda.
 - Neutro e Apático não emitem; Apático não é afetado; criaturas ficam de fora.
 - A afinidade usada é a de como o RECEPTOR vê o emissor.
-- O contágio natural não deixa o humor "imposto" (mudar depois não causa dissonância).
+- O humor que muda pela empatia natural fica "imposto", igual ao de uma manipulação (mudar depois causa dissonância), para o jogador não distinguir as duas.

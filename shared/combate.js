@@ -371,12 +371,13 @@ export function empatiaNatural(participantes, sistema, { relacoes = {}, rng = Ma
     }
     resultados.push({ p: r, de: atual, para: novo, mudou: novo !== atual, motivo, rmnp, testes });
   }
-  // 3) Aplica (contágio natural: não é imposto). A máscara igual ao novo humor some.
+  // 3) Aplica igual a uma manipulação (humor imposto), para o jogador não distinguir uma da outra.
+  // A máscara igual ao novo humor some.
   for (const x of resultados) {
     if (!x.mudou) continue;
     x.p.humor = x.para;
     x.p.humorOpcoes = [];
-    x.p.humorImposto = false;
+    x.p.humorImposto = x.para !== 'neutro';
     if (x.p.humorAparente === x.para) x.p.humorAparente = null;
   }
   return { emissores, resultados };

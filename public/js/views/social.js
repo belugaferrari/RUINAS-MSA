@@ -39,7 +39,7 @@ function botaoEmpatiaNatural() {
   return botao('Empatia natural', async () => {
     const r = await acao('social.empatiaNatural', {});
     janela('Empatia natural (oculta)', h('div', {},
-      h('p', { class: 'dica' }, `${r.mudaram} personagem(ns) mudaram de humor. Os jogadores afetados recebem um aviso de que foi o clima da sala.`),
+      h('p', { class: 'dica' }, `${r.mudaram} personagem(ns) mudaram de humor. Os jogadores não são avisados (não sabem se foi manipulação ou empatia natural).`),
       h('ul', { class: 'lista-descanso' }, r.linhas.map(l => h('li', {}, l)))), [['OK', () => true]]);
   }, { class: 'pequeno', icone: 'waves', title: 'Teste oculto para todos os humanos da sala: cada um influencia os outros com o humor que mostra (CAR% + 1d100 contra o R.MNP de cada um)' });
 }

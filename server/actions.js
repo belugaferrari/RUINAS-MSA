@@ -1456,7 +1456,7 @@ export const acoes = {
   },
 
   // Empatia natural (mestre, regra do aplicativo): cada humano influencia os outros com o humor que mostra.
-  // O mestre vê tudo; quem teve o humor mudado recebe um aviso privado de que foi o clima da sala (e não manipulação).
+  // Só o mestre vê. O jogador não fica sabendo se o humor mudou por manipulação ou pela empatia natural.
   'social.empatiaNatural'(c, d, ctx) {
     exigirMestre(ctx);
     const sis = sistema(c.sistema);
@@ -1468,11 +1468,6 @@ export const acoes = {
     const influencias = r.emissores.filter(e => e.emite).map(e => `${e.p.nome} (${nomeH(e.humor)}) ${e.total}`).join(' · ');
     const linhas = r.resultados.map(x => `${x.p.nome}: ${x.mudou ? `${nomeH(x.de)} → ${nomeH(x.para)}` : `fica ${nomeH(x.de)}`} (${x.motivo}; ${x.testes.filter(t => t.sucesso).length}/${x.testes.length} influências passaram do R.MNP ${x.rmnp}±)`);
     registrar(c.salas.social.log, { tipo: 'manipulacao', secreta: true, autor: 'Mestre', rotulo: 'Empatia natural — oculto', texto: `Influências: ${influencias || 'ninguém emitiu'}. ${linhas.join(' · ')}` });
-    for (const x of r.resultados.filter(y => y.mudou)) {
-      if (!x.p.donoId) continue;
-      registrar(c.salas.social.log, { autor: x.p.nome, rotulo: 'Empatia natural', privadoPara: x.p.donoId,
-        texto: `O clima da conversa mudou ${x.p.nome}: de ${nomeH(x.de)} para ${nomeH(x.para)}. Foi a empatia natural, não uma manipulação.` });
-    }
     return { texto: linhas.join('\n'), linhas, mudaram: r.resultados.filter(y => y.mudou).length };
   },
 
