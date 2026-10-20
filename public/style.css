@@ -1186,3 +1186,20 @@ span.peao { display: grid; }
 .img-secao { margin-bottom: 1em; }
 .img-secao > h3 { border-bottom: 1px solid var(--borda); padding-bottom: .2em; }
 .galeria figcaption .mini-select { font-size: .8em; padding: .1em .3em; margin-top: .2em; max-width: 100%; }
+
+/* Sala Social: barra do personagem em cima da mesa social */
+.social-painel { display: flex; flex-direction: column; gap: .7em; }
+.social-barra { display: flex; align-items: center; flex-wrap: wrap; gap: .6em; padding: .5em .8em; }
+.social-barra > .avatar { width: 48px; height: 48px; flex: none; border: 2px solid var(--ouro); }
+.social-barra .nome-controlado { margin: 0; font-size: 1.1em; }
+.social-barra .rmnp { display: inline-flex; flex-direction: column; align-items: center; padding: .1em .55em; border-radius: 8px; background: var(--painel2); border: 1px solid var(--borda); line-height: 1.1; }
+.social-barra .rmnp small { font-size: .65em; color: var(--suave); }
+.humores-barra { display: inline-flex; align-items: center; gap: .35em; }
+.humor-icone { display: inline-flex; align-items: center; justify-content: center; gap: .15em; min-width: var(--toque, 40px); min-height: var(--toque, 40px); padding: .2em .4em; border-radius: 999px; background: var(--painel2); border: 1px solid var(--borda); color: var(--ouro-claro, #f0c873); }
+.humor-icone svg { width: 1.3em; height: 1.3em; }
+.humor-icone.real.imposto { border-color: #e05a4f; box-shadow: 0 0 0 1px #e05a4f55; }
+.mascara:not(.com) .humor-icone.aparente { opacity: .45; }
+.mascara.com .humor-icone.aparente { border-color: #b48cff; color: #d6c2ff; }
+.vant-manip { display: inline-flex; flex-wrap: wrap; gap: .3em; }
+.vant-manip .selo { cursor: help; }
+.social-tres .social-lado > h3 { margin-top: 0; }

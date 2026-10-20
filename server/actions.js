@@ -1,6 +1,6 @@
 import { db, save, uid } from './db.js';
 import { sistema, idSistema } from './sistema.js';
-import { resolverAtaque, aplicarAtaque, armasDisponiveis, opcoesDefesa, sobrevida, rolarIniciativa, resolverManipulacao, modHumorTestes, humorDe, espectroDe, humorAparente } from '../shared/combate.js';
+import { resolverAtaque, aplicarAtaque, armasDisponiveis, opcoesDefesa, sobrevida, rolarIniciativa, resolverManipulacao, modHumorTestes, humorDe, espectroDe, humorAparente, empatiaNatural } from '../shared/combate.js';
 import { sincronizarEfeitos, passarTurnoEfeitos, efeitosAoAgir, cargaNoTurno, descansar } from '../shared/efeitos.js';
 import { fichasDeTeste, relatorioFicha } from '../shared/fichasTeste.js';
 import { passarNecessidades, comer, beber, dormir, rolarCaos, climaDoDia, descreverRelogio, fimDoCombate } from '../shared/tempo.js';
@@ -101,7 +101,7 @@ export function visaoPara(c, user, area) {
 
   const personagens = c.personagens
     .filter(p => meus.has(p.id) || p.tipo === 'pj' || emSala.has(p.id) || conhecidos.has(p.id))
-    .map(p => (meus.has(p.id) ? comDono(p) : fichaPublica(p, sistema(c.sistema))));
+    .map(p => (meus.has(p.id) ? { ...comDono(p), humorOpcoes: [] } : fichaPublica(p, sistema(c.sistema))));
 
   return {
     id: c.id, nome: c.nome, nivel: c.nivel, padraoMSA: c.padraoMSA, pontos: c.pontos, aberta: c.aberta, sistema: idSistema(c.sistema),
@@ -1175,12 +1175,12 @@ export const acoes = {
   // camada "real": o humor verdadeiro (dá os bônus e ônus). camada "aparente": a máscara que a sala vê (null = igual ao real).
   // Rebote nunca é obrigatório: o alvo pode não reagir e manter o humor que tinha.
   'humor.recusarRebote'(c, { id }, ctx) {
+    exigirMestre(ctx);
     const p = personagem(c, id);
-    exigirDonoOuMestre(ctx, p);
     if (!(p.humorOpcoes || []).length) return;
     p.humorOpcoes = [];
     const nome = sistema(c.sistema).social?.humores.find(x => x.id === (p.humor || 'neutro'))?.nome || 'Neutro';
-    registrar(c.salas.social.log, { autor: p.nome, rotulo: 'Rebote', texto: `${p.nome} não reage e continua ${nome}.` });
+    registrar(c.salas.social.log, { autor: p.nome, rotulo: 'Rebote', secreta: true, texto: `${p.nome} não reage e continua ${nome}.` });
   },
 
   'humor.definir'(c, { id, humor, camada = 'real' }, ctx) {
@@ -1199,7 +1199,8 @@ export const acoes = {
     const h = sis.social.humores.find(x => x.id === humor);
     if (!h) throw erro('Humor desconhecido.');
     // Rebote: o alvo escolhe entre as opções da matriz (sem custo; o humor fica imposto).
-    const doRebote = (p.humorOpcoes || []).includes(h.id);
+    // Com a manipulação oculta, só o mestre resolve o rebote.
+    const doRebote = ctx.mestre && (p.humorOpcoes || []).includes(h.id);
     if (!ctx.mestre && !h.escolha && !doRebote) {
       throw erro('Você só escolhe Neutro, Amigável, Indisposto ou Apático; os outros humores vêm de manipulação ou do mestre.');
     }
@@ -1222,7 +1223,8 @@ export const acoes = {
     p.humorOpcoes = [];
     p.humorImposto = doRebote || (ctx.mestre && h.id !== 'neutro');
     if (p.humorAparente === p.humor) p.humorAparente = null;
-    registrar(c.salas.social.log, { autor: p.nome, rotulo: `Humor de ${p.nome}`, texto: p.humorAparente ? `${texto} (por trás da máscara)` : texto, privadoPara: p.humorAparente ? (p.donoId || ctx.user.id) : null });
+    registrar(c.salas.social.log, { autor: p.nome, rotulo: `Humor de ${p.nome}`, texto: p.humorAparente ? `${texto} (por trás da máscara)` : texto,
+      privadoPara: p.humorAparente ? (p.donoId || ctx.user.id) : null, secreta: doRebote || undefined });
   },
 
   // Descanso curto ou longo (mestre): regenera PV (e Sanidade no longo), testa os marcadores, recarrega capacidades.
@@ -1415,14 +1417,19 @@ export const acoes = {
     const nomeSub = per?.subpericias.find(x => x.id === sub)?.nome || sub;
     const nomeEsp = sis.social.espectros?.[espectro]?.nome || espectro;
     const mudar = novo => { b.humor = novo; b.humorAparente = null; b.humorImposto = novo !== 'neutro'; b.humorOpcoes = []; };
+    // Toda manipulação é OCULTA: só o mestre vê quem testou, a intenção e o resultado. Para os jogadores tudo acontece
+    // em silêncio (o alvo só sente o humor mudar). Ler o humor (Empatia) dá a quem leu o que ele percebeu.
     let resultado;
-    if (r.sucesso && r.ler) {
-      // A quebra da máscara: só quem testou vê o humor real.
-      resultado = `SUCESSO — ${a.nome} lê ${b.nome}`;
+    let percebido = null;
+    if (r.ler) {
       const real = nomeH(b.humor || 'neutro');
-      const texto = b.humorAparente ? `A máscara caiu. O humor aparente é ${nomeH(b.humorAparente)}, mas o humor real é ${real}.` : `Sem máscara: o humor real de ${b.nome} é ${real}.`;
-      registrar(c.salas.social.log, { autor: a.nome, rotulo: `Leitura de ${b.nome}`, texto, privadoPara: ctx.user.id });
-      r.revelado = texto;
+      const visto = nomeH(b.humorAparente || b.humor || 'neutro');
+      // Falhou: percebe só o que a pessoa mostra — escrito igual, para não entregar a falha.
+      percebido = r.sucesso && b.humorAparente
+        ? `Você percebe que ${b.nome} está ${real}, por trás da aparência de ${visto}.`
+        : `Você percebe que ${b.nome} está ${r.sucesso ? real : visto}.`;
+      resultado = r.sucesso ? `SUCESSO — ${a.nome} lê ${b.nome}: ${b.humorAparente ? `a máscara (${visto}) caiu, real ${real}` : `real ${real}`}` : `FALHOU — ${a.nome} só vê ${visto}`;
+      registrar(c.salas.social.log, { autor: a.nome, rotulo: `Você observa ${b.nome}`, texto: percebido, privadoPara: ctx.user.id });
     } else if (r.sucesso) {
       mudar(humor);
       resultado = `SUCESSO — ${b.nome} fica ${nomeH(humor)}`;
@@ -1430,22 +1437,39 @@ export const acoes = {
       mudar(r.rebote);
       resultado = `FALHOU — rebote (${nomeEsp}): ${b.nome} fica ${nomeH(r.rebote)}`;
     } else if (r.opcoesRebote.length) {
-      // Duas opções: quem controla o alvo escolhe (o humor fica pendente até a escolha).
+      // Duas opções: com o teste oculto, quem escolhe é o mestre (o humor fica pendente até a escolha).
       b.humorOpcoes = r.opcoesRebote;
-      b.humorAparente = null;
-      resultado = `FALHOU — rebote (${nomeEsp}): ${b.nome} escolhe ficar ${r.opcoesRebote.map(nomeH).join(' ou ')}`;
+      resultado = `FALHOU — rebote (${nomeEsp}): o mestre escolhe se ${b.nome} fica ${r.opcoesRebote.map(nomeH).join(' ou ')} (ou não reage)`;
     } else {
       resultado = 'FALHOU — sem efeito';
     }
     const mods = r.mods.map(m => `${m.nome} ${fmtMod(m.valor)}`).join(', ');
     const entrada = {
-      tipo: 'manipulacao', autor: a.nome, rotulo: `${nomeSub} em ${b.nome} (${r.ler ? 'ler o humor real' : `quer ${nomeH(humor)}`})`, sucesso: r.sucesso, critico: r.critico,
+      tipo: 'manipulacao', secreta: true, autor: a.nome, rotulo: `${nomeSub} em ${b.nome} (${r.ler ? 'ler o humor real' : `quer ${nomeH(humor)}`}) — oculto`, sucesso: r.sucesso, critico: r.critico,
       texto: `${resultado}${r.critico ? ` (crítico de ${r.critico})` : ''}`,
       detalhe: `d100 ${r.dp}${r.modo ? ` (vantagem [${r.dados.join(', ')}])` : ''} + ${r.acao}${mods ? ` (${mods})` : ''} = ${r.total} contra R.MNP ${r.nd} · espectro ${nomeEsp} · DS ${r.ds}`,
       dp: r.dp, dados: r.dados, ds: r.ds, total: r.total, nd: r.nd,
     };
     registrar(c.salas.social.log, entrada);
-    return { ...entrada, revelado: r.revelado || null };
+    if (ctx.mestre) return { ...entrada, revelado: percebido };
+    return { oculto: true, revelado: percebido };
+  },
+
+  // Empatia natural (mestre): teste oculto para todos os humanos da Sala Social; o grupo converge ao humor que um
+  // deles mostra. A fórmula ainda é provisória (shared/combate.js → formulaEmpatiaNatural).
+  'social.empatiaNatural'(c, d, ctx) {
+    exigirMestre(ctx);
+    const sis = sistema(c.sistema);
+    exigirModulo(sis, 'social');
+    const participantes = c.salas.social.participantes.map(id => c.personagens.find(p => p.id === id)).filter(Boolean);
+    let r;
+    try { r = empatiaNatural(participantes, sis); } catch (e) { throw erro(e.message); }
+    const nomeH = id => sis.social.humores.find(x => x.id === id)?.nome || 'Neutro';
+    const texto = `${r.condutor.nome} conduz o grupo para ${nomeH(r.humor)}. `
+      + (r.mudancas.length ? `Mudaram: ${r.mudancas.map(m => `${m.nome} (${nomeH(m.de)} → ${nomeH(m.para)})`).join(', ')}.` : 'Ninguém mudou.')
+      + ` Testes: ${r.testes.map(t => `${t.nome} ${t.total}`).join(' · ')}`;
+    registrar(c.salas.social.log, { tipo: 'manipulacao', secreta: true, autor: 'Mestre', rotulo: 'Empatia natural — oculto', texto });
+    return { texto };
   },
 
   // ---------- Confronto (Ação × Ação, fora do combate) ----------

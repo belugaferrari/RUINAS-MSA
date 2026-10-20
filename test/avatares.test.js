@@ -62,3 +62,18 @@ test('regras gerais: deslocamento, PV persistentes/permanentes, descanso e Esmag
   assert.match(cargaNoTurno(r, { condicoes: [], carga: 100, cargaLevantamento: 80, cargaNivel: 'supercarregado' })[0], /teste de FOR muito difícil/);
   assert.match(cargaNoTurno(r, { condicoes: [], carga: 100, cargaLevantamento: 80, cargaNivel: 'supercarregado' })[0], /5% difícil/);
 });
+
+test('empatia natural: o grupo de humanos converge ao humor mostrado por quem conduz (fórmula provisória)', async () => {
+  const { empatiaNatural } = await import('../shared/combate.js');
+  const sis = { atributos: [{ sigla: 'CAR' }], pericias: [], condicoes: [], raca: {}, regras: {} };
+  const p = (id, car, humor, extra = {}) => ({ id, nome: id, atributos: { CAR: car }, humor, ...extra });
+  const grupo = [p('lider', 20, 'neutro', { humorAparente: 'confiante' }), p('b', 8, 'indisposto'), p('c', 9, 'amigavel', { humorAparente: 'confiante' }), p('fera', 30, 'raivoso', { criatura: true })];
+  const r = empatiaNatural(grupo, sis, () => 0.5);
+  assert.equal(r.condutor.id, 'lider', 'mesmo dado: maior CAR conduz');
+  assert.equal(r.humor, 'confiante', 'o humor mostrado (máscara) é o que contagia');
+  assert.equal(grupo[1].humor, 'confiante');
+  assert.equal(grupo[2].humor, 'confiante');
+  assert.equal(grupo[2].humorAparente, null, 'máscara igual ao novo humor some');
+  assert.equal(grupo[3].humor, 'raivoso', 'criaturas não são contagiadas');
+  assert.throws(() => empatiaNatural([grupo[0]], sis));
+});

@@ -119,6 +119,12 @@ export const humores = () => estado.sistema.social?.humores || [];
 export const reboteTexto = regra => Object.entries(regra.falha || {}).map(([k, l]) => `${k}: ${l.length ? l.map(id => nomeHumorLer(id)).join(' ou ') : 'sem efeito'}`).join(' · ');
 const nomeHumorLer = id => (id === 'ler' ? 'ler o humor real' : nomeHumor(id));
 export const nomeHumor = id => humores().find(x => x.id === (id || 'neutro'))?.nome || 'Neutro';
+// Ícone de cada humor (barra da Sala Social).
+export const ICONE_HUMOR = {
+  neutro: 'meh', amigavel: 'smile', indisposto: 'frown', apatico: 'circle-off', atraido: 'heart', enojado: 'thumbs-down', motivado: 'flame',
+  desmotivado: 'cloud-rain', corajoso: 'shield', amedrontado: 'ghost', confiante: 'badge-check', desconfiado: 'eye', raivoso: 'angry', sereno: 'leaf',
+};
+export const iconeHumor = id => ICONE_HUMOR[id || 'neutro'] || 'smile';
 
 // Selo do humor no cartão do participante; quem controla o personagem pode trocar.
 // Humor no cartão. Quem controla vê e muda as duas camadas: o humor real (dá os efeitos) e a máscara (o que a sala vê).
@@ -158,7 +164,9 @@ export function rodaDoHumor() {
     h('ul', { class: 'dica lista-humores' },
       h('li', {}, 'Cada um escolhe Neutro, Amigável, Indisposto ou Apático. Os demais humores vêm de manipulação ou do mestre.'),
       h('li', {}, h('strong', {}, 'Máscara: '), 'o humor real (oculto) dá os efeitos; a máscara é o que a sala vê. Empatia → "ler o humor real" revela a máscara só para quem testou.'),
-      h('li', {}, h('strong', {}, 'Rebote: '), 'falhar na manipulação pode jogar o alvo num humor reativo, conforme o relacionamento (A Aliado/Amigável · B Desconhecido · C Rival/Inimigo). O rebote nunca é obrigatório: o alvo escolhe uma opção ou não reage.'),
+      h('li', {}, h('strong', {}, 'Testes ocultos: '), 'toda manipulação acontece em silêncio — só o mestre vê quem tentou, a intenção e o resultado. O alvo só sente o humor mudar.'),
+      h('li', {}, h('strong', {}, 'Rebote: '), 'falhar na manipulação pode jogar o alvo num humor reativo, conforme o relacionamento (A Aliado/Amigável · B Desconhecido · C Rival/Inimigo). Quando há duas opções, o mestre escolhe (ou deixa sem reação).'),
+      h('li', {}, h('strong', {}, 'Empatia natural: '), 'o mestre faz um teste oculto para todos os humanos da sala e o grupo converge ao humor que um deles mostra (regra em construção).'),
       h('li', {}, h('strong', {}, 'Dissonância: '), `agir contra um humor imposto custa ${sis.social.dissonancia?.dano || '1d6'} de Sanidade.`),
       h('li', {}, h('strong', {}, 'Agressão súbita: '), `atacar um humano no meio do diálogo custa ${sis.social.agressao?.dano || '1d6'} de Humanidade.`)),
     h('ul', { class: 'lista-humores' }, humores().map(x => {

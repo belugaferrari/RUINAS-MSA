@@ -231,7 +231,10 @@ test('ações de combate e humor no servidor (MSS) e bloqueio no MSA', () => {
     Object.assign(lia, { humor: 'apatico', humorAparente: 'corajoso', humorImposto: false }); // (um erro crítico daria rebote)
     leitura = executar(c, 'social.manipular', { autor: ids[1], alvo: ids[0], sub: 'manipulacao.empatia', humor: 'ler' }, ctxM);
   } while (!leitura.sucesso);
-  assert.match(leitura.revelado, /A máscara caiu.*Corajoso.*Apático/);
+  assert.match(leitura.revelado, /está Apático, por trás da aparência de Corajoso/);
+  // Toda manipulação é oculta: nenhum jogador vê o teste (nem quem é o alvo); o mestre vê tudo.
+  assert.ok(!visaoPara(c, ana, 'jogador').salas.social.log.some(e => e.tipo === 'manipulacao'));
+  assert.ok(visaoPara(c, { id: c.mestreId }, 'mestre').salas.social.log.some(e => e.tipo === 'manipulacao'));
   // Manipulação imposta + jogador quebrando o humor = dano de Sanidade (dissonância).
   executar(c, 'humor.definir', { id: ids[0], humor: 'motivado' }, ctxM);
   assert.equal(lia.humorImposto, true);
@@ -244,10 +247,12 @@ test('ações de combate e humor no servidor (MSS) e bloqueio no MSA', () => {
   assert.equal(lia.humanidade.temporario, 0);
   if (cons.sucesso) assert.equal(lia.sanidade.atual, san);
   assert.throws(() => executar(c, 'consciencia.testar', { id: ids[0] }, { user: ana, mestre: false }), /Não há dano temporário/);
-  // Rebote com duas opções: o alvo escolhe (sem custo de dissonância).
+  // Rebote com duas opções: com o teste oculto, quem escolhe é o mestre (sem custo de dissonância); o jogador nem vê as opções.
   lia.humorOpcoes = ['indisposto', 'desconfiado'];
   const san2 = lia.sanidade.atual;
-  executar(c, 'humor.definir', { id: ids[0], humor: 'desconfiado' }, { user: ana, mestre: false });
+  assert.deepEqual(visaoPara(c, ana, 'jogador').personagens.find(p => p.id === ids[0]).humorOpcoes, []);
+  assert.throws(() => executar(c, 'humor.definir', { id: ids[0], humor: 'desconfiado' }, { user: ana, mestre: false }), /só escolhe/);
+  executar(c, 'humor.definir', { id: ids[0], humor: 'desconfiado' }, ctxM);
   assert.equal(lia.humor, 'desconfiado');
   assert.equal(lia.sanidade.atual, san2);
   assert.deepEqual(lia.humorOpcoes, []);

@@ -290,3 +290,37 @@ export function resolverManipulacao(autor, alvo, sub, humorDesejado, sistema, { 
   }
   return { ...teste, mods, sub, humorDesejado, espectro, rebote, opcoesRebote, ler: humorDesejado === 'ler' };
 }
+
+// ---------- Empatia natural ----------
+// O mestre lança um teste oculto para todos os humanos da Sala Social e o grupo converge, sem testes de quem é
+// contagiado, para o humor que um dos participantes mostra (o aparente, ou o real sem máscara).
+// FÓRMULA PROVISÓRIA (o autor vai mandar a regra): cada humano rola CAR% (D-MIL) e conduz quem tirar o maior total
+// (empate: maior CAR). Para trocar a regra, basta mudar formulaEmpatiaNatural — o resto da mecânica já usa o resultado.
+export function formulaEmpatiaNatural(humanos, sistema, rng = Math.random) {
+  const testes = humanos.map(p => {
+    const d = derivados(p, sistema);
+    const dp = 1 + Math.floor(rng() * 100);
+    return { id: p.id, nome: p.nome, car: d.atributos.CAR ?? 0, acao: d.percentual.CAR ?? 0, dp, total: (d.percentual.CAR ?? 0) + dp };
+  });
+  const ordenados = [...testes].sort((a, b) => b.total - a.total || b.car - a.car);
+  return { condutor: ordenados[0]?.id || null, testes };
+}
+
+export function empatiaNatural(participantes, sistema, rng = Math.random) {
+  const humanos = participantes.filter(p => !p.criatura && !(p.marcadores || []).includes('Morto'));
+  if (humanos.length < 2) throw new Error('A empatia natural precisa de pelo menos dois humanos na Sala Social.');
+  const { condutor, testes } = formulaEmpatiaNatural(humanos, sistema, rng);
+  const lider = humanos.find(p => p.id === condutor);
+  const humor = lider.humorAparente || lider.humor || 'neutro';
+  const mudancas = [];
+  for (const p of humanos) {
+    if (p.id === lider.id || (p.humor || 'neutro') === humor) continue;
+    mudancas.push({ id: p.id, nome: p.nome, de: p.humor || 'neutro', para: humor });
+    p.humor = humor;
+    p.humorOpcoes = [];
+    // Contágio natural: não é imposto (mudar depois não causa dissonância). A máscara igual ao novo humor some.
+    p.humorImposto = false;
+    if (p.humorAparente === humor) p.humorAparente = null;
+  }
+  return { condutor: lider, humor, testes, mudancas };
+}

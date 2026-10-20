@@ -1,37 +1,78 @@
-// Sala Social (esboço do autor), em três colunas:
-// o seu lado (você em cima: humor aparente, humor real e R.MNP) · Manipulações (botões) · o outro lado (alvos).
-// Cada personagem mostra o humor que se vê e a afinidade (como o seu personagem vê aquele, no mapa de relacionamento).
+// Sala Social: em cima, a barra do personagem que você controla (avatar, R.MNP, humor real e aparente só com ícones,
+// vantagens e habilidades de manipulação); embaixo, a mesa social: duas colunas com quem está na sala e as Manipulações.
+// Toda manipulação é oculta: só o mestre vê quem testou, a intenção e o resultado.
 import { h, botao, aviso, icone, titulo, confirmar, vazio, janela } from '../ui.js';
 import { estado, render, personagemPorId } from '../estado.js';
 import { acao } from '../api.js';
 import { derivados, listaHabilidades, efeitosHabilidade, podeSeduzir } from '/shared/regras.js';
 import { resistenciaManipulacao } from '/shared/combate.js';
 import { controladoNaSala, nomeControlado } from './batalha.js';
-import { humorCartao, nomeHumor, nomeSub, reboteTexto, alvoDe, marcarAlvo } from './combate.js';
+import { humorCartao, nomeHumor, nomeSub, reboteTexto, alvoDe, marcarAlvo, iconeHumor, humores } from './combate.js';
 import { efeitosIcones } from './efeitos.js';
 
 export function painelSocial(participantes, mestre) {
-  const sis = estado.sistema;
   const { meus, p, chave } = controladoNaSala('social', participantes, mestre);
-  if (!p) return null;
+  if (!p) return mestre ? barraMestre(participantes) : null;
   const alvo = alvoDe(p, 'social', participantes);
-  // Sem lados nem ordem: só duas colunas de até 10 (você em cima da primeira) para caber na tela.
+  // Sem lados nem ordem: só duas colunas de até 10 para caber na tela.
   const outros = participantes.filter(x => x.id !== p.id);
-  const esquerda = outros.slice(0, 9);
-  const direita = outros.slice(9);
-  return h('div', { class: 'social-tres' },
-    h('section', { class: 'bloco social-lado' },
-      h('div', { class: 'social-eu' },
-        h('div', { class: 'barra' }, icone('user'), nomeControlado(meus, p, chave), h('span', { class: 'espaco' }),
-          sis.modulos?.social ? h('span', { class: 'rmnp', title: 'Resistência à Manipulação: Manipulação + 50 + modificadores' }, h('small', {}, 'R.MNP'), h('strong', {}, resistenciaManipulacao(p, sis))) : null),
-        humorCartao(p, true, mestre),
-        efeitosIcones(p, { mestre })),
-      esquerda.length ? h('ul', { class: 'social-lista' }, esquerda.map(x => miniCartao(p, x, alvo))) : null),
-    h('section', { class: 'bloco social-manip' }, titulo('Manipulações', 'drama'), manipulacoes(p, personagemPorId(alvo), mestre)),
-    h('section', { class: 'bloco social-lado outro' },
-      direita.length ? h('ul', { class: 'social-lista' }, direita.map(x => miniCartao(p, x, alvo)))
-        : outros.length ? null : vazio('Ninguém mais na sala.', 'users'),
-      outrosModificadores(p, mestre)));
+  const esquerda = outros.slice(0, 10);
+  const direita = outros.slice(10);
+  return h('div', { class: 'social-painel' },
+    barraPersonagem(p, meus, chave, mestre, participantes),
+    h('div', { class: 'social-tres' },
+      h('section', { class: 'bloco social-lado' }, titulo('Mesa social', 'users', 'h3'),
+        esquerda.length ? h('ul', { class: 'social-lista' }, esquerda.map(x => miniCartao(p, x, alvo))) : vazio('Ninguém mais na sala.', 'users')),
+      h('section', { class: 'bloco social-manip' }, titulo('Manipulações', 'drama'), manipulacoes(p, personagemPorId(alvo), mestre)),
+      h('section', { class: 'bloco social-lado outro' },
+        direita.length ? h('ul', { class: 'social-lista' }, direita.map(x => miniCartao(p, x, alvo))) : null,
+        // Bônus livre e de situação: só o mestre aplica (as vantagens de manipulação já estão na barra de cima).
+        mestre ? outrosModificadores(p, mestre) : null)));
+}
+
+// Mestre sem personagem controlado na sala: só os botões gerais.
+function barraMestre(participantes) {
+  return participantes.length ? h('div', { class: 'social-barra bloco' }, botaoEmpatiaNatural()) : null;
+}
+
+function botaoEmpatiaNatural() {
+  return botao('Empatia natural', async () => {
+    const r = await acao('social.empatiaNatural', {});
+    janela('Empatia natural (oculta)', h('p', {}, r.texto), [['OK', () => true]]);
+  }, { class: 'pequeno', icone: 'waves', title: 'Teste oculto para todos os humanos da sala: o grupo converge ao humor que um deles mostra (fórmula provisória)' });
+}
+
+// Barra superior: avatar, nome, R.MNP, humor real e aparente (só ícones; o título explica), vantagens de manipulação.
+function barraPersonagem(p, meus, chave, mestre, participantes) {
+  const sis = estado.sistema;
+  const real = p.humor || 'neutro';
+  const aparente = p.humorAparente;
+  const efeitosReal = humores().find(x => x.id === real)?.efeitos || '';
+  const abrirHumor = () => janela(`Humor de ${p.nome}`, h('div', { class: 'humor-janela' },
+    h('p', { class: 'dica' }, 'Humor real: o que você sente (dá os bônus e ônus). Humor aparente: a máscara que a sala vê.'),
+    humorCartao(p, true, mestre)), [['Fechar', () => true]]);
+  const icHumor = (id, titulo, classe) => h('button', { type: 'button', class: `humor-icone ${classe}`, title: titulo, 'aria-label': titulo, onclick: abrirHumor },
+    icone(iconeHumor(id)));
+  const daManipulacao = listaHabilidades(p, sis).filter(x => /manipula|l[aá]bia|sedu[cç]|intimida|lideran|empatia|etiqueta|interrogat|tortura|impressionar|r\.?\s?mnp/i.test(`${x.nome} ${x.descricao}`));
+  const ativas = new Set(p.ativas || []);
+  const meu = p.donoId === estado.usuario.id;
+  return h('div', { class: 'social-barra bloco' },
+    h('span', { class: 'avatar rosto', 'data-pid': p.id }, p.foto ? h('img', { src: p.foto, alt: '' }) : p.nome.slice(0, 1)),
+    nomeControlado(meus, p, chave),
+    sis.modulos?.social ? h('span', { class: 'rmnp', title: 'R.MNP — Resistência à Manipulação: Manipulação + 50 + modificadores. É a dificuldade para manipular você.' },
+      h('small', {}, 'R.MNP'), h('strong', {}, resistenciaManipulacao(p, sis))) : null,
+    sis.modulos?.social ? h('span', { class: 'humores-barra' },
+      icHumor(real, `Humor real: ${nomeHumor(real)}${efeitosReal ? ` — ${efeitosReal}` : ''}${p.humorImposto ? ' (imposto: mudar custa Sanidade)' : ''}. Clique para mudar.`, `real ${p.humorImposto ? 'imposto' : ''}`),
+      h('span', { class: `mascara ${aparente ? 'com' : ''}`, title: aparente ? `Humor aparente (a máscara que a sala vê): ${nomeHumor(aparente)}` : 'Sem máscara: a sala vê o seu humor real' },
+        h('button', { type: 'button', class: 'humor-icone aparente', onclick: abrirHumor, 'aria-label': aparente ? `Humor aparente: ${nomeHumor(aparente)}` : 'Sem máscara' },
+          icone('drama'), aparente ? icone(iconeHumor(aparente)) : null))) : null,
+    efeitosIcones(p, { mestre }),
+    daManipulacao.length ? h('span', { class: 'vant-manip' }, daManipulacao.map(x => h('span', {
+      class: `selo ${ativas.has(x.id) ? 'ok' : ''}`, title: `${x.nome}${ativas.has(x.id) ? ' (ativa)' : ''}: ${x.descricao}`,
+    }, x.nome))) : null,
+    h('span', { class: 'espaco' }),
+    mestre ? botaoEmpatiaNatural() : null,
+    mestre || meu ? botao('', () => acao('sala.remover', { sala: 'social', id: p.id }), { class: 'pequeno', icone: 'log-out', title: `${p.nome} sai da sala` }) : null);
 }
 
 // Personagem da sala como o seu o enxerga: o humor que ele interpreta (o aparente)
@@ -44,7 +85,7 @@ function miniCartao(eu, x, alvo) {
   const visto = x.donoId === estado.usuario.id || estado.campanha.papel === 'mestre' ? (x.humorAparente || x.humor) : x.humor;
   const ler = async () => {
     const r = await acao('social.manipular', { autor: eu.id, alvo: x.id, sub: 'manipulacao.empatia', humor: 'ler' });
-    aviso(r.revelado || `${r.autor}: ${r.texto}`, r.sucesso ? 'ok' : 'erro');
+    aviso(r.revelado || `${r.autor}: ${r.texto}`);
   };
   return h('li', { class: `mini-linha ${x.id === alvo ? 'alvo' : ''}` },
     h('button', {
@@ -83,7 +124,8 @@ function manipulacoes(p, b, mestre) {
     if (!b) throw new Error('Escolha o alvo (clique num personagem).');
     const sel = estado.sel.manipular || {};
     const r = await acao('social.manipular', { autor: p.id, alvo: b.id, sub, humor, mod: mestre ? (parseInt(sel.mod, 10) || 0) + (parseInt(sel.situacaoMod, 10) || 0) : 0 });
-    aviso(r.revelado || `${r.autor}: ${r.texto}`, r.sucesso ? 'ok' : 'erro');
+    // Teste oculto: o jogador não sabe se funcionou (o mestre vê o resultado no registro).
+    aviso(r.revelado || (r.oculto ? `${nomeSub(sub)} em ${b.nome}: feito em segredo. Só o mestre vê o resultado.` : `${r.autor}: ${r.texto}`), r.oculto || r.revelado ? 'ok' : r.sucesso ? 'ok' : 'erro');
   };
   return [
     h('p', { class: 'alvo-manip' }, icone('crosshair'), b ? [' Alvo: ', h('strong', {}, b.nome)] : ' Clique num personagem para escolher o alvo.'),

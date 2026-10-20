@@ -34,7 +34,8 @@ export function salaView(nome) {
     nome === 'social' ? rodaDoHumor() : null,
     nome === 'social' && mestre ? h('div', { class: 'bloco' }, xpDaSala(participantes)) : null,
     h('div', { class: 'sala-grade' },
-      h('div', { class: 'participantes' },
+      // Na Sala Social o jogador já vê todos na mesa social; a lista detalhada fica só para o mestre.
+      nome === 'social' && !mestre ? null : h('div', { class: 'participantes' },
         titulo(nome === 'batalha' ? 'No campo' : 'Na sala', 'users'),
         participantes.length ? participantes.map((p, i) => cartaoParticipante(nome, s, p, i, participantes.length, mestre, participantes)) : vazio('Ninguém na sala ainda.', ICONES_SALA[nome])),
       h('div', { class: 'registro' },
