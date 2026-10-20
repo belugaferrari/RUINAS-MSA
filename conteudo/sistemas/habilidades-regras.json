@@ -13,30 +13,46 @@
   "alma de ciborgue": {
     "modo": "sempre",
     "rmnp": 20,
-    "imune": ["Dor"],
+    "imune": [
+      "Dor"
+    ],
     "humanidadeMax": -10,
     "texto": "dano vorpal / resistências e vulnerabilidades dependem dos implantes (entra com o controle de implantes)"
   },
   "juggernaut": {
     "modo": "sempre",
     "especial": "juggernaut",
-    "usos": { "max": 1, "recarga": "descanso-longo" },
+    "usos": {
+      "max": 1,
+      "recarga": "descanso-longo"
+    },
     "texto": "1ª vez por descanso longo que o PV ficaria abaixo de 0 no combate: fica com 1 PV (automático)"
   },
   "mente cibernetica": {
     "modo": "sempre",
-    "contra": ["drone", "automato"],
-    "vantagem": ["iniciativa", "ataque"],
+    "contra": [
+      "drone",
+      "automato"
+    ],
+    "vantagem": [
+      "iniciativa",
+      "ataque"
+    ],
     "defesa": 15
   },
   "zona de abate": {
     "modo": "ligar",
-    "vantagem": ["briga.deslocar"],
+    "vantagem": [
+      "briga.deslocar"
+    ],
     "texto": "vale a até 6 m de uma armadilha sua; manobras Deslocar/Derrubar em criaturas até 2 tamanhos maiores, sem soltar a arma"
   },
   "sensores sismicos endodermicos": {
     "modo": "ligar",
-    "vantagem": ["sentidos.tato", "sentidos.audicao"],
+    "vantagem": [
+      "sentidos.tato",
+      "sentidos.audicao"
+    ],
     "texto": "ligue para detectar criaturas invisíveis ou escondidas a até 9 m que tocam o solo (elas não têm Ataque Surpresa contra você)"
   },
   "membros adaptados": {
@@ -45,17 +61,108 @@
   },
   "receptor neural": {
     "modo": "sempre",
-    "subpericias": [{ "pericia": "sentidos", "id": "sentidos.ondas", "nome": "Ondas", "descricao": "Detecta ondas de equipamentos a até 9 m e flutuações de rádio (sem ouvir o conteúdo). Só para quem tem Receptor Neural." }],
+    "subpericias": [
+      {
+        "pericia": "sentidos",
+        "id": "sentidos.ondas",
+        "nome": "Ondas",
+        "descricao": "Detecta ondas de equipamentos a até 9 m e flutuações de rádio (sem ouvir o conteúdo). Só para quem tem Receptor Neural."
+      }
+    ],
     "texto": "libera a subperícia Sentidos › Ondas"
   },
   "ataque afiado": {
     "modo": "sempre",
-    "melhoria": { "id": "afiada", "nome": "Afiada", "armas": "arma-branca", "horas": 2 },
+    "melhoria": {
+      "id": "afiada",
+      "nome": "Afiada",
+      "armas": "arma-branca",
+      "horas": 2
+    },
     "texto": "afie a arma branca (2 h de treino): +1 passo na progressão de dano a cada vez que recebeu esta habilidade; só vale para você"
   },
   "aperfeicoamento do soldado": {
     "modo": "sempre",
-    "melhoria": { "id": "aperfeicoada", "nome": "Aperfeiçoada", "armas": "armas-de-fogo", "horas": 2 },
+    "melhoria": {
+      "id": "aperfeicoada",
+      "nome": "Aperfeiçoada",
+      "armas": "armas-de-fogo",
+      "horas": 2
+    },
     "texto": "aperfeiçoe a arma de fogo (2 h de treino): +1 passo na progressão de dano a cada vez que recebeu esta habilidade; só vale para você"
+  },
+  "essencia monstruosa": {
+    "modo": "ativar",
+    "acao": "completa",
+    "especial": "essencia",
+    "custo": {
+      "hum": "1d4"
+    },
+    "duracao": "combate",
+    "texto": "escolha um monstro abatido no campo: até o fim do combate, o atributo mais alto dele vira o seu (perde 1d4 HUM)"
+  },
+  "nucleo energetico": {
+    "modo": "sempre",
+    "recurso": {
+      "id": "nucleo",
+      "nome": "Cargas do Núcleo",
+      "max": "3+MOD CONS",
+      "recarga": "descanso-longo"
+    },
+    "texto": "cargas = 3 + MOD CONS (voltam no descanso longo): +2d6 de dano elétrico num ataque físico (opção do ataque) ou servir de bateria; com coração humano, 1d6 de dano a cada carga"
+  },
+  "aceleracao sinaptica": {
+    "modo": "ativar",
+    "acao": "livre",
+    "custo": {
+      "recurso": "nucleo",
+      "qtd": 2
+    },
+    "duracao": {
+      "turnos": 3
+    },
+    "efeitos": "FOR +2",
+    "vantagem": [
+      "testes"
+    ],
+    "fim": {
+      "dano": "2d4",
+      "nome": "superaquecimento (dano puro)"
+    },
+    "texto": "+3 m de deslocamento"
+  },
+  "carga de emergencia": {
+    "modo": "ativar",
+    "acao": "principal",
+    "usos": {
+      "max": 1,
+      "recarga": "descanso-longo"
+    },
+    "requerItem": "bateria|gerador",
+    "especial": "pvTemp",
+    "pvTemp": "2d6",
+    "duracao": "combate",
+    "texto": "ligado a uma bateria ou gerador: 2d6 PV temporários até o fim do combate; destrava implante travado"
+  },
+  "quebra hordas": {
+    "modo": "sempre",
+    "especial": "quebraHordas",
+    "texto": "1 vez por turno, ao acertar: o app oferece um ataque extra contra outra criatura da mesma raça a até 1,5 m do alvo"
+  },
+  "guerras diplomaticas": {
+    "modo": "sempre",
+    "especial": "guerrasDiplomaticas",
+    "texto": "ao causar dano, o app oferece (ação bônus) Intimidação contra WILL% + 30 do alvo para ele parar de atacar e voltar a ser Civilizado"
+  },
+  "dano ao sistema": {
+    "modo": "sempre",
+    "especial": "danoSistema",
+    "dano": "2d6+MOD INT",
+    "texto": "ataque do Emissor Neural (Computação › Operacional): Normal contra drone, autômato ou máquina; Difícil contra item na mão de alguém"
+  },
+  "maquina implacavel": {
+    "modo": "sempre",
+    "especial": "investida",
+    "texto": "na Investida (opção do ataque): dano +1 passo e +1 por quadrado avançado; o teste de FOR% do alvo para não cair tem desvantagem; ignora terreno acidentado"
   }
 }

@@ -20,7 +20,7 @@ export function combateView(participantes, mestre) {
   const auto = !!sis.modulos?.combate;
   const cb = estado.campanha.salas.batalha.combate;
   // A ordem e os botões de turno ficam em "Turnos", no topo; aqui só o que ainda pede ação (sua vez, ataques esperando defesa, XP).
-  const partes = [cb ? painelVez(cb, mestre) : null, auto ? pendentesView(mestre, participantes) : null, mestre ? xpDaSala(participantes) : null].filter(Boolean);
+  const partes = [cb ? painelVez(cb, mestre) : null, auto ? ofertasView(mestre) : null, auto ? pendentesView(mestre, participantes) : null, mestre ? xpDaSala(participantes) : null].filter(Boolean);
   if (!partes.length) return null;
   return h('div', { class: 'bloco combate' }, titulo(`Combate${auto ? ` (${sis.nome})` : ''}`, 'swords'), partes);
 }
@@ -42,6 +42,26 @@ export function painelVez(cb, mestre) {
     h('span', { class: 'espaco' }),
     // Passar a vez fica no "Próximo turno", em Turnos.
     botao('Rolar teste', () => prepararTeste(p.id, ''), { class: 'pequeno', icone: 'dices' }));
+}
+
+// Ação extra oferecida por uma habilidade depois do ataque (Quebra-Hordas, Guerras diplomáticas): só quem controla o atacante vê.
+export function ofertasView(mestre) {
+  const lista = (estado.campanha.salas.batalha.ofertas || []).filter(o => meuOuMestre(personagemPorId(o.personagem) || {}, mestre));
+  if (!lista.length) return null;
+  return h('div', { class: 'ofertas' }, lista.map(o => {
+    const chave = `oferta:${o.id}`;
+    if (!o.alvos.includes(estado.sel[chave])) estado.sel[chave] = o.alvos[0];
+    return h('div', { class: 'oferta', role: 'alert' },
+      h('div', {}, icone('zap'), ' ', h('strong', {}, o.habilidade), `: ${o.texto}`),
+      h('div', { class: 'barra' },
+        o.alvos.length > 1 ? selecao(o.alvos.map(id => ({ valor: id, rotulo: personagemPorId(id)?.nome || '?' })), estado.sel[chave], v => { estado.sel[chave] = v; }, { 'aria-label': 'Alvo' })
+          : h('span', {}, `Alvo: ${personagemPorId(o.alvos[0])?.nome || '?'}`),
+        botao('Usar', async () => {
+          const r = await acao('combate.oferta', { id: o.id, aceitar: true, alvo: estado.sel[chave] });
+          if (r?.texto) aviso(r.tipo === 'ataque' ? `${r.autor} ${r.rotulo}: ${r.texto}` : r.texto, r.sucesso ? 'ok' : 'erro');
+        }, { class: 'pequeno primario', icone: 'zap' }),
+        botao('Dispensar', () => acao('combate.oferta', { id: o.id, aceitar: false }), { class: 'pequeno', icone: 'x' })));
+  }));
 }
 
 // O mestre dá XP de uma vez a todos os personagens-jogador da sala.
@@ -309,6 +329,8 @@ export function opcoesGerais(p, mestre) {
   const sel = estado.sel.ataque || {};
   const op = { localizado: sel.localizado, surpresa: sel.surpresa, elevado: sel.elevado, cobertura: sel.cobertura, area: sel.area, duasArmas: sel.duasArmas || null };
   if (p.tipo === 'pj') op.sacrificio = sel.sacrificio;
+  if (sel.cargaNucleo) op.cargaNucleo = true;
+  if (sel.investida != null) op.investida = sel.investida;
   if (mestre) Object.assign(op, { vantagem: sel.vantagem, desvantagem: sel.desvantagem, mod: sel.mod, danoLivre: sel.danoLivre || null });
   return op;
 }

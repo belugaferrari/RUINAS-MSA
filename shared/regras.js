@@ -334,7 +334,9 @@ export function derivados(ficha, sistema) {
   }
   const atributos = {}, percentual = {}, bonusPericial = {}, mod = {};
   for (const a of sistema.atributos) {
-    const v = (ficha.atributos?.[a.sigla] ?? 0) + (bonus[a.sigla] || 0) + (condAtr[a.sigla] || 0) + (hab.atributos[a.sigla] || 0);
+    let v = (ficha.atributos?.[a.sigla] ?? 0) + (bonus[a.sigla] || 0) + (condAtr[a.sigla] || 0) + (hab.atributos[a.sigla] || 0);
+    // Essência monstruosa: até o fim do combate, o atributo mais alto do monstro abatido vira o do personagem.
+    if (ficha.essencia?.sigla === a.sigla) v = Math.max(v, ficha.essencia.valor);
     atributos[a.sigla] = v;
     percentual[a.sigla] = 4 * v + condTestes + hab.testes + (condTesteAtr[a.sigla] || 0);
     bonusPericial[a.sigla] = Math.max(0, 2 * (v - 5));

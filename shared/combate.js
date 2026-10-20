@@ -137,6 +137,10 @@ export function resolverAtaque(atacante, alvo, sistema, op = {}, defesaId = 'nen
     rolarDado(op.danoLivre); // valida a expressão
     arma = { ...arma, nome: `${arma.nome} (dano ${op.danoLivre})`, dano: op.danoLivre };
   }
+  // Máquina Implacável na Investida: dano +1 passo e +1 por quadrado avançado (só corpo a corpo).
+  const investida = op.investida != null && op.investida !== false && arma.alcance === 'corpo' && temHabilidade(atacante, sistema, 'Maquina Implacavel')
+    ? Math.max(0, parseInt(op.investida, 10) || 0) : null;
+  if (investida != null) arma = { ...arma, dano: subirPassos(arma.dano, 1) };
   const da = derivados(atacante, sistema);
   const pericia = arma.pericia || 'briga.ataque-desarmado';
   const mods = [];
@@ -196,6 +200,8 @@ export function resolverAtaque(atacante, alvo, sistema, op = {}, defesaId = 'nen
       // Habilidades e vantagens ativas que somam dano.
       if (da.habilidades?.danoFixo) doDisparo.push({ nome: 'habilidades', total: da.habilidades.danoFixo });
       for (const expr of da.habilidades?.danoDados || []) rolar('habilidades', expr);
+      if (op.cargaNucleo) rolar('Carga do Núcleo (elétrico)', '2d6');
+      if (investida) doDisparo.push({ nome: `Investida (${investida} quadrado${investida > 1 ? 's' : ''})`, total: investida });
     }
     const bruto = doDisparo.reduce((s, p) => s + p.total, 0);
     r.disparos.push({ bruto, dano: Math.max(cfg.danoMinimo, bruto - r.ip) });
@@ -224,6 +230,35 @@ export function gastarUso(p, nome) {
   (p.usos ||= {})[nome] = (p.usos[nome] || 0) + 1;
 }
 
+// Recursos de habilidade (Cargas do Núcleo = 3 + MOD CONS): p.recursos[id] = quantas já gastou.
+export function recursoDe(p, sistema, id) {
+  const hab = listaHabilidades(p, sistema).find(x => x.regra?.recurso?.id === id);
+  if (!hab) return null;
+  const r = hab.regra.recurso;
+  const d = derivados(p, sistema);
+  const max = Math.max(0, String(r.max).split('+').reduce((s, parte) => {
+    const m = /MOD\s*(\w+)/i.exec(parte);
+    return s + (m ? d.mod[m[1].toUpperCase()] || 0 : parseInt(parte, 10) || 0);
+  }, 0));
+  return { ...r, max, restantes: Math.max(0, max - (p.recursos?.[id] || 0)), habilidade: hab.nome };
+}
+export function gastarRecurso(p, sistema, id, qtd = 1) {
+  const r = recursoDe(p, sistema, id);
+  if (!r) throw new Error('Sem essa habilidade.');
+  if (r.restantes < qtd) throw new Error(`${r.nome}: só restam ${r.restantes}.`);
+  (p.recursos ||= {})[id] = (p.recursos[id] || 0) + qtd;
+  return r;
+}
+
+// "Raça" para habilidades como Quebra-Hordas: a da ficha, ou o nome sem o número (Cão das Ruínas 1 e 2 são da mesma).
+export const racaDe = p => p?.raca || String(p?.nome || '').replace(/\s*\d+\s*$/, '').trim().toLowerCase();
+// Distância no mapa em metros (diagonal conta 1 quadrado de 1,5 m); null se algum não tem peão.
+export function distanciaPecas(c, idA, idB) {
+  const a = c.mapa?.pecas?.[idA], b = c.mapa?.pecas?.[idB];
+  if (!a || !b) return null;
+  return Math.max(Math.abs(a.col - b.col), Math.abs(a.lin - b.lin)) * 1.5;
+}
+
 // Aplica o resultado no alvo: PV, desmaio, morte e marcador do efeito de dano.
 export function aplicarAtaque(atacante, alvo, r, sistema = null) {
   const marcar = m => { if (!(alvo.marcadores ||= []).includes(m)) alvo.marcadores.push(m); };
@@ -231,7 +266,14 @@ export function aplicarAtaque(atacante, alvo, r, sistema = null) {
   if (!r.sucesso && !r.dano) return [];
   const notas = [];
   const antes = alvo.pv.atual;
-  alvo.pv.atual -= r.dano;
+  // PV temporários (Carga de Emergência) absorvem o dano primeiro.
+  let dano = r.dano;
+  if (alvo.pvTemp > 0 && dano > 0) {
+    const abs = Math.min(alvo.pvTemp, dano);
+    alvo.pvTemp -= abs; dano -= abs;
+    notas.push(`${abs} nos PV temporários`);
+  }
+  alvo.pv.atual -= dano;
   // Juggernaut: a 1ª vez (por descanso longo) que o PV ficaria abaixo de 0 no combate, fica com 1 PV.
   if (sistema && alvo.pv.atual < 0 && antes >= 0 && temHabilidade(alvo, sistema, 'Juggernaut') && usosRestantes(alvo, sistema, 'juggernaut') > 0) {
     alvo.pv.atual = 1;

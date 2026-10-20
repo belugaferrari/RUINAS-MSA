@@ -1329,3 +1329,9 @@ span.peao { display: grid; }
 .manip.intuir { border-style: dashed; }
 .manip.intuir.ativa { border-style: solid; }
 .humores-mestre { display: inline-flex; flex-wrap: wrap; gap: .5em; } .humores-mestre .aparente { color: #c9b0ff; }
+
+/* Habilidades de ativar, recursos (cargas) e ofertas de ação extra depois do ataque. */
+.hab-recursos { gap: .5em; margin-bottom: .5em; }
+.hab-recursos .recurso { display: inline-flex; align-items: center; gap: .4em; padding: .25em .5em; border: 1px solid var(--borda); border-radius: 8px; background: rgba(0, 0, 0, .15); flex-wrap: wrap; }
+.ofertas { display: flex; flex-direction: column; gap: .4em; margin: .5em 0; }
+.oferta { padding: .5em .6em; border: 1px solid var(--ouro); border-radius: 10px; background: rgba(212, 162, 76, .1); display: flex; flex-direction: column; gap: .35em; }

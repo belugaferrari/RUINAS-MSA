@@ -183,3 +183,21 @@ Regra combinada: **o livro é mais atual**; das planilhas só entra o que o livr
 - O jogador escolhe o próprio humor só ANTES de entrar na Sala Social, entre Amigável, Neutro e Indisposto. Lá dentro só muda por manipulação, empatia natural ou mestre. Apático deixou de ser escolha livre.
 - Habilidades: Irreverente (Galante, nível 15) libera qualquer humor a qualquer momento. Outras habilidades que mexam nisso ainda precisam ser listadas.
 - **Confirmado (autor, 20/10):** a máscara (humor aparente) pode ser trocada dentro da sala.
+
+## Habilidades com regra própria (planilha do autor, 20/10 — 1ª parte, 27 itens)
+Regras em `conteudo/sistemas/habilidades-regras.json` (automática / ligar / ativar com custo, usos e duração). Progressão de dano do livro: D4 > D6 > D8 > D10 > D12 > 2D6 > 2D8 > 2D10 > 2D12 > 3D10 > 3D12 > 2D20 (dado fora da tabela usa o de média mais próxima).
+
+**Provisório — conferir**
+- Tipos de criatura: Humanoide, Animal, Besta, Monstro, Mutante, Drone, Autômato, Máquina (o mestre escolhe no NPC; PJ = Humanoide; NPC marcado como criatura = Monstro).
+- Essência monstruosa: o atributo fica com o MAIOR entre o do personagem e o do monstro (não baixa); o monstro precisa ter atributos na ficha.
+- Quebra-Hordas: "mesma raça" = campo raça da ficha ou o nome sem o número (Cão das Ruínas 1 e 2); vale contra Animal, Besta, Monstro e Mutante; sem peões no mapa, o app não confere a distância.
+- Guerras diplomáticas: Intimidação contra WILL% + 30; quem perde ganha o marcador "Civilizado" (o efeito na mesa fica com o mestre).
+- Dano ao sistema: contra drone/autômato/máquina é Normal e o dano (− IP elétrico) vai no PV; contra item na mão de alguém é Difícil e o mestre aplica o dano no item.
+- Núcleo energético: o personagem começa com coração humano (1d6 de dano por carga); o mestre marca "coração artificial".
+- Aceleração Sináptica: os 3 turnos contam no fim de cada turno do personagem (o turno em que ativou conta).
+- Ataque afiado / Aperfeiçoamento do soldado: Afiada N = quantas vezes recebeu a habilidade; o app não avança o relógio pelas 2 h de treino.
+
+**Ainda por fazer (sistemas novos pedidos na planilha)**
+- Área de criaturas controladas (familiares, animais, implantes, autômatos): Malha neural, Autômatos de combate, Segunda formação, controle de implantes do ciborgue.
+- Armadilhas: criar (componentes, regras do livro), guardar no inventário, colocar no mapa (visíveis), Armadilha móvel; Zona de Abate automática a até 6 m de armadilha sua.
+- Melhorias de arma pelo mestre (próprias e passageiras), além das das habilidades.

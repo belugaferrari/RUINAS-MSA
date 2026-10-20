@@ -7,6 +7,7 @@ import path from 'node:path';
 process.env.ITENS_EXEMPLO = '1';
 process.env.DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'msa-'));
 const { sistema } = await import('../server/sistema.js');
+const { novaCampanha, executar } = await import('../server/actions.js');
 const { resolverAtaque, aplicarAtaque, defesaDoAlvo, resistenciaManipulacao, armasDisponiveis, rolarIniciativa } = await import('../shared/combate.js');
 const { novaFicha, derivados, listaHabilidades, modoHabilidade, vantagemPorHabilidade, subirPassos, subpericiasDe, testeDMil } = await import('../shared/regras.js');
 
@@ -104,4 +105,103 @@ test('Teste D-MIL com vantagem fica com o maior d100', () => {
   const r = testeDMil(40, 70, mss, { modo: 'vantagem', rng: seq(0.1, 0.5, 0.8) });
   assert.deepEqual(r.dados, [11, 51]);
   assert.equal(r.dp, 51);
+});
+
+// ---------- Habilidades de ativar, cargas e ofertas (servidor) ----------
+const mestre = { id: 'm', name: 'Mestre' };
+const ctxM = { user: mestre, mestre: true };
+function campanhaCom(...fichas) {
+  const c = novaCampanha(mestre, { nome: 'Teste', maxJogadores: 2, nivel: 1, padraoMSA: true, sistema: 'mss' });
+  const ids = fichas.map(f => {
+    const id = executar(c, 'personagem.criar', { tipo: 'npc', grupoId: 'encontros', ficha: { nome: f.nome } }, ctxM).id;
+    const p = c.personagens.find(x => x.id === id);
+    const { id: _ignora, ...resto } = f;
+    Object.assign(p, resto);
+    return id;
+  });
+  for (const id of ids) executar(c, 'sala.adicionar', { sala: 'batalha', id }, ctxM);
+  return { c, ids, p: id => c.personagens.find(x => x.id === id) };
+}
+
+test('Núcleo energético: cargas = 3 + MOD CONS, gastas no ataque e na Aceleração Sináptica; voltam no descanso longo', () => {
+  const f = comGanho('Aceleração Sináptica');
+  f.atributos.CONS = 14; // MOD +2 → 5 cargas
+  f.coracaoArtificial = true;
+  const { c, ids, p } = campanhaCom(f, alvoSimples({ nome: 'Alvo' }));
+  const eu = p(ids[0]);
+  const hab = listaHabilidades(eu, mss).find(x => x.nome === 'Aceleração Sináptica');
+  executar(c, 'habilidade.ativar', { id: eu.id, hab: hab.id }, ctxM);
+  assert.equal(eu.recursos.nucleo, 2);
+  assert.ok(eu.ativas.includes(hab.id));
+  assert.equal(derivados(eu, mss).atributos.FOR, (eu.atributos.FOR ?? 0) + 2);
+  assert.ok(vantagemPorHabilidade(eu, mss, ['sentidos.visao']));
+  // 3 turnos dele: no fim do 3º acaba e toma 2d4.
+  const pv = eu.pv.atual;
+  for (let i = 0; i < 6; i++) {
+    const cb = c.salas.batalha.combate;
+    if (cb.ordem[cb.vez].id !== eu.id) executar(c, 'combate.proximo', {}, ctxM);
+    else executar(c, 'combate.proximo', {}, ctxM);
+  }
+  assert.ok(!eu.ativas.includes(hab.id));
+  assert.ok(eu.pv.atual <= pv - 2 && eu.pv.atual >= pv - 8);
+  executar(c, 'habilidade.recurso', { id: eu.id, recurso: 'nucleo' }, ctxM);
+  assert.equal(eu.recursos.nucleo, 3);
+  executar(c, 'descanso.fazer', { tipo: 'longo', ids: [eu.id] }, ctxM);
+  assert.ok(!eu.recursos?.nucleo);
+});
+
+test('Carga de Emergência: precisa de bateria, 1 vez por descanso longo, PV temporários absorvem dano e somem no fim do combate', () => {
+  const f = alvoSimples({ nome: 'Ciborgue', classe: mss.classes.find(x => x.nome === 'Ciborgue').id, nivel: 3 });
+  const v = mss.classes.find(x => x.nome === 'Ciborgue').vantagens.find(x => x.nome === 'Carga de Emergência');
+  f.vantagens = [`${f.classe}/${v.id}`];
+  const { c, ids, p } = campanhaCom(f, alvoSimples({ nome: 'Alvo' }));
+  const eu = p(ids[0]);
+  const hab = listaHabilidades(eu, mss).find(x => x.nome === 'Carga de Emergência');
+  assert.ok(hab, 'vantagem de classe na lista');
+  assert.throws(() => executar(c, 'habilidade.ativar', { id: eu.id, hab: hab.id }, ctxM), /bateria/);
+  eu.itens = [{ uid: 'b1', nome: 'Bateria pequena', tipo: 'diverso' }];
+  executar(c, 'habilidade.ativar', { id: eu.id, hab: hab.id }, ctxM);
+  assert.ok(eu.pvTemp >= 2 && eu.pvTemp <= 12);
+  const temp = eu.pvTemp, pv = eu.pv.atual;
+  aplicarAtaque(p(ids[1]), eu, { sucesso: true, dano: temp + 1 }, mss);
+  assert.equal(eu.pv.atual, pv - 1);
+  executar(c, 'habilidade.ativar', { id: eu.id, hab: hab.id }, ctxM); // desativa
+  assert.throws(() => executar(c, 'habilidade.ativar', { id: eu.id, hab: hab.id }, ctxM), /já foi usada/);
+});
+
+test('Essência monstruosa: monstro abatido dá o atributo mais alto dele até o fim do combate', () => {
+  const cl = mss.classes.find(x => x.nome === 'Caçador');
+  const v = cl.vantagens.find(x => x.nome === 'Essência monstruosa');
+  const f = alvoSimples({ nome: 'Caçador', classe: cl.id, nivel: 3, vantagens: [`${cl.id}/${v.id}`] });
+  const monstro = alvoSimples({ nome: 'Fera', tipoCriatura: 'besta', pv: { max: 20, atual: 0 } });
+  monstro.atributos = { ...monstro.atributos, FOR: 22 };
+  const { c, ids, p } = campanhaCom(f, monstro);
+  const eu = p(ids[0]);
+  const hab = listaHabilidades(eu, mss).find(x => x.nome === 'Essência monstruosa');
+  const hum = eu.humanidade.atual;
+  executar(c, 'habilidade.ativar', { id: eu.id, hab: hab.id, alvo: ids[1] }, ctxM);
+  assert.equal(derivados(eu, mss).atributos.FOR, 22);
+  assert.ok(eu.humanidade.atual < hum);
+  executar(c, 'combate.encerrar', {}, ctxM);
+  assert.ok(!eu.essencia);
+});
+
+test('Quebra-Hordas oferece ataque extra contra outra criatura da mesma raça, uma vez por turno', () => {
+  const cl = mss.classes.find(x => x.nome === 'Caçador');
+  const v = cl.vantagens.find(x => x.nome === 'Quebra-Hordas');
+  const f = alvoSimples({ nome: 'Caçadora', classe: cl.id, nivel: 3, vantagens: [`${cl.id}/${v.id}`] });
+  f.atributos.FOR = 18;
+  const caes = [1, 2].map(n => alvoSimples({ nome: `Cão das Ruínas ${n}`, tipoCriatura: 'animal' }));
+  const { c, ids } = campanhaCom(f, ...caes);
+  const s = c.salas.batalha;
+  let tentativas = 0;
+  while (!(s.ofertas || []).length && tentativas++ < 40) {
+    executar(c, 'combate.atacar', { atacante: ids[0], alvo: ids[1], opcoes: { surpresa: true } }, ctxM);
+  }
+  const of = s.ofertas[0];
+  assert.equal(of.tipo, 'quebraHordas');
+  assert.deepEqual(of.alvos, [ids[2]]);
+  const r = executar(c, 'combate.oferta', { id: of.id, aceitar: true, alvo: ids[2] }, ctxM);
+  assert.ok(r.id || r.tipo);
+  assert.ok(!(s.ofertas || []).some(o => o.tipo === 'quebraHordas'));
 });

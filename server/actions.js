@@ -1,10 +1,10 @@
 import { db, save, uid } from './db.js';
 import { sistema, idSistema } from './sistema.js';
-import { resolverAtaque, aplicarAtaque, armasDisponiveis, opcoesDefesa, sobrevida, rolarIniciativa, resolverManipulacao, modHumorTestes, humorDe, espectroDe, humorAparente, empatiaNatural, liberdadeDeHumor, modoRolagem } from '../shared/combate.js';
+import { resolverAtaque, aplicarAtaque, armasDisponiveis, opcoesDefesa, sobrevida, rolarIniciativa, resolverManipulacao, modHumorTestes, humorDe, espectroDe, humorAparente, empatiaNatural, liberdadeDeHumor, modoRolagem, recursoDe, gastarRecurso, racaDe, distanciaPecas, usosRestantes, gastarUso, testeContra, ipContra } from '../shared/combate.js';
 import { sincronizarEfeitos, passarTurnoEfeitos, efeitosAoAgir, cargaNoTurno, descansar } from '../shared/efeitos.js';
 import { fichasDeTeste, relatorioFicha } from '../shared/fichasTeste.js';
 import { passarNecessidades, comer, beber, dormir, rolarCaos, climaDoDia, descreverRelogio, fimDoCombate } from '../shared/tempo.js';
-import { podeSeduzir, itemAberto, itemVisivel, xpParaSubir, novaFicha, podeEquipar, rolarDado, rolarAtributosCriacao, testeDMil, gerarEncontro, derivados, problemasFicha, LIMITE_SALA, desgastarItem, repararItem, listaHabilidades, vantagemPorHabilidade, temHabilidade, regraDaHabilidade } from '../shared/regras.js';
+import { podeSeduzir, itemAberto, itemVisivel, xpParaSubir, novaFicha, podeEquipar, rolarDado, rolarAtributosCriacao, testeDMil, gerarEncontro, derivados, problemasFicha, LIMITE_SALA, desgastarItem, repararItem, listaHabilidades, vantagemPorHabilidade, temHabilidade, regraDaHabilidade, tipoCriatura, chaveHabilidade } from '../shared/regras.js';
 
 const GRUPO_ENCONTROS = 'encontros';
 const MAX_LOG = 100;
@@ -343,9 +343,25 @@ function entrarNoCombate(c, s, p) {
 }
 
 // Fim do combate para um personagem: as Necessidades voltam e ele faz o teste de CONS difícil (livro).
+// Habilidades ativadas que duram o combate (Essência monstruosa, PV temporários da Carga de Emergência…) acabam.
+function encerrarAtivacoes(c, p, sis, soCombate = true) {
+  if (!p) return;
+  const fim = [];
+  for (const [id, a] of Object.entries(p.habAtivas || {})) {
+    if (soCombate && !a.combate && !a.turnos) continue;
+    delete p.habAtivas[id];
+    p.ativas = (p.ativas || []).filter(x => x !== id);
+    fim.push(a.nome || id);
+  }
+  if (p.essencia) { fim.push(`Essência (${p.essencia.sigla})`); delete p.essencia; }
+  if (p.pvTemp) { delete p.pvTemp; fim.push('PV temporários'); }
+  if (fim.length) registrar(c.salas.batalha.log, { autor: p.nome, rotulo: 'Fim das habilidades ativadas', texto: fim.join(', ') });
+}
+
 function terminarCombatePara(c, p) {
   if (!p?.emCombate) return;
   const sis = sistema(c.sistema);
+  encerrarAtivacoes(c, p, sis);
   delete p.emCombate;
   const nota = fimDoCombate(p, sis, derivados(p, sis).percentual.CONS ?? 0);
   sincronizarEfeitos(p, sis);
@@ -419,6 +435,7 @@ function resolverPendente(c, s, pend, defesa, sis) {
   }
   s.pendentes = (s.pendentes || []).filter(x => x.id !== pend.id);
   const notas = aplicarAtaque(a, b, r, sis);
+  criarOfertas(c, s, a, b, r, pend, sis);
   // Ataque que falhou: a arma usada pode perder durabilidade (DS maior que a durabilidade atual).
   if (!r.sucesso) {
     const usada = (a.itens || []).find(i => i.uid === pend.opcoes?.armaUid);
@@ -455,6 +472,56 @@ function resolverPendente(c, s, pend, defesa, sis) {
   };
   registrar(s.log, entrada);
   return entrada;
+}
+
+// Núcleo energético com coração humano: cada carga usada causa 1d6 de dano (o mestre marca "coração artificial" na ficha).
+function cargaNoCoracao(p, qtd = 1) {
+  if (p.coracaoArtificial || !p.pv) return '';
+  const d = rolarDado(`${qtd}d6`);
+  p.pv.atual -= d.total;
+  return ` · coração humano: ${d.total} de dano (${p.pv.atual}/${p.pv.max} PV)`;
+}
+
+// Fim do turno: habilidades ativadas por turnos descontam um; ao acabar, saem e aplicam o efeito final (Aceleração Sináptica: 2d4).
+function passarTurnoHabilidades(p) {
+  const notas = [];
+  for (const [id, a] of Object.entries(p.habAtivas || {})) {
+    if (!a.turnos) continue;
+    a.turnos--;
+    if (a.turnos > 0) { notas.push(`${a.nome}: falta${a.turnos > 1 ? 'm' : ''} ${a.turnos} turno${a.turnos > 1 ? 's' : ''}`); continue; }
+    delete p.habAtivas[id];
+    p.ativas = (p.ativas || []).filter(x => x !== id);
+    let txt = `${a.nome} acabou`;
+    if (a.fim?.dano && p.pv) {
+      const d = rolarDado(a.fim.dano);
+      p.pv.atual -= d.total;
+      txt += ` — ${a.fim.nome || 'dano'}: ${d.total} [${d.dados.join(', ')}] (${p.pv.atual}/${p.pv.max} PV)`;
+    }
+    notas.push(txt);
+  }
+  return notas;
+}
+
+// Depois de um ataque, habilidades que dão uma ação extra viram uma "oferta" para quem controla o atacante.
+const TIPOS_HORDA = ['animal', 'besta', 'monstro', 'mutante'];
+function criarOfertas(c, s, a, b, r, pend, sis) {
+  s.ofertas ||= [];
+  const cb = s.combate;
+  const turno = cb ? `${cb.rodada}:${cb.turno}` : 'livre';
+  // Quebra-Hordas: 1 vez por turno, ao acertar, ataque extra contra outra criatura da mesma raça a até 1,5 m do alvo.
+  if (r.sucesso && !pend.opcoes?.extra && temHabilidade(a, sis, 'Quebra-Hordas') && a.quebraHordasEm !== turno && TIPOS_HORDA.includes(tipoCriatura(b))) {
+    const candidatos = s.participantes.filter(id => id !== a.id && id !== b.id).map(id => personagem(c, id))
+      .filter(x => x.pv && x.pv.atual > 0 && racaDe(x) === racaDe(b) && (distanciaPecas(c, b.id, x.id) ?? 0) <= 1.5);
+    if (candidatos.length) {
+      s.ofertas.push({ id: uid(), tipo: 'quebraHordas', habilidade: 'Quebra-Hordas', personagem: a.id, alvos: candidatos.map(x => x.id), armaUid: pend.opcoes?.armaUid || 'desarmado',
+        texto: `${a.nome} acertou ${b.nome}: ataque extra (Quebra-Hordas) contra outra criatura da mesma raça a até 1,5 m${candidatos.some(x => distanciaPecas(c, b.id, x.id) == null) ? ' (confira a distância no mapa)' : ''}` });
+    }
+  }
+  // Guerras diplomáticas: ao causar dano, ação bônus de Intimidação contra WILL% + 30 do alvo para ele parar de atacar.
+  if (r.dano > 0 && temHabilidade(a, sis, 'Guerras diplomaticas') && b.atributos && !(b.marcadores || []).includes('Civilizado')) {
+    s.ofertas.push({ id: uid(), tipo: 'guerrasDiplomaticas', habilidade: 'Guerras diplomáticas', personagem: a.id, alvos: [b.id],
+      texto: `${a.nome} causou dano em ${b.nome}: ação bônus de Intimidação (contra WILL% + 30) para ${b.nome} parar de atacar` });
+  }
 }
 
 // Dano temporário de Sanidade/Humanidade: sai do valor atual e fica anotado; no descanso longo,
@@ -970,7 +1037,9 @@ export const acoes = {
     s.participantes = s.participantes.filter(x => x !== id);
     if (s.ativo === id) s.ativo = null;
     sairDoCombate(s, id);
-    terminarCombatePara(c, c.personagens.find(p => p.id === id));
+    const quem = c.personagens.find(p => p.id === id);
+    terminarCombatePara(c, quem);
+    if (nome === 'batalha') encerrarAtivacoes(c, quem, sistema(c.sistema));
   },
 
   'sala.acionar'(c, { sala: nome, id }, ctx) {
@@ -1071,9 +1140,11 @@ export const acoes = {
     const sis = sistema(c.sistema);
     // Fim do turno de quem estava agindo: os efeitos com tempo descontam um turno.
     if (atual) {
-      const notasEfeitos = [...passarTurnoEfeitos(atual, sis), ...cargaNoTurno(atual, derivados(atual, sis))];
+      const notasEfeitos = [...passarTurnoEfeitos(atual, sis), ...cargaNoTurno(atual, derivados(atual, sis)), ...passarTurnoHabilidades(atual)];
       if (notasEfeitos.length) registrar(s.log, { autor: atual.nome, rotulo: 'Efeitos', texto: notasEfeitos.join(' · ') });
     }
+    // Ofertas de ação extra (Quebra-Hordas, Guerras diplomáticas) valem só no turno em que surgiram.
+    s.ofertas = [];
     cb.vez++;
     cb.turno = (cb.turno || 1) + 1;
     if (cb.vez >= cb.ordem.length) {
@@ -1162,6 +1233,12 @@ export const acoes = {
     if (op.danoLivre) {
       try { rolarDado(op.danoLivre); } catch { throw erro(`Dano inválido: ${op.danoLivre}`); }
     }
+    if (op.investida != null && !temHabilidade(a, sis, 'Maquina Implacavel')) delete op.investida;
+    // Carga do Núcleo: +2d6 elétrico neste ataque (gasta 1 carga; com coração humano, 1d6 de dano em quem usa).
+    if (op.cargaNucleo) {
+      try { gastarRecurso(a, sis, 'nucleo', 1); } catch (e) { throw erro(e.message); }
+      registrar(s.log, { autor: a.nome, rotulo: 'Carga do Núcleo', texto: `+2d6 elétrico no ataque${cargaNoCoracao(a)}` });
+    }
     const pend = { id: uid(), atacante: a.id, alvo: b.id, opcoes: op, arma: arma.nome, alcance: arma.alcance, area: !!op.area, em: Date.now(), municao: itemArma?.capacidade ? itemArma.uid : null,
       armaTipo: tipoDaArma(arma), tipoDano: arma.tipoDano || null };
     // Contra tiro, ou com o alvo pego de surpresa, não há defesa a escolher: resolve na hora.
@@ -1169,6 +1246,128 @@ export const acoes = {
     (s.pendentes ||= []).push(pend);
     registrar(s.log, { autor: a.nome, rotulo: `${a.nome} ataca ${b.nome} com ${arma.nome}${op.area ? ' (área)' : ''}`, texto: `aguardando a defesa de ${b.nome}` });
     return pend;
+  },
+
+  // Oferta de ação extra (Quebra-Hordas, Guerras diplomáticas): quem controla o atacante aceita (com o alvo) ou dispensa.
+  'combate.oferta'(c, { id, aceitar, alvo }, ctx) {
+    const sis = sistema(c.sistema);
+    const s = c.salas.batalha;
+    const of = (s.ofertas || []).find(x => x.id === id);
+    if (!of) throw erro('Essa oferta já passou.');
+    const a = personagem(c, of.personagem);
+    exigirDonoOuMestre(ctx, a);
+    s.ofertas = s.ofertas.filter(x => x.id !== id);
+    if (!aceitar) return null;
+    const b = personagem(c, alvo || of.alvos[0]);
+    if (!of.alvos.includes(b.id)) throw erro('Esse alvo não vale para esta ação.');
+    if (of.tipo === 'quebraHordas') {
+      const cb = s.combate;
+      a.quebraHordasEm = cb ? `${cb.rodada}:${cb.turno}` : 'livre';
+      return acoes['combate.atacar'](c, { atacante: a.id, alvo: b.id, opcoes: { armaUid: of.armaUid, extra: 'Quebra-Hordas' } }, ctx);
+    }
+    if (of.tipo === 'guerrasDiplomaticas') {
+      const da = derivados(a, sis), db = derivados(b, sis);
+      const nd = (db.percentual.WILL ?? 0) + 30;
+      const t = testeContra(da.subpericias['manipulacao.intimidacao'] ?? 0, nd, sis);
+      if (t.sucesso) (b.marcadores ||= []).push('Civilizado');
+      const texto = `Intimidação ${t.total} (d100 ${t.dp} + ${t.acao}) contra WILL% + 30 = ${nd}: ${t.sucesso ? `${b.nome} para de atacar e volta a ser Civilizado` : `${b.nome} continua lutando`}`;
+      registrar(s.log, { autor: a.nome, rotulo: `Guerras diplomáticas contra ${b.nome}`, texto, sucesso: t.sucesso });
+      return { texto, sucesso: t.sucesso };
+    }
+    throw erro('Oferta desconhecida.');
+  },
+
+  // Habilidade de "ativar": custo (HUM, cargas), usos por descanso, item exigido, duração (turnos ou o combate) e efeito especial.
+  'habilidade.ativar'(c, { id, hab: habId, alvo }, ctx) {
+    const p = personagem(c, id);
+    exigirDonoOuMestre(ctx, p);
+    const sis = sistema(c.sistema);
+    const hab = listaHabilidades(p, sis).find(x => x.id === habId);
+    const regra = hab?.regra;
+    if (!hab || regra?.modo !== 'ativar') throw erro('Essa habilidade não é de ativar.');
+    if ((p.habAtivas || {})[hab.id]) {
+      delete p.habAtivas[hab.id];
+      p.ativas = (p.ativas || []).filter(x => x !== hab.id);
+      if (regra.especial === 'essencia') delete p.essencia;
+      if (regra.especial === 'pvTemp') delete p.pvTemp;
+      registrar(c.salas.batalha.log, { autor: p.nome, rotulo: `${hab.nome} desativada`, texto: '' });
+      return { desativou: true };
+    }
+    const chave = chaveHabilidade(hab.nome);
+    if (usosRestantes(p, sis, chave) <= 0) throw erro(`${hab.nome} já foi usada (volta no descanso longo).`);
+    if (regra.requerItem && !(p.itens || []).some(i => new RegExp(regra.requerItem, 'i').test(i.nome))) throw erro(`${hab.nome} precisa de um item: ${regra.requerItem.replace('|', ' ou ')}.`);
+    const notas = [];
+    let essencia = null;
+    if (regra.especial === 'essencia') {
+      const m = personagem(c, alvo);
+      const abatido = m.semPv || (m.pv && m.pv.atual <= 0) || (m.marcadores || []).some(x => ['Morto', 'Desmaiado'].includes(x));
+      if (!c.salas.batalha.participantes.includes(m.id) || !abatido || tipoCriatura(m) === 'humanoide') throw erro('Escolha um monstro abatido no Campo de Batalha.');
+      if (!m.atributos) throw erro(`${m.nome} não tem atributos na ficha: o mestre precisa preencher.`);
+      const [sigla, valor] = Object.entries(derivados(m, sis).atributos).sort((x, y) => y[1] - x[1])[0];
+      essencia = { sigla, valor, de: m.nome };
+      notas.push(`${sigla} ${valor} (de ${m.nome})`);
+    }
+    if (regra.custo?.recurso) {
+      try { gastarRecurso(p, sis, regra.custo.recurso, regra.custo.qtd || 1); } catch (e) { throw erro(e.message); }
+      notas.push(`gastou ${regra.custo.qtd || 1} carga(s)${cargaNoCoracao(p, regra.custo.qtd || 1)}`);
+    }
+    if (regra.custo?.hum && p.humanidade) {
+      const d = rolarDado(regra.custo.hum);
+      p.humanidade.atual = Math.max(0, p.humanidade.atual - d.total);
+      notas.push(`perdeu ${d.total} HUM [${d.dados.join(', ')}]`);
+    }
+    if (regra.especial === 'pvTemp') {
+      const d = rolarDado(regra.pvTemp);
+      p.pvTemp = Math.max(p.pvTemp || 0, d.total);
+      notas.push(`${d.total} PV temporários [${d.dados.join(', ')}]`);
+    }
+    if (essencia) p.essencia = essencia;
+    if (regra.usos) gastarUso(p, chave);
+    (p.habAtivas ||= {})[hab.id] = { nome: hab.nome, ...(regra.duracao?.turnos ? { turnos: regra.duracao.turnos } : {}), ...(regra.duracao === 'combate' ? { combate: true } : {}), ...(regra.fim ? { fim: regra.fim } : {}) };
+    if (!(p.ativas || []).includes(hab.id)) p.ativas = [...(p.ativas || []), hab.id];
+    const duracao = regra.duracao?.turnos ? `por ${regra.duracao.turnos} turnos` : regra.duracao === 'combate' ? 'até o fim do combate' : '';
+    const texto = [regra.acao ? `ação ${regra.acao}` : '', duracao, ...notas].filter(Boolean).join(' · ');
+    registrar(c.salas.batalha.log, { autor: p.nome, rotulo: `${hab.nome} ativada`, texto });
+    return { texto };
+  },
+
+  // Gastar 1 carga de um recurso fora do ataque (Núcleo energético servindo de bateria).
+  'habilidade.recurso'(c, { id, recurso }, ctx) {
+    const p = personagem(c, id);
+    exigirDonoOuMestre(ctx, p);
+    const sis = sistema(c.sistema);
+    let r;
+    try { r = gastarRecurso(p, sis, recurso, 1); } catch (e) { throw erro(e.message); }
+    const texto = `1 carga usada como bateria (restam ${r.restantes - 1})${cargaNoCoracao(p)}`;
+    registrar(c.salas.batalha.log, { autor: p.nome, rotulo: r.nome, texto });
+    return { texto };
+  },
+
+  // Dano ao sistema (Emissor Neural): Computação › Operacional, Normal contra drone/autômato/máquina, Difícil contra item na mão de alguém.
+  'habilidade.danoSistema'(c, { id, alvo }, ctx) {
+    const p = personagem(c, id);
+    exigirDonoOuMestre(ctx, p);
+    const sis = sistema(c.sistema);
+    if (!temHabilidade(p, sis, 'Dano ao sistema')) throw erro(`${p.nome} não tem Dano ao sistema.`);
+    const b = personagem(c, alvo);
+    const maquina = ['drone', 'automato', 'maquina'].includes(tipoCriatura(b));
+    const dif = sis.teste.dificuldades.find(x => x.nome === (maquina ? 'Normal' : 'Difícil')) || { nome: maquina ? 'Normal' : 'Difícil', nd: maquina ? 70 : 90 };
+    const d = derivados(p, sis);
+    const t = testeContra(d.subpericias['computacao.operacional'] ?? 0, dif.nd, sis);
+    let texto = `Computação › Operacional ${t.total} (d100 ${t.dp} + ${t.acao}) contra ${dif.nome} ${dif.nd}: `;
+    if (!t.sucesso) texto += 'falhou';
+    else {
+      const regra = regraDaHabilidade('Dano ao sistema', sis);
+      const rol = rolarDado(String(regra?.dano || '2d6').replace(/MOD\s*INT/i, String(d.mod.INT || 0)).replace('+-', '-'));
+      if (maquina && b.pv) {
+        const ip = ipContra(b, sis, 'Elétrico');
+        const dano = Math.max(sis.combate?.danoMinimo ?? 0, rol.total - ip);
+        b.pv.atual -= dano;
+        texto += `${dano} de dano elétrico em ${b.nome} [${rol.dados.join(', ')}]${ip ? ` − IP ${ip}` : ''} (${b.pv.atual}/${b.pv.max} PV)`;
+      } else texto += `${rol.total} de dano elétrico num item de ${b.nome} [${rol.dados.join(', ')}] — o mestre aplica no item`;
+    }
+    registrar(c.salas.batalha.log, { autor: p.nome, rotulo: `Dano ao sistema em ${b.nome}`, texto, sucesso: t.sucesso });
+    return { texto, sucesso: t.sucesso };
   },
 
   'combate.defender'(c, { id, defesa }, ctx) {
@@ -1297,6 +1496,11 @@ export const acoes = {
       // Descanso longo recarrega os usos de habilidades "por descanso longo" (Juggernaut, Carga de Emergência…).
       if (tipo === 'longo' && !interrompido && p.usos) {
         for (const k of Object.keys(p.usos)) if (sis.habilidadesRegras?.[k]?.usos?.recarga === 'descanso-longo') delete p.usos[k];
+      }
+      // …e os recursos (Cargas do Núcleo).
+      if (tipo === 'longo' && !interrompido && p.recursos) {
+        const recarrega = new Set(Object.values(sis.habilidadesRegras || {}).filter(r => r.recurso?.recarga === 'descanso-longo').map(r => r.recurso.id));
+        for (const k of Object.keys(p.recursos)) if (recarrega.has(k)) delete p.recursos[k];
       }
       sincronizarEfeitos(p, sis);
       notas.push(...lembretesDescanso(p, sis, tipo));

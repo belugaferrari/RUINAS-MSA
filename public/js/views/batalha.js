@@ -4,8 +4,8 @@
 import { h, botao, selecao, aviso, icone, titulo, vazio, pedirTexto, confirmar } from '../ui.js';
 import { estado, render, personagemPorId } from '../estado.js';
 import { acao } from '../api.js';
-import { derivados, listaHabilidades, efeitosHabilidade, modoHabilidade, GRUPOS_IP } from '/shared/regras.js';
-import { armasDisponiveis, ipDe, opcoesDefesa, defesaDoAlvo, danoDaArma } from '/shared/combate.js';
+import { derivados, listaHabilidades, efeitosHabilidade, modoHabilidade, temHabilidade, tipoCriatura, chaveHabilidade, GRUPOS_IP } from '/shared/regras.js';
+import { armasDisponiveis, ipDe, opcoesDefesa, defesaDoAlvo, danoDaArma, recursoDe } from '/shared/combate.js';
 import { trilhaCompacta, escolherCondicao, cargaView } from './ficha.js';
 import { painelSlot, naMao, maoHabil } from './boneco.js';
 import { efeitosIcones } from './efeitos.js';
@@ -181,12 +181,24 @@ function quadroHabilidades(p, mestre) {
   const lapis = x => mestre ? botao('', () => ajustar(x), { class: 'pequeno', icone: 'pencil', title: `Ajustar o que ${x.nome} faz no app` }) : null;
   const cabeca = x => h('details', {}, h('summary', {}, h('strong', {}, x.nome), x.vezes > 1 ? h('small', { class: 'selo' }, `×${x.vezes}`) : null, h('small', {}, ` ${x.tipo}`)), h('p', { class: 'bloco-texto' }, x.descricao));
   // Grupos: automáticas (o app aplica sozinho), as de ligar no combate (botão) e as que são só regra para lembrar.
-  const automaticas = [], comNumero = [], lembretes = [];
+  const automaticas = [], comNumero = [], lembretes = [], deAtivar = [];
   for (const x of lista) {
     const modo = modoHabilidade(p, sis, x);
-    (modo === 'sempre' ? automaticas : modo === 'lembrete' ? lembretes : comNumero).push(x);
+    (modo === 'sempre' ? automaticas : modo === 'lembrete' ? lembretes : modo === 'ativar' ? deAtivar : comNumero).push(x);
   }
+  const recursos = lista.filter(x => x.regra?.recurso).map(x => recursoDe(p, sis, x.regra.recurso.id)).filter(Boolean);
   return [
+    recursos.length || p.pvTemp || p.essencia ? h('div', { class: 'hab-recursos barra' },
+      recursos.map(r => h('span', { class: 'recurso' }, icone('zap'), h('strong', {}, ` ${r.nome}: ${r.restantes}/${r.max}`),
+        botao('Usar como bateria', () => acao('habilidade.recurso', { id: p.id, recurso: r.id }).then(x => aviso(x.texto)), { class: 'pequeno', disabled: !r.restantes }),
+        // Núcleo: com coração humano, cada carga causa 1d6 de dano. O mestre marca quando o coração for artificial.
+        r.id === 'nucleo' ? h('label', { class: 'linha', title: 'Com coração humano, cada carga usada causa 1d6 de dano' },
+          h('input', { type: 'checkbox', checked: !!p.coracaoArtificial, disabled: !mestre, onchange: e => acao('personagem.atualizar', { id: p.id, patch: { coracaoArtificial: e.target.checked } }) }), 'coração artificial') : null)),
+      p.pvTemp ? h('span', { class: 'selo ok' }, icone('heart'), ` ${p.pvTemp} PV temporários`) : null,
+      p.essencia ? h('span', { class: 'selo ok' }, `Essência: ${p.essencia.sigla} ${p.essencia.valor} (de ${p.essencia.de})`) : null) : null,
+    deAtivar.length ? h('div', { class: 'hab-grupo' },
+      h('h4', {}, icone('flame'), ' Ativar (custo, usos ou duração)'),
+      h('ul', { class: 'lista-habilidades' }, deAtivar.map(x => botaoAtivar(p, x, lapis)))) : null,
     automaticas.length ? h('div', { class: 'hab-grupo automaticas' },
       h('h4', {}, icone('badge-check'), ' Automáticas (o app aplica sozinho)'),
       h('ul', { class: 'lista-habilidades' }, automaticas.map(x => h('li', { class: 'ativa' },
@@ -211,6 +223,45 @@ function quadroHabilidades(p, mestre) {
         h('div', { class: 'hab-texto' }, cabeca(x), h('small', { class: 'hab-resumo' }, primeiraFrase(x.descricao))),
         mestre ? h('div', { class: 'hab-botoes' }, lapis(x)) : null)))) : null,
   ];
+}
+
+// Habilidade de ativar: mostra custo/usos/duração; ativa (ou desativa). Essência monstruosa pede o monstro abatido.
+function botaoAtivar(p, x, lapis) {
+  const sis = estado.sistema;
+  const r = x.regra;
+  const ativa = p.habAtivas?.[x.id];
+  const usados = p.usos?.[chaveHabilidade(x.nome)] || 0;
+  const info = [
+    r.acao ? `ação ${r.acao}` : null,
+    r.custo?.recurso ? `${r.custo.qtd || 1} carga(s)` : null,
+    r.custo?.hum ? `−${r.custo.hum} HUM` : null,
+    r.usos ? `${Math.max(0, r.usos.max - usados)}/${r.usos.max} por descanso longo` : null,
+    r.duracao?.turnos ? `${r.duracao.turnos} turnos` : r.duracao === 'combate' ? 'até o fim do combate' : null,
+    r.requerItem ? `precisa de ${r.requerItem.replace('|', ' ou ')}` : null,
+  ].filter(Boolean).join(' · ');
+  let escolha = null;
+  if (r.especial === 'essencia' && !ativa) {
+    const abatidos = (estado.campanha.salas.batalha.participantes || []).map(personagemPorId).filter(m => m && m.id !== p.id && tipoCriatura(m) !== 'humanoide'
+      && (m.semPv || (m.pv && m.pv.atual <= 0) || (m.marcadores || []).some(k => ['Morto', 'Desmaiado'].includes(k))));
+    const chave = `essencia:${p.id}`;
+    if (!abatidos.some(m => m.id === estado.sel[chave])) estado.sel[chave] = abatidos[0]?.id || '';
+    escolha = abatidos.length ? selecao(abatidos.map(m => ({ valor: m.id, rotulo: m.nome })), estado.sel[chave], v => { estado.sel[chave] = v; }, { 'aria-label': 'Monstro abatido' })
+      : h('small', { class: 'dica' }, 'Nenhum monstro abatido no campo.');
+  }
+  const ef = efeitosHabilidade(p, sis, x).notas.join(' · ');
+  return h('li', { class: ativa ? 'ativa' : '' },
+    h('div', { class: 'hab-texto' },
+      h('details', {}, h('summary', {}, h('strong', {}, x.nome), h('small', {}, ` ${x.tipo}`)), h('p', { class: 'bloco-texto' }, x.descricao)),
+      h('small', { class: 'hab-efeito' }, icone('zap'), ` ${ef || r.texto || ''}`),
+      h('small', { class: 'dica' }, ativa?.turnos ? `ativa: falta${ativa.turnos > 1 ? 'm' : ''} ${ativa.turnos} turno${ativa.turnos > 1 ? 's' : ''}` : ativa ? 'ativa' : info),
+      escolha),
+    h('div', { class: 'hab-botoes' },
+      botao(ativa ? 'Desativar' : 'Ativar', async () => {
+        if (!ativa && info && !(await confirmar(`Ativar ${x.nome}? ${info}.`))) return;
+        const res = await acao('habilidade.ativar', { id: p.id, hab: x.id, alvo: estado.sel[`essencia:${p.id}`] || null });
+        aviso(res.desativou ? `${x.nome} desativada.` : `${x.nome}: ${res.texto}`);
+      }, { class: `pequeno ${ativa ? '' : 'primario'}`, icone: 'flame', disabled: !ativa && ((r.usos && usados >= r.usos.max) || (r.especial === 'essencia' && !estado.sel[`essencia:${p.id}`])) }),
+      lapis(x)));
 }
 
 // Começo da descrição, para lembrar do que se trata sem abrir o texto todo.
@@ -238,7 +289,7 @@ function quadroAtaques(p, participantes, mestre) {
   const atacar = async uid => {
     if (!alvo) throw new Error('Escolha o alvo (clique no cartão dele no campo).');
     const r = await acao('combate.atacar', { atacante: p.id, alvo, opcoes: { ...opcoesGerais(p, mestre), armaUid: uid } });
-    if (estado.sel.ataque) estado.sel.ataque.sacrificio = false;
+    if (estado.sel.ataque) Object.assign(estado.sel.ataque, { sacrificio: false, cargaNucleo: false, investida: null });
     if (r.tipo === 'ataque') aviso(`${r.autor} ${r.rotulo}: ${r.texto}`, r.sucesso ? 'ok' : 'erro');
     else aviso(`${p.nome} ataca ${b?.nome}: aguardando a defesa.`);
   };
@@ -296,6 +347,14 @@ function quadroAtaques(p, participantes, mestre) {
           h('ul', {}, MANOBRAS.map(id => subs('briga').find(s => s.id === id)).filter(Boolean).map(s => linhaSub(s.id, s.nome))))),
       grupo('Armas brancas', 'arma-branca', i => i.pericia?.startsWith('arma-branca.')),
       grupo('Armas de fogo', 'armas-de-fogo', i => i.pericia?.startsWith('armas-de-fogo.')),
+      auto && temHabilidade(p, sis, 'Dano ao sistema') ? h('li', { class: 'ataque-grupo' }, h('div', { class: 'ataque-cabeca' }, h('strong', {}, 'Emissor Neural')),
+        h('ul', {}, h('li', { class: 'ataque-linha' },
+          h('span', { class: 'ataque-nome' }, 'Dano ao sistema', h('small', {}, ` 2d6 + MOD INT elétrico · ${pct('computacao.operacional')}${b ? ` · ${['drone', 'automato', 'maquina'].includes(tipoCriatura(b)) ? 'Normal' : 'Difícil (item)'}` : ''}`)),
+          dado(`${p.nome}: Dano ao sistema em ${b?.nome || 'o alvo'}`, async () => {
+            if (!alvo) throw new Error('Escolha o alvo.');
+            const r = await acao('habilidade.danoSistema', { id: p.id, alvo });
+            aviso(r.texto, r.sucesso ? 'ok' : 'erro');
+          }, { disabled: !alvo })))) : null,
       outrasArmas.length ? h('li', { class: 'ataque-grupo' }, h('div', { class: 'ataque-cabeca' }, h('strong', {}, 'Outras')), h('ul', {}, outrasArmas.map(linhaArma))) : null),
     auto ? opcoesAtaque(p, mestre) : null,
   ];
@@ -304,6 +363,7 @@ function quadroAtaques(p, participantes, mestre) {
 // Opções que valem para o próximo ataque (surpresa, localizado…); as do mestre mudam a rolagem.
 function opcoesAtaque(p, mestre) {
   const sel = estado.sel.ataque ||= {};
+  const nucleo = recursoDe(p, estado.sistema, 'nucleo');
   const caixa = (chave, rotulo, redesenha = false) => h('label', { class: 'linha' },
     h('input', { type: 'checkbox', checked: !!sel[chave], onchange: e => { sel[chave] = e.target.checked; if (redesenha) render(); } }), rotulo);
   return h('details', { class: 'opcoes-ataque', open: !!estado.sel.ataqueAberto, ontoggle: e => { estado.sel.ataqueAberto = e.target.open; } },
@@ -315,6 +375,12 @@ function opcoesAtaque(p, mestre) {
       caixa('area', 'Ataque em área', true),
       caixa('cobertura', 'Alvo em cobertura (+30, tiro)'),
       p.tipo === 'pj' ? caixa('sacrificio', 'Sacrifício (+10%, D6 de vida)') : null,
+      // Núcleo energético: +2d6 elétrico neste ataque (gasta 1 carga). Máquina Implacável: Investida com dano maior.
+      nucleo && nucleo.restantes > 0 ? caixa('cargaNucleo', `Carga do Núcleo (+2d6 elétrico · restam ${nucleo.restantes})`) : null,
+      temHabilidade(p, estado.sistema, 'Maquina Implacavel') ? h('label', { class: 'linha', title: 'Máquina Implacável: dano +1 passo e +1 por quadrado avançado' },
+        h('input', { type: 'checkbox', checked: sel.investida != null, onchange: e => { sel.investida = e.target.checked ? 1 : null; render(); } }), 'Investida',
+        sel.investida != null ? h('input', { type: 'number', class: 'curto', min: 0, value: sel.investida, 'aria-label': 'Quadrados avançados', onchange: e => { sel.investida = Math.max(0, parseInt(e.target.value, 10) || 0); } }) : null,
+        sel.investida != null ? h('small', {}, ' quadrados') : null) : null,
       mestre ? caixa('vantagem', 'Vantagem') : null,
       mestre ? caixa('desvantagem', 'Desvantagem') : null,
       mestre ? h('label', { class: 'linha' }, 'Mod. %', h('input', { type: 'number', class: 'curto', value: sel.mod || 0, onchange: e => { sel.mod = e.target.value; } })) : null,
