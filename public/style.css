@@ -928,7 +928,7 @@ span.peao { display: grid; }
 .peao.oculto .rosto { border-style: dashed; }
 
 /* ===================== Artes de combate (fx) ===================== */
-[data-pid] { position: relative; }
+[data-pid]:not(.peao) { position: relative; }
 .fx { position: absolute; inset: 0; pointer-events: none; z-index: 6; display: grid; place-items: center; border-radius: inherit; }
 /* Ameaça: o desenho da arma pulsa sobre quem está sendo atacado (até ele se defender). */
 .fx-ameaca { border-radius: inherit; box-shadow: inset 0 0 0 3px rgba(224, 70, 50, .85); animation: fx-ameaca 1s ease-in-out infinite; }
@@ -1168,3 +1168,21 @@ span.peao { display: grid; }
 }
 
 .efeito-icone.suspenso { opacity: .4; filter: grayscale(.8); }
+
+/* Mapa em tela inteira (horizontal). "girar": o celular está em pé e o mapa é deitado 90° pelo CSS. */
+.mapa-barra-cheia { display: flex; justify-content: flex-end; gap: .3em; }
+.mapa-centro.tela-cheia { position: fixed; inset: 0; z-index: 90; background: #000; display: block; padding: 0; margin: 0; }
+.mapa-centro.tela-cheia > :not(.mapa-rolagem):not(.mapa-barra-cheia) { display: none; }
+.mapa-centro.tela-cheia .mapa-barra-cheia { position: fixed; top: max(8px, env(safe-area-inset-top)); right: max(8px, env(safe-area-inset-right)); z-index: 95; }
+.mapa-centro.tela-cheia .mapa-barra-cheia button { background: #000c; }
+.mapa-centro.tela-cheia .mapa-rolagem { width: 100vw; height: 100vh; height: 100dvh; overflow: auto; border-radius: 0; display: flex; align-items: center; justify-content: center; }
+.mapa-centro.tela-cheia .mapa-quadro { flex: none; min-width: 0; max-width: none; border-radius: 0; margin: 0;
+  width: min(100vw, calc(100dvh * var(--aspecto, 1.5))); }
+.mapa-centro.tela-cheia.girar .mapa-rolagem { position: absolute; top: 0; left: 100vw; width: 100dvh; height: 100vw; transform: rotate(90deg); transform-origin: top left; }
+.mapa-centro.tela-cheia.girar .mapa-quadro { width: min(100dvh, calc(100vw * var(--aspecto, 1.5))); }
+
+/* Imagens divididas */
+.img-filtros { flex-wrap: wrap; margin: .6em 0; }
+.img-secao { margin-bottom: 1em; }
+.img-secao > h3 { border-bottom: 1px solid var(--borda); padding-bottom: .2em; }
+.galeria figcaption .mini-select { font-size: .8em; padding: .1em .3em; margin-top: .2em; max-width: 100%; }

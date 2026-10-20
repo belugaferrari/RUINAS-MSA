@@ -6,6 +6,7 @@ import { estado, render, personagemPorId } from '../estado.js';
 import { acao } from '../api.js';
 import { derivados } from '/shared/regras.js';
 import { restricaoMovimento } from '/shared/efeitos.js';
+import { categoriaDaImagem } from '/shared/imagens.js';
 
 export const METROS_POR_QUADRADO = 1.5;
 
@@ -19,6 +20,7 @@ export function distanciaNoMapa(c, idA, idB) {
 
 // O mesmo elemento de mídia é reaproveitado entre as atualizações, para o vídeo não recomeçar a cada mudança.
 const midias = new Map();
+const aspectos = new Map();
 function midiaEl(m) {
   const chave = `${m.tipo}:${m.url}`;
   if (!midias.has(chave)) {
@@ -26,6 +28,13 @@ function midiaEl(m) {
       ? h('video', { src: m.url, class: 'mapa-midia', autoplay: true, loop: true, playsinline: true, 'aria-label': m.titulo })
       : h('img', { src: m.url, class: 'mapa-midia', alt: m.titulo, draggable: 'false' });
     if (m.tipo === 'video') { el.muted = true; el.play?.().catch(() => {}); }
+    // Proporção da mídia: na tela inteira o mapa cabe inteiro (largura ou altura, o que bater primeiro).
+    const proporcao = () => {
+      const w = el.naturalWidth || el.videoWidth;
+      const hh = el.naturalHeight || el.videoHeight;
+      if (w && hh) { aspectos.set(chave, w / hh); el.closest('.mapa-quadro')?.style.setProperty('--aspecto', w / hh); }
+    };
+    el.addEventListener(m.tipo === 'video' ? 'loadedmetadata' : 'load', proporcao);
     midias.set(chave, el);
   }
   return midias.get(chave);
@@ -41,7 +50,7 @@ export function mapaView() {
   const sel = estado.sel.mapaSel;
   const quadro = mapa.midia ? h('div', {
     class: `mapa-quadro ${g.visivel ? 'com-grade' : ''} ${mover ? 'movel' : ''}`,
-    style: { '--cols': g.colunas, '--ox': g.ox, '--oy': g.oy },
+    style: { '--cols': g.colunas, '--ox': g.ox, '--oy': g.oy, '--aspecto': aspectos.get(`${mapa.midia.tipo}:${mapa.midia.url}`) || 1.5 },
     // Com um peão escolhido, clicar num quadrado leva ele para lá.
     // No modo "marcar" (só o mestre), clicar num quadrado cria uma marcação secreta.
     onclick: mover ? async e => {
@@ -64,7 +73,13 @@ export function mapaView() {
   return h('div', { class: 'mapa-tela' },
     mestre ? controlesMestre(mapa) : null,
     h('div', { class: 'mapa-grade-tela' },
-      h('div', { class: 'mapa-centro' }, h('div', { class: 'mapa-rolagem' }, quadro),
+      h('div', { class: `mapa-centro ${estado.sel.mapaCheia ? 'tela-cheia' : ''} ${estado.sel.mapaCheia && girarMapa() ? 'girar' : ''}` },
+        mapa.midia ? h('div', { class: 'mapa-barra-cheia' },
+          estado.sel.mapaCheia
+            ? [botao('', () => { estado.sel.mapaGirar = !girarMapa(); render(); }, { class: 'pequeno', icone: 'rotate-cw', title: 'Girar o mapa', 'aria-label': 'Girar o mapa' }),
+              botao('Sair', sairTelaCheia, { class: 'pequeno', icone: 'minimize-2', title: 'Sair da tela inteira' })]
+            : botao('Tela inteira', entrarTelaCheia, { class: 'pequeno', icone: 'maximize-2', title: 'Mapa em tela inteira, na horizontal' })) : null,
+        h('div', { class: 'mapa-rolagem' }, quadro),
         mover && mapa.midia ? h('p', { class: 'dica' }, icone('info'), ' Arraste os peões, ou escolha um na lista e clique no quadrado de destino. Cada quadrado = 1,5 m.') : null,
         mestre && mapa.midia ? h('div', { class: 'barra' },
           botao(estado.sel.mapaMarcar ? 'Marcando: clique no mapa (clique aqui para parar)' : 'Marcação secreta', () => { estado.sel.mapaMarcar = !estado.sel.mapaMarcar; render(); },
@@ -96,12 +111,39 @@ function marca(m) {
   }, icone('triangle-alert'));
 }
 
+// Tela inteira: ocupa a tela toda e tenta deitar o celular (horizontal). Onde o navegador não deixa travar a tela
+// deitada (iPhone), o mapa é girado 90° quando o aparelho está em pé — o botão "Girar" troca à mão.
+async function entrarTelaCheia() {
+  estado.sel.mapaCheia = true;
+  estado.sel.mapaGirar = null;
+  render();
+  try { await document.documentElement.requestFullscreen?.(); } catch { /* sem tela cheia do navegador: fica a da página */ }
+  try { await screen.orientation?.lock?.('landscape'); } catch { /* não deixou travar: gira pelo CSS se estiver em pé */ }
+  render();
+}
+function sairTelaCheia() {
+  estado.sel.mapaCheia = false;
+  try { screen.orientation?.unlock?.(); } catch { /* nada */ }
+  if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
+  render();
+}
+const emPe = () => window.innerHeight > window.innerWidth;
+const girarMapa = () => (estado.sel.mapaGirar ?? emPe());
+// Saiu da tela cheia do navegador (Esc, voltar do celular): sai do modo do mapa também; girou o aparelho: redesenha.
+document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && estado.sel.mapaCheia) sairTelaCheia(); });
+window.addEventListener('resize', () => { if (estado.sel.mapaCheia && estado.sel.mapaGirar == null) render(); });
+
+// Ponto da tela → quadrado. Com o mapa girado 90° (horário), o x da tela vira o y do mapa e vice-versa.
 function quadradoDoPonto(quadro, g, x, y) {
   const r = quadro.getBoundingClientRect();
-  const cel = r.width / g.colunas;
+  const girado = !!quadro.closest('.girar');
+  const largura = girado ? r.height : r.width;
+  const lx = girado ? y - r.top : x - r.left;
+  const ly = girado ? r.right - x : y - r.top;
+  const cel = largura / g.colunas;
   return {
-    col: Math.max(0, Math.floor((x - r.left) / cel - g.ox)),
-    lin: Math.max(0, Math.floor((y - r.top) / cel - g.oy)),
+    col: Math.max(0, Math.floor(lx / cel - g.ox)),
+    lin: Math.max(0, Math.floor(ly / cel - g.oy)),
   };
 }
 
@@ -144,7 +186,8 @@ function arrastavel(el, p, g) {
     if (!inicio.moveu && Math.hypot(dx, dy) < 6) return;
     inicio.moveu = true;
     el.classList.add('arrastando');
-    el.style.transform = `translate(${dx}px, ${dy}px)`;
+    // Mapa girado: o arrasto da tela vira o deslocamento no mapa (x da tela = y do mapa).
+    el.style.transform = el.closest('.girar') ? `translate(${dy}px, ${-dx}px)` : `translate(${dx}px, ${dy}px)`;
   });
   const soltar = e => {
     if (!inicio) return;
@@ -172,7 +215,10 @@ function controlesMestre(mapa) {
   return h('div', { class: 'bloco mapa-controles' },
     titulo('Mapa e grade', 'map', 'h3'),
     h('div', { class: 'barra' },
-      selecao([{ valor: '', rotulo: midias.length ? 'Escolha o mapa…' : 'Envie imagens na aba Imagens' }, ...midias.map(i => ({ valor: i.id, rotulo: `${i.titulo}${i.tipo === 'video' ? ' (vídeo)' : ''}` }))],
+      selecao([{ valor: '', rotulo: midias.length ? 'Escolha o mapa…' : 'Envie imagens na aba Imagens' },
+        // As da divisão "Mapas" primeiro; as outras aparecem com a divisão entre colchetes.
+        ...[...midias].sort((a, b) => (categoriaDaImagem(b) === 'Mapas') - (categoriaDaImagem(a) === 'Mapas'))
+          .map(i => ({ valor: i.id, rotulo: `${categoriaDaImagem(i) === 'Mapas' ? '' : `[${categoriaDaImagem(i)}] `}${i.titulo}${i.tipo === 'video' ? ' (vídeo)' : ''}` }))],
         mapa.imagemId || '', v => acao('mapa.definir', { imagemId: v || null }), { 'aria-label': 'Mapa' }),
       h('span', { class: 'linha' }, 'Quadrados na largura', passador(g.colunas, 2, 200, v => acao('mapa.grade', { colunas: v }), 'Quadrados na largura')),
       desloc('ox', 'Mover grade →'),

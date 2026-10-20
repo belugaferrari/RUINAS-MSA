@@ -14,6 +14,7 @@ import { criacaoView, iniciarCriacao } from './criacao.js';
 import { versaoApp } from './versao.js';
 import { mapaView } from './mapa.js';
 import { relogioTopo } from './tempo.js';
+import { CATEGORIAS_IMAGEM, categoriaDaImagem } from '/shared/imagens.js';
 
 const ABAS = [
   ['jogadores', 'Jogadores', 'users'], ['npcs', 'NPCs', 'ghost'], ['imagens', 'Imagens', 'image'], ['social', 'Sala Social', 'drama'],
@@ -176,40 +177,57 @@ function moverGrupo(p) {
       campo(`${p.id}:dificuldade`, p.dificuldade ?? '', v => acao('personagem.atualizar', { id: p.id, patch: { dificuldade: v } }), { tipo: 'number', class: 'num' })));
 }
 
+// Imagens divididas em Mapas, Cenas, Locais, Personagens, NPCs, Monstros, Itens, Documentos e pistas e Outros.
 function abaImagens() {
   const c = estado.campanha;
-  const campoTitulo = h('input', { placeholder: 'Título (ex.: Mapa da Ilha Norte)' });
-  const categoria = h('input', { placeholder: 'Categoria (Personagens, Mapas…)', list: 'categorias-img' });
-  const arquivo = h('input', { type: 'file', accept: 'image/*,video/mp4,video/webm' });
-  const categorias = [...new Set(c.imagens.map(i => i.categoria))];
+  const campoTitulo = h('input', { placeholder: 'Título (ex.: Mapa da Ilha Norte)', 'aria-label': 'Título da imagem' });
+  const catEnvio = estado.sel.imgCatEnvio || 'Mapas';
+  const arquivo = h('input', { type: 'file', accept: 'image/*,video/mp4,video/webm', 'aria-label': 'Arquivo' });
+  const porCat = new Map(CATEGORIAS_IMAGEM.map(k => [k.id, []]));
+  for (const i of c.imagens) {
+    const k = categoriaDaImagem(i);
+    if (!porCat.has(k)) porCat.set(k, []);
+    porCat.get(k).push(i);
+  }
+  const extras = [...porCat.keys()].filter(k => !CATEGORIAS_IMAGEM.some(x => x.id === k));
+  const opcoesCat = [...CATEGORIAS_IMAGEM.map(k => k.id), ...extras];
   const filtro = estado.sel.imgCat || '';
-  const lista = c.imagens.filter(i => !filtro || i.categoria === filtro);
+  const icCat = k => CATEGORIAS_IMAGEM.find(x => x.id === k)?.icone || 'folder';
+  const figura = i => h('figure', { class: i.mostrando ? 'mostrando' : '' },
+    i.tipo === 'video' ? h('video', { src: i.url, muted: true, loop: true, playsinline: true, controls: true, class: 'miniatura-video' })
+      : h('img', { src: i.url, alt: i.titulo, onclick: () => janela(i.titulo, h('img', { src: i.url, class: 'img-cheia', alt: i.titulo })) }),
+    h('figcaption', {}, h('strong', {}, i.titulo),
+      selecao(opcoesCat, categoriaDaImagem(i), v => acao('imagem.categoria', { id: i.id, categoria: v }), { class: 'mini-select', 'aria-label': `Divisão de ${i.titulo}`, title: 'Mudar a divisão' })),
+    h('label', { class: 'linha', title: 'O Suporte pode mostrar e esconder esta imagem para os jogadores' },
+      h('input', { type: 'checkbox', checked: !!i.suporte, onchange: e => acao('imagem.suporte', { id: i.id, liberada: e.target.checked }) }), 'Liberar para o Suporte'),
+    h('div', { class: 'acoes' },
+      botao(i.mostrando ? 'Ocultar dos jogadores' : 'Mostrar aos jogadores', () => acao('imagem.mostrar', { id: i.id, mostrando: !i.mostrando }), { class: i.mostrando ? 'pequeno' : 'pequeno primario', icone: i.mostrando ? 'eye-off' : 'eye' }),
+      botao('', async () => { if (await confirmar(`Apagar "${i.titulo}"?`)) await acao('imagem.remover', { id: i.id }); }, { class: 'pequeno perigo', icone: 'trash-2', title: `Apagar ${i.titulo}` })));
+  const secoes = [...porCat.entries()].filter(([k, l]) => l.length && (!filtro || k === filtro));
   return h('div', {},
     h('div', { class: 'bloco' },
       titulo('Enviar imagem, GIF ou vídeo', 'upload'),
-      h('p', { class: 'dica' }, 'Imagens até 10 MB; vídeos MP4/WEBM até 60 MB (para mapas animados, aba Mapa).'),
-      h('div', { class: 'barra' }, campoTitulo, categoria, h('datalist', { id: 'categorias-img' }, categorias.map(k => h('option', { value: k }))), arquivo,
+      h('p', { class: 'dica' }, 'Imagens até 10 MB; vídeos MP4/WEBM até 60 MB (para mapas animados, aba Mapa). Escolha a divisão para achar fácil depois.'),
+      h('div', { class: 'barra' }, campoTitulo,
+        selecao(opcoesCat, catEnvio, v => { estado.sel.imgCatEnvio = v; }, { 'aria-label': 'Divisão da imagem' }),
+        arquivo,
         botao('Enviar', async () => {
           if (!arquivo.files[0]) throw new Error('Escolha um arquivo.');
           const form = new FormData();
           form.append('arquivo', arquivo.files[0]);
           form.append('titulo', campoTitulo.value);
-          form.append('categoria', categoria.value || 'Geral');
+          form.append('categoria', estado.sel.imgCatEnvio || catEnvio);
           await enviarArquivo(`/api/campanhas/${c.id}/imagens`, form);
           aviso('Imagem enviada.');
         }, { class: 'primario', icone: 'upload' }))),
-    h('div', { class: 'barra' }, h('span', {}, 'Categoria:'),
-      selecao([{ valor: '', rotulo: 'Todas' }, ...categorias], filtro, v => { estado.sel.imgCat = v; render(); }),
-      c.imagens.some(i => i.mostrando) ? botao('Parar de mostrar todas', () => Promise.all(c.imagens.filter(i => i.mostrando).map(i => acao('imagem.mostrar', { id: i.id, mostrando: false }))), { icone: 'eye-off' }) : null),
-    lista.length ? h('div', { class: 'galeria' }, lista.map(i => h('figure', { class: i.mostrando ? 'mostrando' : '' },
-      i.tipo === 'video' ? h('video', { src: i.url, muted: true, loop: true, playsinline: true, controls: true, class: 'miniatura-video' })
-        : h('img', { src: i.url, alt: i.titulo, onclick: () => janela(i.titulo, h('img', { src: i.url, class: 'img-cheia', alt: i.titulo })) }),
-      h('figcaption', {}, h('strong', {}, i.titulo), h('small', {}, i.categoria)),
-      h('label', { class: 'linha', title: 'O Suporte pode mostrar e esconder esta imagem para os jogadores' },
-        h('input', { type: 'checkbox', checked: !!i.suporte, onchange: e => acao('imagem.suporte', { id: i.id, liberada: e.target.checked }) }), 'Liberar para o Suporte'),
-      h('div', { class: 'acoes' },
-        botao(i.mostrando ? 'Ocultar dos jogadores' : 'Mostrar aos jogadores', () => acao('imagem.mostrar', { id: i.id, mostrando: !i.mostrando }), { class: i.mostrando ? 'pequeno' : 'pequeno primario', icone: i.mostrando ? 'eye-off' : 'eye' }),
-        botao('', async () => { if (await confirmar(`Apagar "${i.titulo}"?`)) await acao('imagem.remover', { id: i.id }); }, { class: 'pequeno perigo', icone: 'trash-2', title: `Apagar ${i.titulo}` }))))) : vazio('Nenhuma imagem.', 'image'));
+    h('div', { class: 'barra img-filtros', role: 'group', 'aria-label': 'Divisões' },
+      botao(`Todas (${c.imagens.length})`, () => { estado.sel.imgCat = ''; render(); }, { class: `pequeno ${!filtro ? 'primario' : ''}`, 'aria-pressed': !filtro }),
+      [...porCat.entries()].filter(([, l]) => l.length).map(([k, l]) => botao(`${k} (${l.length})`, () => { estado.sel.imgCat = k; render(); },
+        { class: `pequeno ${filtro === k ? 'primario' : ''}`, icone: icCat(k), 'aria-pressed': filtro === k })),
+      c.imagens.some(i => i.mostrando) ? botao('Parar de mostrar todas', () => Promise.all(c.imagens.filter(i => i.mostrando).map(i => acao('imagem.mostrar', { id: i.id, mostrando: false }))), { class: 'pequeno', icone: 'eye-off' }) : null),
+    secoes.length ? secoes.map(([k, l]) => h('section', { class: 'img-secao' },
+      titulo(`${k} · ${l.length}`, icCat(k), 'h3'),
+      h('div', { class: 'galeria' }, l.map(figura)))) : vazio('Nenhuma imagem.', 'image'));
 }
 
 function abaResumo() {

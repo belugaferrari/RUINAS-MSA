@@ -398,3 +398,17 @@ test('necessidades: suspensas no combate (teste de CONS no fim) e vantagens/defe
   assert.match(nota, /Exausto/);
   assert.ok(cb.marcadores.includes('Exausto') && cb.marcadores.some(m => /vulnerabilidade/i.test(m)));
 });
+
+test('imagens: divisões (com nomes antigos) e mudar a divisão', async () => {
+  const { categoriaDaImagem } = await import('../shared/imagens.js');
+  assert.equal(categoriaDaImagem({ categoria: 'Geral' }), 'Outros');
+  assert.equal(categoriaDaImagem({ categoria: 'mapa' }), 'Mapas');
+  assert.equal(categoriaDaImagem({ categoria: 'NPC' }), 'NPCs');
+  assert.equal(categoriaDaImagem({ categoria: 'Facções' }), 'Facções');
+  const m = { id: 'm9', name: 'M9' };
+  const c = novaCampanha(m, { nome: 'Teste 9', maxJogadores: 2, nivel: 1, padraoMSA: true });
+  c.imagens.push({ id: 'i1', titulo: 'Ilha', categoria: 'Geral', url: '/x.png' });
+  executar(c, 'imagem.categoria', { id: 'i1', categoria: 'Mapas' }, { user: m, mestre: true });
+  assert.equal(c.imagens[0].categoria, 'Mapas');
+  assert.throws(() => executar(c, 'imagem.categoria', { id: 'i1', categoria: 'Itens' }, { user: { id: 'x' }, mestre: false }));
+});

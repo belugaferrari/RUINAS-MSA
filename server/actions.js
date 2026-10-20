@@ -910,6 +910,14 @@ export const acoes = {
     c.suportes = (c.suportes || []).filter(x => x !== userId);
   },
 
+  // Muda a divisão (Mapas, Cenas, Locais, Personagens, NPCs, Monstros, Itens…) de uma imagem.
+  'imagem.categoria'(c, { id, categoria }, ctx) {
+    exigirMestre(ctx);
+    const img = c.imagens.find(i => i.id === id);
+    if (!img) throw erro('Imagem não encontrada.');
+    img.categoria = String(categoria || 'Outros').trim().slice(0, 40) || 'Outros';
+  },
+
   'imagem.mostrar'(c, { id, mostrando }, ctx) {
     const img = c.imagens.find(i => i.id === id);
     if (!ctx.mestre && !(ctx.suporte && img?.suporte)) throw erro('Apenas o mestre pode fazer isso.');

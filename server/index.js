@@ -96,7 +96,7 @@ function salvarImagem(file, { video = false } = {}) {
 app.post('/api/campanhas/:id/imagens', upload.single('arquivo'), rota(req => {
   const c = campanhaDoMestre(req);
   const tipo = EXT_VIDEO[req.file?.mimetype] ? 'video' : 'imagem';
-  const img = { id: uid(), titulo: String(req.body.titulo || req.file?.originalname || 'Imagem').slice(0, 120), categoria: String(req.body.categoria || 'Geral').slice(0, 40), url: salvarImagem(req.file, { video: true }), tipo, mostrando: false };
+  const img = { id: uid(), titulo: String(req.body.titulo || req.file?.originalname || 'Imagem').slice(0, 120), categoria: String(req.body.categoria || 'Outros').slice(0, 40), url: salvarImagem(req.file, { video: true }), tipo, mostrando: false };
   c.imagens.push(img);
   save();
   transmitir(c);
