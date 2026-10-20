@@ -1428,8 +1428,8 @@ export const acoes = {
       percebido = r.sucesso && b.humorAparente
         ? `Você percebe que ${b.nome} está ${real}, por trás da aparência de ${visto}.`
         : `Você percebe que ${b.nome} está ${r.sucesso ? real : visto}.`;
-      resultado = r.sucesso ? `SUCESSO — ${a.nome} lê ${b.nome}: ${b.humorAparente ? `a máscara (${visto}) caiu, real ${real}` : `real ${real}`}` : `FALHOU — ${a.nome} só vê ${visto}`;
-      registrar(c.salas.social.log, { autor: a.nome, rotulo: `Você observa ${b.nome}`, texto: percebido, privadoPara: ctx.user.id });
+      // Intuir humor: o personagem não sabe se acertou — só o mestre vê e conta na mesa o que ele percebe.
+      resultado = r.sucesso ? `SUCESSO — ${a.nome} intui ${b.nome}: ${b.humorAparente ? `a máscara (${visto}) caiu, real ${real}` : `real ${real}`}` : `FALHOU — ${a.nome} só percebe ${visto}`;
     } else if (r.sucesso) {
       mudar(humor);
       resultado = `SUCESSO — ${b.nome} fica ${nomeH(humor)}`;
@@ -1445,14 +1445,14 @@ export const acoes = {
     }
     const mods = r.mods.map(m => `${m.nome} ${fmtMod(m.valor)}`).join(', ');
     const entrada = {
-      tipo: 'manipulacao', secreta: true, autor: a.nome, rotulo: `${nomeSub} em ${b.nome} (${r.ler ? 'ler o humor real' : `quer ${nomeH(humor)}`}) — oculto`, sucesso: r.sucesso, critico: r.critico,
+      tipo: 'manipulacao', secreta: true, autor: a.nome, rotulo: r.ler ? `Intuir humor de ${b.nome} (Empatia) — oculto` : `${nomeSub} em ${b.nome} (quer ${nomeH(humor)}) — oculto`, sucesso: r.sucesso, critico: r.critico,
       texto: `${resultado}${r.critico ? ` (crítico de ${r.critico})` : ''}`,
       detalhe: `d100 ${r.dp}${r.modo ? ` (vantagem [${r.dados.join(', ')}])` : ''} + ${r.acao}${mods ? ` (${mods})` : ''} = ${r.total} contra R.MNP ${r.nd} · espectro ${nomeEsp} · DS ${r.ds}`,
       dp: r.dp, dados: r.dados, ds: r.ds, total: r.total, nd: r.nd,
     };
     registrar(c.salas.social.log, entrada);
     if (ctx.mestre) return { ...entrada, revelado: percebido };
-    return { oculto: true, revelado: percebido };
+    return { oculto: true };
   },
 
   // Empatia natural (mestre): teste oculto para todos os humanos da Sala Social; o grupo converge ao humor que um

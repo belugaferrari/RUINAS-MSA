@@ -1297,3 +1297,7 @@ span.peao { display: grid; }
 .equip-slot.alto .equip-nome { padding: 0 6px 18px; }
 .equip-slot.pequena .equip-info { width: 16px; height: 16px; font-size: .6em; right: 2px; bottom: 2px; }
 @media (max-width: 600px) { .equip-info { display: none; } }
+.humor-icone span { font-size: .85em; font-weight: 600; white-space: nowrap; }
+.humor-icone { gap: .3em; padding: .2em .65em; }
+.manip.intuir { border-style: dashed; }
+.manip.intuir.ativa { border-style: solid; }

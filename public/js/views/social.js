@@ -52,7 +52,7 @@ function barraPersonagem(p, meus, chave, mestre, participantes) {
     h('p', { class: 'dica' }, 'Humor real: o que você sente (dá os bônus e ônus). Humor aparente: a máscara que a sala vê.'),
     humorCartao(p, true, mestre)), [['Fechar', () => true]]);
   const icHumor = (id, titulo, classe) => h('button', { type: 'button', class: `humor-icone ${classe}`, title: titulo, 'aria-label': titulo, onclick: abrirHumor },
-    icone(iconeHumor(id)));
+    icone(iconeHumor(id)), h('span', {}, nomeHumor(id)));
   const daManipulacao = listaHabilidades(p, sis).filter(x => /manipula|l[aá]bia|sedu[cç]|intimida|lideran|empatia|etiqueta|interrogat|tortura|impressionar|r\.?\s?mnp/i.test(`${x.nome} ${x.descricao}`));
   const ativas = new Set(p.ativas || []);
   const meu = p.donoId === estado.usuario.id;
@@ -65,7 +65,7 @@ function barraPersonagem(p, meus, chave, mestre, participantes) {
       icHumor(real, `Humor real: ${nomeHumor(real)}${efeitosReal ? ` — ${efeitosReal}` : ''}${p.humorImposto ? ' (imposto: mudar custa Sanidade)' : ''}. Clique para mudar.`, `real ${p.humorImposto ? 'imposto' : ''}`),
       h('span', { class: `mascara ${aparente ? 'com' : ''}`, title: aparente ? `Humor aparente (a máscara que a sala vê): ${nomeHumor(aparente)}` : 'Sem máscara: a sala vê o seu humor real' },
         h('button', { type: 'button', class: 'humor-icone aparente', onclick: abrirHumor, 'aria-label': aparente ? `Humor aparente: ${nomeHumor(aparente)}` : 'Sem máscara' },
-          icone('drama'), aparente ? icone(iconeHumor(aparente)) : null))) : null,
+          icone('drama'), aparente ? [icone(iconeHumor(aparente)), h('span', {}, nomeHumor(aparente))] : null))) : null,
     efeitosIcones(p, { mestre }),
     daManipulacao.length ? h('span', { class: 'vant-manip' }, daManipulacao.map(x => h('span', {
       class: `selo ${ativas.has(x.id) ? 'ok' : ''}`, title: `${x.nome}${ativas.has(x.id) ? ' (ativa)' : ''}: ${x.descricao}`,
@@ -83,10 +83,6 @@ function miniCartao(eu, x, alvo) {
   const afinidade = estado.campanha.relacoes?.[eu.id]?.[x.id]?.tipo || 'Neutro';
   const esp = { Aliado: 'a', Amigável: 'a', Rival: 'c', Inimigo: 'c' }[afinidade] || 'b';
   const visto = x.donoId === estado.usuario.id || estado.campanha.papel === 'mestre' ? (x.humorAparente || x.humor) : x.humor;
-  const ler = async () => {
-    const r = await acao('social.manipular', { autor: eu.id, alvo: x.id, sub: 'manipulacao.empatia', humor: 'ler' });
-    aviso(r.revelado || `${r.autor}: ${r.texto}`);
-  };
   return h('li', { class: `mini-linha ${x.id === alvo ? 'alvo' : ''}` },
     h('button', {
       type: 'button', class: `mini-cartao ${x.id === alvo ? 'alvo' : ''} ${x.semPv || (x.pv && x.pv.atual <= 0) ? 'sem-pv' : ''}`, 'aria-pressed': x.id === alvo,
@@ -95,12 +91,11 @@ function miniCartao(eu, x, alvo) {
       h('span', { class: 'avatar rosto', 'data-pid': x.id }, x.foto ? h('img', { src: x.foto, alt: '' }) : x.nome.slice(0, 1)),
       h('span', { class: 'mini-nome' }, h('strong', {}, x.nome),
         // Sempre o humor interpretado (a máscara, se houver). O que a Empatia revela fica só no aviso e no registro de quem leu.
-        h('small', { title: 'Humor como o seu personagem interpreta (pode ser uma máscara)' }, icone('smile'), ` ${nomeHumor(visto)}`)),
+        h('small', { title: 'Humor como o seu personagem interpreta (pode ser uma máscara)' }, icone(iconeHumor(visto)), ` ${nomeHumor(visto)}`)),
       x.id === alvo ? icone('crosshair') : null),
     h('div', { class: 'mini-acoes' },
       h('button', { type: 'button', class: `afinidade esp-${esp}`, title: `Como ${eu.nome} vê ${x.nome}. Clique para mudar`, 'aria-label': `Afinidade de ${eu.nome} com ${x.nome}: ${afinidade}. Mudar`,
-        onclick: () => escolherAfinidade(eu, x, afinidade) }, h('small', {}, 'Afin.'), afinidade),
-      sis.modulos?.social ? botao('', ler, { class: 'pequeno', icone: 'eye', title: `Ler o humor real de ${x.nome} (Empatia)`, 'aria-label': `Ler o humor real de ${x.nome} com Empatia` }) : null));
+        onclick: () => escolherAfinidade(eu, x, afinidade) }, h('small', {}, 'Afin.'), afinidade)));
 }
 
 function escolherAfinidade(eu, x, atual) {
@@ -117,28 +112,43 @@ function manipulacoes(p, b, mestre) {
   const regras = sis.social.manipulacoes;
   const d = derivados(p, sis);
   const chaveSub = `subDe:${p.id}`;
-  if (!regras[estado.sel[chaveSub]]) estado.sel[chaveSub] = 'manipulacao.labia';
-  const sub = estado.sel[chaveSub];
+  // "Intuir humor" (Empatia, oculto): o personagem não sabe se acertou; o mestre vê e interpreta na mesa.
+  const INTUIR = 'intuir';
+  if (!regras[estado.sel[chaveSub]] && estado.sel[chaveSub] !== INTUIR) estado.sel[chaveSub] = 'manipulacao.labia';
+  const intuir = estado.sel[chaveSub] === INTUIR;
+  const sub = intuir ? 'manipulacao.empatia' : estado.sel[chaveSub];
   const regra = regras[sub];
   const manipular = async humor => {
     if (!b) throw new Error('Escolha o alvo (clique num personagem).');
     const sel = estado.sel.manipular || {};
     const r = await acao('social.manipular', { autor: p.id, alvo: b.id, sub, humor, mod: mestre ? (parseInt(sel.mod, 10) || 0) + (parseInt(sel.situacaoMod, 10) || 0) : 0 });
     // Teste oculto: o jogador não sabe se funcionou (o mestre vê o resultado no registro).
-    aviso(r.revelado || (r.oculto ? `${nomeSub(sub)} em ${b.nome}: feito em segredo. Só o mestre vê o resultado.` : `${r.autor}: ${r.texto}`), r.oculto || r.revelado ? 'ok' : r.sucesso ? 'ok' : 'erro');
+    const nome = humor === 'ler' ? 'Intuir humor' : nomeSub(sub);
+    aviso(r.oculto ? `${nome} em ${b.nome}: feito em segredo. Só o mestre vê o resultado.` : `${r.autor}: ${r.texto}`, r.oculto ? 'ok' : r.sucesso ? 'ok' : 'erro');
   };
+  const d100 = (id) => d.subpericias[id] ?? 0;
   return [
     h('p', { class: 'alvo-manip' }, icone('crosshair'), b ? [' Alvo: ', h('strong', {}, b.nome)] : ' Clique num personagem para escolher o alvo.'),
-    h('div', { class: 'grade-manip' }, Object.keys(regras).map(id => h('button', {
-      type: 'button', class: `manip ${id === sub ? 'ativa' : ''}`, 'aria-pressed': id === sub, title: `Rebote se falhar — ${reboteTexto(regras[id])}`,
-      onclick: () => { estado.sel[chaveSub] = id; render(); },
-    }, h('strong', {}, nomeSub(id)), h('small', {}, `${d.subpericias[id] ?? 0}%`)))),
-    h('div', { class: 'causar' },
-      h('small', {}, `${nomeSub(sub)}: o que causar em ${b?.nome || 'o alvo'}?`),
-      // Sedução: só em quem se atrai pelo gênero de quem seduz.
-      sub === 'manipulacao.seducao' && b && !podeSeduzir(p, b).ok ? h('p', { class: 'alerta' }, icone('heart-crack'), ` ${podeSeduzir(p, b).motivo}`) : null,
-      h('div', { class: 'barra' }, regra.causa.map(id => botao(id === 'ler' ? 'Ler o humor real' : nomeHumor(id), () => manipular(id),
-        { class: 'pequeno primario', icone: 'drama', disabled: !b || (sub === 'manipulacao.seducao' && !podeSeduzir(p, b).ok), title: `${p.nome} usa ${nomeSub(sub)} em ${b?.nome || 'o alvo'}` })))),
+    h('div', { class: 'grade-manip' },
+      Object.keys(regras).map(id => h('button', {
+        type: 'button', class: `manip ${!intuir && id === sub ? 'ativa' : ''}`, 'aria-pressed': !intuir && id === sub, title: `Rebote se falhar — ${reboteTexto(regras[id])}`,
+        onclick: () => { estado.sel[chaveSub] = id; render(); },
+      }, h('strong', {}, nomeSub(id)), h('small', {}, `${d100(id)}%`))),
+      h('button', {
+        type: 'button', class: `manip intuir ${intuir ? 'ativa' : ''}`, 'aria-pressed': intuir, title: 'Intuir o humor real de alguém (Empatia). É oculto: você não sabe se acertou — o mestre interpreta na mesa.',
+        onclick: () => { estado.sel[chaveSub] = INTUIR; render(); },
+      }, h('strong', {}, 'Intuir humor'), h('small', {}, `Empatia ${d100('manipulacao.empatia')}%`))),
+    intuir
+      ? h('div', { class: 'causar' },
+        h('small', {}, `Intuir o humor real de ${b?.nome || 'o alvo'} (Empatia, oculto).`),
+        h('div', { class: 'barra' }, botao(`Intuir o humor de ${b?.nome || 'o alvo'}`, () => manipular('ler'),
+          { class: 'pequeno primario', icone: 'eye', disabled: !b, title: 'O mestre vê o resultado e conta o que o seu personagem percebe' })))
+      : h('div', { class: 'causar' },
+        h('small', {}, `${nomeSub(sub)}: o que causar em ${b?.nome || 'o alvo'}?`),
+        // Sedução: só em quem se atrai pelo gênero de quem seduz.
+        sub === 'manipulacao.seducao' && b && !podeSeduzir(p, b).ok ? h('p', { class: 'alerta' }, icone('heart-crack'), ` ${podeSeduzir(p, b).motivo}`) : null,
+        h('div', { class: 'barra' }, regra.causa.filter(id => id !== 'ler').map(id => botao(nomeHumor(id), () => manipular(id),
+          { class: 'pequeno primario', icone: 'drama', disabled: !b || (sub === 'manipulacao.seducao' && !podeSeduzir(p, b).ok), title: `${p.nome} usa ${nomeSub(sub)} em ${b?.nome || 'o alvo'}` })))),
     h('p', { class: 'dica' }, `Se falhar (rebote): ${reboteTexto(regra)}.`),
     b ? botao('Agredir', async () => {
       const custo = sis.social?.agressao?.dano || '1d6';
