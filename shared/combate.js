@@ -1,6 +1,6 @@
 // Combate e regras sociais automatizadas (Livro MSS). Só valem quando o sistema da campanha liga
 // "modulos.combate" / "modulos.social". Escolhas provisórias estão em conteudo/sistemas/PENDENCIAS.md.
-import { rolarDado, derivados, ipContraDano } from './regras.js';
+import { rolarDado, derivados, ipContraDano, listaHabilidades } from './regras.js';
 
 const d100 = rng => 1 + Math.floor(rng() * 100);
 
@@ -289,6 +289,20 @@ export function resolverManipulacao(autor, alvo, sub, humorDesejado, sistema, { 
     else opcoesRebote = opcoes;
   }
   return { ...teste, mods, sub, humorDesejado, espectro, rebote, opcoesRebote, ler: humorDesejado === 'ler' };
+}
+
+// Humores que o próprio jogador pode escolher: Amigável, Neutro e Indisposto (os "escolha" da Roda do Humor).
+// Habilidades podem liberar mais: Irreverente (Galante, nível 15) escolhe qualquer humor, a qualquer momento.
+const semAc = x => String(x || '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+export function liberdadeDeHumor(p, sistema) {
+  const todos = sistema.social?.humores || [];
+  const irreverente = p?.atributos && listaHabilidades(p, sistema).some(x => semAc(x.nome) === 'irreverente');
+  return {
+    humores: irreverente ? todos : todos.filter(h => h.escolha),
+    // Dentro da Sala Social o humor só muda por manipulação ou empatia natural (salvo habilidade).
+    naSala: !!irreverente,
+    fonte: irreverente ? 'Irreverente' : null,
+  };
 }
 
 // ---------- Empatia natural (regra do aplicativo, autor 20/10) ----------

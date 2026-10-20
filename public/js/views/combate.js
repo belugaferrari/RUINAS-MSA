@@ -4,7 +4,7 @@ import { h, botao, selecao, aviso, icone, titulo, confirmar, pedirTexto } from '
 import { estado, personagemPorId, render } from '../estado.js';
 import { acao } from '../api.js';
 import { derivados } from '/shared/regras.js';
-import { armasDisponiveis, opcoesDefesa, defesaDoAlvo, ipDe, resistenciaManipulacao } from '/shared/combate.js';
+import { armasDisponiveis, opcoesDefesa, defesaDoAlvo, ipDe, resistenciaManipulacao, liberdadeDeHumor } from '/shared/combate.js';
 import { prepararTeste } from './dados.js';
 
 const meuOuMestre = (p, mestre) => mestre || p.donoId === estado.usuario.id;
@@ -177,7 +177,11 @@ export function humorCartao(p, controla, mestre) {
   const real = p.humor || 'neutro';
   if (!controla) return h('div', { class: 'humor' }, h('span', { class: 'selo' }, icone('smile'), nomeHumor(real)));
   const hReal = humores().find(x => x.id === real);
-  const permitidos = humores().filter(x => mestre || x.escolha || x.id === real);
+  // O jogador escolhe só antes de entrar na Sala Social, entre Amigável, Neutro e Indisposto (salvo habilidade).
+  const lib = liberdadeDeHumor(p, estado.sistema);
+  const naSala = (estado.campanha.salas?.social?.participantes || []).includes(p.id);
+  const travado = !mestre && naSala && !lib.naSala;
+  const permitidos = humores().filter(x => mestre || lib.humores.some(y => y.id === x.id) || x.id === real);
   const mudarReal = async v => {
     if (!mestre && p.humorImposto && v !== real && !(await confirmar(`${nomeHumor(real)} foi imposto. Agir contra ele (dissonância) custa ${estado.sistema.social?.dissonancia?.dano || '1d6'} de Sanidade. Mudar mesmo assim?`))) return render();
     acao('humor.definir', { id: p.id, humor: v }).catch(e => aviso(e.message, 'erro'));
@@ -187,8 +191,12 @@ export function humorCartao(p, controla, mestre) {
     rebote.length ? h('div', { class: 'rebote' }, h('strong', {}, icone('circle-alert'), ' Rebote: escolha o humor de ', p.nome, ' '),
       rebote.map(id => botao(nomeHumor(id), () => acao('humor.definir', { id: p.id, humor: id }), { class: 'pequeno primario', title: `${p.nome} fica ${nomeHumor(id)}` })),
       botao(`Não reagir (continuar ${nomeHumor(real)})`, () => acao('humor.recusarRebote', { id: p.id }), { class: 'pequeno', title: 'O rebote não é obrigatório' })) : null,
-    h('label', { class: 'linha' }, icone('smile'), h('small', {}, 'Humor real'),
-      selecao(permitidos.map(x => ({ valor: x.id, rotulo: x.nome })), real, mudarReal, { 'aria-label': `Humor real de ${p.nome}` })),
+    travado
+      ? h('p', { class: 'linha' }, icone(iconeHumor(real)), h('strong', {}, ` ${nomeHumor(real)}`),
+        h('small', { class: 'dica' }, ' — dentro da sala o humor só muda por manipulação ou pela empatia natural. Escolha o humor antes de entrar.'))
+      : h('label', { class: 'linha' }, icone('smile'), h('small', {}, 'Humor real'),
+        selecao(permitidos.map(x => ({ valor: x.id, rotulo: x.nome })), real, mudarReal, { 'aria-label': `Humor real de ${p.nome}` })),
+    lib.fonte && !mestre ? h('small', { class: 'dica' }, `${lib.fonte}: você pode escolher qualquer humor, a qualquer momento.`) : null,
     h('label', { class: 'linha' }, icone('drama'), h('small', {}, 'Humor aparente'),
       selecao([{ valor: '', rotulo: 'sem máscara' }, ...humores().filter(x => x.id !== real).map(x => ({ valor: x.id, rotulo: x.nome }))], p.humorAparente || '',
         v => acao('humor.definir', { id: p.id, humor: v || null, camada: 'aparente' }).catch(e => aviso(e.message, 'erro')), { 'aria-label': `Máscara (humor aparente) de ${p.nome}` })),
@@ -205,7 +213,7 @@ export function rodaDoHumor() {
   return h('details', { class: 'bloco', open: !!estado.sel.rodaAberta, ontoggle: e => { estado.sel.rodaAberta = e.target.open; } },
     h('summary', {}, icone('drama'), 'Roda do Humor'),
     h('ul', { class: 'dica lista-humores' },
-      h('li', {}, 'Cada um escolhe Neutro, Amigável, Indisposto ou Apático. Os demais humores vêm de manipulação ou do mestre.'),
+      h('li', {}, 'Cada um escolhe o próprio humor ANTES de entrar na sala, entre Amigável, Neutro e Indisposto (habilidades como Irreverente liberam outros). Lá dentro o humor só muda por manipulação, pela empatia natural ou pelo mestre.'),
       h('li', {}, h('strong', {}, 'Máscara: '), 'o humor real (oculto) dá os efeitos; a máscara é o que a sala vê. Empatia → "ler o humor real" revela a máscara só para quem testou.'),
       h('li', {}, h('strong', {}, 'Testes ocultos: '), 'toda manipulação acontece em silêncio — só o mestre vê quem tentou, a intenção e o resultado. O alvo só sente o humor mudar.'),
       h('li', {}, h('strong', {}, 'Rebote: '), 'falhar na manipulação pode jogar o alvo num humor reativo, conforme o relacionamento (A Aliado/Amigável · B Desconhecido · C Rival/Inimigo). Quando há duas opções, o mestre escolhe (ou deixa sem reação).'),

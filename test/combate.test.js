@@ -209,14 +209,21 @@ test('ações de combate e humor no servidor (MSS) e bloqueio no MSA', () => {
   executar(c, 'combate.encerrar', {}, ctxM);
   assert.equal(c.salas.batalha.combate, null);
 
-  // Humor: o jogador só escolhe os humores livres. Apático custa só Humanidade (temporária).
+  // Humor: o jogador só escolhe Amigável, Neutro ou Indisposto (Apático e os outros vêm de manipulação ou do mestre).
   assert.throws(() => executar(c, 'humor.definir', { id: ids[0], humor: 'corajoso' }, { user: ana, mestre: false }), /só escolhe/);
+  assert.throws(() => executar(c, 'humor.definir', { id: ids[0], humor: 'apatico' }, { user: ana, mestre: false }), /só escolhe/);
   const san = lia.sanidade.atual;
+  // Apático (dado pelo mestre): resistir custa só Humanidade (temporária) — o caminho continua para quem tiver habilidade.
+  executar(c, 'humor.definir', { id: ids[0], humor: 'apatico' }, ctxM);
   const hum0 = lia.humanidade.atual;
-  executar(c, 'humor.definir', { id: ids[0], humor: 'apatico' }, { user: ana, mestre: false });
-  assert.equal(lia.sanidade.atual, san);
-  assert.ok(lia.humanidade.atual < hum0);
-  assert.equal(lia.humanidade.temporario, hum0 - lia.humanidade.atual);
+  // Dentro da Sala Social o jogador não troca o próprio humor.
+  executar(c, 'sala.adicionar', { sala: 'social', id: ids[0] }, ctxM);
+  assert.throws(() => executar(c, 'humor.definir', { id: ids[0], humor: 'amigavel' }, { user: ana, mestre: false }), /Dentro da Sala Social/);
+  executar(c, 'sala.remover', { sala: 'social', id: ids[0] }, ctxM);
+  executar(c, 'humor.definir', { id: ids[0], humor: 'amigavel' }, { user: ana, mestre: false });
+  assert.equal(lia.humor, 'amigavel');
+  assert.ok(lia.humanidade.atual <= hum0);
+  executar(c, 'humor.definir', { id: ids[0], humor: 'apatico' }, ctxM);
   // Máscara: a sala vê o humor aparente; o real fica com o dono e o mestre.
   executar(c, 'humor.definir', { id: ids[0], humor: 'corajoso', camada: 'aparente' }, { user: ana, mestre: false });
   const outro = { id: 'x' };

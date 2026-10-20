@@ -1,10 +1,11 @@
+import { liberdadeDeHumor } from '/shared/combate.js';
 import { h, botao, selecao, aviso, confirmar, vazio, formatarData, icone, titulo } from '../ui.js';
 import { efeitosIcones, marcadoresLivres } from './efeitos.js';
 import { estado, personagemPorId, meusPersonagens, render } from '../estado.js';
 import { acao } from '../api.js';
 import { LIMITE_SALA } from '/shared/regras.js';
 import { linhaRolagem } from './ficha.js';
-import { combateView, controleTurnos, humorCartao, rodaDoHumor, ajustesMestre, xpDaSala, alvoMarcado, marcarAlvo } from './combate.js';
+import { combateView, controleTurnos, nomeHumor, humorCartao, rodaDoHumor, ajustesMestre, xpDaSala, alvoMarcado, marcarAlvo } from './combate.js';
 import { painelBatalha, ordemLateral } from './batalha.js';
 import { painelSocial } from './social.js';
 import { prepararTeste } from './dados.js';
@@ -52,8 +53,18 @@ function adicionar(nome, s, mestre) {
   // Jogador: um botão "Entrar" (com o nome, se tiver mais de um personagem). Só o mestre escolhe numa lista.
   if (!mestre) {
     const entrar = p => acao('sala.adicionar', { sala: nome, id: p.id }).catch(e => aviso(e.message, 'erro'));
-    return h('div', { class: 'barra' }, candidatos.map(p => botao(candidatos.length > 1 || meusPersonagens().length > 1 ? `Entrar com ${p.nome}` : 'Entrar',
-      () => entrar(p), { class: 'primario', icone: 'log-in', title: `${p.nome} entra em ${TITULOS[nome]}` })));
+    // Sala Social: o humor é escolhido antes de entrar (lá dentro só muda por manipulação ou empatia natural).
+    const humorAntes = p => nome === 'social' && estado.sistema.modulos?.social && p.atributos
+      ? selecao(liberdadeDeHumor(p, estado.sistema).humores.map(x => ({ valor: x.id, rotulo: `Entrar ${x.nome.toLowerCase()}` })).concat(
+        liberdadeDeHumor(p, estado.sistema).humores.some(x => x.id === (p.humor || 'neutro')) ? [] : [{ valor: p.humor, rotulo: `Entrar ${nomeHumor(p.humor).toLowerCase()} (atual)` }]),
+      p.humor || 'neutro', async v => {
+        if (p.humorImposto && v !== p.humor && !(await confirmar(`${nomeHumor(p.humor)} foi imposto. Agir contra ele (dissonância) custa ${estado.sistema.social?.dissonancia?.dano || '1d6'} de Sanidade. Mudar mesmo assim?`))) return render();
+        acao('humor.definir', { id: p.id, humor: v }).catch(e => aviso(e.message, 'erro'));
+      },
+      { 'aria-label': `Humor de ${p.nome} ao entrar`, title: 'O humor só pode ser escolhido antes de entrar na sala' })
+      : null;
+    return h('div', { class: 'barra' }, candidatos.map(p => [humorAntes(p), botao(candidatos.length > 1 || meusPersonagens().length > 1 ? `Entrar com ${p.nome}` : 'Entrar',
+      () => entrar(p), { class: 'primario', icone: 'log-in', title: `${p.nome} entra em ${TITULOS[nome]}` })]));
   }
   const grupos = Object.fromEntries((c.grupos || []).map(g => [g.id, g.nome]));
   const opcoes = [{ valor: '', rotulo: mestre ? '+ colocar na sala…' : '+ entrar com…' },

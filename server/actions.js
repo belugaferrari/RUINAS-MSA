@@ -1,6 +1,6 @@
 import { db, save, uid } from './db.js';
 import { sistema, idSistema } from './sistema.js';
-import { resolverAtaque, aplicarAtaque, armasDisponiveis, opcoesDefesa, sobrevida, rolarIniciativa, resolverManipulacao, modHumorTestes, humorDe, espectroDe, humorAparente, empatiaNatural } from '../shared/combate.js';
+import { resolverAtaque, aplicarAtaque, armasDisponiveis, opcoesDefesa, sobrevida, rolarIniciativa, resolverManipulacao, modHumorTestes, humorDe, espectroDe, humorAparente, empatiaNatural, liberdadeDeHumor } from '../shared/combate.js';
 import { sincronizarEfeitos, passarTurnoEfeitos, efeitosAoAgir, cargaNoTurno, descansar } from '../shared/efeitos.js';
 import { fichasDeTeste, relatorioFicha } from '../shared/fichasTeste.js';
 import { passarNecessidades, comer, beber, dormir, rolarCaos, climaDoDia, descreverRelogio, fimDoCombate } from '../shared/tempo.js';
@@ -1201,8 +1201,12 @@ export const acoes = {
     // Rebote: o alvo escolhe entre as opções da matriz (sem custo; o humor fica imposto).
     // Com a manipulação oculta, só o mestre resolve o rebote.
     const doRebote = ctx.mestre && (p.humorOpcoes || []).includes(h.id);
-    if (!ctx.mestre && !h.escolha && !doRebote) {
-      throw erro('Você só escolhe Neutro, Amigável, Indisposto ou Apático; os outros humores vêm de manipulação ou do mestre.');
+    // O jogador escolhe o humor só ANTES de entrar na Sala Social, e só entre Amigável, Neutro e Indisposto
+    // (habilidades como Irreverente liberam outros e a troca dentro da sala).
+    if (!ctx.mestre && !doRebote) {
+      const lib = liberdadeDeHumor(p, sis);
+      if (!lib.humores.some(x => x.id === h.id)) throw erro('Você só escolhe Amigável, Neutro ou Indisposto; os outros humores vêm de manipulação, da empatia natural ou do mestre.');
+      if (c.salas.social.participantes.includes(p.id) && !lib.naSala) throw erro('Dentro da Sala Social o humor só muda por manipulação ou pela empatia natural. Escolha o humor antes de entrar.');
     }
     if ((p.humor || 'neutro') === h.id && !doRebote) return;
     let texto = h.nome;

@@ -765,8 +765,7 @@
     "nome": "Apático",
     "efeitos": "−5% nos testes; não pode manipular.",
     "testes": -5,
-    "semManipular": true,
-    "escolha": true
+    "semManipular": true
    },
    {
     "id": "atraido",
