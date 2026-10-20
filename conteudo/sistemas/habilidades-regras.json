@@ -1,0 +1,61 @@
+{
+  "_aviso": "Regras próprias de habilidades e vantagens (valem no MSA e no MSS). A chave é o nome sem acento, em minúsculas. modo: sempre (aplicada sozinha) | ligar (botão liga/desliga) | ativar (botão com custo, usos ou duração). efeitos: mesmo formato do lápis do mestre. contra: tipos de criatura do oponente (tiposCriatura no base.json). Decisões do autor na planilha de 20/10.",
+  "comunicacao selvagem": {
+    "modo": "ligar",
+    "efeitos": "+10% em Trato de Animais",
+    "texto": "ligue ao interagir com animais, bestas ou monstros selvagens; animal que você acalmou pode sofrer ataque surpresa"
+  },
+  "implantes de qualidade": {
+    "modo": "sempre",
+    "efeitos": "+1 IP geral",
+    "texto": "implantes +1 de durabilidade e reparo com vantagem (entra com o controle de implantes)"
+  },
+  "alma de ciborgue": {
+    "modo": "sempre",
+    "rmnp": 20,
+    "imune": ["Dor"],
+    "humanidadeMax": -10,
+    "texto": "dano vorpal / resistências e vulnerabilidades dependem dos implantes (entra com o controle de implantes)"
+  },
+  "juggernaut": {
+    "modo": "sempre",
+    "especial": "juggernaut",
+    "usos": { "max": 1, "recarga": "descanso-longo" },
+    "texto": "1ª vez por descanso longo que o PV ficaria abaixo de 0 no combate: fica com 1 PV (automático)"
+  },
+  "mente cibernetica": {
+    "modo": "sempre",
+    "contra": ["drone", "automato"],
+    "vantagem": ["iniciativa", "ataque"],
+    "defesa": 15
+  },
+  "zona de abate": {
+    "modo": "ligar",
+    "vantagem": ["briga.deslocar"],
+    "texto": "vale a até 6 m de uma armadilha sua; manobras Deslocar/Derrubar em criaturas até 2 tamanhos maiores, sem soltar a arma"
+  },
+  "sensores sismicos endodermicos": {
+    "modo": "ligar",
+    "vantagem": ["sentidos.tato", "sentidos.audicao"],
+    "texto": "ligue para detectar criaturas invisíveis ou escondidas a até 9 m que tocam o solo (elas não têm Ataque Surpresa contra você)"
+  },
+  "membros adaptados": {
+    "modo": "ligar",
+    "texto": "Natação 9 m ou Escalada 9 m (ligar custa uma ação principal)"
+  },
+  "receptor neural": {
+    "modo": "sempre",
+    "subpericias": [{ "pericia": "sentidos", "id": "sentidos.ondas", "nome": "Ondas", "descricao": "Detecta ondas de equipamentos a até 9 m e flutuações de rádio (sem ouvir o conteúdo). Só para quem tem Receptor Neural." }],
+    "texto": "libera a subperícia Sentidos › Ondas"
+  },
+  "ataque afiado": {
+    "modo": "sempre",
+    "melhoria": { "id": "afiada", "nome": "Afiada", "armas": "arma-branca", "horas": 2 },
+    "texto": "afie a arma branca (2 h de treino): +1 passo na progressão de dano a cada vez que recebeu esta habilidade; só vale para você"
+  },
+  "aperfeicoamento do soldado": {
+    "modo": "sempre",
+    "melhoria": { "id": "aperfeicoada", "nome": "Aperfeiçoada", "armas": "armas-de-fogo", "horas": 2 },
+    "texto": "aperfeiçoe a arma de fogo (2 h de treino): +1 passo na progressão de dano a cada vez que recebeu esta habilidade; só vale para você"
+  }
+}

@@ -33,7 +33,8 @@ function mesclar(base, extra) {
 
 function arquivos(id) {
   return [path.join(SISTEMAS, 'base.json'), path.join(SISTEMAS, `${id}.json`),
-    ...['pericias', 'profissoes', 'classes', 'vantagens'].map(n => path.join(SISTEMAS, id, `${n}.json`))];
+    ...['pericias', 'profissoes', 'classes', 'vantagens'].map(n => path.join(SISTEMAS, id, `${n}.json`)),
+    path.join(SISTEMAS, 'habilidades-regras.json')];
 }
 
 export const idSistema = id => (IDS_SISTEMAS.includes(id) ? id : SISTEMA_PADRAO);
@@ -46,11 +47,21 @@ export function sistema(id = SISTEMA_PADRAO) {
   const assinatura = [...lista, ...(arqItens ? [arqItens] : [])].map(a => `${a}:${fs.statSync(a).mtimeMs}`).join('|');
   const atual = cache.get(id);
   if (atual && atual.assinatura === assinatura) return atual.dados;
-  const [base, proprio, pericias, profissoes, classes, vantagens] = lista.map(ler);
+  const [base, proprio, pericias, profissoes, classes, vantagens, habRegras] = lista.map(ler);
   const v = vantagens.dados;
+  const { _aviso, ...habilidadesRegras } = habRegras;
+  // Subperícias que só existem para quem tem certa habilidade (ex.: Sentidos › Ondas, do Receptor Neural).
+  const listaPericias = pericias.dados.map(p => ({ ...p, subpericias: [...p.subpericias] }));
+  for (const [chave, r] of Object.entries(habilidadesRegras)) {
+    for (const sp of r.subpericias || []) {
+      const per = listaPericias.find(p => p.id === sp.pericia);
+      if (per && !per.subpericias.some(x => x.id === sp.id)) per.subpericias.push({ id: sp.id, nome: sp.nome, descricao: sp.descricao, exige: chave });
+    }
+  }
   const dados = {
     ...mesclar(base, proprio),
-    pericias: pericias.dados,
+    habilidadesRegras,
+    pericias: listaPericias,
     profissoes: profissoes.dados,
     classes: classes.dados,
     vantagens: v.gerais,

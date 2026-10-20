@@ -1,6 +1,6 @@
 import { h, icone, passador, seloRevisao } from '../ui.js';
 import { estado, render } from '../estado.js';
-import { custoPericiaBase } from '/shared/regras.js';
+import { custoPericiaBase, subpericiasDe } from '/shared/regras.js';
 
 // Painel das 20 perícias base com suas subperícias.
 // opts: { d (derivados), editar: { base(id,v), sub(id,v), minBase, minSub, maxRestante, limite }, rolar(ref, nome) }
@@ -48,7 +48,7 @@ function grupo(ficha, p, d, editar, rolar, chave, forcarAberto, soTreinadas) {
       rolar ? h('button', { type: 'button', class: 'so-icone pequeno', title: `Testar ${p.nome}`, 'aria-label': `Testar ${p.nome}`, onclick: () => rolar(`per:${p.id}`, p.nome) }, icone('dices')) : null),
     aberto || (soTreinadas && gastoSubs > 0) ? h('div', { class: 'subpericias' },
       aberto ? h('p', { class: 'dica' }, p.descricao) : null,
-      p.subpericias.filter(s => aberto || (ficha.subpericias?.[s.id] ?? 0) > 0).map(s => {
+      subpericiasDe(p, ficha, estado.sistema).filter(s => aberto || (ficha.subpericias?.[s.id] ?? 0) > 0).map(s => {
         const pts = ficha.subpericias?.[s.id] ?? 0;
         const prof = d.bonusProfissao[s.id];
         return h('div', { class: `subpericia ${pts ? 'treinada' : ''}`, title: s.descricao },

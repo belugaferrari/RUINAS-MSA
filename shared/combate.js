@@ -1,6 +1,6 @@
 // Combate e regras sociais automatizadas (Livro MSS). Só valem quando o sistema da campanha liga
 // "modulos.combate" / "modulos.social". Escolhas provisórias estão em conteudo/sistemas/PENDENCIAS.md.
-import { rolarDado, derivados, ipContraDano, listaHabilidades } from './regras.js';
+import { rolarDado, derivados, ipContraDano, listaHabilidades, vantagemPorHabilidade, tipoCriatura, subirPassos, temHabilidade, regraDaHabilidade } from './regras.js';
 
 const d100 = rng => 1 + Math.floor(rng() * 100);
 
@@ -39,11 +39,18 @@ export const modHumorTestes = (p, sistema) => (sistema.modulos?.social ? humorDe
 const tem = (p, nome) => (p?.marcadores || []).some(m => String(m).toLowerCase().startsWith(nome.toLowerCase()));
 
 // Armas que o personagem pode usar agora: as equipadas, mais o ataque desarmado.
+// Melhorias da arma (Afiada 2, Aperfeiçoada 1…): sobem passos na progressão de dano. As feitas por uma habilidade
+// (Ataque afiado) só valem para quem afiou ("dono"); as do próprio item valem para todos.
+export function passosDeMelhoria(item, p) {
+  return (item.melhorias || []).filter(m => !m.dono || m.dono === p?.id).reduce((s, m) => s + (m.passos ?? m.nivel ?? 0), 0);
+}
+export const danoDaArma = (item, p) => subirPassos(item.dano, passosDeMelhoria(item, p));
+
 export function armasDisponiveis(p, sistema) {
   const cfg = sistema.combate;
   // Arma quebrada (durabilidade 0) não ataca até ser reparada.
   const armas = (p.itens || []).filter(i => i.equipado && i.tipo === 'arma' && i.dano && !(i.durabilidade != null && (i.durabilidadeAtual ?? i.durabilidade) <= 0)).map(i => ({
-    uid: i.uid, nome: i.nome, dano: i.dano, pericia: i.pericia || null, tipoDano: i.tipoDano || 'Físico',
+    uid: i.uid, nome: i.nome, dano: danoDaArma(i, p), pericia: i.pericia || null, tipoDano: i.tipoDano || 'Físico',
     efeitoDano: i.efeitoDano ?? cfg.chancePorTipo?.[i.tipoDano] ?? cfg.efeitoPadrao, penetracao: i.penetracao || 0, alcance: i.alcance || (i.pericia?.startsWith('armas-de-fogo') ? 'distancia' : 'corpo'),
     // Cadência: quantos disparos (balas e danos) por ataque — da arma ou da subperícia (ex.: Rifle de Assalto 2).
     cadencia: Math.max(1, i.cadencia ?? cfg.cadencia?.[i.pericia] ?? 1),
@@ -80,7 +87,7 @@ export function opcoesDefesa(alvo, arma, sistema, { area = false } = {}) {
 // Contra tiro (a distância, fora de área) a dificuldade é 50 + 5 × nível do alvo. Cobertura parcial +30 só contra ataques a distância.
 // Defesa surpresa (alvo pego de surpresa, não escolhe defesa): só a base da Esquiva (50) contra ataque físico,
 // e só nível × 5 contra ataque a distância.
-export function defesaDoAlvo(alvo, arma, sistema, { escolha = 'nenhuma', cobertura = false, area = false, surpresa = false } = {}) {
+export function defesaDoAlvo(alvo, arma, sistema, { escolha = 'nenhuma', cobertura = false, area = false, surpresa = false, atacante = null } = {}) {
   const cfg = sistema.combate;
   const opcoes = opcoesDefesa(alvo, arma, sistema, { area });
   const esc = surpresa ? { id: 'nenhuma', nome: 'Surpresa' } : opcoes.find(o => o.id === escolha);
@@ -96,6 +103,10 @@ export function defesaDoAlvo(alvo, arma, sistema, { escolha = 'nenhuma', cobertu
   if (arma.alcance === 'distancia' && (cobertura || caidoDistancia)) partes.push({ nome: 'cobertura parcial', valor: cfg.coberturaParcial });
   const humor = sistema.modulos?.social ? humorDe(alvo, sistema) : null;
   if (humor?.defesa) partes.push({ nome: humor.nome, valor: humor.defesa });
+  // Habilidades do alvo que somam defesa (algumas só contra certos tipos de criatura, ex.: Mente cibernética contra drones).
+  const tipoAtacante = atacante ? tipoCriatura(atacante) : null;
+  const extra = derivados(alvo, sistema).habilidades.defesas.filter(d => !d.contra || (tipoAtacante && d.contra.includes(tipoAtacante))).reduce((t, d) => t + d.valor, 0);
+  if (extra) partes.push({ nome: 'habilidades', valor: extra });
   return { id: esc.id, nome: esc.nome, nota: esc.nota || null, total: partes.reduce((s, x) => s + x.valor, 0), partes };
 }
 
@@ -145,13 +156,14 @@ export function resolverAtaque(atacante, alvo, sistema, op = {}, defesaId = 'nen
   if (arma.alcance === 'corpo' && tem(alvo, 'Caído')) motivosV.push('alvo caído');
   if (tem(alvo, 'Aturdido') || tem(alvo, 'Imobilizado')) motivosV.push('alvo aturdido/imobilizado');
   if (hA?.vantagemAtaque) motivosV.push(hA.nome);
+  if (vantagemPorHabilidade(atacante, sistema, ['ataque', pericia], [alvo])) motivosV.push('habilidade');
   if (op.desvantagem) motivosD.push('mestre');
   if (tem(atacante, 'Caído')) motivosD.push('atacante caído');
   if (tem(atacante, 'Aturdido')) motivosD.push('atacante aturdido');
   if (hA?.desvantagemAtaque) motivosD.push(hA.nome);
   const modo = modoRolagem(motivosV.length > 0, motivosD.length > 0);
 
-  const defesa = defesaDoAlvo(alvo, arma, sistema, { escolha: defesaId, cobertura: !!op.cobertura, area: !!op.area, surpresa: !!op.surpresa });
+  const defesa = defesaDoAlvo(alvo, arma, sistema, { escolha: defesaId, cobertura: !!op.cobertura, area: !!op.area, surpresa: !!op.surpresa, atacante });
   const teste = testeContra(acao, defesa.total, sistema, { modo, rng });
   const r = {
     arma: arma.nome, pericia, acao, mods, defesa, ...teste, motivosVantagem: motivosV, motivosDesvantagem: motivosD,
@@ -199,15 +211,37 @@ export function resolverAtaque(atacante, alvo, sistema, op = {}, defesaId = 'nen
   return r;
 }
 
+// Imunidades por habilidade (Alma de ciborgue: Dor).
+export const imuneA = (p, sistema, efeito) => !!sistema && derivados(p, sistema).habilidades.imune.some(x => String(x).toLowerCase() === String(efeito).toLowerCase());
+
+// Usos de habilidade com recarga (p.usos[chave] = quantos já usou). O descanso longo zera os de "descanso-longo".
+export function usosRestantes(p, sistema, nome) {
+  const regra = regraDaHabilidade(nome, sistema);
+  if (!regra?.usos) return Infinity;
+  return Math.max(0, regra.usos.max - (p.usos?.[nome] || 0));
+}
+export function gastarUso(p, nome) {
+  (p.usos ||= {})[nome] = (p.usos[nome] || 0) + 1;
+}
+
 // Aplica o resultado no alvo: PV, desmaio, morte e marcador do efeito de dano.
-export function aplicarAtaque(atacante, alvo, r) {
+export function aplicarAtaque(atacante, alvo, r, sistema = null) {
   const marcar = m => { if (!(alvo.marcadores ||= []).includes(m)) alvo.marcadores.push(m); };
   if (r.perdaSacrificio) atacante.pv.atual -= r.perdaSacrificio;
   if (!r.sucesso && !r.dano) return [];
   const notas = [];
   const antes = alvo.pv.atual;
   alvo.pv.atual -= r.dano;
-  if (r.efeito) { marcar(r.efeito); notas.push(r.efeito); }
+  // Juggernaut: a 1ª vez (por descanso longo) que o PV ficaria abaixo de 0 no combate, fica com 1 PV.
+  if (sistema && alvo.pv.atual < 0 && antes >= 0 && temHabilidade(alvo, sistema, 'Juggernaut') && usosRestantes(alvo, sistema, 'juggernaut') > 0) {
+    alvo.pv.atual = 1;
+    gastarUso(alvo, 'juggernaut');
+    notas.push('Juggernaut: ficou com 1 PV');
+    if (r.efeito && !imuneA(alvo, sistema, r.efeito)) { marcar(r.efeito); notas.push(r.efeito); }
+    return notas;
+  }
+  if (r.efeito && imuneA(alvo, sistema, r.efeito)) notas.push(`imune a ${r.efeito}`);
+  else if (r.efeito) { marcar(r.efeito); notas.push(r.efeito); }
   if (antes < 0 && !r.naoLetal) { marcar('Morto'); notas.push('morto (dano com PV negativo)'); }
   else if (alvo.pv.atual <= 0 && antes > 0) { marcar('Desmaiado'); notas.push(r.naoLetal ? 'desmaiado (não letal)' : 'desmaiado'); }
   return notas;
@@ -226,16 +260,18 @@ export function sobrevida(p, sistema) {
 }
 
 // Iniciativa = AGI + 1d10, com vantagem pelo humor (Corajoso, Amedrontado, Enojado) ou desvantagem (Sereno).
-export function rolarIniciativa(p, sistema, rng = Math.random) {
+// Habilidades também dão vantagem (Mente cibernética, se houver drone ou autômato entre os oponentes).
+export function rolarIniciativa(p, sistema, rng = Math.random, oponentes = null) {
   const agi = derivados(p, sistema).iniciativa;
   const h = sistema.modulos?.social ? humorDe(p, sistema) : null;
+  const vant = !!h?.vantagemIniciativa || vantagemPorHabilidade(p, sistema, 'iniciativa', oponentes);
+  const desv = !!h?.desvantagemIniciativa;
   const a = 1 + Math.floor(rng() * 10);
   const dados = [a];
-  // Vantagem fica com o maior dos dois d10; desvantagem (Sereno), com o menor.
-  const dois = h?.vantagemIniciativa || h?.desvantagemIniciativa;
-  if (dois) dados.push(1 + Math.floor(rng() * 10));
-  const d10 = h?.desvantagemIniciativa && !h?.vantagemIniciativa ? Math.min(...dados) : Math.max(...dados);
-  return { total: agi + d10, agi, dados, vantagem: !!h?.vantagemIniciativa, desvantagem: !!h?.desvantagemIniciativa };
+  // Vantagem fica com o maior dos dois d10; desvantagem (Sereno), com o menor. As duas juntas se anulam.
+  if (vant !== desv) dados.push(1 + Math.floor(rng() * 10));
+  const d10 = desv && !vant ? Math.min(...dados) : Math.max(...dados);
+  return { total: agi + d10, agi, dados, vantagem: vant && !desv, desvantagem: desv && !vant };
 }
 
 // ---------- Social ----------
@@ -246,7 +282,7 @@ export function resistenciaManipulacao(p, sistema) {
   const d = derivados(p, sistema);
   const base = d.pericias[sistema.social?.resistenciaBase || 'manipulacao'] ?? 0;
   const h = humorDe(p, sistema);
-  return base + (sistema.teste.passiva?.soma ?? 50) + (h?.rmnp || 0) + (parseInt(p.rmnpExtra, 10) || 0);
+  return base + (sistema.teste.passiva?.soma ?? 50) + (h?.rmnp || 0) + (parseInt(p.rmnpExtra, 10) || 0) + (d.habilidades?.rmnp || 0);
 }
 
 // Espectro do relacionamento (como o alvo vê quem manipula): A Aliado/Amigável, B Desconhecido, C Rival/Inimigo.

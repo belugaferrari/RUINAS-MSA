@@ -2,7 +2,7 @@ import { h, campo, botao, selecao, aviso, confirmar, pedirTexto, formatarData, v
 import { efeitosIcones } from './efeitos.js';
 import { estado, render } from '../estado.js';
 import { acao, enviarArquivo } from '../api.js';
-import { GENEROS, ATRACOES, atracaoDe, durabilidadeDe, derivados, slotsOcupados, ganhosDeClasse, pontosGastos, pontosPericiaTotal, vantagensDisponiveis, acharVantagem, xpParaSubir } from '/shared/regras.js';
+import { GENEROS, ATRACOES, atracaoDe, durabilidadeDe, derivados, slotsOcupados, ganhosDeClasse, pontosGastos, pontosPericiaTotal, vantagensDisponiveis, acharVantagem, xpParaSubir, subpericiasDe } from '/shared/regras.js';
 import { painelPericias } from './pericias.js';
 import { bonecoView } from './boneco.js';
 import { escolherAvatar } from './avatares.js';
@@ -438,7 +438,7 @@ function painelTeste(p, d) {
   const opcoesAcao = [{ valor: '', rotulo: 'Escolha o que testar…' },
     ...sis.atributos.map(a => ({ valor: `atr:${a.sigla}`, rotulo: `${a.nome}% (${d.percentual[a.sigla]})` })),
     ...sis.pericias.flatMap(x => [{ valor: `per:${x.id}`, rotulo: `${x.nome} (${d.pericias[x.id]})` },
-      ...x.subpericias.map(s => ({ valor: `sub:${s.id}`, rotulo: `  ${x.nome} › ${s.nome} (${d.subpericias[s.id]})` }))])];
+      ...subpericiasDe(x, p, sis).map(s => ({ valor: `sub:${s.id}`, rotulo: `  ${x.nome} › ${s.nome} (${d.subpericias[s.id]})` }))])];
   const ultimo = (estado.campanha.log || []).filter(e => e.autor === p.nome).at(-1);
   return h('div', {},
     h('p', { class: 'dica' }, sis.teste.descricao),
@@ -476,7 +476,7 @@ export function linhaRolagem(e) {
       h('span', { class: 'total' }, e.total),
       e.nd != null ? h('span', { class: `selo ${e.sucesso ? 'ok' : 'perigo'}` }, icone(e.sucesso ? 'check' : 'x'), `${res} (ND ${e.nd})`) : null,
       e.critico ? h('span', { class: 'selo cheio' }, `crítico de ${e.critico}`) : null,
-      h('small', {}, ` (d100 ${e.dp} + ação ${e.acao}${e.metade ? ' [metade]' : ''}${e.mod ? ` ${e.mod > 0 ? '+' : ''}${e.mod} já incluso` : ''} · DS ${e.ds})`),
+      h('small', {}, ` (d100 ${e.dados?.length > 1 ? `[${e.dados.join(', ')}] → ${e.dp}` : e.dp} + ação ${e.acao}${e.metade ? ' [metade]' : ''}${e.mod ? ` ${e.mod > 0 ? '+' : ''}${e.mod} já incluso` : ''} · DS ${e.ds})`),
       e.secreta ? h('span', { class: 'selo' }, 'secreta') : null);
   }
   const partes = [`${e.dado}: [${e.dados.join(', ')}]${e.mod ? (e.mod > 0 ? ` +${e.mod}` : ` ${e.mod}`) : ''}`, ...(e.componentes || []).map(c => `${c.nome} ${c.valor}`)];

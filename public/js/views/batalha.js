@@ -1,11 +1,11 @@
 // Campo de Combate (esboço do autor): no alto, o painel do personagem que você controla, em três quadros —
 // Personagem (PV, SAN, HUM, mãos, defesas, IP, efeitos) · Habilidades e vantagens (ativar/desativar) · Ataques.
 // Embaixo ficam o turno, os participantes (o campo) e o registro.
-import { h, botao, selecao, aviso, icone, titulo, vazio, pedirTexto } from '../ui.js';
+import { h, botao, selecao, aviso, icone, titulo, vazio, pedirTexto, confirmar } from '../ui.js';
 import { estado, render, personagemPorId } from '../estado.js';
 import { acao } from '../api.js';
-import { derivados, listaHabilidades, efeitosHabilidade, GRUPOS_IP } from '/shared/regras.js';
-import { armasDisponiveis, ipDe, opcoesDefesa, defesaDoAlvo } from '/shared/combate.js';
+import { derivados, listaHabilidades, efeitosHabilidade, modoHabilidade, GRUPOS_IP } from '/shared/regras.js';
+import { armasDisponiveis, ipDe, opcoesDefesa, defesaDoAlvo, danoDaArma } from '/shared/combate.js';
 import { trilhaCompacta, escolherCondicao, cargaView } from './ficha.js';
 import { painelSlot, naMao, maoHabil } from './boneco.js';
 import { efeitosIcones } from './efeitos.js';
@@ -179,11 +179,20 @@ function quadroHabilidades(p, mestre) {
     await acao('personagem.atualizar', { id: p.id, patch: { ajustesHabilidades: ajustes } });
   };
   const lapis = x => mestre ? botao('', () => ajustar(x), { class: 'pequeno', icone: 'pencil', title: `Ajustar o que ${x.nome} faz no app` }) : null;
-  const cabeca = x => h('details', {}, h('summary', {}, h('strong', {}, x.nome), h('small', {}, ` ${x.tipo}`)), h('p', { class: 'bloco-texto' }, x.descricao));
-  // Dois grupos: as que mudam números no app (com botão de ligar) e as que são só regra para lembrar (sem botão).
-  const comNumero = [], lembretes = [];
-  for (const x of lista) (efeitosHabilidade(p, sis, x).notas.length ? comNumero : lembretes).push(x);
+  const cabeca = x => h('details', {}, h('summary', {}, h('strong', {}, x.nome), x.vezes > 1 ? h('small', { class: 'selo' }, `×${x.vezes}`) : null, h('small', {}, ` ${x.tipo}`)), h('p', { class: 'bloco-texto' }, x.descricao));
+  // Grupos: automáticas (o app aplica sozinho), as de ligar no combate (botão) e as que são só regra para lembrar.
+  const automaticas = [], comNumero = [], lembretes = [];
+  for (const x of lista) {
+    const modo = modoHabilidade(p, sis, x);
+    (modo === 'sempre' ? automaticas : modo === 'lembrete' ? lembretes : comNumero).push(x);
+  }
   return [
+    automaticas.length ? h('div', { class: 'hab-grupo automaticas' },
+      h('h4', {}, icone('badge-check'), ' Automáticas (o app aplica sozinho)'),
+      h('ul', { class: 'lista-habilidades' }, automaticas.map(x => h('li', { class: 'ativa' },
+        h('div', { class: 'hab-texto' }, cabeca(x),
+          h('small', { class: 'hab-efeito' }, icone('zap'), ` ${efeitosHabilidade(p, sis, x).notas.join(' · ') || x.regra?.texto || ''}`)),
+        mestre ? h('div', { class: 'hab-botoes' }, lapis(x)) : null)))) : null,
     comNumero.length ? h('div', { class: 'hab-grupo' },
       h('h4', {}, icone('zap'), ' Ligar no combate'),
       h('ul', { class: 'lista-habilidades' }, comNumero.map(x => {
@@ -191,7 +200,7 @@ function quadroHabilidades(p, mestre) {
         const ef = efeitosHabilidade(p, sis, x);
         return h('li', { class: on ? 'ativa' : '' },
           h('div', { class: 'hab-texto' }, cabeca(x),
-            h('small', { class: 'hab-efeito' }, icone('zap'), ` ${ef.notas.join(' · ')}`, p.ajustesHabilidades?.[x.id] ? h('span', { class: 'selo' }, 'ajustado') : null)),
+            h('small', { class: 'hab-efeito' }, icone('zap'), ` ${ef.notas.join(' · ') || x.regra?.texto || ''}`, p.ajustesHabilidades?.[x.id] ? h('span', { class: 'selo' }, 'ajustado') : null)),
           h('div', { class: 'hab-botoes' },
             botao(on ? 'Ligada' : 'Desligada', () => alternar(x.id), { class: `pequeno ${on ? 'primario' : ''}`, 'aria-pressed': on, title: `${on ? 'Desligar' : 'Ligar'} ${x.nome}` }),
             lapis(x)));
@@ -235,11 +244,22 @@ function quadroAtaques(p, participantes, mestre) {
   };
   const dado = (rotulo, fn, props = {}) => botao('', fn, { class: 'pequeno dado-linha', icone: 'dices', title: rotulo, 'aria-label': rotulo, ...props });
   // Arma equipada: ataca (MSS) ou prepara o teste da perícia dela (MSA).
+  // Habilidades que melhoram a arma (Ataque afiado, Aperfeiçoamento do soldado): botão "Afiar" na arma que serve.
+  const melhoradoras = listaHabilidades(p, sis).filter(x => x.regra?.melhoria);
   const linhaArma = it => {
     const ref = `sub:${it.pericia || 'briga.ataque-desarmado'}`;
     const semBala = it.capacidade && (it.carregada || 0) <= 0;
+    const minhas = (it.melhorias || []).filter(m => !m.dono || m.dono === p.id);
+    const podeMelhorar = melhoradoras.filter(x => String(it.pericia || '').startsWith(x.regra.melhoria.armas)
+      && !minhas.some(m => m.id === x.regra.melhoria.id && m.nivel >= (x.vezes || 1)));
     return h('li', { class: 'ataque-linha arma' },
-      h('span', { class: 'ataque-nome' }, it.nome, h('small', {}, ` ${it.dano || ''}${it.pericia ? ` · ${pct(it.pericia)}` : ''}`)),
+      h('span', { class: 'ataque-nome' }, it.nome, h('small', {}, ` ${danoDaArma(it, p) || ''}${it.pericia ? ` · ${pct(it.pericia)}` : ''}`),
+        minhas.map(m => h('span', { class: 'selo ok', title: `+${m.nivel} passo(s) na progressão de dano` }, `${m.nome} ${m.nivel}`))),
+      podeMelhorar.map(x => botao(x.regra.melhoria.id === 'afiada' ? 'Afiar' : 'Aperfeiçoar', async () => {
+        if (!(await confirmar(`${p.nome} passa ${x.regra.melhoria.horas || 2} h treinando com ${it.nome}. Ela fica ${x.regra.melhoria.nome} ${x.vezes || 1} (só para ${p.nome}).`))) return;
+        const r = await acao('item.melhorar', { id: p.id, uid: it.uid, habilidade: x.nome });
+        aviso(`${it.nome}: ${r.nome} ${r.nivel}`);
+      }, { class: 'pequeno', icone: 'hammer', title: `${x.nome}: ${x.regra.texto}` })),
       it.capacidade ? h('span', { class: `selo ${semBala ? 'perigo' : ''}` }, `${it.carregada || 0}/${it.capacidade}`) : null,
       it.capacidade ? botao('', () => acao('item.recarregar', { id: p.id, uid: it.uid }), { class: 'pequeno', icone: 'refresh-cw', title: `Recarregar ${it.nome}`, disabled: (it.carregada || 0) >= it.capacidade }) : null,
       auto && automaticas.some(a => a.uid === it.uid)

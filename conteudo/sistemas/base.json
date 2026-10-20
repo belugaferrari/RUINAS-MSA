@@ -250,6 +250,17 @@
   "Fama e riquezas",
   "Vingança"
  ],
+ "_avisoTiposCriatura": "Tipo de criatura (provisório, a confirmar com o autor): usado por habilidades que valem só contra certos oponentes (ex.: Mente cibernética contra drones e autômatos).",
+ "tiposCriatura": [
+  { "id": "humanoide", "nome": "Humanoide" },
+  { "id": "animal", "nome": "Animal" },
+  { "id": "besta", "nome": "Besta" },
+  { "id": "monstro", "nome": "Monstro" },
+  { "id": "mutante", "nome": "Mutante" },
+  { "id": "drone", "nome": "Drone" },
+  { "id": "automato", "nome": "Autômato" },
+  { "id": "maquina", "nome": "Máquina" }
+ ],
  "tiposDano": [
   "Corte",
   "Perfuração",

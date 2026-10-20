@@ -1,7 +1,7 @@
 import { h, botao, selecao, aviso, confirmar, icone, titulo, vazio, formatarData, seloRevisao } from '../ui.js';
 import { estado, render, personagemPorId } from '../estado.js';
 import { acao } from '../api.js';
-import { derivados } from '/shared/regras.js';
+import { derivados, subpericiasDe } from '/shared/regras.js';
 
 // Confrontos fora do combate: Ação × Ação passiva (livro) ou disputa em que os dois rolam (provisório).
 const MODOS = {
@@ -29,7 +29,7 @@ function opcoesAcao(p) {
   return [{ valor: '', rotulo: 'Ação…' },
     ...sis.atributos.map(a => ({ valor: `atr:${a.sigla}`, rotulo: `${a.nome}% (${d.percentual[a.sigla]})` })),
     ...sis.pericias.flatMap(x => [{ valor: `per:${x.id}`, rotulo: `${x.nome} (${d.pericias[x.id]})` },
-      ...x.subpericias.map(s => ({ valor: `sub:${s.id}`, rotulo: `· ${x.nome} › ${s.nome} (${d.subpericias[s.id]})` }))])];
+      ...subpericiasDe(x, p, sis).map(s => ({ valor: `sub:${s.id}`, rotulo: `· ${x.nome} › ${s.nome} (${d.subpericias[s.id]})` }))])];
 }
 
 function formLado(rotulo, l) {

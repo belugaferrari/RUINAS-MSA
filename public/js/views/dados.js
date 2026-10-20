@@ -2,7 +2,7 @@ import { abrirDescanso } from './descanso.js';
 import { h, botao, selecao, aviso, icone, titulo, formatarData } from '../ui.js';
 import { estado, render, personagemPorId, meusPersonagens } from '../estado.js';
 import { acao } from '../api.js';
-import { derivados, ndPorNivel } from '/shared/regras.js';
+import { derivados, ndPorNivel, subpericiasDe } from '/shared/regras.js';
 import { linhaRolagem } from './ficha.js';
 
 // Painel de dados da lateral direita, sempre à mão durante a sessão.
@@ -107,7 +107,7 @@ function secaoTeste(p, d, mestre) {
   const opcoesAcao = d ? [{ valor: '', rotulo: 'O que testar…' },
     ...sis.atributos.map(a => ({ valor: `atr:${a.sigla}`, rotulo: `${a.nome}% (${d.percentual[a.sigla]})` })),
     ...sis.pericias.flatMap(x => [{ valor: `per:${x.id}`, rotulo: `${x.nome} (${d.pericias[x.id]})` },
-      ...x.subpericias.map(sub => ({ valor: `sub:${sub.id}`, rotulo: `· ${x.nome} › ${sub.nome} (${d.subpericias[sub.id]})` }))])] : null;
+      ...subpericiasDe(x, p, sis).map(sub => ({ valor: `sub:${sub.id}`, rotulo: `· ${x.nome} › ${sub.nome} (${d.subpericias[sub.id]})` }))])] : null;
 
   const nd = () => {
     if (s.dif === 'sem') return null;
@@ -125,7 +125,7 @@ function secaoTeste(p, d, mestre) {
     const dif = sis.teste.dificuldades.find(x => x.nome === s.dif);
     if (opcoesAcao && !s.acao) throw new Error('Escolha o que testar.');
     const mod = s.mod + (s.intuicao ? (sis.teste.intuicao?.mod ?? -20) : 0);
-    await enviar({ acaoRef: opcoesAcao ? s.acao : null, acao: opcoesAcao ? null : (s.acaoLivre ?? 40), rotulo: opcoesAcao ? null : 'Teste', mod, nd: nd(), metade: !!dif?.metade }, textoResultado);
+    await enviar({ acaoRef: opcoesAcao ? s.acao : null, acao: opcoesAcao ? null : (s.acaoLivre ?? 40), rotulo: opcoesAcao ? null : 'Teste', mod, nd: nd(), metade: !!dif?.metade, modo: s.modo || null }, textoResultado);
   }, { class: 'primario jogar', icone: 'dices' });
   // Ordem do esboço do autor: dificuldade (F N D MD), Jogar, perícia e outros modificadores.
   return h('div', { class: 'form' },
@@ -150,7 +150,10 @@ function secaoTeste(p, d, mestre) {
       !p && s.dif.startsWith('nivel:') ? numero('Nível', 'nivelNd', { min: 1, max: 20 }) : null,
       h('div', { class: 'barra' },
         numero('Mod.', 'mod', { step: 5 }),
-        h('label', { class: 'linha', title: sis.teste.intuicao?.descricao }, h('input', { type: 'checkbox', checked: s.intuicao, onchange: e => { s.intuicao = e.target.checked; } }), `Intuição (${sis.teste.intuicao?.mod ?? -20}%)`))),
+        h('label', { class: 'linha', title: sis.teste.intuicao?.descricao }, h('input', { type: 'checkbox', checked: s.intuicao, onchange: e => { s.intuicao = e.target.checked; } }), `Intuição (${sis.teste.intuicao?.mod ?? -20}%)`)),
+      // Vantagem: rola 2d100 e fica com o maior; desvantagem, com o menor. Habilidade ligada que dá vantagem nesse teste entra sozinha.
+      selecao([{ valor: '', rotulo: 'Rolagem normal' }, { valor: 'vantagem', rotulo: 'Com vantagem (2d100, o maior)' }, { valor: 'desvantagem', rotulo: 'Com desvantagem (2d100, o menor)' }],
+        s.modo || '', v => { s.modo = v || null; }, { 'aria-label': 'Vantagem ou desvantagem' })),
     h('p', { class: 'dica' }, sis.teste.descricao),
     ultimo());
 }
@@ -246,5 +249,5 @@ export async function prepararTeste(personagemId, acaoRef) {
   const sis = estado.sistema;
   const dif = s.dif === 'sem' ? null : sis.teste.dificuldades.find(x => x.nome === s.dif) || sis.teste.dificuldades.find(x => x.nome === 'Normal');
   const nd = dif ? dif.nd : null;
-  await enviar({ acaoRef, mod: s.mod || 0, nd, metade: !!dif?.metade }, textoResultado);
+  await enviar({ acaoRef, mod: s.mod || 0, nd, metade: !!dif?.metade, modo: s.modo || null }, textoResultado);
 }

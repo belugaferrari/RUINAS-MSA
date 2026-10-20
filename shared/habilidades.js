@@ -7,7 +7,11 @@ const semAcento = s => String(s || '').normalize('NFKD').replace(/[̀-ͯ]/g, '')
 const SIGLAS = ['FOR', 'CONS', 'AGI', 'DES', 'INT', 'PER', 'CAR', 'WILL'];
 const COMBATE = ['briga', 'arma-branca', 'armas-de-fogo'];
 
-const vazio = () => ({ atributos: {}, testes: 0, pericias: {}, subpericias: {}, pv: 0, ip: { geral: 0, tipos: {} }, danoFixo: 0, danoDados: [], notas: [] });
+// Além dos números do texto, as regras próprias de cada habilidade (habilidades-regras.json) trazem:
+// R.MNP, imunidades, vantagens (em testes, ataque, iniciativa), defesa extra (às vezes só contra certos tipos de criatura)
+// e mudança na Humanidade máxima.
+const vazio = () => ({ atributos: {}, testes: 0, pericias: {}, subpericias: {}, pv: 0, ip: { geral: 0, tipos: {} }, danoFixo: 0, danoDados: [], notas: [],
+  rmnp: 0, imune: [], vantagens: [], defesas: [], humanidadeMax: 0 });
 
 // Nomes de perícias e subperícias para achar no texto (os mais longos primeiro, para "Armas de Fogo" ganhar de "Armas").
 function nomesDoSistema(sistema) {
@@ -104,6 +108,45 @@ export function efeitosDoTexto(texto, sistema, { tipoIp = () => null } = {}) {
     r.danoDados.push(expr);
     r.notas.push(`+${expr} de dano`);
   }
+  // Formato do mestre (lápis) para o que não é número de perícia: "R.MNP +20", "imune: Dor", "vantagem: Briga › Deslocar, iniciativa".
+  for (const m of t.matchAll(/\bR\.?\s?MNP\s*([+-]\s*\d+)/gi)) {
+    const v = parseInt(m[1].replace(/\s/g, ''), 10);
+    r.rmnp += v;
+    r.notas.push(`R.MNP ${fmt(v)}`);
+  }
+  for (const m of t.matchAll(/\bimune\s*:\s*([^;]+)/gi)) {
+    const nomesImune = m[1].split(/,|\se\s/).map(x => x.trim()).filter(Boolean);
+    r.imune.push(...nomesImune);
+    r.notas.push(`imune a ${nomesImune.join(', ')}`);
+  }
+  for (const m of t.matchAll(/\bvantagem\s*:\s*([^;]+)/gi)) {
+    for (const parte of m[1].split(',').map(x => x.trim()).filter(Boolean)) {
+      const ps = semAcento(parte).replace(/[›>\[\]]/g, ' ').replace(/\s+/g, ' ').trim();
+      const achado = nomesDoSistema(sistema).find(x => ps.endsWith(x.nome));
+      const alvo = /iniciativa/.test(ps) ? 'iniciativa' : /ataque/.test(ps) && !achado ? 'ataque' : /todos/.test(ps) ? 'testes' : achado?.id;
+      if (!alvo) continue;
+      r.vantagens.push({ alvo, contra: null });
+      r.notas.push(`vantagem em ${achado?.rotulo || parte}`);
+    }
+  }
+  return r;
+}
+
+// Junta os campos das regras próprias (habilidades-regras.json) ao que veio do texto.
+export function efeitosDaRegra(regra, base, sistema, rotulos = {}) {
+  const r = base;
+  const contra = regra.contra?.length ? regra.contra : null;
+  const nomeContra = contra ? ` contra ${contra.map(id => rotulos.tipos?.[id] || id).join(' e ')}` : '';
+  if (regra.rmnp) { r.rmnp += regra.rmnp; r.notas.push(`R.MNP ${regra.rmnp > 0 ? '+' : ''}${regra.rmnp}`); }
+  if (regra.imune?.length) { r.imune.push(...regra.imune); r.notas.push(`imune a ${regra.imune.join(', ')}`); }
+  if (regra.humanidadeMax) { r.humanidadeMax += regra.humanidadeMax; r.notas.push(`Humanidade máxima ${regra.humanidadeMax}`); }
+  if (regra.vantagem?.length) {
+    for (const alvo of regra.vantagem) r.vantagens.push({ alvo, contra });
+    const nomes = regra.vantagem.map(a => ({ testes: 'todos os testes', ataque: 'ataques', iniciativa: 'iniciativa' }[a] || rotulos.sub?.(a) || a));
+    r.notas.push(`vantagem em ${nomes.join(', ')}${nomeContra}`);
+  }
+  if (regra.defesa) { r.defesas.push({ valor: regra.defesa, contra }); r.notas.push(`defesa +${regra.defesa}%${nomeContra}`); }
+  if (regra.texto) r.notas.push(regra.texto);
   return r;
 }
 
@@ -116,6 +159,8 @@ export function somarEfeitos(lista) {
     for (const [k, v] of Object.entries(x.ip.tipos)) r.ip.tipos[k] = (r.ip.tipos[k] || 0) + v;
     r.testes += x.testes; r.pv += x.pv; r.ip.geral += x.ip.geral; r.danoFixo += x.danoFixo;
     r.danoDados.push(...x.danoDados); r.notas.push(...x.notas);
+    r.rmnp += x.rmnp || 0; r.humanidadeMax += x.humanidadeMax || 0;
+    r.imune.push(...(x.imune || [])); r.vantagens.push(...(x.vantagens || [])); r.defesas.push(...(x.defesas || []));
   }
   return r;
 }

@@ -13,6 +13,7 @@ import { confrontoView } from './confronto.js';
 import { criacaoView, iniciarCriacao } from './criacao.js';
 import { versaoApp } from './versao.js';
 import { mapaView } from './mapa.js';
+import { tipoCriatura } from '/shared/regras.js';
 import { relogioTopo } from './tempo.js';
 import { CATEGORIAS_IMAGEM, categoriaDaImagem } from '/shared/imagens.js';
 
@@ -174,7 +175,10 @@ function moverGrupo(p) {
   return h('div', { class: 'barra' }, h('span', {}, `Grupo de ${p.nome}:`),
     selecao(grupos.map(g => ({ valor: g.id, rotulo: g.nome })), p.grupoId, v => acao('personagem.atualizar', { id: p.id, patch: { grupoId: v } })),
     h('label', { class: 'linha' }, 'Dificuldade (encontros)',
-      campo(`${p.id}:dificuldade`, p.dificuldade ?? '', v => acao('personagem.atualizar', { id: p.id, patch: { dificuldade: v } }), { tipo: 'number', class: 'num' })));
+      campo(`${p.id}:dificuldade`, p.dificuldade ?? '', v => acao('personagem.atualizar', { id: p.id, patch: { dificuldade: v } }), { tipo: 'number', class: 'num' })),
+    // Tipo de criatura: algumas habilidades valem só contra certos tipos (ex.: Mente cibernética contra drones e autômatos).
+    h('label', { class: 'linha' }, 'Tipo de criatura',
+      selecao((estado.sistema.tiposCriatura || []).map(t => ({ valor: t.id, rotulo: t.nome })), tipoCriatura(p), v => acao('personagem.atualizar', { id: p.id, patch: { tipoCriatura: v } }), { 'aria-label': `Tipo de criatura de ${p.nome}` })));
 }
 
 // Imagens divididas em Mapas, Cenas, Locais, Personagens, NPCs, Monstros, Itens, Documentos e pistas e Outros.

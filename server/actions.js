@@ -1,10 +1,10 @@
 import { db, save, uid } from './db.js';
 import { sistema, idSistema } from './sistema.js';
-import { resolverAtaque, aplicarAtaque, armasDisponiveis, opcoesDefesa, sobrevida, rolarIniciativa, resolverManipulacao, modHumorTestes, humorDe, espectroDe, humorAparente, empatiaNatural, liberdadeDeHumor } from '../shared/combate.js';
+import { resolverAtaque, aplicarAtaque, armasDisponiveis, opcoesDefesa, sobrevida, rolarIniciativa, resolverManipulacao, modHumorTestes, humorDe, espectroDe, humorAparente, empatiaNatural, liberdadeDeHumor, modoRolagem } from '../shared/combate.js';
 import { sincronizarEfeitos, passarTurnoEfeitos, efeitosAoAgir, cargaNoTurno, descansar } from '../shared/efeitos.js';
 import { fichasDeTeste, relatorioFicha } from '../shared/fichasTeste.js';
 import { passarNecessidades, comer, beber, dormir, rolarCaos, climaDoDia, descreverRelogio, fimDoCombate } from '../shared/tempo.js';
-import { podeSeduzir, itemAberto, itemVisivel, xpParaSubir, novaFicha, podeEquipar, rolarDado, rolarAtributosCriacao, testeDMil, gerarEncontro, derivados, problemasFicha, LIMITE_SALA, desgastarItem, repararItem, listaHabilidades } from '../shared/regras.js';
+import { podeSeduzir, itemAberto, itemVisivel, xpParaSubir, novaFicha, podeEquipar, rolarDado, rolarAtributosCriacao, testeDMil, gerarEncontro, derivados, problemasFicha, LIMITE_SALA, desgastarItem, repararItem, listaHabilidades, vantagemPorHabilidade, temHabilidade, regraDaHabilidade } from '../shared/regras.js';
 
 const GRUPO_ENCONTROS = 'encontros';
 const MAX_LOG = 100;
@@ -327,11 +327,14 @@ function ordenarIniciativa(cb) {
   cb.ordem.sort((a, b) => b.ini - a.ini || b.agi - a.agi);
 }
 
+// Quem está no campo além do personagem (para habilidades que dependem do tipo de criatura dos oponentes).
+const oponentesDe = (c, s, p) => s.participantes.filter(id => id !== p.id).map(id => c.personagens.find(x => x.id === id)).filter(Boolean);
+
 function entrarNoCombate(c, s, p) {
   if (s.combate.ordem.some(o => o.id === p.id)) return;
   const sis = sistema(c.sistema);
   const atual = s.combate.ordem[s.combate.vez]?.id;
-  const r = rolarIniciativa(p, sis);
+  const r = rolarIniciativa(p, sis, Math.random, oponentesDe(c, s, p));
   s.combate.ordem.push({ id: p.id, ini: r.total, agi: r.agi });
   p.emCombate = true;
   ordenarIniciativa(s.combate);
@@ -379,7 +382,7 @@ function iniciarCombate(c) {
   const s = c.salas.batalha;
   const vivos = s.participantes.map(id => c.personagens.find(p => p.id === id)).filter(Boolean);
   const ordem = vivos.map(p => {
-    const r = rolarIniciativa(p, sis);
+    const r = rolarIniciativa(p, sis, Math.random, vivos.filter(x => x.id !== p.id));
     return { id: p.id, ini: r.total, agi: r.agi, dados: r.dados };
   });
   s.combate = { rodada: 1, turno: 1, vez: 0, ordem };
@@ -415,7 +418,7 @@ function resolverPendente(c, s, pend, defesa, sis) {
     throw erro(e.message);
   }
   s.pendentes = (s.pendentes || []).filter(x => x.id !== pend.id);
-  const notas = aplicarAtaque(a, b, r);
+  const notas = aplicarAtaque(a, b, r, sis);
   // Ataque que falhou: a arma usada pode perder durabilidade (DS maior que a durabilidade atual).
   if (!r.sucesso) {
     const usada = (a.itens || []).find(i => i.uid === pend.opcoes?.armaUid);
@@ -589,6 +592,11 @@ export const acoes = {
       const delta = derivados(p, sis).habilidades.pv - derivados(antes, sis).habilidades.pv;
       if (delta && p.pv) p.pv = { ...p.pv, max: p.pv.max + delta, atual: p.pv.atual + delta };
     }
+    // Habilidade que muda a Humanidade máxima (Alma de ciborgue −10) chegou ou saiu (nível, classe): ajusta o máximo e o atual.
+    if (p.humanidade && !('humanidade' in (patch || {}))) {
+      const dh = derivados(p, sis).habilidades.humanidadeMax - derivados(antes, sis).habilidades.humanidadeMax;
+      if (dh) p.humanidade = { ...p.humanidade, max: Math.max(1, (p.humanidade.max ?? 100) + dh), atual: Math.min(p.humanidade.atual ?? 100, Math.max(1, (p.humanidade.max ?? 100) + dh)) };
+    }
     // Explicitamente editado (ex.: "PV máx." pelo mestre) não é recalculado.
     const explicitos = new Set(Object.keys(patch || {}));
     if (CAMPOS_FORMULA.some(k => explicitos.has(k)) && !['pv', 'sanidade', 'humanidade'].some(k => explicitos.has(k))) recalcularMaximos(p, sis);
@@ -687,6 +695,23 @@ export const acoes = {
   },
 
   // Recarrega a arma com a munição do mesmo tipo que o personagem carrega (as caixas vazias somem).
+  // Ataque afiado / Aperfeiçoamento do soldado: o personagem passa 2 h treinando com a arma e ela ganha a melhoria
+  // (Afiada N / Aperfeiçoada N, N = quantas vezes recebeu a habilidade). Só vale para quem fez ("dono").
+  'item.melhorar'(c, { id, uid: itemUid, habilidade }, ctx) {
+    const p = personagem(c, id);
+    exigirDonoOuMestre(ctx, p);
+    const sis = sistema(c.sistema);
+    const hab = temHabilidade(p, sis, habilidade || '');
+    const m = hab?.regra?.melhoria;
+    if (!m) throw erro(`${p.nome} não tem essa habilidade.`);
+    const arma = (p.itens || []).find(i => i.uid === itemUid);
+    if (!arma || arma.tipo !== 'arma' || !String(arma.pericia || '').startsWith(m.armas)) throw erro(`${hab.nome} vale só para ${m.armas === 'arma-branca' ? 'armas brancas' : 'armas de fogo'}.`);
+    const nivel = hab.vezes || 1;
+    arma.melhorias = [...(arma.melhorias || []).filter(x => !(x.id === m.id && x.dono === p.id)), { id: m.id, nome: m.nome, nivel, dono: p.id }];
+    registrar(c.log, { autor: p.nome, rotulo: `${hab.nome}: ${arma.nome}`, texto: `${m.nome} ${nivel} (+${nivel} passo${nivel > 1 ? 's' : ''} no dano) após ${m.horas || 2} h de treino` });
+    return { nome: m.nome, nivel };
+  },
+
   'item.recarregar'(c, { id, uid: itemUid }, ctx) {
     const p = personagem(c, id);
     exigirDonoOuMestre(ctx, p);
@@ -977,7 +1002,7 @@ export const acoes = {
   // Rolagens acontecem no servidor para todos verem o mesmo resultado.
   // Rolagens acontecem no servidor para todos verem o mesmo resultado.
   // Teste D-MIL: { acaoRef | acao, mod, nd, metade }. Iniciativa: { tipo: 'iniciativa' }. Livre: { dado: '2d6' }.
-  'rolar'(c, { sala: nome, id, rotulo, tipo, acaoRef, acao, mod, nd, metade, dado, secreta }, ctx) {
+  'rolar'(c, { sala: nome, id, rotulo, tipo, acaoRef, acao, mod, nd, metade, dado, secreta, modo }, ctx) {
     const sis = sistema(c.sistema);
     let autor = ctx.mestre ? 'Mestre' : ctx.user.name;
     let p = null;
@@ -1004,8 +1029,13 @@ export const acoes = {
       // No sistema com módulo social, o humor do personagem entra no modificador (ex.: Apático −5%).
       const modificador = Math.max(-100, Math.min(100, parseInt(mod, 10) || 0)) + (p ? modHumorTestes(p, sis) : 0);
       const ndNum = nd === '' || nd == null ? null : Math.max(0, parseInt(nd, 10) || 0);
-      const r = testeDMil(a.valor + modificador, ndNum, sis, { metade: !!metade });
-      entrada = { ...base, tipo: 'dmil', rotulo: String(rotulo || a.nome).slice(0, 80), acaoNome: a.nome, mod: modificador, metade: !!metade, ...r };
+      // Vantagem/desvantagem: escolhida no rolador, ou automática por habilidade ligada (ex.: Zona de Abate em Briga › Deslocar).
+      const alvosRef = !acaoRef ? [] : acaoRef.startsWith('sub:') ? [acaoRef.slice(4), acaoRef.slice(4).split('.')[0]] : acaoRef.startsWith('per:') ? [acaoRef.slice(4)] : [];
+      const porHabilidade = p && alvosRef.length && vantagemPorHabilidade(p, sis, alvosRef);
+      const pedido = ['vantagem', 'desvantagem'].includes(modo) ? modo : null;
+      const modoFinal = modoRolagem(pedido === 'vantagem' || porHabilidade, pedido === 'desvantagem');
+      const r = testeDMil(a.valor + modificador, ndNum, sis, { metade: !!metade, modo: modoFinal });
+      entrada = { ...base, tipo: 'dmil', rotulo: `${String(rotulo || a.nome).slice(0, 80)}${modoFinal ? ` (${modoFinal}${porHabilidade && modoFinal === 'vantagem' ? ' por habilidade' : ''})` : ''}`, acaoNome: a.nome, mod: modificador, metade: !!metade, ...r };
     }
     if (nome && c.salas[nome]) registrar(c.salas[nome].log, entrada);
     else registrar(c.log, entrada);
@@ -1264,6 +1294,10 @@ export const acoes = {
       // Descanso curto é a refeição (meia ração); o longo, se não foi interrompido, tira o Sono.
       if (tipo === 'curto') notas.push(comer(p, sis));
       if (tipo === 'longo' && !interrompido) { const dormiu = dormir(p, sis); if (dormiu) notas.push(dormiu); else (p.necessidades ||= { comida: 0, agua: 0, sono: 0 }).sono = 0; }
+      // Descanso longo recarrega os usos de habilidades "por descanso longo" (Juggernaut, Carga de Emergência…).
+      if (tipo === 'longo' && !interrompido && p.usos) {
+        for (const k of Object.keys(p.usos)) if (sis.habilidadesRegras?.[k]?.usos?.recarga === 'descanso-longo') delete p.usos[k];
+      }
       sincronizarEfeitos(p, sis);
       notas.push(...lembretesDescanso(p, sis, tipo));
       const usos = p.descansosDoDia?.dia === dia ? p.descansosDoDia : { dia, curto: 0, longo: 0 };

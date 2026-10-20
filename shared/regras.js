@@ -1,4 +1,4 @@
-import { efeitosDoTexto, somarEfeitos } from './habilidades.js';
+import { efeitosDoTexto, somarEfeitos, efeitosDaRegra } from './habilidades.js';
 // Regras compartilhadas entre servidor e navegador.
 // Base: Livro do Jogador MSS (rev. 14/10/2026). O MSA pode mudar regras — as fórmulas ficam todas aqui.
 
@@ -37,15 +37,18 @@ export function rolarDado(expr, rng = Math.random) {
 }
 
 // Teste D-MIL: AÇÃO% + 1d100 ≥ ND, com 1d10 de suporte (DS).
-export function testeDMil(acao, nd, sistema, { metade = false, rng = Math.random } = {}) {
+// modo: 'vantagem' (rola 2d100 e fica com o maior) ou 'desvantagem' (o menor).
+export function testeDMil(acao, nd, sistema, { metade = false, rng = Math.random, modo = null } = {}) {
   const t = sistema.teste;
-  const dp = 1 + Math.floor(rng() * 100);
+  const dados = [1 + Math.floor(rng() * 100)];
+  if (modo === 'vantagem' || modo === 'desvantagem') dados.push(1 + Math.floor(rng() * 100));
+  const dp = modo === 'desvantagem' ? Math.min(...dados) : Math.max(...dados);
   const ds = 1 + Math.floor(rng() * 10);
   const valor = metade ? Math.floor(acao / 2) : acao;
   const total = valor + dp;
   const critico = dp >= t.criticoAcerto ? 'acerto' : dp <= t.criticoErro ? 'erro' : null;
   const sucesso = nd == null ? null : critico === 'acerto' ? true : critico === 'erro' ? false : total >= nd;
-  return { dp, ds, acao: valor, total, nd, sucesso, critico };
+  return { dp, ds, acao: valor, total, nd, sucesso, critico, ...(dados.length > 1 ? { dados, modo } : {}) };
 }
 
 const regras = s => s.regras || {};
@@ -232,24 +235,85 @@ export function condicoesAtivas(ficha, sistema) {
 }
 
 // Habilidades que o personagem pode ativar no combate: vantagens, ganhos da classe e a habilidade única da raça.
+// Ganho que se repete na tabela da classe (Ataque afiado nos níveis 6, 10, 14…) aparece uma vez, com "vezes".
+// "regra" é a regra própria da habilidade (conteudo/sistemas/habilidades-regras.json), quando existe.
 export function listaHabilidades(ficha, sistema) {
+  const ganhos = new Map();
+  for (const g of ganhosDeClasse(ficha, sistema).filter(g => g.descricao)) {
+    const atual = ganhos.get(g.nome);
+    if (atual) atual.vezes++;
+    else ganhos.set(g.nome, { id: `c:${g.nome}`, nome: g.nome, descricao: g.descricao, tipo: `Nível ${g.nivel}`, vezes: 1 });
+  }
   return [
-    ...(ficha.vantagens || []).map(id => acharVantagem(id, sistema)).filter(Boolean).map(v => ({ id: `v:${v.id}`, nome: v.nome, descricao: v.descricao, tipo: v.origem === 'Geral' ? 'Vantagem' : `Classe · ${v.origem}` })),
-    ...ganhosDeClasse(ficha, sistema).filter(g => g.descricao).map(g => ({ id: `c:${g.nome}`, nome: g.nome, descricao: g.descricao, tipo: `Nível ${g.nivel}` })),
-    sistema.raca?.habilidadeUnica ? { id: 'raca', nome: sistema.raca.habilidadeUnica.nome, descricao: sistema.raca.habilidadeUnica.descricao, tipo: sistema.raca.nome } : null,
-  ].filter(Boolean);
+    ...(ficha.vantagens || []).map(id => acharVantagem(id, sistema)).filter(Boolean).map(v => ({ id: `v:${v.id}`, nome: v.nome, descricao: v.descricao, tipo: v.origem === 'Geral' ? 'Vantagem' : `Classe · ${v.origem}`, vezes: 1 })),
+    ...ganhos.values(),
+    sistema.raca?.habilidadeUnica ? { id: 'raca', nome: sistema.raca.habilidadeUnica.nome, descricao: sistema.raca.habilidadeUnica.descricao, tipo: sistema.raca.nome, vezes: 1 } : null,
+  ].filter(Boolean).map(x => ({ ...x, regra: regraDaHabilidade(x.nome, sistema) }));
 }
 
-// O que uma habilidade faz no app: o ajuste do mestre (se houver) ou o que o app leu do texto do livro.
+// Regra própria da habilidade, pelo nome (sem acento, maiúsculas nem o que vem entre parênteses).
+export const chaveHabilidade = nome => semAcento(nome).replace(/\s*[([].*$/, '').replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
+export function regraDaHabilidade(nome, sistema) {
+  return sistema.habilidadesRegras?.[chaveHabilidade(nome)] || null;
+}
+export const temHabilidade = (ficha, sistema, nome) => listaHabilidades(ficha, sistema).find(x => chaveHabilidade(x.nome) === chaveHabilidade(nome)) || null;
+
+// Subperícias que o personagem vê: as que exigem habilidade (Sentidos › Ondas) só para quem a tem.
+export const subpericiasDe = (pericia, ficha, sistema) => pericia.subpericias.filter(s => !s.exige || listaHabilidades(ficha || {}, sistema).some(x => chaveHabilidade(x.nome) === s.exige));
+
+// Tipo de criatura (para habilidades que valem só contra drones, animais…): o da ficha, ou humanoide / monstro.
+export const tipoCriatura = p => p?.tipoCriatura || (p?.criatura ? 'monstro' : 'humanoide');
+const rotulosEfeitos = sistema => ({
+  tipos: Object.fromEntries((sistema.tiposCriatura || []).map(t => [t.id, t.nome])),
+  sub: id => (sistema.pericias || []).flatMap(p => p.subpericias.map(s => [s.id, `${p.nome} › ${s.nome}`])).find(x => x[0] === id)?.[1],
+});
+
+// O que uma habilidade faz no app: o ajuste do mestre (se houver); senão a regra própria; senão o que o app leu do texto do livro.
 export function efeitosHabilidade(ficha, sistema, hab) {
-  const texto = ficha.ajustesHabilidades?.[hab.id] ?? hab.descricao;
-  return efeitosDoTexto(texto, sistema, { tipoIp });
+  const regra = hab.regra === undefined ? regraDaHabilidade(hab.nome, sistema) : hab.regra;
+  const texto = ficha.ajustesHabilidades?.[hab.id] ?? (regra ? regra.efeitos || '' : hab.descricao);
+  const r = efeitosDoTexto(texto, sistema, { tipoIp });
+  return regra ? efeitosDaRegra(regra, r, sistema, rotulosEfeitos(sistema)) : r;
+}
+
+// Como a habilidade funciona no app: "sempre" (aplicada sozinha), "ligar" (botão liga/desliga), "ativar" (botão com custo/duração)
+// ou "lembrete" (sem efeito no app). Sem regra própria: liga/desliga se o app achou números no texto.
+export function modoHabilidade(ficha, sistema, hab) {
+  if (ficha.ajustesHabilidades?.[hab.id]) return hab.regra?.modo === 'sempre' ? 'sempre' : 'ligar';
+  if (hab.regra?.modo) return hab.regra.modo;
+  return efeitosHabilidade(ficha, sistema, hab).notas.length ? 'ligar' : 'lembrete';
 }
 
 export function bonusHabilidades(ficha, sistema) {
   const ativas = new Set(ficha.ativas || []);
-  if (!ativas.size) return somarEfeitos([]);
-  return somarEfeitos(listaHabilidades(ficha, sistema).filter(x => ativas.has(x.id)).map(x => efeitosHabilidade(ficha, sistema, x)));
+  const lista = listaHabilidades(ficha, sistema).filter(x => ativas.has(x.id) || x.regra?.modo === 'sempre');
+  return somarEfeitos(lista.map(x => efeitosHabilidade(ficha, sistema, x)));
+}
+
+// Vantagem por habilidade: alvo = 'ataque' | 'iniciativa' | 'testes' | id de perícia/subperícia. "contra" = tipos de criatura do oponente.
+export function vantagemPorHabilidade(ficha, sistema, alvos, oponentes = null) {
+  const lista = Array.isArray(alvos) ? alvos : [alvos];
+  const tipos = oponentes ? oponentes.map(tipoCriatura) : null;
+  return bonusHabilidades(ficha, sistema).vantagens.some(v => (lista.includes(v.alvo) || v.alvo === 'testes')
+    && (!v.contra || (tipos && v.contra.some(t => tipos.includes(t)))));
+}
+
+// Progressão dos dados de dano (livro, criação de armadilhas): D4 > D6 > D8 > D10 > D12 > 2D6 > 2D8 > 2D10 > 2D12 > 3D10 > 3D12 > 2D20.
+export const PROGRESSAO_DANO = ['1d4', '1d6', '1d8', '1d10', '1d12', '2d6', '2d8', '2d10', '2d12', '3d10', '3d12', '2d20'];
+// Sobe (ou desce) n passos o dado de uma expressão de dano ("1d6+2" → "1d8+2"). Dado fora da tabela: usa o de média mais próxima.
+export function subirPassos(expr, n) {
+  if (!n) return expr;
+  const m = /^\s*(\d*)d(\d+)(.*)$/i.exec(String(expr || ''));
+  if (!m) return expr;
+  const qtd = parseInt(m[1] || '1', 10), faces = parseInt(m[2], 10);
+  const media = e => { const [a, b] = e.split('d').map(Number); return (a * (b + 1)) / 2; };
+  let i = PROGRESSAO_DANO.indexOf(`${qtd}d${faces}`);
+  if (i < 0) {
+    const alvo = (qtd * (faces + 1)) / 2;
+    i = PROGRESSAO_DANO.reduce((melhor, e, k) => (Math.abs(media(e) - alvo) < Math.abs(media(PROGRESSAO_DANO[melhor]) - alvo) ? k : melhor), 0);
+  }
+  const j = Math.max(0, Math.min(PROGRESSAO_DANO.length - 1, i + n));
+  return `${PROGRESSAO_DANO[j]}${m[3]}`;
 }
 
 export function derivados(ficha, sistema) {
@@ -302,7 +366,8 @@ export function derivados(ficha, sistema) {
   const estadoSanidade = [...(sistema.sanidade?.estados || [])].reverse().find(e => san < e.abaixoDe)?.nome || 'Lúcido';
   // Humanidade vai de 1 a 100 (abaixo de 1 o jogador perde o controle do personagem).
   // Limite inicial = 50 + 2×CAR + 2×PER: o personagem novo começa com um valor de 51 até esse limite, à escolha do jogador.
-  const humanidadeMax = sistema.humanidade?.maximo ?? 100;
+  // Habilidades podem baixar a Humanidade máxima (Alma de ciborgue: −10 permanentes).
+  const humanidadeMax = (sistema.humanidade?.maximo ?? 100) + hab.humanidadeMax;
   const humanidadeLimite = Math.min(humanidadeMax, 50 + 2 * (ficha.atributos?.CAR ?? 0) + 2 * (ficha.atributos?.PER ?? 0));
   const humanidadeMinInicial = Math.min(humanidadeLimite, sistema.humanidade?.minimoInicial ?? 51);
   const hum = ficha.humanidade?.atual ?? humanidadeLimite;
