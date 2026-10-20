@@ -692,7 +692,8 @@ button.efeito-icone { cursor: pointer; }
 /* Dados d10 desenhados: DP = 2 d10 de marfim (dezena e unidade), DS = 1 d10 vermelho. */
 
 /* Campo de Combate: painel do personagem em três quadros (esboço do autor). */
-.batalha-topo { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, .9fr) minmax(0, 1.05fr); gap: 1em; align-items: start; margin-bottom: 1em; }
+.batalha-topo { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1em; align-items: start; margin-bottom: 1em; }
+.batalha-topo > .bat-habilidades { grid-column: 1 / -1; }
 .batalha-topo > .bloco { margin: 0; }
 .nome-controlado { margin: 0; font-size: 1.15em; }
 select.nome-controlado { font-weight: 700; }
@@ -705,7 +706,11 @@ select.nome-controlado { font-weight: 700; }
 .defesa { display: flex; flex-direction: column; align-items: center; padding: .3em; border: 1px solid var(--borda); border-radius: 8px; background: rgba(0, 0, 0, .15); }
 .defesa small { opacity: .75; font-size: .78em; }
 .defesa strong { font-size: 1.15em; font-variant-numeric: tabular-nums; }
-.lista-habilidades { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .3em; max-height: 520px; overflow-y: auto; }
+.lista-habilidades { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: .4em; }
+.hab-grupo + .hab-grupo { margin-top: .8em; }
+.hab-grupo h4 { margin: .4em 0 .35em; display: flex; align-items: center; gap: .3em; }
+.hab-grupo.lembretes li { background: rgba(0, 0, 0, .12); }
+.hab-resumo { opacity: .8; }
 .lista-habilidades li { display: flex; align-items: flex-start; gap: .4em; padding: .3em .4em; border: 1px solid var(--borda); border-radius: 8px; }
 .lista-habilidades li.ativa { border-color: var(--ouro); background: rgba(201, 164, 92, .08); }
 .lista-habilidades details { flex: 1; min-width: 0; }
@@ -721,7 +726,6 @@ select.nome-controlado { font-weight: 700; }
 .opcoes-ataque { margin-top: .6em; }
 .grade-opcoes { display: flex; flex-wrap: wrap; gap: .3em .8em; margin-top: .3em; }
 .sala-batalha .participantes, .sala-social .participantes { gap: .4em; }
-@media (max-width: 1250px) { .batalha-topo { grid-template-columns: 1fr 1fr; } .batalha-topo > .bat-ataques { grid-column: 1 / -1; } }
 @media (max-width: 760px) { .batalha-topo { grid-template-columns: 1fr; } }
 
 /* Sala Social: seu lado · manipulações · outro lado. */
@@ -799,11 +803,34 @@ select.nome-controlado { font-weight: 700; }
 .sem-pv .rosto, .avatar-ordem.sem-pv .rosto, .participante.sem-pv .avatar { filter: sepia(1) saturate(6) hue-rotate(-30deg) brightness(.75); }
 .avatar-ordem.sem-pv { border-color: #b3261e; }
 .ordem-iniciativa button.ini { padding: 0 .4em; min-height: 0; }
+/* Campo de Batalha: a ordem vira uma faixa horizontal presa no alto ao rolar. */
+.ordem-lateral.ordem-faixa { position: sticky; top: 3.6em; z-index: 3; flex-direction: row; align-items: center; max-height: none; overflow-x: auto; margin-bottom: 1em; padding: .45em .7em; }
+.ordem-faixa ol { flex-direction: row; gap: .6em; align-items: flex-start; }
+.ordem-faixa .ordem-topo { flex: none; padding-right: .4em; }
+.ordem-faixa .avatar-ordem { width: 46px; height: 46px; }
+.ordem-faixa .nome-ordem { max-width: 64px; }
 @media (max-width: 760px) {
-  .campo-com-ordem { grid-template-columns: 1fr; }
-  .ordem-lateral { position: sticky; top: 3.2em; z-index: 3; flex-direction: row; max-height: none; overflow-x: auto; }
-  .ordem-lateral ol { flex-direction: row; }
+  .ordem-lateral.ordem-faixa { top: 3.2em; }
 }
+/* No campo: uma linha por personagem; as ações ficam no menu ⋯. */
+.participante.compacto { grid-template-columns: 40px minmax(0, 1fr) auto; padding: .35em .6em; gap: .1em .6em; }
+.participante.compacto .avatar { width: 40px; height: 40px; }
+.participante.compacto .linha-nome { display: flex; align-items: center; flex-wrap: wrap; gap: .1em .5em; }
+.participante.compacto .linha-stats { display: flex; align-items: center; flex-wrap: wrap; gap: .1em .6em; margin-top: .15em; }
+.participante.compacto .linha-stats .barra-pv { width: 90px; margin: 0; }
+.participante.compacto .lado { display: flex; align-items: center; gap: .35em; flex-wrap: wrap; justify-content: flex-end; }
+.menu-acoes { position: relative; }
+.menu-acoes > summary { list-style: none; cursor: pointer; display: grid; place-items: center; width: 34px; height: 34px; border: 1px solid var(--borda); border-radius: 8px; background: var(--painel2, #2a2118); }
+.menu-acoes > summary::-webkit-details-marker { display: none; }
+.menu-acoes[open] > summary { border-color: var(--ouro); }
+.menu-acoes .menu-corpo { position: absolute; right: 0; top: calc(100% + 4px); z-index: 6; display: flex; flex-wrap: wrap; gap: .35em; width: max-content; max-width: min(340px, 86vw); padding: .5em; background: var(--painel); border: 1px solid var(--ouro-esc); border-radius: 10px; box-shadow: 0 8px 24px #000a; }
+.controle-turnos .barra { flex-wrap: wrap; }
+.controle-turnos .turno-cartao { padding: .25em .6em; }
+.controle-turnos .turno-cartao .avatar { width: 30px; height: 30px; }
+.editar-ordem { margin-top: .5em; }
+.editar-ordem > summary { cursor: pointer; color: var(--ouro); }
+/* Celular e telas médias: espaço no fim para o botão redondo dos Dados não cobrir nada. */
+@media (max-width: 1099px) { .area-campanha > .conteudo { padding-bottom: 96px; } }
 .aviso-defesa { margin: 0 0 .4em; padding: .4em .5em; border-radius: 8px; background: rgba(224, 107, 93, .15); border: 1px solid #e06b5d; font-size: .92em; }
 .defesas.escolhendo .defesa.escolher { cursor: pointer; border-color: var(--ouro); background: #3a2c1a; color: var(--texto); animation: ef-pulso 1.4s ease-in-out infinite; }
 .defesas.escolhendo .defesa.escolher:hover { background: var(--ouro); color: #1a1a1a; }

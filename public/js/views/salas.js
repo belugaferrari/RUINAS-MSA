@@ -27,10 +27,10 @@ export function salaView(nome) {
         if (await confirmar(`Remover todos de ${TITULOS[nome]} e limpar o registro?`)) await acao('sala.limpar', { sala: nome });
       }, { class: 'perigo', icone: 'trash-2' }) : null),
     // Em cima, o painel do personagem que você controla (esboço do autor); embaixo, o turno, o campo e o registro.
+    // Turnos numa linha, a faixa de avatares na ordem da iniciativa (fica presa no alto ao rolar), o painel de quem você controla.
     nome === 'batalha' ? controleTurnos(participantes, mestre) : null,
     nome === 'batalha'
-      ? h('div', { class: 'campo-com-ordem' }, ordemLateral(participantes, mestre),
-        h('div', { class: 'campo-conteudo' }, painelBatalha(participantes, mestre), combateView(participantes, mestre)))
+      ? [ordemLateral(participantes, mestre), painelBatalha(participantes, mestre), combateView(participantes, mestre)]
       : painelSocial(participantes, mestre),
     mestre && nome === 'batalha' ? encontroAleatorio() : null,
     nome === 'social' ? rodaDoHumor() : null,
@@ -43,7 +43,18 @@ export function salaView(nome) {
       h('div', { class: 'registro' },
         participantes.some(p => mestre || p.donoId === estado.usuario.id) ? null : h('p', { class: 'dica' }, 'Entre na sala com um personagem para agir aqui.'),
         titulo('Registro', 'scroll'),
-        h('ol', { class: 'log', 'data-rolagem': `log-${nome}` }, [...s.log].reverse().map(e => h('li', {}, h('small', {}, formatarData(e.em)), ' ', linhaRolagem(e)))))));
+        registro(nome, s.log))));
+}
+
+// Registro: só as últimas entradas; o resto abre num botão.
+const NO_REGISTRO = 6;
+function registro(nome, log) {
+  const tudo = !!estado.sel[`log:${nome}`];
+  const lista = [...log].reverse();
+  return [
+    h('ol', { class: 'log', 'data-rolagem': `log-${nome}` }, (tudo ? lista : lista.slice(0, NO_REGISTRO)).map(e => h('li', {}, h('small', {}, formatarData(e.em)), ' ', linhaRolagem(e)))),
+    lista.length > NO_REGISTRO ? botao(tudo ? 'Mostrar só as últimas' : `Ver tudo (${lista.length})`, () => { estado.sel[`log:${nome}`] = !tudo; render(); }, { class: 'pequeno', icone: tudo ? 'chevron-up' : 'chevron-down' }) : null,
+  ];
 }
 
 function adicionar(nome, s, mestre) {
@@ -80,6 +91,7 @@ function cartaoParticipante(nome, s, p, i, total, mestre, participantes) {
   // Clicar no cartão marca o personagem como alvo (o jogador não marca o próprio personagem).
   const marcavel = automatico && (mestre || (!meu && participantes.some(x => x.donoId === estado.usuario.id)));
   const alvo = alvoMarcado(nome) === p.id;
+  if (nome === 'batalha') return linhaCampo(s, p, i, total, mestre, meu, veStats, marcavel, alvo);
   return h('div', {
     class: `participante ${s.ativo === p.id ? 'ativo' : ''} ${p.tipo} ${alvo ? 'alvo' : ''} ${marcavel ? 'marcavel' : ''} ${p.semPv || (p.pv && p.pv.atual <= 0) ? 'sem-pv' : ''}`,
     onclick: marcavel ? e => { if (!e.target.closest('button, select, input, label, a, summary')) marcarAlvo(nome, p.id); } : null,
@@ -109,6 +121,48 @@ function cartaoParticipante(nome, s, p, i, total, mestre, participantes) {
       mestre ? botao('', () => acao('sala.ordenar', { sala: nome, id: p.id, direcao: -1 }), { class: 'pequeno', icone: 'chevron-up', disabled: i === 0, title: `Subir ${p.nome} na ordem` }) : null,
       mestre ? botao('', () => acao('sala.ordenar', { sala: nome, id: p.id, direcao: 1 }), { class: 'pequeno', icone: 'chevron-down', disabled: i === total - 1, title: `Descer ${p.nome} na ordem` }) : null,
       mestre || meu ? botao('Tirar', () => acao('sala.remover', { sala: nome, id: p.id }), { class: 'pequeno perigo', icone: 'log-out', title: `Tirar ${p.nome} da sala` }) : null));
+}
+
+// Campo de Batalha: uma linha por personagem — avatar, nome, PV (de quem você vê), efeitos e o alvo.
+// As outras ações (PV, testar, caído, acionar, ordem, tirar) ficam no menu "⋯".
+function linhaCampo(s, p, i, total, mestre, meu, veStats, marcavel, alvo) {
+  const semPv = p.semPv || (p.pv && p.pv.atual <= 0);
+  const acoes = [
+    veStats && p.pv ? botao('PV', () => acao('pv.alterar', { id: p.id, delta: -1 }), { class: 'pequeno', icone: 'minus', title: `Tirar 1 PV de ${p.nome}`, 'aria-label': `Tirar 1 PV de ${p.nome}` }) : null,
+    veStats && p.pv ? botao('PV', () => acao('pv.alterar', { id: p.id, delta: 1 }), { class: 'pequeno', icone: 'plus', title: `Dar 1 PV a ${p.nome}`, 'aria-label': `Dar 1 PV a ${p.nome}` }) : null,
+    veStats && p.atributos ? botao('Testar', () => prepararTeste(p.id, ''), { class: 'pequeno', icone: 'dices', title: `Rolar um teste de ${p.nome}` }) : null,
+    veStats ? botao(caido(p) ? 'Levantar' : 'Caído', () => alternarCaido(p), { class: 'pequeno', icone: 'arrow-left-right', title: caido(p) ? `${p.nome} se levanta` : `${p.nome} fica caído` }) : null,
+    mestre ? botao(s.ativo === p.id ? 'Desacionar' : 'Acionar', () => acao('sala.acionar', { sala: 'batalha', id: p.id }), { class: 'pequeno primario', icone: 'zap' }) : null,
+    mestre ? botao('', () => acao('sala.ordenar', { sala: 'batalha', id: p.id, direcao: -1 }), { class: 'pequeno', icone: 'chevron-up', disabled: i === 0, title: `Subir ${p.nome} na lista` }) : null,
+    mestre ? botao('', () => acao('sala.ordenar', { sala: 'batalha', id: p.id, direcao: 1 }), { class: 'pequeno', icone: 'chevron-down', disabled: i === total - 1, title: `Descer ${p.nome} na lista` }) : null,
+    mestre || meu ? botao('Tirar', () => acao('sala.remover', { sala: 'batalha', id: p.id }), { class: 'pequeno perigo', icone: 'log-out', title: `Tirar ${p.nome} da sala` }) : null,
+    mestre ? ajustesMestre(p, 'batalha') : null,
+  ].filter(Boolean);
+  const chave = `menu:${p.id}`;
+  return h('div', {
+    class: `participante compacto ${s.ativo === p.id ? 'ativo' : ''} ${p.tipo} ${alvo ? 'alvo' : ''} ${marcavel ? 'marcavel' : ''} ${semPv ? 'sem-pv' : ''}`,
+    onclick: marcavel ? e => { if (!e.target.closest('button, select, input, label, a, summary, details')) marcarAlvo('batalha', p.id); } : null,
+  },
+    h('div', { class: 'avatar', 'data-pid': p.id }, p.foto ? h('img', { src: p.foto, alt: '' }) : p.nome.slice(0, 1)),
+    h('div', { class: 'info' },
+      h('div', { class: 'linha-nome' },
+        h('strong', {}, p.nome),
+        h('small', { class: 'meta' }, p.tipo === 'pj' ? `PJ${p.dono ? ` · ${p.dono}` : ''}` : 'NPC'),
+        s.ativo === p.id ? h('span', { class: 'selo ok' }, mestre ? 'acionado' : 'em cena') : null,
+        semPv ? h('span', { class: 'selo perigo' }, 'fora de combate') : null),
+      veStats && p.pv ? h('div', { class: 'linha-stats' },
+        h('div', { class: 'barra-pv', title: `PV ${p.pv.atual}/${p.pv.max}` }, h('i', { style: { width: `${Math.max(0, Math.min(100, (100 * p.pv.atual) / (p.pv.max || 1)))}%` } })),
+        h('span', { class: 'meta icones-meta' },
+          h('span', {}, icone('heart'), `${p.pv.atual}/${p.pv.max}`),
+          h('span', {}, icone('brain'), p.sanidade?.atual ?? '-'),
+          h('span', {}, icone('hand-heart'), p.humanidade?.atual ?? '-'))) : null),
+    h('div', { class: 'lado' },
+      efeitosIcones(p, { mestre }),
+      veStats && marcadoresLivres(p).length ? h('div', { class: 'marcadores' }, marcadoresLivres(p).map(m => h('span', { class: 'etiqueta' }, m))) : null,
+      marcavel ? botao(alvo ? 'Alvo' : '', () => marcarAlvo('batalha', p.id), { class: `pequeno ${alvo ? 'perigo' : ''}`, icone: 'crosshair', title: alvo ? `Desmarcar ${p.nome} como alvo` : `Marcar ${p.nome} como alvo`, 'aria-pressed': alvo }) : null,
+      acoes.length ? h('details', { class: 'menu-acoes', open: !!estado.sel[chave], ontoggle: e => { estado.sel[chave] = e.target.open; } },
+        h('summary', { title: `Ações de ${p.nome}`, 'aria-label': `Ações de ${p.nome}` }, icone('ellipsis')),
+        h('div', { class: 'menu-corpo' }, acoes)) : null));
 }
 
 function encontroAleatorio() {

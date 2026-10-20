@@ -6,6 +6,7 @@ import { acao } from '../api.js';
 import { derivados } from '/shared/regras.js';
 import { armasDisponiveis, opcoesDefesa, defesaDoAlvo, ipDe, resistenciaManipulacao, liberdadeDeHumor } from '/shared/combate.js';
 import { prepararTeste } from './dados.js';
+import { controladoNaSala } from './batalha.js';
 
 const meuOuMestre = (p, mestre) => mestre || p.donoId === estado.usuario.id;
 const opcoesPersonagens = lista => lista.map(p => ({ valor: p.id, rotulo: p.nome }));
@@ -18,12 +19,10 @@ export function combateView(participantes, mestre) {
   const sis = estado.sistema;
   const auto = !!sis.modulos?.combate;
   const cb = estado.campanha.salas.batalha.combate;
-  return h('div', { class: 'bloco combate' },
-    titulo(`Turnos${auto ? ` e combate (${sis.nome})` : ''}`, 'swords'),
-    // A ordem e os botões de turno ficam no "Controle de turnos", no topo do Campo de Batalha.
-    cb ? painelVez(cb, mestre) : null,
-    auto ? pendentesView(mestre) : null,
-    mestre ? xpDaSala(participantes) : null);
+  // A ordem e os botões de turno ficam em "Turnos", no topo; aqui só o que ainda pede ação (sua vez, ataques esperando defesa, XP).
+  const partes = [cb ? painelVez(cb, mestre) : null, auto ? pendentesView(mestre, participantes) : null, mestre ? xpDaSala(participantes) : null].filter(Boolean);
+  if (!partes.length) return null;
+  return h('div', { class: 'bloco combate' }, titulo(`Combate${auto ? ` (${sis.nome})` : ''}`, 'swords'), partes);
 }
 
 // Quem está na vez: atalhos para o dono (ou o mestre) agir sem procurar na tela.
@@ -31,7 +30,7 @@ export function painelVez(cb, mestre) {
   const p = personagemPorId(cb.ordem[cb.vez]?.id);
   if (!p) return null;
   const meu = p.donoId === estado.usuario.id;
-  if (!meu && !mestre) return h('p', { class: 'vez-de' }, icone('hourglass'), ` Vez de ${p.nome}.`);
+  if (!meu && !mestre) return null; // quem está na vez já aparece em Turnos
   const armas = (p.itens || []).filter(i => i.equipado && i.capacidade);
   return h('div', { class: `painel-vez ${meu ? 'minha' : ''}` },
     h('strong', {}, icone('zap'), meu ? ` Sua vez: ${p.nome}` : ` Vez de ${p.nome}`),
@@ -41,8 +40,8 @@ export function painelVez(cb, mestre) {
       botao('', () => acao('item.municao', { id: p.id, uid: i.uid, delta: -1 }), { class: 'pequeno', icone: 'minus', title: `Gastar 1 bala de ${i.nome}`, disabled: (i.carregada || 0) <= 0 }),
       botao('Recarregar', () => acao('item.recarregar', { id: p.id, uid: i.uid }), { class: 'pequeno', icone: 'refresh-cw', disabled: (i.carregada || 0) >= i.capacidade }))),
     h('span', { class: 'espaco' }),
-    botao('Rolar teste', () => prepararTeste(p.id, ''), { class: 'pequeno', icone: 'dices' }),
-    botao('Passar a vez', () => acao('combate.proximo'), { class: 'pequeno primario', icone: 'skip-forward' }));
+    // Passar a vez fica no "Próximo turno", em Turnos.
+    botao('Rolar teste', () => prepararTeste(p.id, ''), { class: 'pequeno', icone: 'dices' }));
 }
 
 // O mestre dá XP de uma vez a todos os personagens-jogador da sala.
@@ -60,16 +59,18 @@ export function xpDaSala(participantes) {
 }
 
 // Ataques declarados esperando a defesa. Quem controla o alvo (ou o mestre) escolhe; os valores só aparecem para quem escolhe.
-export function pendentesView(mestre) {
+export function pendentesView(mestre, participantes = []) {
   const sis = estado.sistema;
-  const lista = estado.campanha.salas.batalha.pendentes || [];
+  // O ataque contra o personagem do seu painel já aparece lá (as defesas viram botões): aqui não se repete.
+  const noPainel = controladoNaSala('batalha', participantes, mestre).p?.id;
+  const lista = (estado.campanha.salas.batalha.pendentes || []).filter(pd => mestre || pd.alvo !== noPainel);
   if (!lista.length) return null;
   return h('div', { class: 'pendentes' },
     titulo('Aguardando defesa', 'shield'),
     lista.map(pd => {
       const a = personagemPorId(pd.atacante);
       const b = personagemPorId(pd.alvo);
-      const escolhe = b && b.atributos && meuOuMestre(b, mestre);
+      const escolhe = b && b.atributos && meuOuMestre(b, mestre) && pd.alvo !== noPainel;
       const podeCancelar = mestre || a?.donoId === estado.usuario.id;
       let botoes = [];
       if (escolhe) {
@@ -83,7 +84,8 @@ export function pendentesView(mestre) {
       return h('div', { class: 'pendente' },
         h('div', {}, h('strong', {}, a?.nome || '?'), ` ataca `, h('strong', {}, b?.nome || '?'), ` com ${pd.arma}${pd.area ? ' (ataque em área)' : ''}${pd.alcance === 'distancia' ? ' (a distância)' : ''}`),
         escolhe ? h('div', { class: 'barra' }, h('span', { class: 'dica' }, 'Defender com:'), botoes)
-          : h('p', { class: 'dica' }, `Aguardando ${b?.nome || 'o alvo'} escolher a defesa…`),
+          : pd.alvo === noPainel ? h('p', { class: 'dica' }, `Escolha a defesa no quadro de ${b?.nome}, acima.`)
+            : h('p', { class: 'dica' }, `Aguardando ${b?.nome || 'o alvo'} escolher a defesa…`),
         podeCancelar ? botao('Cancelar ataque', () => acao('combate.cancelar', { id: pd.id }), { class: 'pequeno perigo', icone: 'square-x' }) : null);
     }));
 }
@@ -105,32 +107,31 @@ export function controleTurnos(participantes, mestre) {
   const proximo = proxIdx >= 0 ? personagemPorId(cb.ordem[proxIdx]?.id) : null;
   const podePassar = mestre || atual?.donoId === estado.usuario.id;
   const rosto = p => h('span', { class: 'avatar rosto', 'data-pid': p?.id }, p?.foto ? h('img', { src: p.foto, alt: '' }) : (p?.nome || '?').slice(0, 1));
+  // Numa linha só: quem age e quem vem depois (a rodada aparece na faixa). A ordem completa fica na faixa de avatares logo abaixo;
+  // a lista com a iniciativa de cada um (para mudar, adiantar e atrasar) só aparece ao mestre, recolhida.
   return h('section', { class: 'bloco controle-turnos' },
     h('div', { class: 'barra' },
-      titulo('Controle de turnos', 'hourglass', 'h3'),
-      h('span', { class: 'selo cheio' }, `Rodada ${cb.rodada} · Turno ${cb.turno || 1}`),
+      titulo('Turnos', 'hourglass', 'h3'),
+      h('div', { class: 'turno-cartao agora' }, h('small', {}, 'Agindo agora'), rosto(atual), h('strong', {}, atual?.nome || '—'), h('span', { class: 'ini' }, `ini ${cb.ordem[cb.vez]?.ini ?? '—'}`)),
+      proximo ? h('div', { class: 'turno-cartao proximo' }, h('small', {}, 'Próximo'), rosto(proximo), h('strong', {}, proximo.nome)) : null,
       h('span', { class: 'espaco' }),
       podePassar ? botao('Próximo turno', () => acao('combate.proximo'), { class: 'primario', icone: 'skip-forward', title: atual ? `Termina o turno de ${atual.nome}` : 'Próximo turno' }) : null,
       mestre ? botao('Rolar iniciativa de novo', async () => { if (await confirmar('Rolar a iniciativa de todos de novo? A rodada volta para 1.')) await acao('combate.iniciar'); }, { class: 'pequeno', icone: 'dices' }) : null,
       mestre ? botao('Encerrar combate', () => acao('combate.encerrar'), { class: 'pequeno perigo', icone: 'square-x' }) : null),
-    h('div', { class: 'turno-agora' },
-      h('div', { class: 'turno-cartao agora' }, h('small', {}, 'Agindo agora'), rosto(atual), h('strong', {}, atual?.nome || '—'), h('span', { class: 'ini' }, `ini ${cb.ordem[cb.vez]?.ini ?? '—'}`)),
-      proximo ? h('div', { class: 'turno-cartao proximo' }, h('small', {}, 'Próximo'), rosto(proximo), h('strong', {}, proximo.nome), h('span', { class: 'ini' }, `ini ${cb.ordem[proxIdx].ini}`)) : null),
-    // A ordem completa com a iniciativa de cada um. O mestre muda o valor (clique), adianta e atrasa.
-    h('ol', { class: 'ordem-iniciativa' }, cb.ordem.map((o, i) => {
-      const p = personagemPorId(o.id);
-      const semPv = p?.semPv || (p?.pv && p.pv.atual <= 0);
-      return h('li', { class: `${i === cb.vez ? 'vez' : ''} ${i === proxIdx ? 'proximo' : ''} ${semPv ? 'sem-pv' : ''}` },
-        h('span', { class: 'pos' }, `${i + 1}º`),
-        rosto(p),
-        h('span', { class: 'nome' }, p?.nome || '?', i === cb.vez ? h('small', { class: 'selo ok' }, 'agora') : i === proxIdx ? h('small', { class: 'selo' }, 'próximo') : null),
-        mestre
-          ? h('button', { type: 'button', class: 'ini', title: `Iniciativa de ${p?.nome}: ${o.ini}${o.agi != null ? ` (AGI ${o.agi} + d10)` : ''}. Clique para mudar`, 'aria-label': `Iniciativa de ${p?.nome}: ${o.ini}. Mudar`,
-            onclick: async () => { const v = await pedirTexto(`Iniciativa de ${p?.nome}`, 'Novo valor', String(o.ini)); if (v != null) acao('combate.iniciativa', { id: o.id, ini: v }); } }, String(o.ini))
-          : h('span', { class: 'ini', title: o.agi != null ? `AGI ${o.agi} + d10` : '' }, String(o.ini)),
-        mestre ? botao('', () => acao('combate.ordenar', { id: o.id, direcao: -1 }), { class: 'pequeno', icone: 'chevron-up', disabled: i === 0, title: `Adiantar ${p?.nome}` }) : null,
-        mestre ? botao('', () => acao('combate.ordenar', { id: o.id, direcao: 1 }), { class: 'pequeno', icone: 'chevron-down', disabled: i === n - 1, title: `Atrasar ${p?.nome}` }) : null);
-    })));
+    mestre ? h('details', { class: 'editar-ordem', open: !!estado.sel.editarOrdem, ontoggle: e => { estado.sel.editarOrdem = e.target.open; } },
+      h('summary', {}, icone('list-ordered'), ' Editar ordem e iniciativa'),
+      h('ol', { class: 'ordem-iniciativa' }, cb.ordem.map((o, i) => {
+        const p = personagemPorId(o.id);
+        const semPv = p?.semPv || (p?.pv && p.pv.atual <= 0);
+        return h('li', { class: `${i === cb.vez ? 'vez' : ''} ${i === proxIdx ? 'proximo' : ''} ${semPv ? 'sem-pv' : ''}` },
+          h('span', { class: 'pos' }, `${i + 1}º`),
+          rosto(p),
+          h('span', { class: 'nome' }, p?.nome || '?'),
+          h('button', { type: 'button', class: 'ini', title: `Iniciativa de ${p?.nome}: ${o.ini}${o.agi != null ? ` (AGI ${o.agi} + d10)` : ''}. Clique para mudar`, 'aria-label': `Iniciativa de ${p?.nome}: ${o.ini}. Mudar`,
+            onclick: async () => { const v = await pedirTexto(`Iniciativa de ${p?.nome}`, 'Novo valor', String(o.ini)); if (v != null) acao('combate.iniciativa', { id: o.id, ini: v }); } }, String(o.ini)),
+          botao('', () => acao('combate.ordenar', { id: o.id, direcao: -1 }), { class: 'pequeno', icone: 'chevron-up', disabled: i === 0, title: `Adiantar ${p?.nome}` }),
+          botao('', () => acao('combate.ordenar', { id: o.id, direcao: 1 }), { class: 'pequeno', icone: 'chevron-down', disabled: i === n - 1, title: `Atrasar ${p?.nome}` }));
+      }))) : null);
 }
 
 export function ordemView(cb, mestre) {

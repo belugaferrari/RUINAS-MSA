@@ -44,10 +44,11 @@ export function nomeControlado(meus, p, chave) {
 export function painelBatalha(participantes, mestre) {
   const { meus, p, chave } = controladoNaSala('batalha', participantes, mestre);
   if (!p) return null;
+  // Personagem e Ataques lado a lado; as Habilidades embaixo, na largura toda (sem rolagem por dentro).
   return h('div', { class: 'batalha-topo' },
     h('section', { class: 'bloco bat-personagem', 'data-pid': p.id }, quadroPersonagem(p, meus, chave, mestre, participantes)),
-    h('section', { class: 'bloco bat-habilidades' }, titulo('Habilidades, características e vantagens', 'sparkles'), quadroHabilidades(p, mestre)),
-    h('section', { class: 'bloco bat-ataques' }, titulo('Ataques', 'swords'), quadroAtaques(p, participantes, mestre)));
+    h('section', { class: 'bloco bat-ataques' }, titulo('Ataques', 'swords'), quadroAtaques(p, participantes, mestre)),
+    h('section', { class: 'bloco bat-habilidades' }, titulo('Habilidades', 'sparkles'), quadroHabilidades(p, mestre)));
 }
 
 // ---------- Personagem ----------
@@ -177,18 +178,37 @@ function quadroHabilidades(p, mestre) {
     if (v.trim() && v.trim() !== efeitosHabilidade(p, sis, x).notas.join('; ')) ajustes[x.id] = v.trim(); else delete ajustes[x.id];
     await acao('personagem.atualizar', { id: p.id, patch: { ajustesHabilidades: ajustes } });
   };
-  return h('ul', { class: 'lista-habilidades' }, lista.map(x => {
-    const on = ativas.has(x.id);
-    const ef = efeitosHabilidade(p, sis, x);
-    return h('li', { class: on ? 'ativa' : '' },
-      h('div', { class: 'hab-texto' },
-        h('details', {}, h('summary', {}, h('strong', {}, x.nome), h('small', {}, ` ${x.tipo}`)), h('p', { class: 'bloco-texto' }, x.descricao)),
-        h('small', { class: `hab-efeito ${ef.notas.length ? '' : 'so-lembrete'}` }, ef.notas.length ? [icone('zap'), ` ${ef.notas.join(' · ')}`] : 'Só lembrete (sem número para o app somar)',
-          p.ajustesHabilidades?.[x.id] ? h('span', { class: 'selo' }, 'ajustado') : null)),
-      h('div', { class: 'hab-botoes' },
-        botao(on ? 'Ativo' : 'Desativado', () => alternar(x.id), { class: `pequeno ${on ? 'primario' : ''}`, 'aria-pressed': on, title: `${on ? 'Desativar' : 'Ativar'} ${x.nome}` }),
-        mestre ? botao('', () => ajustar(x), { class: 'pequeno', icone: 'pencil', title: `Ajustar o que ${x.nome} faz no app` }) : null));
-  }));
+  const lapis = x => mestre ? botao('', () => ajustar(x), { class: 'pequeno', icone: 'pencil', title: `Ajustar o que ${x.nome} faz no app` }) : null;
+  const cabeca = x => h('details', {}, h('summary', {}, h('strong', {}, x.nome), h('small', {}, ` ${x.tipo}`)), h('p', { class: 'bloco-texto' }, x.descricao));
+  // Dois grupos: as que mudam números no app (com botão de ligar) e as que são só regra para lembrar (sem botão).
+  const comNumero = [], lembretes = [];
+  for (const x of lista) (efeitosHabilidade(p, sis, x).notas.length ? comNumero : lembretes).push(x);
+  return [
+    comNumero.length ? h('div', { class: 'hab-grupo' },
+      h('h4', {}, icone('zap'), ' Ligar no combate'),
+      h('ul', { class: 'lista-habilidades' }, comNumero.map(x => {
+        const on = ativas.has(x.id);
+        const ef = efeitosHabilidade(p, sis, x);
+        return h('li', { class: on ? 'ativa' : '' },
+          h('div', { class: 'hab-texto' }, cabeca(x),
+            h('small', { class: 'hab-efeito' }, icone('zap'), ` ${ef.notas.join(' · ')}`, p.ajustesHabilidades?.[x.id] ? h('span', { class: 'selo' }, 'ajustado') : null)),
+          h('div', { class: 'hab-botoes' },
+            botao(on ? 'Ligada' : 'Desligada', () => alternar(x.id), { class: `pequeno ${on ? 'primario' : ''}`, 'aria-pressed': on, title: `${on ? 'Desligar' : 'Ligar'} ${x.nome}` }),
+            lapis(x)));
+      }))) : null,
+    lembretes.length ? h('div', { class: 'hab-grupo lembretes' },
+      h('h4', {}, icone('book-open'), ' Sempre valem / lembretes'),
+      h('ul', { class: 'lista-habilidades' }, lembretes.map(x => h('li', {},
+        h('div', { class: 'hab-texto' }, cabeca(x), h('small', { class: 'hab-resumo' }, primeiraFrase(x.descricao))),
+        mestre ? h('div', { class: 'hab-botoes' }, lapis(x)) : null)))) : null,
+  ];
+}
+
+// Começo da descrição, para lembrar do que se trata sem abrir o texto todo.
+function primeiraFrase(texto) {
+  const t = String(texto || '').replace(/\s+/g, ' ').trim();
+  const f = t.split(/(?<=[.!?])\s/)[0];
+  return f.length > 160 ? `${f.slice(0, 157).trimEnd()}…` : f;
 }
 
 // ---------- Ataques ----------
@@ -293,7 +313,7 @@ export function ordemLateral(participantes, mestre) {
   const alvo = eu ? alvoDe(eu, 'batalha', participantes) : null;
   const vez = cb ? cb.vez : -1;
   const proximo = cb && lista.length > 1 ? (vez + 1) % lista.length : -1;
-  return h('aside', { class: 'ordem-lateral', 'aria-label': 'Ordem dos turnos' },
+  return h('aside', { class: 'ordem-lateral ordem-faixa', 'aria-label': 'Ordem dos turnos' },
     cb ? h('div', { class: 'ordem-topo' }, h('strong', {}, `Rodada ${cb.rodada}`), h('small', {}, `Turno ${cb.turno || 1}`)) : h('div', { class: 'ordem-topo' }, h('small', {}, 'Sem combate')),
     h('ol', {}, lista.map(({ p, ini }, i) => {
       const meu = meus.some(x => x.id === p.id);
