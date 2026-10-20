@@ -538,6 +538,20 @@ export function estadoCarga(peso, FOR) {
 // Gênero do personagem e por quais gêneros ele se atrai (Sedução só funciona em quem se atrai pelo gênero de quem seduz).
 // atracao: lista de gêneros; [] = não se atrai por ninguém; sem o campo = ainda não definido (não limita).
 export const GENEROS = [{ id: 'masculino', nome: 'Masculino', plural: 'Homens' }, { id: 'feminino', nome: 'Feminino', plural: 'Mulheres' }, { id: 'outro', nome: 'Outro', plural: 'Outros gêneros' }];
+// Opções de "Se atrai por" (uma só): Homens, Mulheres ou Ambos os gêneros.
+export const ATRACOES = [
+  { id: 'homens', nome: 'Homens', generos: ['masculino'] },
+  { id: 'mulheres', nome: 'Mulheres', generos: ['feminino'] },
+  { id: 'ambos', nome: 'Ambos os gêneros', generos: ['masculino', 'feminino', 'outro'] },
+];
+export function atracaoDe(lista) {
+  if (!Array.isArray(lista)) return null;
+  const s = new Set(lista);
+  if (s.has('masculino') && s.has('feminino')) return ATRACOES[2];
+  if (s.has('masculino')) return ATRACOES[0];
+  if (s.has('feminino')) return ATRACOES[1];
+  return null;
+}
 export function podeSeduzir(autor, alvo) {
   if (!Array.isArray(alvo?.atracao) || !autor?.genero) return { ok: true };
   if (alvo.atracao.includes(autor.genero)) return { ok: true };

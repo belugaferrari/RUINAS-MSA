@@ -4,7 +4,7 @@ import { estado, personagemPorId, meusPersonagens, render } from '../estado.js';
 import { acao } from '../api.js';
 import { LIMITE_SALA } from '/shared/regras.js';
 import { linhaRolagem } from './ficha.js';
-import { combateView, humorCartao, rodaDoHumor, ajustesMestre, xpDaSala, alvoMarcado, marcarAlvo } from './combate.js';
+import { combateView, controleTurnos, humorCartao, rodaDoHumor, ajustesMestre, xpDaSala, alvoMarcado, marcarAlvo } from './combate.js';
 import { painelBatalha, ordemLateral } from './batalha.js';
 import { painelSocial } from './social.js';
 import { prepararTeste } from './dados.js';
@@ -26,6 +26,7 @@ export function salaView(nome) {
         if (await confirmar(`Remover todos de ${TITULOS[nome]} e limpar o registro?`)) await acao('sala.limpar', { sala: nome });
       }, { class: 'perigo', icone: 'trash-2' }) : null),
     // Em cima, o painel do personagem que você controla (esboço do autor); embaixo, o turno, o campo e o registro.
+    nome === 'batalha' ? controleTurnos(participantes, mestre) : null,
     nome === 'batalha'
       ? h('div', { class: 'campo-com-ordem' }, ordemLateral(participantes, mestre),
         h('div', { class: 'campo-conteudo' }, painelBatalha(participantes, mestre), combateView(participantes, mestre)))

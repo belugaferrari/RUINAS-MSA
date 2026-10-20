@@ -71,7 +71,7 @@ export function inventarioExpandido(p, mestre) {
   return tela;
 }
 
-function cartaoItem(p, i, mestre) {
+export function cartaoItem(p, i, mestre) {
   const sis = estado.sistema;
   const cor = COR_RARIDADE[i.raridade] || '#8a7a62';
   const slot = sis.slots.find(s => s.id === i.slot);

@@ -115,6 +115,18 @@ app.post('/api/campanhas/:id/personagens/:pid/foto', upload.single('arquivo'), r
   return { foto: p.foto };
 }));
 
+// Imagem de corpo inteiro do personagem (aparece no painel de equipamento). Mestre ou dono.
+app.post('/api/campanhas/:id/personagens/:pid/corpo', upload.single('arquivo'), rota(req => {
+  const user = autenticado(req);
+  const c = db.campaigns.find(x => x.id === req.params.id);
+  const p = c?.personagens.find(x => x.id === req.params.pid);
+  if (!p || (c.mestreId !== user.id && p.donoId !== user.id)) throw Object.assign(new Error('Personagem não encontrado.'), { status: 404 });
+  p.imagemCorpo = salvarImagem(req.file);
+  save();
+  transmitir(c);
+  return { imagemCorpo: p.imagemCorpo };
+}));
+
 app.post('/api/campanhas/:id/importar-npcs', upload.single('arquivo'), rota(async req => {
   const c = campanhaDoMestre(req);
   if (!req.file) throw new Error('Envie a planilha .xlsx.');

@@ -1,3 +1,4 @@
+import { abrirDescanso } from './descanso.js';
 import { h, botao, selecao, aviso, icone, titulo, formatarData } from '../ui.js';
 import { estado, render, personagemPorId, meusPersonagens } from '../estado.js';
 import { acao } from '../api.js';
@@ -162,6 +163,13 @@ function secaoRapidos(p) {
       botao('d10 (DS)', () => enviar({ dado: '1d10', rotulo: 'Dado de suporte (d10)' }, r => `DS: ${r.total}`), { icone: 'dices' }),
       botao('1d6 (Sacrifício)', () => enviar({ dado: '1d6', rotulo: 'Sacrifício — dano puro' }, r => `Sacrifício: ${r.total} de dano`), { icone: 'heart' })),
     h('p', { class: 'dica' }, 'Iniciativa = AGI + 1d10. DS: compare com a durabilidade do item (falha) ou com o efeito de dano / dezena da ação.'),
+    p ? [titulo('Descanso e necessidades', 'bed', 'h4'),
+      h('div', { class: 'grade-botoes' },
+        botao('Descanso curto', () => acao('descanso.fazer', { tipo: 'curto', ids: [p.id] }).then(r => aviso(r.linhas.join(' · '))).catch(e => aviso(e.message, 'erro')),
+          { icone: 'coffee', title: 'Refeição (meia ração) + 1 hora: 1 PV' }),
+        botao('Descanso longo…', () => abrirDescanso({ ids: [p.id], quem: p.nome }), { icone: 'bed', title: 'Confirma Conforto, Abrigo e Ergonomia; também tem o descanso interrompido' }),
+        botao('Comer', () => acao('necessidade.comer', { id: p.id }).then(() => aviso(`${p.nome} comeu.`)), { icone: 'utensils', title: 'Zera as horas sem comer e tira a Fome' }),
+        botao('Beber', () => acao('necessidade.beber', { id: p.id }).then(() => aviso(`${p.nome} bebeu.`)), { icone: 'cup-soda', title: 'A Sede acaba na hora' }))] : null,
     ultimo());
 }
 

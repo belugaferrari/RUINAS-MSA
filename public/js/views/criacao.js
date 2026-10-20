@@ -2,7 +2,7 @@ import { h, botao, aviso, vazio, confirmar, icone, titulo, tabela, passador, sel
 import { TIPOS } from './livros.js';
 import { estado, render, mudar } from '../estado.js';
 import { acao } from '../api.js';
-import { GENEROS, itemAberto, novaFicha, pontosDoNivel, pontosGastos, pontosPericiaTotal, pontosVantagemExtra, derivados, problemasFicha, custoPericiaBase, vantagensDisponiveis, acharVantagem } from '/shared/regras.js';
+import { GENEROS, ATRACOES, atracaoDe, itemAberto, novaFicha, pontosDoNivel, pontosGastos, pontosPericiaTotal, pontosVantagemExtra, derivados, problemasFicha, custoPericiaBase, vantagensDisponiveis, acharVantagem } from '/shared/regras.js';
 import { ICONE_TIPO, descInstinto } from './ficha.js';
 import { painelPericias } from './pericias.js';
 import { escolherAvatar } from './avatares.js';
@@ -90,11 +90,11 @@ function passoIdentidade() {
     h('div', { class: 'barra', role: 'group', 'aria-label': 'Gênero' }, h('strong', {}, icone('user'), ' Gênero *'),
       GENEROS.map(g => botao(g.nome, () => alterar(x => { x.genero = g.id; }), { class: `pequeno ${f.genero === g.id ? 'primario' : ''}`, 'aria-pressed': f.genero === g.id }))),
     h('div', { class: 'barra', role: 'group', 'aria-label': 'Se atrai por' }, h('strong', {}, icone('heart'), ' Se atrai por'),
-      GENEROS.map(g => {
-        const on = (f.atracao || []).includes(g.id);
-        return botao(g.plural, () => alterar(x => { const a = new Set(x.atracao || []); on ? a.delete(g.id) : a.add(g.id); x.atracao = [...a]; }), { class: `pequeno ${on ? 'primario' : ''}`, 'aria-pressed': on });
+      ATRACOES.map(o => {
+        const on = atracaoDe(f.atracao)?.id === o.id;
+        return botao(o.nome, () => alterar(x => { x.atracao = [...o.generos]; }), { class: `pequeno ${on ? 'primario' : ''}`, 'aria-pressed': on });
       })),
-    h('p', { class: 'dica' }, 'A Sedução só funciona em quem se atrai pelo gênero de quem seduz (nos dois sentidos). Sem nenhuma marcada, ninguém consegue seduzir o personagem.'),
+    h('p', { class: 'dica' }, 'A Sedução só funciona em quem se atrai pelo gênero de quem seduz (nos dois sentidos).'),
     titulo('De onde você veio?', 'compass', 'h4'),
     h('div', { class: 'cartoes' }, sis.origens.map(o => cartaoEscolha(f.origem === o.nome, () => alterar(x => { x.origem = o.nome; }), h('strong', {}, o.nome), h('p', {}, o.descricao)))),
     h('label', {}, 'Família (quem te criou?)', h('textarea', { rows: 2, 'data-key': 'cr:familia', value: f.familia, oninput: e => { f.familia = e.target.value; salvarRascunho(); } })),

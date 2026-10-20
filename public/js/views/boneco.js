@@ -1,84 +1,121 @@
 // Boneco do personagem: mostra o que está equipado em cada parte do corpo e deixa equipar/trocar ali mesmo.
-import { h, botao, aviso, icone, titulo } from '../ui.js';
+import { h, botao, aviso, icone, titulo, janela } from '../ui.js';
 import { estado, render, mudar } from '../estado.js';
-import { acao } from '../api.js';
-import { podeEquipar } from '/shared/regras.js';
+import { acao, enviarArquivo } from '../api.js';
+import { podeEquipar, derivados } from '/shared/regras.js';
+import { ICONE_TIPO } from './ficha.js';
+import { cartaoItem } from './inventarioExpandido.js';
 
-// Boneco: o personagem pintado (masculino ou feminino, pelo gênero da ficha) entre duas colunas de molduras,
-// uma para cada parte do corpo. Parte ocupada: a moldura acende em azul de runa e um medalhão com o item
-// brilha sobre aquela parte do corpo. Clicar na moldura ou no medalhão abre o painel para equipar/trocar.
-const PARTES = [
-  { id: 'cabeca', slot: 'cabeca', rotulo: 'Cabeça', icone: 'hard-hat', lado: 'esq' },
-  { id: 'joia', slot: 'joia', rotulo: 'Joias', icone: 'gem', lado: 'dir' },
-  { id: 'corpo', slot: 'corpo', rotulo: 'Corpo', icone: 'shield', lado: 'esq' },
-  { id: 'costas', slot: 'costas', rotulo: 'Costas', icone: 'backpack', lado: 'dir' },
-  { id: 'm0', slot: 'maos', mao: 0, rotulo: 'Mão direita', icone: 'hand', lado: 'esq' },
-  { id: 'm1', slot: 'maos', mao: 1, rotulo: 'Mão esquerda', icone: 'hand', lado: 'dir' },
-  { id: 'vestimenta', slot: 'vestimenta', rotulo: 'Vestimenta', icone: 'shirt', lado: 'esq' },
+// Painel de equipamento (no estilo das telas de inventário de jogo): o nome no alto, a imagem de corpo inteiro do
+// personagem no meio sobre um pedestal (enviada pelo jogador ou pelo mestre; sem ela, a figura padrão pelo gênero) e,
+// em volta, uma moldura para cada parte do corpo com o item equipado: ícone na cor da raridade, um número de destaque
+// (IP, dano…) e o "i" para ver tudo do item. Clicar na moldura abre o painel para equipar/trocar.
+const ESQUERDA = [
+  { id: 'cabeca', slot: 'cabeca', rotulo: 'Cabeça', icone: 'hard-hat' },
+  { id: 'costas', slot: 'costas', rotulo: 'Costas', icone: 'backpack' },
+  { id: 'corpo', slot: 'corpo', rotulo: 'Corpo', icone: 'shield', alto: true },
+  { id: 'vestimenta', slot: 'vestimenta', rotulo: 'Vestimenta', icone: 'shirt' },
 ];
-// Onde fica cada parte em cada figura (em % da imagem).
-const FIGURAS = {
-  masculino: { img: '/img/boneco-masculino.webp', pontos: { cabeca: [49, 3.5], joia: [50, 19], corpo: [50, 30], costas: [76, 21], m0: [12, 46], m1: [85, 46], vestimenta: [50, 62] } },
-  feminino: { img: '/img/boneco-feminino.webp', pontos: { cabeca: [40, 6], joia: [41, 21], corpo: [44, 33], costas: [66, 25], m0: [12, 49], m1: [77, 49], vestimenta: [46, 63] } },
-};
-const ICONE_NA_MAO = { arma: 'sword', escudo: 'shield', item: 'package', duas: 'swords' };
+const DIREITA = [
+  { id: 'm0', slot: 'maos', mao: 0, rotulo: 'Mão direita', icone: 'hand', alto: true },
+  { id: 'm1', slot: 'maos', mao: 1, rotulo: 'Mão esquerda', icone: 'hand' },
+];
+const FIGURA_PADRAO = { masculino: '/img/boneco-masculino.webp', feminino: '/img/boneco-feminino.webp' };
+const COR_RARIDADE = { Mundano: '#9a948a', Comum: '#cfc8bb', Incomum: '#62d16e', Raro: '#4f9dff', 'Raríssimo': '#b06bff', 'Lendário': '#ffb02e', 'Único': '#ff6a3a', Ilegal: '#e0405a' };
 
 // Que tipo de coisa está em cada mão: arma, escudo (proteção) ou um item qualquer.
 const tipoNaMao = it => (it.tipo === 'arma' ? 'arma' : it.tipo === 'defesa' || /escudo/i.test(it.nome) ? 'escudo' : 'item');
 
-// Partes que acabaram de ser ocupadas acendem com mais força por um instante ("equipado!").
+// Partes que acabaram de ser ocupadas brilham por um instante ("equipado!").
 const ocupacaoVista = new Map();
 const recem = new Map();
-function partesOcupadas(p) {
-  const tem = slot => (p.itens || []).some(i => i.equipado && i.slot === slot);
-  const ocupadas = ['cabeca', 'corpo', 'vestimenta', 'joia', 'costas'].filter(tem);
-  if (naMao(p, 0)) ocupadas.push('m0');
-  if (naMao(p, 1)) ocupadas.push('m1');
+function marcarNovos(p, ocupadas) {
   const antes = ocupacaoVista.get(p.id);
   if (antes) for (const c of ocupadas) if (!antes.has(c)) { recem.set(`${p.id}:${c}`, Date.now()); setTimeout(render, 1700); }
   ocupacaoVista.set(p.id, new Set(ocupadas));
-  return ocupadas;
+}
+
+// Número de destaque do item na moldura (como o "+12" do exemplo).
+function destaque(i) {
+  if (!i) return null;
+  if (i.defesa) return `IP ${i.defesa}`;
+  if (i.dano || i.danoTexto) return i.dano || i.danoTexto;
+  const b = Object.entries(i.bonus || {})[0];
+  if (b) return `${b[0]} ${b[1] > 0 ? '+' : ''}${b[1]}`;
+  return null;
 }
 
 export function bonecoView(p, { mestre = false, linkGuardados = true, compacto = false } = {}) {
   const sis = estado.sistema;
   const chave = `boneco:${p.id}`;
   const aberto = estado.sel[chave] || null;
-  const fig = FIGURAS[p.genero === 'feminino' ? 'feminino' : 'masculino'];
-  const ocupadas = new Set(partesOcupadas(p));
+  const tem = slot => sis.slots.some(s => s.id === slot);
+  const equipados = slot => (p.itens || []).filter(i => i.equipado && i.slot === slot);
+  const ocupadas = [...ESQUERDA, ...DIREITA].filter(x => tem(x.slot) && (x.mao != null ? naMao(p, x.mao) : equipados(x.slot).length)).map(x => x.id);
+  const joias = equipados('joia');
+  if (joias.length) ocupadas.push('joia');
+  marcarNovos(p, ocupadas);
   const agora = Date.now();
   const novo = id => agora - (recem.get(`${p.id}:${id}`) || 0) < 1600;
-  const partes = PARTES.filter(pt => sis.slots.some(s => s.id === pt.slot)).map(pt => {
-    const itens = pt.slot === 'maos' ? (naMao(p, pt.mao) ? [naMao(p, pt.mao)] : []) : (p.itens || []).filter(i => i.equipado && i.slot === pt.slot);
-    const id = pt.mao != null ? `maos:${pt.mao}` : pt.slot;
-    const duas = itens[0] && pt.slot === 'maos' && (itens[0].ocupa ?? 1) >= 2;
-    const simbolo = pt.slot === 'maos' && itens[0] ? ICONE_NA_MAO[duas ? 'duas' : tipoNaMao(itens[0])] : pt.icone;
-    const nomes = itens.map(i => i.nome).join(', ');
-    const habil = pt.mao != null && maoHabil(p) === pt.mao;
-    return { ...pt, itens, chaveAberta: id, simbolo, nomes, habil, cheio: ocupadas.has(pt.id), novo: novo(pt.id),
-      abrir: () => { estado.sel[chave] = aberto === id ? null : id; render(); } };
-  });
-  const classe = x => `parte-${x.id} ${x.cheio ? 'cheio' : ''} ${x.novo ? 'novo' : ''} ${aberto === x.chaveAberta ? 'aberto' : ''}`;
-  const moldura = x => h('button', {
-    type: 'button', class: `boneco-moldura ${classe(x)}`, 'aria-expanded': aberto === x.chaveAberta,
-    title: `${x.rotulo}: ${x.nomes || 'vazio'}`, onclick: x.abrir,
-  },
-    h('span', { class: 'moldura-icone' }, icone(x.simbolo)),
-    h('span', { class: 'moldura-texto' }, h('small', {}, x.rotulo, x.habil ? ' ★' : ''), h('span', {}, x.nomes || 'vazio')));
-  const pontos = fig.pontos;
-  const medalhao = x => h('button', {
-    type: 'button', class: `boneco-medalhao ${classe(x)}`, style: { left: `${pontos[x.id][0]}%`, top: `${pontos[x.id][1]}%` },
-    title: `${x.rotulo}: ${x.nomes || 'vazio'}`, 'aria-label': `${x.rotulo}: ${x.nomes || 'vazio'}`, tabindex: compacto ? 0 : -1, onclick: x.abrir,
-  }, h('span', { class: 'selo' }, h('span', { class: 'aura' }), icone(x.simbolo)));
+  const abrir = id => () => { estado.sel[chave] = aberto === id ? null : id; render(); };
+  const info = i => ev => { ev.stopPropagation(); janela(i.nome, cartaoItem(p, i, mestre), [['Fechar', () => true]]); };
+
+  // Uma moldura: item (ícone na cor da raridade, nome, destaque e "i") ou vazia (ícone apagado e o nome da parte).
+  const moldura = (x, item, { pequena = false, extra = '' } = {}) => {
+    const id = x.mao != null ? `maos:${x.mao}` : x.slot;
+    const cor = item ? COR_RARIDADE[item.raridade] || '#c9a45c' : null;
+    const duas = item && x.slot === 'maos' && (item.ocupa ?? 1) >= 2;
+    const ic = item ? (x.slot === 'maos' ? { arma: 'sword', escudo: 'shield', item: 'package' }[tipoNaMao(item)] : ICONE_TIPO[item.tipo] || x.icone) : x.icone;
+    const hab = x.mao != null && maoHabil(p) === x.mao;
+    const cls = `equip-slot ${x.alto ? 'alto' : ''} ${pequena ? 'pequena' : ''} ${item ? 'cheio' : 'vazio'} ${novo(x.id) ? 'novo' : ''} ${aberto === id ? 'aberto' : ''} ${extra}`;
+    return h('div', { class: cls, style: cor ? { '--rar': cor } : null },
+      h('button', {
+        type: 'button', class: 'equip-botao', onclick: abrir(id),
+        title: `${x.rotulo}${hab ? ' (mão hábil)' : ''}: ${item ? `${item.nome}${duas ? ' (duas mãos)' : ''}` : 'vazio'}`,
+        'aria-label': `${x.rotulo}: ${item ? item.nome : 'vazio'}`,
+      },
+        h('span', { class: 'equip-icone' }, icone(ic)),
+        destaque(item) ? h('span', { class: 'equip-destaque' }, destaque(item)) : null,
+        pequena ? null : h('span', { class: 'equip-nome' }, item ? item.nome : x.rotulo),
+        hab && !pequena ? h('span', { class: 'equip-habil', title: 'Mão hábil' }, '★') : null),
+      item ? h('button', { type: 'button', class: 'equip-info', title: `Ver tudo de ${item.nome}`, 'aria-label': `Ver tudo de ${item.nome}`, onclick: info(item) }, 'i') : null);
+  };
+  const slotDe = x => {
+    if (!tem(x.slot)) return null;
+    const item = x.mao != null ? naMao(p, x.mao) : equipados(x.slot)[0];
+    return moldura(x, item);
+  };
+  const capJoia = sis.slots.find(s => s.id === 'joia')?.capacidade || 0;
+  const blocoJoias = capJoia ? h('div', { class: 'equip-joias', role: 'group', 'aria-label': 'Joias' },
+    Array.from({ length: Math.min(4, capJoia) }, (_, k) => moldura({ id: 'joia', slot: 'joia', rotulo: `Joia ${k + 1}`, icone: 'gem' }, joias[k], { pequena: true }))) : null;
+
+  const figuraUrl = p.imagemCorpo || FIGURA_PADRAO[p.genero === 'feminino' ? 'feminino' : 'masculino'];
+  const podeEnviar = mestre || estado.campanha.papel === 'mestre' || p.donoId === estado.usuario.id;
+  const arquivo = h('input', { type: 'file', accept: 'image/*', hidden: true, onchange: async e => {
+    const f = e.target.files[0];
+    if (!f) return;
+    const form = new FormData();
+    form.append('arquivo', f);
+    try { await enviarArquivo(`/api/campanhas/${estado.campanha.id}/personagens/${p.id}/corpo`, form); aviso('Imagem de corpo inteiro atualizada.'); } catch (err) { aviso(err.message, 'erro'); }
+  } });
+  const d = derivados(p, sis);
   const guardados = (p.itens || []).filter(i => !i.equipado);
-  return h('div', { class: `boneco ${compacto ? 'compacto' : ''}` },
-    h('div', { class: 'boneco-palco' },
-      compacto ? null : h('div', { class: 'boneco-coluna esq' }, partes.filter(x => x.lado === 'esq').map(moldura)),
-      h('div', { class: 'boneco-figura' },
-        h('img', { src: fig.img, alt: '', class: 'boneco-arte', draggable: 'false' }),
-        partes.map(medalhao)),
-      compacto ? null : h('div', { class: 'boneco-coluna dir' }, partes.filter(x => x.lado === 'dir').map(moldura))),
-    aberto ? painelSlot(p, aberto, mestre) : compacto ? null : h('p', { class: 'dica' }, icone('info'), ' Toque numa moldura (ou no corpo) para ver, equipar ou trocar.'),
+  return h('div', { class: `boneco equip ${compacto ? 'compacto' : ''}` },
+    h('div', { class: 'equip-painel' },
+      h('div', { class: 'equip-titulo' },
+        h('span', { class: 'equip-nivel', title: 'Nível' }, String(p.nivel || 1)),
+        h('strong', {}, p.nome),
+        h('span', { class: 'equip-stats' },
+          h('span', { title: 'IP (proteção dos itens equipados)' }, icone('shield'), ` ${d.defesa}`),
+          h('span', { title: `Carga ${d.carga.toFixed(1)} kg de ${d.cargaCapacidade} kg` }, icone('weight'), ` ${d.carga.toFixed(1)}`))),
+      h('div', { class: 'equip-grade' },
+        h('div', { class: 'equip-coluna' }, ESQUERDA.map(slotDe)),
+        h('div', { class: 'equip-centro' },
+          h('div', { class: 'equip-figura' }, h('img', { src: figuraUrl, alt: '', draggable: 'false', class: p.imagemCorpo ? 'propria' : 'padrao' })),
+          h('div', { class: 'equip-pedestal', 'aria-hidden': 'true' }),
+          podeEnviar ? [arquivo, botao('', () => arquivo.click(), { class: 'pequeno equip-enviar', icone: 'image', title: 'Enviar a imagem de corpo inteiro do personagem' })] : null),
+        h('div', { class: 'equip-coluna' }, blocoJoias, DIREITA.map(slotDe)))),
+    aberto ? painelSlot(p, aberto, mestre) : compacto ? null : h('p', { class: 'dica' }, icone('info'), ' Toque numa moldura para equipar ou trocar; no "i" para ver tudo do item.'),
     linkGuardados ? h('p', { class: 'boneco-guardados' }, icone('backpack'), ` Guardados: ${guardados.length} ${guardados.length === 1 ? 'item' : 'itens'} `,
       botao('Ver inventário', () => irParaInventario(mestre), { class: 'pequeno link', icone: 'backpack' })) : null);
 }
@@ -115,6 +152,7 @@ export function painelSlot(p, aberto, mestre) {
     titulo(`${slotDef.nome} (${noSlot.reduce((s, i) => s + (i.ocupa ?? 1), 0)}/${slotDef.capacidade})`, 'shirt', 'h4'),
     noSlot.length ? h('ul', { class: 'lista-inline' }, noSlot.map(i => h('li', {}, i.nome,
       i.capacidade ? h('small', {}, ` (${i.carregada || 0}/${i.capacidade})`) : null,
+      botao('', () => janela(i.nome, cartaoItem(p, i, mestre), [['Fechar', () => true]]), { class: 'pequeno', icone: 'info', title: `Ver tudo de ${i.nome}` }),
       botao('Guardar', () => acao('item.equipar', { id: p.id, uid: i.uid, equipar: false }), { class: 'pequeno', icone: 'backpack', title: `Guardar ${i.nome}` }))))
       : h('p', { class: 'dica' }, 'Nada equipado aqui.'),
     opcoes.length ? h('div', {}, h('small', {}, 'Guardados que servem aqui:'),

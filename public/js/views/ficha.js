@@ -2,7 +2,7 @@ import { h, campo, botao, selecao, aviso, confirmar, pedirTexto, formatarData, v
 import { efeitosIcones } from './efeitos.js';
 import { estado, render } from '../estado.js';
 import { acao, enviarArquivo } from '../api.js';
-import { GENEROS, durabilidadeDe, derivados, slotsOcupados, ganhosDeClasse, pontosGastos, pontosPericiaTotal, vantagensDisponiveis, acharVantagem, xpParaSubir } from '/shared/regras.js';
+import { GENEROS, ATRACOES, atracaoDe, durabilidadeDe, derivados, slotsOcupados, ganhosDeClasse, pontosGastos, pontosPericiaTotal, vantagensDisponiveis, acharVantagem, xpParaSubir } from '/shared/regras.js';
 import { painelPericias } from './pericias.js';
 import { bonecoView } from './boneco.js';
 import { escolherAvatar } from './avatares.js';
@@ -312,14 +312,13 @@ export function barraXp(p) {
 function generoView(p) {
   const mestre = estado.campanha.papel === 'mestre';
   const nome = id => GENEROS.find(g => g.id === id)?.nome || '—';
-  const atr = Array.isArray(p.atracao) ? (p.atracao.length ? p.atracao.map(id => GENEROS.find(g => g.id === id)?.plural).join(', ') : 'ninguém') : 'não definido';
+  const atual = atracaoDe(p.atracao);
+  const atr = Array.isArray(p.atracao) ? (atual?.nome || 'ninguém') : 'não definido';
   if (!mestre) return h('p', { class: 'meta' }, icone('user'), ` Gênero: ${nome(p.genero)} · Se atrai por: ${atr}`);
   return h('div', { class: 'grade2' },
     h('label', {}, 'Gênero', selecao([{ valor: '', rotulo: '—' }, ...GENEROS.map(g => ({ valor: g.id, rotulo: g.nome }))], p.genero || '', v => atualizar(p, { genero: v }))),
-    h('div', { role: 'group', 'aria-label': 'Se atrai por' }, h('small', {}, 'Se atrai por'), h('div', { class: 'barra' }, GENEROS.map(g => {
-      const on = (p.atracao || []).includes(g.id);
-      return h('label', { class: 'linha' }, h('input', { type: 'checkbox', checked: on, onchange: () => { const a = new Set(p.atracao || []); on ? a.delete(g.id) : a.add(g.id); atualizar(p, { atracao: [...a] }); } }), g.plural);
-    }))));
+    h('label', {}, 'Se atrai por', selecao([{ valor: '', rotulo: '—' }, ...ATRACOES.map(o => ({ valor: o.id, rotulo: o.nome }))], atual?.id || '',
+      v => atualizar(p, { atracao: ATRACOES.find(o => o.id === v)?.generos || [] }))));
 }
 
 function identidade(p) {

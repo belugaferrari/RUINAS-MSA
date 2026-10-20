@@ -311,7 +311,7 @@ const nomeStr = v => String(v ?? '').slice(0, 20000);
 // Campos que um jogador pode alterar diretamente na própria ficha (o resto passa pelo mestre ou por ações específicas).
 const CAMPOS_JOGADOR = new Set([
   'nome', 'idade', 'peso', 'altura', 'instinto', 'caracteristicas', 'background', 'anotacoes', 'origem', 'motivacao', 'familia',
-  'foto', 'pv', 'sanidade', 'humanidade', 'marcadores', 'ativas',
+  'foto', 'imagemCorpo', 'pv', 'sanidade', 'humanidade', 'marcadores', 'ativas',
 ]);
 const CAMPOS_PROTEGIDOS = new Set(['id', 'tipo', 'donoId', 'backups']);
 
