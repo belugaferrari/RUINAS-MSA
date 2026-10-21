@@ -326,6 +326,8 @@ export function derivados(ficha, sistema) {
   const condicoes = condicoesAtivas(ficha, sistema).filter(c => !(ficha.emCombate && c.grupo === 'Necessidades'));
   const condAtr = {}, condTesteAtr = {}, condPericia = {};
   let condTestes = 0;
+  // Civilizados: quem atacou primeiro um Encantado civilizado tem −10% em todos os testes até o fim da batalha.
+  const onusCivilizado = ficha.onusCivilizado ? -10 : 0;
   for (const c of condicoes) {
     for (const [k, v] of Object.entries(c.atributos || {})) condAtr[k] = (condAtr[k] || 0) + v * c.qtd;
     for (const [k, v] of Object.entries(c.testesAtributos || {})) condTesteAtr[k] = (condTesteAtr[k] || 0) + v * c.qtd;
@@ -335,10 +337,12 @@ export function derivados(ficha, sistema) {
   const atributos = {}, percentual = {}, bonusPericial = {}, mod = {};
   for (const a of sistema.atributos) {
     let v = (ficha.atributos?.[a.sigla] ?? 0) + (bonus[a.sigla] || 0) + (condAtr[a.sigla] || 0) + (hab.atributos[a.sigla] || 0);
-    // Essência monstruosa: até o fim do combate, o atributo mais alto do monstro abatido vira o do personagem.
-    if (ficha.essencia?.sigla === a.sigla) v = Math.max(v, ficha.essencia.valor);
+    // Essência monstruosa: até o fim do combate, o atributo do personagem fica igual ao mais alto do monstro abatido
+    // (rinoceronte com CONS 18 → CONS 18), mesmo que o do personagem fosse maior (autor, 21/10).
+    if (ficha.essencia?.sigla === a.sigla) v = ficha.essencia.valor;
+
     atributos[a.sigla] = v;
-    percentual[a.sigla] = 4 * v + condTestes + hab.testes + (condTesteAtr[a.sigla] || 0);
+    percentual[a.sigla] = 4 * v + condTestes + hab.testes + (condTesteAtr[a.sigla] || 0) + onusCivilizado;
     bonusPericial[a.sigla] = Math.max(0, 2 * (v - 5));
     mod[a.sigla] = Math.floor((v - 10) / 2) + (racial[a.sigla] || 0);
   }
@@ -349,7 +353,7 @@ export function derivados(ficha, sistema) {
   for (const p of sistema.pericias || []) {
     const base = ficha.pericias?.[p.id] ?? 0;
     const bp = bonusPericial[p.atributo] ?? 0;
-    const cond = condTestes + (condTesteAtr[p.atributo] || 0) + (condPericia[p.id] || 0) + hab.testes + (hab.pericias[p.id] || 0);
+    const cond = condTestes + (condTesteAtr[p.atributo] || 0) + (condPericia[p.id] || 0) + hab.testes + (hab.pericias[p.id] || 0) + onusCivilizado;
     pericias[p.id] = base + bp + (bonus[p.id] || 0) + cond;
     for (const s of p.subpericias) {
       subpericias[s.id] = base + (ficha.subpericias?.[s.id] ?? 0) + bp + (bonusProfissao[s.id] || 0) + (bonus[p.id] || 0) + (bonus[s.id] || 0) + cond + (hab.subpericias[s.id] || 0);

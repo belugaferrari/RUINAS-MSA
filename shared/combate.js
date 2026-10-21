@@ -250,8 +250,8 @@ export function gastarRecurso(p, sistema, id, qtd = 1) {
   return r;
 }
 
-// "Raça" para habilidades como Quebra-Hordas: a da ficha, ou o nome sem o número (Cão das Ruínas 1 e 2 são da mesma).
-export const racaDe = p => p?.raca || String(p?.nome || '').replace(/\s*\d+\s*$/, '').trim().toLowerCase();
+// "Raça" para habilidades como Quebra-Hordas: o campo Raça da ficha (autor, 21/10). Sem raça preenchida, não combina com ninguém.
+export const racaDe = p => String(p?.raca || '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase() || null;
 // Distância no mapa em metros (diagonal conta 1 quadrado de 1,5 m); null se algum não tem peão.
 export function distanciaPecas(c, idA, idB) {
   const a = c.mapa?.pecas?.[idA], b = c.mapa?.pecas?.[idB];

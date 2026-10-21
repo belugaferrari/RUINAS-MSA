@@ -176,6 +176,9 @@ function moverGrupo(p) {
     selecao(grupos.map(g => ({ valor: g.id, rotulo: g.nome })), p.grupoId, v => acao('personagem.atualizar', { id: p.id, patch: { grupoId: v } })),
     h('label', { class: 'linha' }, 'Dificuldade (encontros)',
       campo(`${p.id}:dificuldade`, p.dificuldade ?? '', v => acao('personagem.atualizar', { id: p.id, patch: { dificuldade: v } }), { tipo: 'number', class: 'num' })),
+    // Raça: Quebra-Hordas ataca outra criatura da mesma raça.
+    h('label', { class: 'linha' }, 'Raça',
+      campo(`${p.id}:raca`, p.raca ?? '', v => acao('personagem.atualizar', { id: p.id, patch: { raca: v.trim() } }), { class: 'curto', placeholder: 'ex.: Cão das Ruínas' })),
     // Tipo de criatura: algumas habilidades valem só contra certos tipos (ex.: Mente cibernética contra drones e autômatos).
     h('label', { class: 'linha' }, 'Tipo de criatura',
       selecao((estado.sistema.tiposCriatura || []).map(t => ({ valor: t.id, rotulo: t.nome })), tipoCriatura(p), v => acao('personagem.atualizar', { id: p.id, patch: { tipoCriatura: v } }), { 'aria-label': `Tipo de criatura de ${p.nome}` })));

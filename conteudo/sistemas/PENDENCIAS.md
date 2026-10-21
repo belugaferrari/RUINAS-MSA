@@ -188,12 +188,13 @@ Regra combinada: **o livro é mais atual**; das planilhas só entra o que o livr
 Regras em `conteudo/sistemas/habilidades-regras.json` (automática / ligar / ativar com custo, usos e duração). Progressão de dano do livro: D4 > D6 > D8 > D10 > D12 > 2D6 > 2D8 > 2D10 > 2D12 > 3D10 > 3D12 > 2D20 (dado fora da tabela usa o de média mais próxima).
 
 **Provisório — conferir**
-- Tipos de criatura: Humanoide, Animal, Besta, Monstro, Mutante, Drone, Autômato, Máquina (o mestre escolhe no NPC; PJ = Humanoide; NPC marcado como criatura = Monstro).
-- Essência monstruosa: o atributo fica com o MAIOR entre o do personagem e o do monstro (não baixa); o monstro precisa ter atributos na ficha.
-- Quebra-Hordas: "mesma raça" = campo raça da ficha ou o nome sem o número (Cão das Ruínas 1 e 2); vale contra Animal, Besta, Monstro e Mutante; sem peões no mapa, o app não confere a distância.
-- Guerras diplomáticas: Intimidação contra WILL% + 30; quem perde ganha o marcador "Civilizado" (o efeito na mesa fica com o mestre).
+- Tipos de criatura: Humanoide, Animal, Besta, Monstro, Mutante, Drone, Autômato, Máquina (o mestre escolhe no NPC; PJ = Humanoide; NPC marcado como criatura = Monstro). **Autor (21/10): por agora está bom; ampliar quando as criaturas estiverem prontas.**
+- **Confirmado (autor, 21/10):** Essência monstruosa iguala o atributo do personagem ao mais alto do monstro (rinoceronte com CONS 18 → CONS 18), mesmo que fique menor. O monstro precisa ter atributos na ficha.
+- **Confirmado (autor, 21/10):** Quebra-Hordas usa o campo Raça da ficha (o mestre preenche no NPC). Provisório: vale contra Animal, Besta, Monstro e Mutante; sem peões no mapa, o app não confere a distância.
+- Guerras diplomáticas devolve o adversário à situação dos **Civilizados** (Encantado, nível 12 — autor, 21/10): para atacar o Encantado ele precisa passar de novo em WILL% Difícil. Provisório: o teste de WILL é feito uma vez por combate para cada adversário (não a cada ataque); quem passa e ataca primeiro fica com −10% em todos os testes até o fim da batalha.
 - Dano ao sistema: contra drone/autômato/máquina é Normal e o dano (− IP elétrico) vai no PV; contra item na mão de alguém é Difícil e o mestre aplica o dano no item.
-- Núcleo energético: o personagem começa com coração humano (1d6 de dano por carga); o mestre marca "coração artificial".
+- **LEMBRAR O AUTOR (21/10):** rever como dano afeta itens — itens não têm PV, têm durabilidade (Dano ao sistema e outros).
+- Núcleo energético: o personagem começa com coração humano (1d6 de dano por carga); o mestre marca "coração artificial". **Aguardando o autor reler a classe.**
 - Aceleração Sináptica: os 3 turnos contam no fim de cada turno do personagem (o turno em que ativou conta).
 - Ataque afiado / Aperfeiçoamento do soldado: Afiada N = quantas vezes recebeu a habilidade; o app não avança o relógio pelas 2 h de treino.
 

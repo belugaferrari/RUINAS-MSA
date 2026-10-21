@@ -174,13 +174,14 @@ test('Essência monstruosa: monstro abatido dá o atributo mais alto dele até o
   const v = cl.vantagens.find(x => x.nome === 'Essência monstruosa');
   const f = alvoSimples({ nome: 'Caçador', classe: cl.id, nivel: 3, vantagens: [`${cl.id}/${v.id}`] });
   const monstro = alvoSimples({ nome: 'Fera', tipoCriatura: 'besta', pv: { max: 20, atual: 0 } });
-  monstro.atributos = { ...monstro.atributos, FOR: 22 };
+  monstro.atributos = { ...monstro.atributos, CONS: 18 };
+  f.atributos.CONS = 20; // iguala mesmo sendo menor (autor, 21/10)
   const { c, ids, p } = campanhaCom(f, monstro);
   const eu = p(ids[0]);
   const hab = listaHabilidades(eu, mss).find(x => x.nome === 'Essência monstruosa');
   const hum = eu.humanidade.atual;
   executar(c, 'habilidade.ativar', { id: eu.id, hab: hab.id, alvo: ids[1] }, ctxM);
-  assert.equal(derivados(eu, mss).atributos.FOR, 22);
+  assert.equal(derivados(eu, mss).atributos.CONS, 18);
   assert.ok(eu.humanidade.atual < hum);
   executar(c, 'combate.encerrar', {}, ctxM);
   assert.ok(!eu.essencia);
@@ -191,7 +192,8 @@ test('Quebra-Hordas oferece ataque extra contra outra criatura da mesma raça, u
   const v = cl.vantagens.find(x => x.nome === 'Quebra-Hordas');
   const f = alvoSimples({ nome: 'Caçadora', classe: cl.id, nivel: 3, vantagens: [`${cl.id}/${v.id}`] });
   f.atributos.FOR = 18;
-  const caes = [1, 2].map(n => alvoSimples({ nome: `Cão das Ruínas ${n}`, tipoCriatura: 'animal' }));
+  const caes = [1, 2].map(n => alvoSimples({ nome: `Cão das Ruínas ${n}`, tipoCriatura: 'animal', raca: 'Cão das Ruínas' }));
+  caes.push(alvoSimples({ nome: 'Cão das Ruínas 3', tipoCriatura: 'animal' })); // sem raça na ficha: não entra
   const { c, ids } = campanhaCom(f, ...caes);
   const s = c.salas.batalha;
   let tentativas = 0;
@@ -204,4 +206,26 @@ test('Quebra-Hordas oferece ataque extra contra outra criatura da mesma raça, u
   const r = executar(c, 'combate.oferta', { id: of.id, aceitar: true, alvo: ids[2] }, ctxM);
   assert.ok(r.id || r.tipo);
   assert.ok(!(s.ofertas || []).some(o => o.tipo === 'quebraHordas'));
+});
+
+test('Civilizados: atacar o Encantado sem ter sido atacado exige WILL% Difícil; quem passa fica com −10%', () => {
+  const f = comGanho('Civilizados');
+  const inimigo = alvoSimples({ nome: 'Bandido' });
+  const { c, ids, p } = campanhaCom(f, inimigo);
+  const enc = p(ids[0]), band = p(ids[1]);
+  let barrou = 0, passou = false;
+  for (let i = 0; i < 40 && !passou; i++) {
+    const r = executar(c, 'combate.atacar', { atacante: band.id, alvo: enc.id, opcoes: { surpresa: true } }, ctxM);
+    if (r.tipo === 'barrado') barrou++; else passou = true;
+  }
+  assert.ok(barrou > 0, 'WILL% baixo costuma falhar no Difícil');
+  if (passou) assert.equal(derivados(band, mss).percentual.WILL, 4 * band.atributos.WILL - 10);
+  // Depois que o Encantado ataca, o adversário ataca sem teste.
+  const outro = p(executar(c, 'personagem.criar', { tipo: 'npc', grupoId: 'encontros', ficha: { nome: 'Outro' } }, ctxM).id);
+  Object.assign(outro, novaFicha(mss), { id: outro.id, nome: 'Outro', pv: { max: 30, atual: 30 } });
+  executar(c, 'sala.adicionar', { sala: 'batalha', id: outro.id }, ctxM);
+  executar(c, 'combate.atacar', { atacante: enc.id, alvo: outro.id, opcoes: { surpresa: true } }, ctxM);
+  const r = executar(c, 'combate.atacar', { atacante: outro.id, alvo: enc.id, opcoes: { surpresa: true } }, ctxM);
+  assert.notEqual(r.tipo, 'barrado');
+  assert.ok(!outro.onusCivilizado);
 });

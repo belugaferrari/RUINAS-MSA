@@ -355,6 +355,8 @@ function encerrarAtivacoes(c, p, sis, soCombate = true) {
   }
   if (p.essencia) { fim.push(`Essência (${p.essencia.sigla})`); delete p.essencia; }
   if (p.pvTemp) { delete p.pvTemp; fim.push('PV temporários'); }
+  if (p.onusCivilizado) fim.push('ônus de Civilizados');
+  for (const k of ['atacouNoCombate', 'passouCivilizado', 'onusCivilizado']) delete p[k];
   if (fim.length) registrar(c.salas.batalha.log, { autor: p.nome, rotulo: 'Fim das habilidades ativadas', texto: fim.join(', ') });
 }
 
@@ -482,6 +484,27 @@ function cargaNoCoracao(p, qtd = 1) {
   return ` · coração humano: ${d.total} de dano (${p.pv.atual}/${p.pv.max} PV)`;
 }
 
+// Civilizados (Encantado, nível 12): os adversários precisam passar em WILL% Difícil para atacá-lo, a não ser que ele os
+// tenha atacado primeiro. Quem passa e ataca primeiro fica com −10% em todos os testes até o fim da batalha.
+// O teste vale uma vez por combate para cada adversário (Guerras diplomáticas devolve a situação de Civilizados).
+function civilizados(c, a, b, sis) {
+  if (temHabilidade(a, sis, 'Civilizados') && !(a.atacouNoCombate ||= []).includes(b.id)) a.atacouNoCombate.push(b.id);
+  if (!temHabilidade(b, sis, 'Civilizados') || (b.atacouNoCombate || []).includes(a.id) || (a.passouCivilizado || []).includes(b.id)) return null;
+  const dif = sis.teste.dificuldades.find(x => x.nome === 'Difícil') || { nome: 'Difícil', nd: 90 };
+  const t = testeContra(derivados(a, sis).percentual.WILL ?? 0, dif.nd, sis);
+  const conta = `WILL% ${t.total} (d100 ${t.dp} + ${t.acao}) contra ${dif.nome} ${dif.nd}`;
+  const s = c.salas.batalha;
+  if (!t.sucesso) {
+    const texto = `${a.nome} não consegue atacar ${b.nome} (Civilizados): ${conta}`;
+    registrar(s.log, { autor: a.nome, rotulo: `tenta atacar ${b.nome}`, texto, sucesso: false });
+    return { tipo: 'barrado', texto };
+  }
+  (a.passouCivilizado ||= []).push(b.id);
+  a.onusCivilizado = true;
+  registrar(s.log, { autor: a.nome, rotulo: `ataca ${b.nome} primeiro (Civilizados)`, texto: `${conta}: passou; −10% em todos os testes até o fim da batalha` });
+  return null;
+}
+
 // Fim do turno: habilidades ativadas por turnos descontam um; ao acabar, saem e aplicam o efeito final (Aceleração Sináptica: 2d4).
 function passarTurnoHabilidades(p) {
   const notas = [];
@@ -511,14 +534,14 @@ function criarOfertas(c, s, a, b, r, pend, sis) {
   // Quebra-Hordas: 1 vez por turno, ao acertar, ataque extra contra outra criatura da mesma raça a até 1,5 m do alvo.
   if (r.sucesso && !pend.opcoes?.extra && temHabilidade(a, sis, 'Quebra-Hordas') && a.quebraHordasEm !== turno && TIPOS_HORDA.includes(tipoCriatura(b))) {
     const candidatos = s.participantes.filter(id => id !== a.id && id !== b.id).map(id => personagem(c, id))
-      .filter(x => x.pv && x.pv.atual > 0 && racaDe(x) === racaDe(b) && (distanciaPecas(c, b.id, x.id) ?? 0) <= 1.5);
+      .filter(x => x.pv && x.pv.atual > 0 && racaDe(b) && racaDe(x) === racaDe(b) && (distanciaPecas(c, b.id, x.id) ?? 0) <= 1.5);
     if (candidatos.length) {
       s.ofertas.push({ id: uid(), tipo: 'quebraHordas', habilidade: 'Quebra-Hordas', personagem: a.id, alvos: candidatos.map(x => x.id), armaUid: pend.opcoes?.armaUid || 'desarmado',
         texto: `${a.nome} acertou ${b.nome}: ataque extra (Quebra-Hordas) contra outra criatura da mesma raça a até 1,5 m${candidatos.some(x => distanciaPecas(c, b.id, x.id) == null) ? ' (confira a distância no mapa)' : ''}` });
     }
   }
   // Guerras diplomáticas: ao causar dano, ação bônus de Intimidação contra WILL% + 30 do alvo para ele parar de atacar.
-  if (r.dano > 0 && temHabilidade(a, sis, 'Guerras diplomaticas') && b.atributos && !(b.marcadores || []).includes('Civilizado')) {
+  if (r.dano > 0 && temHabilidade(a, sis, 'Guerras diplomaticas') && b.atributos) {
     s.ofertas.push({ id: uid(), tipo: 'guerrasDiplomaticas', habilidade: 'Guerras diplomáticas', personagem: a.id, alvos: [b.id],
       texto: `${a.nome} causou dano em ${b.nome}: ação bônus de Intimidação (contra WILL% + 30) para ${b.nome} parar de atacar` });
   }
@@ -1216,6 +1239,9 @@ export const acoes = {
     const nasMaos = (a.itens || []).filter(i => i.equipado && i.slot === 'maos' && i.tipo === 'arma' && (i.ocupa ?? 1) < 2);
     const usada = nasMaos.find(i => i.uid === op.armaUid);
     if (nasMaos.length >= 2 && usada) op.duasArmas = (usada.mao ?? 0) === (a.maoHabil === 'esquerda' ? 1 : 0) ? 'principal' : 'inabil';
+    // Civilizados (Encantado): quem ele não atacou precisa passar em WILL% Difícil para atacá-lo.
+    const barrado = civilizados(c, a, b, sis);
+    if (barrado) return barrado;
     agressaoSubita(c, a, b, sis);
     const notasAgir = efeitosAoAgir(a, sis);
     if (notasAgir.length) registrar(s.log, { autor: a.nome, rotulo: 'Efeitos', texto: notasAgir.join(' · ') });
@@ -1269,8 +1295,12 @@ export const acoes = {
       const da = derivados(a, sis), db = derivados(b, sis);
       const nd = (db.percentual.WILL ?? 0) + 30;
       const t = testeContra(da.subpericias['manipulacao.intimidacao'] ?? 0, nd, sis);
-      if (t.sucesso) (b.marcadores ||= []).push('Civilizado');
-      const texto = `Intimidação ${t.total} (d100 ${t.dp} + ${t.acao}) contra WILL% + 30 = ${nd}: ${t.sucesso ? `${b.nome} para de atacar e volta a ser Civilizado` : `${b.nome} continua lutando`}`;
+      // Passou: o adversário volta à situação dos Civilizados (para atacar de novo, precisa do teste de WILL% Difícil).
+      if (t.sucesso) {
+        a.atacouNoCombate = (a.atacouNoCombate || []).filter(x => x !== b.id);
+        b.passouCivilizado = (b.passouCivilizado || []).filter(x => x !== a.id);
+      }
+      const texto = `Intimidação ${t.total} (d100 ${t.dp} + ${t.acao}) contra WILL% + 30 = ${nd}: ${t.sucesso ? `${b.nome} para de atacar e volta à situação dos Civilizados` : `${b.nome} continua lutando`}`;
       registrar(s.log, { autor: a.nome, rotulo: `Guerras diplomáticas contra ${b.nome}`, texto, sucesso: t.sucesso });
       return { texto, sucesso: t.sucesso };
     }

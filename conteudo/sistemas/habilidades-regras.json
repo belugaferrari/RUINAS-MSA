@@ -99,7 +99,7 @@
       "hum": "1d4"
     },
     "duracao": "combate",
-    "texto": "escolha um monstro abatido no campo: até o fim do combate, o atributo mais alto dele vira o seu (perde 1d4 HUM)"
+    "texto": "escolha um monstro abatido no campo: até o fim do combate, o seu atributo fica igual ao mais alto dele (ex.: CONS 18); perde 1d4 HUM"
   },
   "nucleo energetico": {
     "modo": "sempre",
@@ -147,12 +147,12 @@
   "quebra hordas": {
     "modo": "sempre",
     "especial": "quebraHordas",
-    "texto": "1 vez por turno, ao acertar: o app oferece um ataque extra contra outra criatura da mesma raça a até 1,5 m do alvo"
+    "texto": "1 vez por turno, ao acertar: o app oferece um ataque extra contra outra criatura da mesma raça (campo Raça da ficha) a até 1,5 m do alvo"
   },
   "guerras diplomaticas": {
     "modo": "sempre",
     "especial": "guerrasDiplomaticas",
-    "texto": "ao causar dano, o app oferece (ação bônus) Intimidação contra WILL% + 30 do alvo para ele parar de atacar e voltar a ser Civilizado"
+    "texto": "ao causar dano, o app oferece (ação bônus) Intimidação contra WILL% + 30 do alvo; se passar, ele volta à situação dos Civilizados"
   },
   "dano ao sistema": {
     "modo": "sempre",
@@ -164,5 +164,10 @@
     "modo": "sempre",
     "especial": "investida",
     "texto": "na Investida (opção do ataque): dano +1 passo e +1 por quadrado avançado; o teste de FOR% do alvo para não cair tem desvantagem; ignora terreno acidentado"
+  },
+  "civilizados": {
+    "modo": "sempre",
+    "especial": "civilizados",
+    "texto": "quem não foi atacado por você precisa passar em WILL% Difícil para lhe atacar (automático); quem lhe ataca primeiro fica com −10% em todos os testes até o fim da batalha"
   }
 }

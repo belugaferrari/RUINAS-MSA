@@ -290,7 +290,8 @@ function quadroAtaques(p, participantes, mestre) {
     if (!alvo) throw new Error('Escolha o alvo (clique no cartão dele no campo).');
     const r = await acao('combate.atacar', { atacante: p.id, alvo, opcoes: { ...opcoesGerais(p, mestre), armaUid: uid } });
     if (estado.sel.ataque) Object.assign(estado.sel.ataque, { sacrificio: false, cargaNucleo: false, investida: null });
-    if (r.tipo === 'ataque') aviso(`${r.autor} ${r.rotulo}: ${r.texto}`, r.sucesso ? 'ok' : 'erro');
+    if (r.tipo === 'barrado') aviso(r.texto, 'erro');
+    else if (r.tipo === 'ataque') aviso(`${r.autor} ${r.rotulo}: ${r.texto}`, r.sucesso ? 'ok' : 'erro');
     else aviso(`${p.nome} ataca ${b?.nome}: aguardando a defesa.`);
   };
   const dado = (rotulo, fn, props = {}) => botao('', fn, { class: 'pequeno dado-linha', icone: 'dices', title: rotulo, 'aria-label': rotulo, ...props });
