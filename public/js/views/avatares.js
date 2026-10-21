@@ -1,6 +1,7 @@
 // Galeria de avatares prontos: filtros por grupo (Humanos, cada classe, NPCs e criaturas) e por gênero.
 // Escolher um avatar só grava o endereço da imagem na ficha (p.foto); "Enviar foto" continua valendo.
-import { h, botao, icone, janela } from '../ui.js';
+import { h, botao, icone, janela, pedirTexto, aviso } from '../ui.js';
+import { imagemDeLink } from '/shared/imagens.js';
 import { AVATARES, GRUPOS_AVATAR } from '/shared/avatares.js';
 
 export function escolherAvatar({ titulo = 'Escolher avatar', atual = '', genero = '', aoEscolher, enviarFoto = null }) {
@@ -26,6 +27,15 @@ export function escolherAvatar({ titulo = 'Escolher avatar', atual = '', genero 
   desenhar();
   fechar = janela(titulo, h('div', { class: 'avatar-galeria' },
     enviarFoto ? h('div', { class: 'barra' }, botao('Enviar foto do aparelho', () => { fechar(); enviarFoto(); }, { class: 'pequeno', icone: 'camera' }),
+      // Link do Google Drive (compartilhado com "qualquer pessoa com o link") ou de uma imagem na internet: o app só mostra.
+      botao('Colar link (Drive ou internet)', async () => {
+        const link = await pedirTexto('Link da imagem', 'Cole o link do Google Drive (Qualquer pessoa com o link) ou o endereço da imagem', '');
+        if (link == null) return;
+        const url = imagemDeLink(link);
+        if (!url) return aviso('Link inválido: cole um endereço que comece com https://', 'erro');
+        await aoEscolher(url);
+        fechar();
+      }, { class: 'pequeno', icone: 'link' }),
       atual ? botao('Tirar a imagem', async () => { await aoEscolher(''); fechar(); }, { class: 'pequeno perigo', icone: 'x' }) : null) : null,
     chips, grade), [['Fechar', () => true]]);
 }

@@ -1,4 +1,5 @@
 import { db, save, uid } from './db.js';
+import { imagemDeLink } from '../shared/imagens.js';
 import { sistema, idSistema } from './sistema.js';
 import { resolverAtaque, aplicarAtaque, armasDisponiveis, opcoesDefesa, sobrevida, rolarIniciativa, resolverManipulacao, modHumorTestes, humorDe, espectroDe, humorAparente, empatiaNatural, liberdadeDeHumor, modoRolagem, recursoDe, gastarRecurso, racaDe, distanciaPecas, usosRestantes, gastarUso, testeContra, ipContra } from '../shared/combate.js';
 import { sincronizarEfeitos, passarTurnoEfeitos, efeitosAoAgir, cargaNoTurno, descansar } from '../shared/efeitos.js';
@@ -298,15 +299,28 @@ function valorAcao(p, ref, sis) {
   throw erro('Escolha o que vai testar.');
 }
 
+// Imagem do monstro: a que o mestre pôs na campanha (arquivo enviado ou link) ou a da planilha (link).
+export const imagemDoMonstro = (c, m) => c.imagensMonstros?.[m.nome] || imagemDeLink(m.imagem) || null;
+
 function npcDeMonstro(c, m) {
   return {
     ...novaFicha(sistema(c.sistema), c), id: uid(), tipo: 'npc', grupoId: GRUPO_ENCONTROS, donoId: null,
     nome: m.nome, dificuldade: m.dificuldade, pv: { max: m.pv, atual: m.pv }, criatura: true,
+    foto: imagemDoMonstro(c, m) || '',
     anotacoes: `Ataque: ${m.ataque}\nDefesa: ${m.defesa}\n${m.descricao}`,
   };
 }
 
 const nomeStr = v => String(v ?? '').slice(0, 20000);
+// Endereço de imagem aceito: arquivo do app (/uploads, /img, avatares) ou link http(s) (Drive vira o endereço da imagem).
+function imagemSegura(v) {
+  const t = String(v ?? '').trim().slice(0, 2000);
+  if (!t) return '';
+  if (/^\/[\w./-]+$/.test(t) && !t.includes('..')) return t;
+  const url = imagemDeLink(t);
+  if (!url) throw erro('Imagem inválida: envie um arquivo ou cole um link https://');
+  return url;
+}
 
 // Campos que um jogador pode alterar diretamente na própria ficha (o resto passa pelo mestre ou por ações específicas).
 const CAMPOS_JOGADOR = new Set([
@@ -661,7 +675,8 @@ export const acoes = {
     for (const [k, v] of Object.entries(patch || {})) {
       if (CAMPOS_PROTEGIDOS.has(k)) continue;
       if (!ctx.mestre && !CAMPOS_JOGADOR.has(k)) continue;
-      p[k] = k === 'nivel' ? Math.max(1, Math.min(20, parseInt(v, 10) || 1)) : v;
+      // Foto por link (Google Drive ou internet): guarda o endereço da imagem; arquivos enviados ficam em /uploads.
+      p[k] = k === 'nivel' ? Math.max(1, Math.min(20, parseInt(v, 10) || 1)) : ['foto', 'imagemCorpo'].includes(k) ? imagemSegura(v) : v;
     }
     // Ficha de jogador editada pelo mestre: mesmas travas de pontos da criação, a não ser na "edição livre" da campanha.
     if (ctx.mestre && p.tipo === 'pj' && !c.edicaoLivre) {
@@ -1814,6 +1829,16 @@ export const acoes = {
   'confronto.remover'(c, { id }, ctx) {
     exigirMestre(ctx);
     c.confrontos = (c.confrontos || []).filter(x => x.id !== id);
+  },
+
+  // Imagem de um monstro do Livro dos Monstros nesta campanha: link (Drive ou internet). Vazio tira.
+  // O envio de arquivo é pela rota /api/campanhas/:id/monstros/imagem.
+  'monstro.imagem'(c, { nome, link }, ctx) {
+    exigirMestre(ctx);
+    if (!sistema(c.sistema).monstros.some(x => x.nome === nome)) throw erro('Criatura não encontrada.');
+    const url = imagemSegura(link);
+    c.imagensMonstros ||= {};
+    if (url) c.imagensMonstros[nome] = url; else delete c.imagensMonstros[nome];
   },
 
   'monstro.adicionar'(c, { nome }, ctx) {

@@ -1,8 +1,9 @@
-import { h, botao, selecao, aviso, vazio, icone, titulo, tabela, abas, seloRevisao, confirmar, formatarData } from '../ui.js';
+import { h, botao, selecao, aviso, vazio, icone, titulo, tabela, abas, seloRevisao, confirmar, formatarData, pedirTexto } from '../ui.js';
 import { ICONE_TIPO } from './ficha.js';
 import { estado, render, personagemPorId, meusPersonagens } from '../estado.js';
 import { acao, get, enviarArquivo, baixarArquivo } from '../api.js';
 import { itemVisivel, itemAberto } from '/shared/regras.js';
+import { imagemDeLink } from '/shared/imagens.js';
 import { marked } from '/vendor/marked.js';
 
 const cacheLivros = {};
@@ -97,6 +98,7 @@ export function monstrosView() {
   return h('div', {},
     h('div', { class: 'barra' }, titulo('Livro dos Monstros', 'skull', 'h2'), h('span', { class: 'espaco' }), h('label', { class: 'busca' }, icone('search'), filtroBusca('monstros', 'Buscar criatura…'))),
     lista.length ? h('div', { class: 'cartoes' }, lista.map(m => h('div', { class: 'cartao monstro' },
+      imagemMonstro(m, mestre)[0],
       titulo(m.nome, 'skull'),
       h('p', { class: 'meta icones-meta' },
         h('span', { title: 'Dificuldade' }, icone('flame'), `Dif. ${m.dificuldade}`),
@@ -104,10 +106,40 @@ export function monstrosView() {
         h('span', { title: 'Defesa' }, icone('shield'), `Def ${m.defesa}`)),
       h('p', {}, icone('sword'), h('strong', {}, ' Ataque: '), m.ataque),
       h('p', {}, m.descricao),
+      imagemMonstro(m, mestre)[1],
       mestre ? botao('Colocar no Campo de Batalha', async () => {
         await acao('monstro.adicionar', { nome: m.nome });
         aviso(`${m.nome} entrou no Campo de Batalha.`);
       }, { class: 'pequeno', icone: 'swords' }) : null))) : vazio('Nenhuma criatura encontrada.', 'search'));
+}
+
+// Imagem do monstro: arquivo enviado pelo mestre ou link (Google Drive compartilhado ou endereço na internet).
+function imagemMonstro(m, mestre) {
+  const url = estado.campanha.imagensMonstros?.[m.nome] || imagemDeLink(m.imagem);
+  const arquivo = h('input', {
+    type: 'file', accept: 'image/*', hidden: true,
+    onchange: async e => {
+      const f = e.target.files[0];
+      if (!f) return;
+      const form = new FormData();
+      form.append('nome', m.nome);
+      form.append('arquivo', f);
+      try { await enviarArquivo(`/api/campanhas/${estado.campanha.id}/monstros/imagem`, form); aviso(`Imagem de ${m.nome} atualizada.`); } catch (err) { aviso(err.message, 'erro'); }
+    },
+  });
+  const colar = async () => {
+    const link = await pedirTexto(`Imagem de ${m.nome}`, 'Cole o link do Google Drive (Qualquer pessoa com o link) ou o endereço da imagem', '');
+    if (link == null) return;
+    if (!imagemDeLink(link)) return aviso('Link inválido: cole um endereço que comece com https://', 'erro');
+    await acao('monstro.imagem', { nome: m.nome, link });
+  };
+  return [
+    url ? h('img', { class: 'monstro-imagem', src: url, alt: m.nome, loading: 'lazy', referrerpolicy: 'no-referrer' }) : null,
+    mestre ? h('div', { class: 'barra' }, arquivo,
+      botao(url ? 'Trocar imagem' : 'Enviar imagem', () => arquivo.click(), { class: 'pequeno', icone: 'camera' }),
+      botao('Colar link', colar, { class: 'pequeno', icone: 'link' }),
+      url && estado.campanha.imagensMonstros?.[m.nome] ? botao('', () => acao('monstro.imagem', { nome: m.nome, link: '' }), { class: 'pequeno perigo', icone: 'x', title: 'Tirar a imagem' }) : null) : null,
+  ];
 }
 
 export function classesView() {

@@ -103,6 +103,17 @@ app.post('/api/campanhas/:id/imagens', upload.single('arquivo'), rota(req => {
   return img;
 }));
 
+// Imagem de um monstro do Livro dos Monstros (só o mestre). A alternativa é colar um link (ação monstro.imagem).
+app.post('/api/campanhas/:id/monstros/imagem', upload.single('arquivo'), rota(req => {
+  const c = campanhaDoMestre(req);
+  const nome = String(req.body.nome || '');
+  if (!sistema(c.sistema).monstros.some(m => m.nome === nome)) throw Object.assign(new Error('Criatura não encontrada.'), { status: 404 });
+  (c.imagensMonstros ||= {})[nome] = salvarImagem(req.file);
+  save();
+  transmitir(c);
+  return { url: c.imagensMonstros[nome] };
+}));
+
 // Foto do personagem: o mestre envia para qualquer um; o jogador só para os seus.
 app.post('/api/campanhas/:id/personagens/:pid/foto', upload.single('arquivo'), rota(req => {
   const user = autenticado(req);
