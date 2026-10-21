@@ -21,3 +21,14 @@ export function categoriaDaImagem(img) {
   if (exata) return exata.id;
   return SINONIMOS[k] || String(img.categoria).trim();
 }
+
+// Link de imagem colado pelo mestre (planilha de monstros): o link de compartilhar do Google Drive vira o endereço
+// da imagem (a imagem fica no Drive do mestre; o app só mostra). Precisa estar como "Qualquer pessoa com o link".
+// Outros endereços http(s) passam como estão; qualquer outra coisa é ignorada.
+export function imagemDeLink(link) {
+  const t = String(link || '').trim();
+  if (!/^https?:\/\//i.test(t)) return null;
+  const id = /drive\.google\.com\/(?:file\/d\/|open\?id=|uc\?(?:export=\w+&)?id=|thumbnail\?id=)([\w-]{10,})/i.exec(t)?.[1]
+    || /docs\.google\.com\/uc\?(?:export=\w+&)?id=([\w-]{10,})/i.exec(t)?.[1];
+  return id ? `https://drive.google.com/thumbnail?id=${id}&sz=w1000` : t;
+}
