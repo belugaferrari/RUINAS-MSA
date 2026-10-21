@@ -101,7 +101,7 @@ export function iniciarSessao(s) {
       reiniciando = true;
       aviso('O app está sendo atualizado. A página recarrega sozinha em alguns segundos.');
     },
-    'sistema:atualizado': () => recarregarSistema().then(() => aviso('O catálogo de itens foi atualizado.')),
+    'sistema:atualizado': () => recarregarSistema().then(() => aviso('O catálogo (itens ou monstros) foi atualizado.')),
     expulso: msg => {
       aviso(msg, 'erro');
       mudar({ tela: 'saguao', campanha: null });

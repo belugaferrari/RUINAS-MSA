@@ -213,13 +213,14 @@ test('Civilizados: atacar o Encantado sem ter sido atacado exige WILL% Difícil;
   const inimigo = alvoSimples({ nome: 'Bandido' });
   const { c, ids, p } = campanhaCom(f, inimigo);
   const enc = p(ids[0]), band = p(ids[1]);
-  let barrou = 0, passou = false;
-  for (let i = 0; i < 40 && !passou; i++) {
-    const r = executar(c, 'combate.atacar', { atacante: band.id, alvo: enc.id, opcoes: { surpresa: true } }, ctxM);
-    if (r.tipo === 'barrado') barrou++; else passou = true;
-  }
-  assert.ok(barrou > 0, 'WILL% baixo costuma falhar no Difícil');
-  if (passou) assert.equal(derivados(band, mss).percentual.WILL, 4 * band.atributos.WILL - 10);
+  const rnd = Math.random;
+  try {
+    Math.random = () => 0.2; // d100 = 21: falha no WILL% Difícil
+    assert.equal(executar(c, 'combate.atacar', { atacante: band.id, alvo: enc.id, opcoes: { surpresa: true } }, ctxM).tipo, 'barrado');
+    Math.random = () => 0.9; // d100 = 91: passa
+    assert.notEqual(executar(c, 'combate.atacar', { atacante: band.id, alvo: enc.id, opcoes: { surpresa: true } }, ctxM).tipo, 'barrado');
+  } finally { Math.random = rnd; }
+  assert.equal(derivados(band, mss).percentual.WILL, 4 * band.atributos.WILL - 10);
   // Depois que o Encantado ataca, o adversário ataca sem teste.
   const outro = p(executar(c, 'personagem.criar', { tipo: 'npc', grupoId: 'encontros', ficha: { nome: 'Outro' } }, ctxM).id);
   Object.assign(outro, novaFicha(mss), { id: outro.id, nome: 'Outro', pv: { max: 30, atual: 30 } });

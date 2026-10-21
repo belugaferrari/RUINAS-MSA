@@ -13,6 +13,7 @@ import { novaCampanha, resumoCampanha, visaoPara, entrarNaCampanha, executar, ac
 
 migrarCampanhas();
 import { modeloNpcs, lerNpcs } from './excel.js';
+import { lerPlanilhaMonstros, planilhaMonstros, catalogoMonstros, salvarCatalogoMonstros, voltarMonstrosPadrao } from './monstros.js';
 import { catalogoItens, origemCatalogo, lerPlanilhaItens, planilhaDoCatalogo, salvarCatalogoMestre, voltarCatalogoPadrao } from './itens.js';
 import { montarSprite } from './icones.js';
 import { avatarPorId, svgAvatar } from '../shared/avatares.js';
@@ -190,6 +191,48 @@ app.post('/api/itens', upload.single('arquivo'), rota(async req => {
   salvarCatalogoMestre(itens, req.file.originalname);
   io.emit('sistema:atualizado');
   return { recebidos: novos.length, total: itens.length };
+}));
+
+// Livro dos Monstros por planilha (abas Monstros, Ataques, Habilidades). Vale para todas as campanhas deste PC.
+app.get('/api/monstros/origem', rota(req => {
+  autenticado(req);
+  const cat = catalogoMonstros();
+  return cat ? { origem: 'mestre', atualizadoEm: cat.atualizadoEm, arquivo: cat.arquivo, total: cat.monstros.length } : { origem: 'padrao', total: sistema('mss').monstros.length };
+}));
+
+app.get('/api/monstros.xlsx', async (req, res) => {
+  try {
+    exigirAlgumMestre(req);
+    const sis = sistema(req.query.sistema || 'mss');
+    res.attachment('monstros-ilhas-das-ruinas.xlsx');
+    res.send(Buffer.from(await planilhaMonstros(sis, sis.monstros)));
+  } catch (e) {
+    res.status(e.status || 400).send(e.message);
+  }
+});
+
+// modo "atualizar": troca os monstros de mesmo nome e mantém os outros; "substituir": fica só com os da planilha.
+app.post('/api/monstros', upload.single('arquivo'), rota(async req => {
+  exigirAlgumMestre(req);
+  if (!req.file) throw new Error('Envie a planilha .xlsx.');
+  const { monstros: novos, avisos } = await lerPlanilhaMonstros(req.file.buffer, sistema('mss'));
+  if (!novos.length) throw new Error('A planilha não tem monstros (aba "Monstros", coluna "Nome").');
+  let monstros = novos;
+  if (req.body.modo !== 'substituir') {
+    const sem = x => String(x).normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+    const nomes = new Set(novos.map(m => sem(m.nome)));
+    monstros = [...sistema('mss').monstros.filter(m => !nomes.has(sem(m.nome))), ...novos];
+  }
+  salvarCatalogoMonstros(monstros, req.file.originalname);
+  io.emit('sistema:atualizado');
+  return { recebidos: novos.length, total: monstros.length, avisos: avisos.slice(0, 30) };
+}));
+
+app.post('/api/monstros/padrao', rota(req => {
+  exigirAlgumMestre(req);
+  voltarMonstrosPadrao();
+  io.emit('sistema:atualizado');
+  return { ok: true };
 }));
 
 app.post('/api/itens/padrao', rota(req => {

@@ -247,8 +247,11 @@ export function listaHabilidades(ficha, sistema) {
   return [
     ...(ficha.vantagens || []).map(id => acharVantagem(id, sistema)).filter(Boolean).map(v => ({ id: `v:${v.id}`, nome: v.nome, descricao: v.descricao, tipo: v.origem === 'Geral' ? 'Vantagem' : `Classe · ${v.origem}`, vezes: 1 })),
     ...ganhos.values(),
-    sistema.raca?.habilidadeUnica ? { id: 'raca', nome: sistema.raca.habilidadeUnica.nome, descricao: sistema.raca.habilidadeUnica.descricao, tipo: sistema.raca.nome, vezes: 1 } : null,
-  ].filter(Boolean).map(x => ({ ...x, regra: regraDaHabilidade(x.nome, sistema) }));
+    // Monstros não têm a habilidade da raça humana; têm as próprias (planilha do Livro dos Monstros).
+    sistema.raca?.habilidadeUnica && !ficha.criatura ? { id: 'raca', nome: sistema.raca.habilidadeUnica.nome, descricao: sistema.raca.habilidadeUnica.descricao, tipo: sistema.raca.nome, vezes: 1 } : null,
+  ].filter(Boolean).map(x => ({ ...x, regra: regraDaHabilidade(x.nome, sistema) })).concat(
+    (ficha.habilidadesProprias || []).map((x, i) => ({ id: `m:${i}:${x.nome}`, nome: x.nome, descricao: x.descricao || x.efeitos || '', tipo: 'Monstro', vezes: 1,
+      regra: x.modo === 'lembrete' && !x.efeitos ? null : { modo: x.modo || 'sempre', efeitos: x.efeitos || '' } })));
 }
 
 // Regra própria da habilidade, pelo nome (sem acento, maiúsculas nem o que vem entre parênteses).
@@ -391,7 +394,7 @@ export function derivados(ficha, sistema) {
     habilidades: hab,
     carga: (ficha.itens || []).reduce((s, i) => s + (i.peso || 0), 0),
     ...carga,
-    ...deslocamento(sistema, condicoes, carga.cargaNivel),
+    ...deslocamento(sistema, condicoes, carga.cargaNivel, ficha.deslocamentoBase ?? null),
     limitePericia: limitePericia(nivel, sistema),
     atributoMax: atributoMax(nivel, sistema),
     temClasse: nivel >= (r.nivelClasse ?? 3),
@@ -402,8 +405,9 @@ export function derivados(ficha, sistema) {
 // Deslocamento por turno (planilha de regras gerais): humano 9 m = 6 quadrados de 1,5 m.
 // Preso (Paralisado, Enraizado, Imobilizado, Desmaiado, Esmagado) = 0; Dano a membros inferiores −3 m cada;
 // Sobrecarregado −4,5 m; Supercarregado só 1 passo (1,5 m).
-export function deslocamento(sistema, condicoes, cargaNivel) {
-  const base = parseFloat(String(sistema.raca?.deslocamento || '9').replace(',', '.')) || 9;
+export function deslocamento(sistema, condicoes, cargaNivel, proprio = null) {
+  // Monstros têm o deslocamento da planilha; personagens, o da raça.
+  const base = parseFloat(String(proprio ?? sistema.raca?.deslocamento ?? '9').replace(',', '.')) || 9;
   const motivos = [];
   let m = base;
   if (condicoes.some(c => c.movimento === 'preso')) {
@@ -570,6 +574,8 @@ export function ipDoItem(i) {
 
 function ipPorTipo(ficha, equipados, bonus, hab) {
   const tipos = { ...hab.ip.tipos };
+  // IP natural por tipo de dano (monstros da planilha: "Corte 2; Frio 1").
+  for (const [t, v] of Object.entries(ficha.ipTipos || {})) { const k = tipoIp(t) || t; tipos[k] = (tipos[k] || 0) + (parseInt(v, 10) || 0); }
   let geral = (bonus.Defesa || 0) + (parseInt(ficha.ipExtra, 10) || 0) + hab.ip.geral;
   for (const i of equipados) {
     const x = ipDoItem(i);

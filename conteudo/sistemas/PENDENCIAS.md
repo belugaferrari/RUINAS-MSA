@@ -202,3 +202,16 @@ Regras em `conteudo/sistemas/habilidades-regras.json` (automática / ligar / ati
 - Área de criaturas controladas (familiares, animais, implantes, autômatos): Malha neural, Autômatos de combate, Segunda formação, controle de implantes do ciborgue.
 - Armadilhas: criar (componentes, regras do livro), guardar no inventário, colocar no mapa (visíveis), Armadilha móvel; Zona de Abate automática a até 6 m de armadilha sua.
 - Melhorias de arma pelo mestre (próprias e passageiras), além das das habilidades.
+
+## Livro dos Monstros por planilha (autor, 21/10)
+- Tamanhos: Diminuto, Pequeno, Médio, Grande, Enorme, Colossal (confirmado).
+- Monstros não têm Sanidade nem Humanidade (confirmado).
+- Defesas dos monstros calculadas como as dos personagens (atributos + perícias/subperícias + 50), mais as vantagens/habilidades (confirmado).
+- Coluna "Comportamento" para descrever como o monstro age (pedido do autor).
+- Imagem: link do Google Drive/internet na planilha, ou arquivo enviado no app (Livro dos Monstros > Enviar imagem).
+
+**Provisório — conferir**
+- O acerto do ataque vem da subperícia escolhida (padrão: Briga › Ataque desarmado); "Acerto %" na planilha substitui. A FOR entra no dano corpo a corpo, como no personagem.
+- PV em branco: calculado como no personagem (FOR + CONS + 5 por nível depois do 1º).
+- Resistência = metade do dano; vulnerabilidade = dobro; imunidade a um tipo de dano = dano zero (e imunidade a efeito, ex.: Dor, impede o marcador).
+- O livro enviado vale para todas as campanhas do PC (como o catálogo de itens).

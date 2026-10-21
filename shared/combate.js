@@ -50,7 +50,7 @@ export function armasDisponiveis(p, sistema) {
   const cfg = sistema.combate;
   // Arma quebrada (durabilidade 0) não ataca até ser reparada.
   const armas = (p.itens || []).filter(i => i.equipado && i.tipo === 'arma' && i.dano && !(i.durabilidade != null && (i.durabilidadeAtual ?? i.durabilidade) <= 0)).map(i => ({
-    uid: i.uid, nome: i.nome, dano: danoDaArma(i, p), pericia: i.pericia || null, tipoDano: i.tipoDano || 'Físico',
+    uid: i.uid, nome: i.nome, dano: danoDaArma(i, p), acerto: i.acerto ?? null, pericia: i.pericia || null, tipoDano: i.tipoDano || 'Físico',
     efeitoDano: i.efeitoDano ?? cfg.chancePorTipo?.[i.tipoDano] ?? cfg.efeitoPadrao, penetracao: i.penetracao || 0, alcance: i.alcance || (i.pericia?.startsWith('armas-de-fogo') ? 'distancia' : 'corpo'),
     // Cadência: quantos disparos (balas e danos) por ataque — da arma ou da subperícia (ex.: Rifle de Assalto 2).
     cadencia: Math.max(1, i.cadencia ?? cfg.cadencia?.[i.pericia] ?? 1),
@@ -150,7 +150,8 @@ export function resolverAtaque(atacante, alvo, sistema, op = {}, defesaId = 'nen
   add('Sacrifício', op.sacrificio ? cfg.sacrificio.mod : 0);
   add('humor', modHumorTestes(atacante, sistema));
   add('modificador', Math.max(-100, Math.min(100, parseInt(op.mod, 10) || 0)));
-  const acao = (da.subpericias[pericia] ?? 0) + mods.reduce((s, m) => s + m.valor, 0);
+  // Ataque natural de monstro pode ter o acerto fixo da planilha; o normal é o valor da subperícia, como no personagem.
+  const acao = (arma.acerto ?? da.subpericias[pericia] ?? 0) + mods.reduce((s, m) => s + m.valor, 0);
 
   const hA = sistema.modulos?.social ? humorDe(atacante, sistema) : null;
   const motivosV = [], motivosD = [];
@@ -211,6 +212,12 @@ export function resolverAtaque(atacante, alvo, sistema, op = {}, defesaId = 'nen
   r.danoBruto = partes.reduce((s, p) => s + p.total, 0);
   r.dano = r.disparos.reduce((s, x) => s + x.dano, 0);
   if (!teste.sucesso) { r.dano = Math.floor(r.dano / 2); r.metadeEvasao = true; }
+  // Imunidade (dano zero), resistência (metade) e vulnerabilidade (dobro) ao tipo de dano (monstros da planilha).
+  const tipoD = String(arma.tipoDano || '').toLowerCase();
+  const tem2 = lista => (lista || []).some(x => String(x).toLowerCase() === tipoD);
+  if (tipoD && tem2(alvo.imunidades)) { r.dano = 0; r.imune = arma.tipoDano; }
+  else if (tipoD && tem2(alvo.resistencias)) { r.dano = Math.floor(r.dano / 2); r.resistencia = arma.tipoDano; }
+  else if (tipoD && tem2(alvo.vulnerabilidades)) { r.dano *= 2; r.vulnerabilidade = arma.tipoDano; }
   if (tem(alvo, 'Queimadura')) { r.dano += 1; r.queimadura = true; }
   const efeito = cfg.efeitosPorTipo[arma.tipoDano];
   if (efeito && teste.sucesso && teste.ds <= arma.efeitoDano) r.efeito = efeito;
@@ -218,7 +225,8 @@ export function resolverAtaque(atacante, alvo, sistema, op = {}, defesaId = 'nen
 }
 
 // Imunidades por habilidade (Alma de ciborgue: Dor).
-export const imuneA = (p, sistema, efeito) => !!sistema && derivados(p, sistema).habilidades.imune.some(x => String(x).toLowerCase() === String(efeito).toLowerCase());
+export const imuneA = (p, sistema, efeito) => (p.imunidades || []).some(x => String(x).toLowerCase() === String(efeito).toLowerCase())
+  || (!!sistema && derivados(p, sistema).habilidades.imune.some(x => String(x).toLowerCase() === String(efeito).toLowerCase()));
 
 // Usos de habilidade com recarga (p.usos[chave] = quantos já usou). O descanso longo zera os de "descanso-longo".
 export function usosRestantes(p, sistema, nome) {

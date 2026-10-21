@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { RAIZ, DATA_DIR } from './db.js';
+import { ARQ_MONSTROS } from './monstros.js';
 
 export const CONTEUDO = path.join(RAIZ, 'conteudo');
 const SISTEMAS = path.join(CONTEUDO, 'sistemas');
@@ -44,7 +45,8 @@ export function sistema(id = SISTEMA_PADRAO) {
   id = idSistema(id);
   const lista = arquivos(id);
   const arqItens = arquivoItens();
-  const assinatura = [...lista, ...(arqItens ? [arqItens] : [])].map(a => `${a}:${fs.statSync(a).mtimeMs}`).join('|');
+  const arqMonstros = fs.existsSync(ARQ_MONSTROS) ? ARQ_MONSTROS : null;
+  const assinatura = [...lista, ...(arqItens ? [arqItens] : []), ...(arqMonstros ? [arqMonstros] : [])].map(a => `${a}:${fs.statSync(a).mtimeMs}`).join('|');
   const atual = cache.get(id);
   if (atual && atual.assinatura === assinatura) return atual.dados;
   const [base, proprio, pericias, profissoes, classes, vantagens, habRegras] = lista.map(ler);
@@ -70,6 +72,8 @@ export function sistema(id = SISTEMA_PADRAO) {
   };
   // As colunas originais da planilha ("planilha") só servem para exportar de volta: não vão para o navegador.
   if (arqItens) dados.itens = ler(arqItens).itens.map(({ planilha, ...it }) => it);
+  // Livro dos Monstros enviado pelo mestre por planilha (sem ele, os exemplos do base.json).
+  if (arqMonstros) dados.monstros = ler(arqMonstros).monstros;
   cache.set(id, { assinatura, dados });
   return dados;
 }

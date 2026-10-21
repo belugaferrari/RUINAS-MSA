@@ -94,23 +94,80 @@ export function livroView(nome, nomeLivro) {
 export function monstrosView() {
   const mestre = estado.campanha.papel === 'mestre';
   const q = busca('monstros');
-  const lista = estado.sistema.monstros.filter(m => !q || JSON.stringify(m).toLowerCase().includes(q));
+  const sis = estado.sistema;
+  const lista = sis.monstros.filter(m => !q || JSON.stringify(m).toLowerCase().includes(q));
+  const tipoNome = id => (sis.tiposCriatura || []).find(t => t.id === id)?.nome || null;
+  const subNome = id => sis.pericias.flatMap(p => p.subpericias.map(x => [x.id, x.nome])).find(x => x[0] === id)?.[1] || id;
   return h('div', {},
     h('div', { class: 'barra' }, titulo('Livro dos Monstros', 'skull', 'h2'), h('span', { class: 'espaco' }), h('label', { class: 'busca' }, icone('search'), filtroBusca('monstros', 'Buscar criatura…'))),
-    lista.length ? h('div', { class: 'cartoes' }, lista.map(m => h('div', { class: 'cartao monstro' },
-      imagemMonstro(m, mestre)[0],
-      titulo(m.nome, 'skull'),
-      h('p', { class: 'meta icones-meta' },
-        h('span', { title: 'Dificuldade' }, icone('flame'), `Dif. ${m.dificuldade}`),
-        h('span', { title: 'Pontos de vida' }, icone('heart'), `PV ${m.pv}`),
-        h('span', { title: 'Defesa' }, icone('shield'), `Def ${m.defesa}`)),
-      h('p', {}, icone('sword'), h('strong', {}, ' Ataque: '), m.ataque),
-      h('p', {}, m.descricao),
-      imagemMonstro(m, mestre)[1],
-      mestre ? botao('Colocar no Campo de Batalha', async () => {
-        await acao('monstro.adicionar', { nome: m.nome });
-        aviso(`${m.nome} entrou no Campo de Batalha.`);
-      }, { class: 'pequeno', icone: 'swords' }) : null))) : vazio('Nenhuma criatura encontrada.', 'search'));
+    mestre ? planilhaMonstrosMestre() : null,
+    lista.length ? h('div', { class: 'cartoes' }, lista.map(m => {
+      const [img, botoesImg] = imagemMonstro(m, mestre);
+      const ataques = m.ataques?.length ? m.ataques : m.ataque ? [{ nome: m.ataque }] : [];
+      const atr = m.atributos ? Object.entries(m.atributos).map(([k, v]) => `${k} ${v}`).join(' · ') : '';
+      const extras = [
+        m.resistencias?.length ? `Resiste: ${m.resistencias.join(', ')}` : null,
+        m.imunidades?.length ? `Imune: ${m.imunidades.join(', ')}` : null,
+        m.vulnerabilidades?.length ? `Vulnerável: ${m.vulnerabilidades.join(', ')}` : null,
+      ].filter(Boolean);
+      return h('div', { class: 'cartao monstro' },
+        img,
+        titulo(m.nome, 'skull'),
+        h('p', { class: 'meta' }, [tipoNome(m.tipoCriatura), m.tamanho, m.raca && m.raca !== m.nome ? m.raca : null, m.nivel ? `nível ${m.nivel}` : null].filter(Boolean).join(' · ')),
+        h('p', { class: 'meta icones-meta' },
+          h('span', { title: 'Dificuldade' }, icone('flame'), `Dif. ${m.dificuldade ?? '—'}`),
+          h('span', { title: 'Pontos de vida' }, icone('heart'), `PV ${m.pv ?? 'calc.'}`),
+          h('span', { title: 'IP geral' }, icone('shield'), `IP ${m.ipGeral ?? m.defesa ?? 0}`),
+          m.deslocamento ? h('span', { title: 'Deslocamento' }, icone('footprints'), `${m.deslocamento} m`) : null,
+          m.xp ? h('span', { title: 'XP' }, icone('sparkles'), `${m.xp} XP`) : null),
+        atr ? h('p', { class: 'meta' }, atr) : null,
+        ataques.length ? h('ul', { class: 'lista-ataques-monstro' }, ataques.map(a => h('li', {}, icone('sword'), ' ', h('strong', {}, a.nome),
+          a.dano ? ` ${a.dano}${a.tipoDano ? ` ${a.tipoDano}` : ''}${a.alcance === 'distancia' ? ` · ${a.alcanceM ? `${a.alcanceM} m` : 'distância'}` : ''}${a.acerto != null ? ` · ${a.acerto}%` : a.pericia ? ` · ${subNome(a.pericia)}` : ''}` : ''))) : null,
+        m.habilidades?.length ? h('p', {}, icone('sparkles'), ' ', m.habilidades.map(x => x.nome).join(', ')) : null,
+        extras.length ? h('p', { class: 'meta' }, extras.join(' · ')) : null,
+        m.comportamento ? h('details', {}, h('summary', {}, 'Comportamento'), h('p', {}, m.comportamento)) : null,
+        m.descricao ? h('p', {}, m.descricao) : null,
+        botoesImg,
+        mestre ? botao('Colocar no Campo de Batalha', async () => {
+          await acao('monstro.adicionar', { nome: m.nome });
+          aviso(`${m.nome} entrou no Campo de Batalha.`);
+        }, { class: 'pequeno', icone: 'swords' }) : null);
+    })) : vazio('Nenhuma criatura encontrada.', 'search'));
+}
+
+// Livro dos Monstros por planilha (só o mestre): baixar a planilha atual, enviar de volta ou voltar aos exemplos.
+function planilhaMonstrosMestre() {
+  const info = estado.sel.monstrosInfo;
+  if (!info && !estado.sel.monstrosPedido) {
+    estado.sel.monstrosPedido = true;
+    get('/api/monstros/origem').then(r => { estado.sel.monstrosInfo = r; render(); }).catch(() => {});
+  }
+  const arquivo = h('input', { type: 'file', accept: '.xlsx', 'aria-label': 'Planilha de monstros (.xlsx)' });
+  const modo = h('select', { 'aria-label': 'Como usar a planilha' },
+    h('option', { value: 'atualizar' }, 'Atualizar: troca os monstros da planilha e mantém os outros'),
+    h('option', { value: 'substituir' }, 'Substituir: o livro fica só com os monstros da planilha'));
+  const recarregar = () => { estado.sel.monstrosInfo = null; estado.sel.monstrosPedido = false; };
+  return h('details', { class: 'bloco', open: !!estado.sel.monstrosAberto, ontoggle: e => { estado.sel.monstrosAberto = e.target.open; } },
+    h('summary', {}, icone('file-spreadsheet'), ' Livro dos Monstros (planilha)'),
+    h('p', { class: 'dica' }, info ? `${info.total} criaturas · ${info.origem === 'mestre' ? `enviado por você${info.arquivo ? ` (${info.arquivo})` : ''}${info.atualizadoEm ? ` · ${formatarData(info.atualizadoEm)}` : ''}` : 'exemplos do app'}.` : 'Carregando…'),
+    h('p', { class: 'dica' }, 'Baixe a planilha, preencha as abas Monstros, Ataques e Habilidades (instruções dentro dela) e envie de volta. Vale para todas as campanhas deste PC; monstros que já estão em campo não mudam.'),
+    h('div', { class: 'barra' },
+      botao('Baixar planilha', () => baixarArquivo(`/api/monstros.xlsx?sistema=${estado.campanha.sistema || 'mss'}`, 'monstros-ilhas-das-ruinas.xlsx'), { icone: 'download' }),
+      arquivo, modo,
+      botao('Enviar planilha', async () => {
+        if (!arquivo.files[0]) throw new Error('Escolha a planilha .xlsx.');
+        const form = new FormData();
+        form.append('arquivo', arquivo.files[0]);
+        form.append('modo', modo.value);
+        const r = await enviarArquivo('/api/monstros', form);
+        recarregar();
+        aviso(`${r.recebidos} monstros lidos; o livro tem ${r.total}.${r.avisos?.length ? ` Atenção: ${r.avisos.join(' ')}` : ''}`, r.avisos?.length ? 'erro' : 'ok');
+      }, { class: 'primario', icone: 'upload' }),
+      info?.origem === 'mestre' ? botao('Voltar aos exemplos', async () => {
+        if (!(await confirmar('Apagar o Livro dos Monstros enviado e voltar aos exemplos do app?'))) return;
+        await enviarArquivo('/api/monstros/padrao', new FormData());
+        recarregar();
+      }, { class: 'perigo', icone: 'refresh-cw' }) : null));
 }
 
 // Imagem do monstro: arquivo enviado pelo mestre ou link (Google Drive compartilhado ou endereço na internet).

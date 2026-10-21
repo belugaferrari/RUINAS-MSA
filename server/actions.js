@@ -302,13 +302,40 @@ function valorAcao(p, ref, sis) {
 // Imagem do monstro: a que o mestre pôs na campanha (arquivo enviado ou link) ou a da planilha (link).
 export const imagemDoMonstro = (c, m) => c.imagensMonstros?.[m.nome] || imagemDeLink(m.imagem) || null;
 
+// Monstro do Livro dos Monstros vira um NPC com ficha de combate: atributos e perícias (as defesas saem daí, como no
+// personagem), ataques naturais (armas equipadas), IP, resistências, habilidades próprias e o saque no inventário.
+// Monstro não tem Sanidade nem Humanidade.
 function npcDeMonstro(c, m) {
-  return {
-    ...novaFicha(sistema(c.sistema), c), id: uid(), tipo: 'npc', grupoId: GRUPO_ENCONTROS, donoId: null,
-    nome: m.nome, dificuldade: m.dificuldade, pv: { max: m.pv, atual: m.pv }, criatura: true,
-    foto: imagemDoMonstro(c, m) || '',
-    anotacoes: `Ataque: ${m.ataque}\nDefesa: ${m.defesa}\n${m.descricao}`,
+  const sis = sistema(c.sistema);
+  const f = novaFicha(sis, c);
+  const p = {
+    ...f, id: uid(), tipo: 'npc', grupoId: GRUPO_ENCONTROS, donoId: null, criatura: true,
+    nome: m.nome, nivel: m.nivel || 1, dificuldade: m.dificuldade, xp: m.xp || 0, foto: imagemDoMonstro(c, m) || '',
+    raca: m.raca || '', tipoCriatura: m.tipoCriatura || 'monstro', tamanho: m.tamanho || '',
+    atributos: { ...f.atributos, ...(m.atributos || {}) }, pericias: { ...(m.pericias || {}) }, subpericias: { ...(m.subpericias || {}) },
+    ipExtra: m.ipGeral ?? m.defesa ?? 0, ipTipos: { ...(m.ipTipos || {}) },
+    resistencias: [...(m.resistencias || [])], imunidades: [...(m.imunidades || [])], vulnerabilidades: [...(m.vulnerabilidades || [])],
+    habilidadesProprias: (m.habilidades || []).map(x => ({ ...x })),
+    ...(m.deslocamento ? { deslocamentoBase: m.deslocamento } : {}),
+    anotacoes: [
+      m.comportamento ? `Comportamento: ${m.comportamento}` : '', m.sentidos ? `Sentidos: ${m.sentidos}` : '',
+      m.outrosDeslocamentos ? `Deslocamentos: ${m.outrosDeslocamentos}` : '', m.habitat ? `Onde aparece: ${m.habitat}` : '',
+      !m.ataques?.length && m.ataque ? `Ataque: ${m.ataque}` : '', m.descricao || '',
+    ].filter(Boolean).join('\n'),
   };
+  delete p.sanidade;
+  delete p.humanidade;
+  const naturais = (m.ataques?.length ? m.ataques : m.ataque ? [{ nome: m.ataque.replace(/\s*\d*d\d.*$/i, '') || 'Ataque', dano: /\d*d\d+(?:[+-]\d+)?/i.exec(m.ataque)?.[0] || '1d4' }] : [])
+    .map(a => ({ uid: uid(), nome: a.nome, tipo: 'arma', natural: true, equipado: true, dano: a.dano, pericia: a.pericia || 'briga.ataque-desarmado',
+      ...(a.acerto != null ? { acerto: a.acerto } : {}), tipoDano: a.tipoDano || 'Físico', alcance: a.alcance || 'corpo',
+      ...(a.alcanceM ? { alcanceM: a.alcanceM } : {}), ...(a.cadencia ? { cadencia: a.cadencia } : {}), ...(a.efeitoDano != null ? { efeitoDano: a.efeitoDano } : {}),
+      ...(a.penetracao ? { penetracao: a.penetracao } : {}), ...(a.obs ? { descricao: a.obs } : {}) }));
+  const saque = (m.saque || []).map(ref => sis.itens.find(i => i.id === ref || i.nome.toLowerCase() === String(ref).toLowerCase())).filter(Boolean)
+    .map(it => ({ ...structuredClone(it), uid: uid(), itemId: it.id, equipado: false, durabilidadeAtual: it.durabilidade }));
+  p.itens = [...naturais, ...saque];
+  const pv = m.pv ?? derivados(p, sis).pvMax;
+  p.pv = { max: pv, atual: pv };
+  return p;
 }
 
 const nomeStr = v => String(v ?? '').slice(0, 20000);
@@ -475,7 +502,8 @@ function resolverPendente(c, s, pend, defesa, sis) {
     ? `Acertou! ${b.nome} tomou ${r.dano} de dano (${b.pv.atual}/${b.pv.max} PV)`
     : r.dano ? `${b.nome} defendeu em parte (${r.defesa.nome}): tomou ${r.dano} de dano (${b.pv.atual}/${b.pv.max} PV)`
       : tiro ? `Errou ${b.nome}` : `${b.nome} defendeu (${r.defesa.nome})`;
-  const extras = [...notas, !r.sucesso && r.defesa.id === 'esquiva' ? `${b.nome} pode se deslocar até 1,5 m` : null, r.perdaSacrificio ? `Sacrifício: ${a.nome} perde ${r.perdaSacrificio} PV` : null].filter(Boolean);
+  const extras = [...notas, r.imune ? `${b.nome} é imune a ${r.imune}` : null, r.resistencia ? `resistência a ${r.resistencia}: metade do dano` : null,
+    r.vulnerabilidade ? `vulnerável a ${r.vulnerabilidade}: dano dobrado` : null, !r.sucesso && r.defesa.id === 'esquiva' ? `${b.nome} pode se deslocar até 1,5 m` : null, r.perdaSacrificio ? `Sacrifício: ${a.nome} perde ${r.perdaSacrificio} PV` : null].filter(Boolean);
   const entrada = {
     tipo: 'ataque', autor: a.nome, rotulo: `ataca ${b.nome} com ${r.arma}`, sucesso: r.sucesso, critico: r.critico, defendeu: !r.sucesso, alvo: b.nome,
     // Para as artes na tela: quem ataca, quem é o alvo, o tipo de arma e se o alvo caiu.
