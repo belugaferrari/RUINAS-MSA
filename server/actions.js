@@ -311,7 +311,7 @@ function npcDeMonstro(c, m) {
   const p = {
     ...f, id: uid(), tipo: 'npc', grupoId: GRUPO_ENCONTROS, donoId: null, criatura: true,
     nome: m.nome, nivel: m.nivel || 1, dificuldade: m.dificuldade, xp: m.xp || 0, foto: imagemDoMonstro(c, m) || '',
-    raca: m.raca || '', tipoCriatura: m.tipoCriatura || 'monstro', tamanho: m.tamanho || '',
+    raca: m.raca || '', tipoCriatura: m.tipoCriatura || 'monstro', tamanho: m.tamanho || '', afinidades: [...(m.afinidades || [])].slice(0, 2),
     atributos: { ...f.atributos, ...(m.atributos || {}) }, pericias: { ...(m.pericias || {}) }, subpericias: { ...(m.subpericias || {}) },
     ipExtra: m.ipGeral ?? m.defesa ?? 0, ipTipos: { ...(m.ipTipos || {}) },
     resistencias: [...(m.resistencias || [])], imunidades: [...(m.imunidades || [])], vulnerabilidades: [...(m.vulnerabilidades || [])],

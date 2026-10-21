@@ -20,7 +20,8 @@ const rino = {
   imagem: 'https://drive.google.com/file/d/1AbCdEfGhIjKlMnOp/view?usp=sharing', descricao: 'Exemplo.',
   ataques: [{ nome: 'Chifrada', pericia: 'briga.ataque-desarmado', dano: '2d8+3', tipoDano: 'Perfuração', alcance: 'corpo', efeitoDano: 3 },
     { nome: 'Pisotear', acerto: 35, dano: '1d10', tipoDano: 'Concussão', alcance: 'corpo' }],
-  habilidades: [{ nome: 'Couro de pedra', modo: 'sempre', efeitos: '+1 IP geral', descricao: 'Pele grossa.' }],
+  habilidades: [{ nome: 'Couro de pedra', modo: 'sempre', efeitos: '+1 IP geral', descricao: 'Pele grossa.' }, { nome: 'Sombra viva', modo: 'lembrete', efeitos: '', descricao: 'Some na escuridão.', unica: true }],
+  afinidades: ['Frio', 'Elétrico'],
 };
 
 test('planilha de monstros: o que sai do app volta igual', async () => {
@@ -38,6 +39,8 @@ test('planilha de monstros: o que sai do app volta igual', async () => {
   assert.equal(m.ataques.length, 2);
   assert.equal(m.ataques[1].acerto, 35);
   assert.equal(m.habilidades[0].modo, 'sempre');
+  assert.ok(m.habilidades[1].unica && !m.habilidades[0].unica);
+  assert.deepEqual(m.afinidades, ['Frio', 'Elétrico']);
 });
 
 test('monstro do livro vira NPC completo: atributos, defesa como a do personagem, ataques naturais, IP, resistência e sem SAN/HUM', () => {
@@ -57,6 +60,7 @@ test('monstro do livro vira NPC completo: atributos, defesa como a do personagem
     assert.equal(d.atributos.CONS, 18);
     assert.equal(d.ip.geral, 3); // 2 da planilha + 1 da habilidade "Couro de pedra"
     assert.equal(d.deslocamentoBase, 9);
+    assert.deepEqual(p.afinidades, ['Frio', 'Elétrico']);
     const armas = armasDisponiveis(p, sis);
     assert.ok(armas.some(a => a.nome === 'Chifrada' && a.dano === '2d8+3'));
     // Defesa igual à do personagem: Esquiva = subperícia + 50.

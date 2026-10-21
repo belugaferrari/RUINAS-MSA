@@ -250,7 +250,7 @@ export function listaHabilidades(ficha, sistema) {
     // Monstros não têm a habilidade da raça humana; têm as próprias (planilha do Livro dos Monstros).
     sistema.raca?.habilidadeUnica && !ficha.criatura ? { id: 'raca', nome: sistema.raca.habilidadeUnica.nome, descricao: sistema.raca.habilidadeUnica.descricao, tipo: sistema.raca.nome, vezes: 1 } : null,
   ].filter(Boolean).map(x => ({ ...x, regra: regraDaHabilidade(x.nome, sistema) })).concat(
-    (ficha.habilidadesProprias || []).map((x, i) => ({ id: `m:${i}:${x.nome}`, nome: x.nome, descricao: x.descricao || x.efeitos || '', tipo: 'Monstro', vezes: 1,
+    (ficha.habilidadesProprias || []).map((x, i) => ({ id: `m:${i}:${x.nome}`, nome: x.nome, descricao: x.descricao || x.efeitos || '', tipo: x.unica ? 'Habilidade única' : 'Monstro', unica: !!x.unica, vezes: 1,
       regra: x.modo === 'lembrete' && !x.efeitos ? null : { modo: x.modo || 'sempre', efeitos: x.efeitos || '' } })));
 }
 

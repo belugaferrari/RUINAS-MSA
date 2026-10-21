@@ -215,3 +215,5 @@ Regras em `conteudo/sistemas/habilidades-regras.json` (automática / ligar / ati
 - PV em branco: calculado como no personagem (FOR + CONS + 5 por nível depois do 1º).
 - Resistência = metade do dano; vulnerabilidade = dobro; imunidade a um tipo de dano = dano zero (e imunidade a efeito, ex.: Dor, impede o marcador).
 - O livro enviado vale para todas as campanhas do PC (como o catálogo de itens).
+- Criaturas podem ter habilidades únicas (coluna "Única" na aba Habilidades: não podem ser copiadas por Mutante/Transmorfo nem reveladas por Zoologia) e até duas afinidades elementares (autor, 21/10).
+- **Aguardando o autor:** o que a afinidade elementar faz no combate (por enquanto só fica registrada e aparece no cartão). Elemental no livro = Elétrico, Calor e Frio.

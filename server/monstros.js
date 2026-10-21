@@ -12,6 +12,8 @@ const sem = s => String(s ?? '').normalize('NFKD').replace(/[̀-ͯ]/g, '').toLow
 const SIGLAS = ['FOR', 'CONS', 'AGI', 'DES', 'INT', 'PER', 'CAR', 'WILL'];
 export const TAMANHOS = ['Diminuto', 'Pequeno', 'Médio', 'Grande', 'Enorme', 'Colossal'];
 const MODOS = ['sempre', 'ligar', 'ativar', 'lembrete'];
+// Afinidade elementar (até duas por criatura). Elemental no livro: Elétrico, Calor e Frio.
+export const ELEMENTOS = ['Elétrico', 'Calor', 'Frio'];
 
 // [título na planilha, chave, largura, dica]
 const COL_MONSTROS = [
@@ -28,6 +30,8 @@ const COL_MONSTROS = [
   ['Subperícias (pontos; separe por ;)', 'subpericias', 30, 'Ex.: Esquiva 3; Ataque desarmado 2; Briga › Defesa desarmada 1'],
   ['IP geral', 'ipGeral', 9, null],
   ['IP por tipo', 'ipTipos', 20, 'Ex.: Corte 2; Frio 1'],
+  ['Afinidade elementar 1', 'afinidade1', 14, 'Até duas afinidades elementares (Elétrico, Calor, Frio)'],
+  ['Afinidade elementar 2', 'afinidade2', 14, null],
   ['Resistências', 'resistencias', 20, 'Tipos de dano que sofrem metade (separe por ;)'],
   ['Imunidades', 'imunidades', 20, 'Tipos de dano (dano zero) ou efeitos (Dor, Sangramento…)'],
   ['Vulnerabilidades', 'vulnerabilidades', 20, 'Tipos de dano que sofrem o dobro'],
@@ -58,6 +62,7 @@ const COL_HABILIDADES = [
   ['Monstro', 'monstro', 24, null],
   ['Habilidade', 'nome', 24, null],
   ['Modo', 'modo', 12, 'sempre (aplica sozinho) / ligar / ativar / lembrete'],
+  ['Única (sim/não)', 'unica', 10, 'Habilidade única: não pode ser copiada (Mutante, Transmorfo…) nem revelada por testes como Zoologia'],
   ['Efeitos no app', 'efeitos', 36, 'Formato do lápis do mestre. Ex.: +1 IP geral; vantagem: ataque; imune: Dor; Furtividade +10%'],
   ['Descrição', 'descricao', 60, null],
 ];
@@ -133,6 +138,14 @@ export async function lerPlanilhaMonstros(buffer, sis) {
     for (const k of ['raca', 'outrosDeslocamentos', 'sentidos', 'comportamento', 'habitat', 'imagem', 'descricao']) { const t = texto(l[k]); if (t) m[k] = t; }
     const tipo = texto(l.tipoCriatura);
     if (tipo) { m.tipoCriatura = tipoDe(tipo); if (!m.tipoCriatura) avisos.push(`${nome}: tipo de criatura "${tipo}" não existe (ficou Monstro).`); }
+    const afinidades = [];
+    for (const k of ['afinidade1', 'afinidade2']) {
+      const t = texto(l[k]);
+      if (!t) continue;
+      const el = ELEMENTOS.find(x => sem(x) === sem(t));
+      if (el && !afinidades.includes(el)) afinidades.push(el); else if (!el) avisos.push(`${nome}: afinidade elementar "${t}" não existe (use Elétrico, Calor ou Frio).`);
+    }
+    if (afinidades.length) m.afinidades = afinidades;
     const tam = TAMANHOS.find(t => sem(t) === sem(l.tamanho));
     if (tam) m.tamanho = tam;
     for (const k of ['nivel', 'dificuldade', 'xp', 'pv', 'ipGeral', 'deslocamento']) { const n = numero(l[k]); if (n != null) m[k] = n; }
@@ -181,7 +194,7 @@ export async function lerPlanilhaMonstros(buffer, sis) {
     if (!nome) continue;
     if (!m) { avisos.push(`Habilidade "${nome}": monstro "${texto(l.monstro)}" não está na aba Monstros.`); continue; }
     const modo = MODOS.find(x => x === sem(l.modo)) || 'lembrete';
-    m.habilidades.push({ nome, modo, efeitos: texto(l.efeitos), descricao: texto(l.descricao) });
+    m.habilidades.push({ nome, modo, efeitos: texto(l.efeitos), descricao: texto(l.descricao), ...(/^(s|sim|x|1|única|unica)$/i.test(texto(l.unica)) ? { unica: true } : {}) });
   }
   return { monstros, avisos };
 }
@@ -200,7 +213,9 @@ export async function planilhaMonstros(sis, monstros) {
     '• Aba Monstros: uma linha por criatura. Só "Nome" é obrigatório. Monstros não têm Sanidade nem Humanidade.',
     '• Defesas: calculadas como as do personagem — pelos atributos e pelas perícias/subperícias (Esquiva = Briga + Esquiva + 50), mais as habilidades.',
     '• Aba Ataques: uma linha por ataque (um monstro pode ter vários). O acerto vem da perícia do ataque, como no personagem; "Acerto %" substitui, se preenchido.',
-    '• Aba Habilidades: poderes especiais. "Efeitos no app" usa o formato do lápis do mestre (ex.: +1 IP geral; vantagem: ataque; imune: Dor; Furtividade +10%).',
+    '• Afinidade elementar: até duas por criatura (Elétrico, Calor, Frio).',
+    '• Aba Habilidades: poderes especiais. Marque "Única" nas habilidades únicas (não podem ser copiadas nem reveladas por testes como Zoologia).',
+    '• Aba Habilidades (efeitos): "Efeitos no app" usa o formato do lápis do mestre (ex.: +1 IP geral; vantagem: ataque; imune: Dor; Furtividade +10%).',
     '• Listas separadas por ponto e vírgula (;). Ex.: Perícias = "Briga 4; Sentidos 3"; IP por tipo = "Corte 2; Frio 1".',
     '• Imagem: cole o link do Google Drive (Compartilhar > Qualquer pessoa com o link > Copiar link) ou o endereço de uma imagem.',
     '  Para usar um ARQUIVO, deixe em branco e envie no app: Livro dos Monstros > Enviar imagem.',
@@ -228,17 +243,18 @@ export async function planilhaMonstros(sis, monstros) {
       ...m, tipoCriatura: tipoNome(m.tipoCriatura), pericias: juntar(m.pericias, k => nomesPer[k] || k), subpericias: juntar(m.subpericias, k => nomesSub[k] || k),
       ipTipos: juntar(m.ipTipos, k => k), ...Object.fromEntries(['resistencias', 'imunidades', 'vulnerabilidades', 'saque'].map(k => [k, (m[k] || []).join('; ')])),
       ...Object.fromEntries(SIGLAS.map(s => [`atr:${s}`, m.atributos?.[s] ?? ''])),
-      descricao: m.descricao || '', ipGeral: m.ipGeral ?? m.defesa ?? '',
+      descricao: m.descricao || '', ipGeral: m.ipGeral ?? m.defesa ?? '', afinidade1: m.afinidades?.[0] || '', afinidade2: m.afinidades?.[1] || '',
     };
     wsM.addRow(COL_MONSTROS.map(([, k]) => v[k] ?? ''));
     const ataques = m.ataques?.length ? m.ataques : m.ataque ? [{ nome: m.ataque.replace(/\s*\d*d\d.*$/i, '') || 'Ataque', dano: /\d*d\d+(?:[+-]\d+)?/i.exec(m.ataque)?.[0] || '1d4' }] : [];
     for (const a of ataques) wsA.addRow(COL_ATAQUES.map(([, k]) => (k === 'monstro' ? m.nome : k === 'pericia' ? nomesSub[a.pericia] || '' : k === 'alcance' ? (a.alcance === 'distancia' ? 'distância' : 'corpo') : a[k] ?? '')));
-    for (const hb of m.habilidades || []) wsH.addRow(COL_HABILIDADES.map(([, k]) => (k === 'monstro' ? m.nome : hb[k] ?? '')));
+    for (const hb of m.habilidades || []) wsH.addRow(COL_HABILIDADES.map(([, k]) => (k === 'monstro' ? m.nome : k === 'unica' ? (hb.unica ? 'sim' : 'não') : hb[k] ?? '')));
   }
   const lst = wb.addWorksheet('Listas');
   const listas = [
     ['Tipo de criatura', (sis.tiposCriatura || []).map(t => t.nome)], ['Tamanho', TAMANHOS], ['Tipo de dano', sis.tiposDano || []],
     ['Alcance', ['corpo', 'distância']], ['Modo', MODOS], ['Subperícias (ataque)', Object.values(nomesSub)], ['Perícias', Object.values(nomesPer)],
+    ['Afinidade elementar', ELEMENTOS], ['Sim/não', ['sim', 'não']],
   ];
   lst.columns = listas.map(([h]) => ({ header: h, width: 26 }));
   lst.getRow(1).font = { bold: true };
@@ -257,5 +273,8 @@ export async function planilhaMonstros(sis, monstros) {
   validar(wsA, 'alcance', COL_ATAQUES, 3);
   validar(wsA, 'pericia', COL_ATAQUES, 5);
   validar(wsH, 'modo', COL_HABILIDADES, 4);
+  validar(wsM, 'afinidade1', COL_MONSTROS, 7);
+  validar(wsM, 'afinidade2', COL_MONSTROS, 7);
+  validar(wsH, 'unica', COL_HABILIDADES, 8);
   return wb.xlsx.writeBuffer();
 }
