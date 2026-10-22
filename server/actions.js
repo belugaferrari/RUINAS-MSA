@@ -5,7 +5,7 @@ import { resolverAtaque, aplicarAtaque, armasDisponiveis, opcoesDefesa, sobrevid
 import { sincronizarEfeitos, passarTurnoEfeitos, efeitosAoAgir, cargaNoTurno, descansar } from '../shared/efeitos.js';
 import { fichasDeTeste, relatorioFicha } from '../shared/fichasTeste.js';
 import { passarNecessidades, comer, beber, dormir, rolarCaos, climaDoDia, descreverRelogio, fimDoCombate } from '../shared/tempo.js';
-import { podeSeduzir, itemAberto, itemVisivel, xpParaSubir, novaFicha, podeEquipar, rolarDado, rolarAtributosCriacao, testeDMil, gerarEncontro, derivados, problemasFicha, LIMITE_SALA, desgastarItem, repararItem, durabilidadeDe, listaHabilidades, vantagemPorHabilidade, temHabilidade, regraDaHabilidade, tipoCriatura, chaveHabilidade, TIPOS_ACAO, nomeAcao } from '../shared/regras.js';
+import { podeSeduzir, itemAberto, itemVisivel, xpParaSubir, novaFicha, podeEquipar, rolarDado, rolarAtributosCriacao, testeDMil, gerarEncontro, derivados, problemasFicha, LIMITE_SALA, desgastarItem, repararItem, durabilidadeDe, listaHabilidades, vantagemPorHabilidade, temHabilidade, regraDaHabilidade, tipoCriatura, chaveHabilidade, TIPOS_ACAO, nomeAcao, acoesDaHabilidade, dadosDaHabilidade, ehAtaqueEspecial } from '../shared/regras.js';
 
 const GRUPO_ENCONTROS = 'encontros';
 const MAX_LOG = 100;
@@ -602,6 +602,26 @@ function criarOfertas(c, s, a, b, r, pend, sis) {
     if (candidatos.length) {
       s.ofertas.push({ id: uid(), tipo: 'quebraHordas', habilidade: 'Quebra-Hordas', personagem: a.id, alvos: candidatos.map(x => x.id), armaUid: pend.opcoes?.armaUid || 'desarmado',
         texto: `${a.nome} acertou ${b.nome}: ataque extra (Quebra-Hordas) contra outra criatura da mesma raça a até 1,5 m${candidatos.some(x => distanciaPecas(c, b.id, x.id) == null) ? ' (confira a distância no mapa)' : ''}` });
+    }
+  }
+  // Reações e ações livres do ALVO viram um "ataque especial momentâneo" (autor, 22/10): ao ser atacado, cada habilidade
+  // dele que gasta reação ou ação livre aparece como oferta. O texto filtra o gatilho: "falhar … ataque" só quando o ataque
+  // errou; "corpo-a-corpo" só contra ataque corpo a corpo. A reação é 1 por rodada.
+  if (b.atributos && !pend.opcoes?.extra) {
+    const cbR = s.combate;
+    const g = cbR?.gasto?.[b.id];
+    const reacaoUsada = g && g.reacaoRodada === cbR.rodada && (g.reacao || 0) >= 1;
+    const semAc = t => String(t || '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    for (const hab of listaHabilidades(b, sis)) {
+      const acoes = acoesDaHabilidade(b, sis, hab);
+      const tipo = acoes.find(x => x === 'reacao' || x === 'livre');
+      if (!tipo || (tipo === 'reacao' && reacaoUsada)) continue;
+      const t = semAc(hab.descricao);
+      if (/falha\w*[^.]{0,40}ataque|ataque[^.]{0,40}falha/.test(t) && r.sucesso) continue;
+      if (/corpo[- ]a[- ]corpo/.test(t) && pend.alcance === 'distancia') continue;
+      s.ofertas = s.ofertas.filter(o => !(o.personagem === b.id && o.habilidade === hab.nome));
+      s.ofertas.push({ id: uid(), tipo: 'reacao', habilidade: hab.nome, personagem: b.id, alvos: [a.id], acao: tipo, ataque: ehAtaqueEspecial(hab), dados: dadosDaHabilidade(hab),
+        texto: `${b.nome} ${r.sucesso ? 'foi atingido' : 'escapou'} (ataque de ${a.nome}): pode usar ${hab.nome} como ${nomeAcao(tipo).toLowerCase()} agora` });
     }
   }
   // Guerras diplomáticas: ao causar dano, ação bônus de Intimidação contra WILL% + 30 do alvo para ele parar de atacar.
@@ -1411,6 +1431,18 @@ export const acoes = {
       const cb = s.combate;
       a.quebraHordasEm = cb ? `${cb.rodada}:${cb.turno}` : 'livre';
       return acoes['combate.atacar'](c, { atacante: a.id, alvo: b.id, opcoes: { armaUid: of.armaUid, extra: 'Quebra-Hordas' } }, ctx);
+    }
+    if (of.tipo === 'reacao') {
+      // Ataque especial de reação: ataca quem atacou (fora do turno gasta a reação; ação livre não gasta nada).
+      if (of.ataque) {
+        const arma = armasDisponiveis(a, sis).find(x => x.uid !== 'desarmado') || armasDisponiveis(a, sis)[0];
+        const r = acoes['combate.atacar'](c, { atacante: a.id, alvo: b.id, opcoes: { armaUid: arma.uid, ...(of.acao === 'livre' ? { extra: of.habilidade } : {}) } }, ctx);
+        registrar(s.log, { autor: a.nome, rotulo: `${of.habilidade} (${nomeAcao(of.acao)})`, texto: `contra ${b.nome}` });
+        return r;
+      }
+      const excesso = gastarAcao(c, a, of.acao);
+      registrar(s.log, { autor: a.nome, rotulo: `${a.nome} usa ${of.habilidade}`, texto: `${nomeAcao(of.acao)}${excesso ? ` · atenção: ${excesso}` : ''}` });
+      return { texto: `${a.nome} usou ${of.habilidade} (${nomeAcao(of.acao)}).`, excesso };
     }
     if (of.tipo === 'guerrasDiplomaticas') {
       const da = derivados(a, sis), db = derivados(b, sis);

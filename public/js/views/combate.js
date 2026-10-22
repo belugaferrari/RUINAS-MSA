@@ -52,7 +52,7 @@ export function ofertasView(mestre) {
     const chave = `oferta:${o.id}`;
     if (!o.alvos.includes(estado.sel[chave])) estado.sel[chave] = o.alvos[0];
     return h('div', { class: 'oferta', role: 'alert' },
-      h('div', {}, icone('zap'), ' ', h('strong', {}, o.habilidade), `: ${o.texto}`),
+      h('div', {}, icone(o.tipo === 'reacao' ? 'shield' : 'zap'), ' ', h('strong', {}, o.habilidade), o.acao ? h('small', { class: `selo acao acao-${o.acao}` }, o.acao === 'reacao' ? 'Reação' : 'Ação livre') : null, `: ${o.texto}`),
       h('div', { class: 'barra' },
         o.alvos.length > 1 ? selecao(o.alvos.map(id => ({ valor: id, rotulo: personagemPorId(id)?.nome || '?' })), estado.sel[chave], v => { estado.sel[chave] = v; }, { 'aria-label': 'Alvo' })
           : h('span', {}, `Alvo: ${personagemPorId(o.alvos[0])?.nome || '?'}`),
@@ -60,6 +60,7 @@ export function ofertasView(mestre) {
           const r = await acao('combate.oferta', { id: o.id, aceitar: true, alvo: estado.sel[chave] });
           if (r?.texto) aviso(r.tipo === 'ataque' ? `${r.autor} ${r.rotulo}: ${r.texto}` : r.texto, r.sucesso ? 'ok' : 'erro');
         }, { class: 'pequeno primario', icone: 'zap' }),
+        (o.dados || []).map(d => botao(d, () => acao('rolar', { id: o.personagem, dado: d, rotulo: `${o.habilidade} (${d})`, sala: 'batalha' }).then(r => aviso(`${o.habilidade}: ${r.total} [${r.dados.join(', ')}]`)), { class: 'pequeno', icone: 'dices' })),
         botao('Dispensar', () => acao('combate.oferta', { id: o.id, aceitar: false }), { class: 'pequeno', icone: 'x' })));
   }));
 }

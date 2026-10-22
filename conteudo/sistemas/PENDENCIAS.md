@@ -244,3 +244,6 @@ Regras em `conteudo/sistemas/habilidades-regras.json` (automática / ligar / ati
 **Provisório — conferir**
 - Habilidade que cita mais de uma ação (ex.: Despertar: bônus; livre se for atacado) mostra a primeira; as outras aparecem ao passar o mouse.
 - Ataques especiais com regra automática (dano, alvo, efeito) ainda são poucos: os outros anotam o uso e rolam os dados; o mestre aplica o resto.
+- **Reações e ações livres (autor, 22/10):** viram um "ataque especial momentâneo" para o personagem atacado: ao ser atacado, cada habilidade dele de reação ou ação livre aparece como oferta (Usar/Dispensar) até o próximo turno. Provisório: o gatilho é lido do texto ("falhar … ataque" só quando o ataque errou; "corpo-a-corpo" só contra corpo a corpo); a reação é 1 por rodada; reação de ataque ataca quem atacou com a primeira arma equipada.
+- Tamanhos: a planilha do autor usa também Miúdo e Imenso (aceitos; ordem provisória: Diminuto, Miúdo, Pequeno, Médio, Grande, Enorme, Imenso, Colossal).
+- **Aguardando o autor:** a planilha de monstros do Drive usa afinidades além dos elementos (Água, Fogo, Tóxico, Neutro, Vampiro, Submundo, Místico, Ordem, Caos, Terra, Psíquico, Metal, Areia, Planta, Pedra, Ar). Falta definir a lista oficial e a qual tipo de dano cada uma corresponde para a regra da metade do dano.

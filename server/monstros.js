@@ -10,7 +10,8 @@ export const ARQ_MONSTROS = path.join(DATA_DIR, 'catalogo-monstros.json');
 
 const sem = s => String(s ?? '').normalize('NFKD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
 const SIGLAS = ['FOR', 'CONS', 'AGI', 'DES', 'INT', 'PER', 'CAR', 'WILL'];
-export const TAMANHOS = ['Diminuto', 'Pequeno', 'Médio', 'Grande', 'Enorme', 'Colossal'];
+// Tamanhos (a planilha do autor usa também Miúdo e Imenso; ordem provisória).
+export const TAMANHOS = ['Diminuto', 'Miúdo', 'Pequeno', 'Médio', 'Grande', 'Enorme', 'Imenso', 'Colossal'];
 const MODOS = ['sempre', 'ligar', 'ativar', 'lembrete'];
 // Afinidade elementar (até duas por criatura): a 1ª é o elemento principal — o monstro recebe metade do dano dele.
 // Não existe elemento oposto (autor, 22/10).

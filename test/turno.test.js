@@ -70,3 +70,33 @@ test('só o mestre cancela efeitos', () => {
   executar(c, 'efeito.turnos', { id, efeito: ef, turnos: 0 }, ctxM);
   assert.ok(!lia.marcadores.includes('Sangramento'));
 });
+
+test('reações e ações livres aparecem como ataque especial momentâneo para o alvo (Predador Apex só quando o ataque erra)', () => {
+  const c = novaCampanha(mestre, { nome: 'T', maxJogadores: 2, nivel: 1, sistema: 'mss' });
+  const cl = mss.classes.find(x => x.nome === 'Transmorfo');
+  const esp = cl.especializacoes.find(e => /LICANT/.test(e.nome));
+  const ids = ['Lobo', 'Bandido'].map(nome => executar(c, 'personagem.criar', { tipo: 'npc', grupoId: 'encontros', ficha: { nome } }, ctxM).id);
+  const lobo = c.personagens.find(p => p.id === ids[0]);
+  Object.assign(lobo, { classe: cl.id, especializacao: esp.id, nivel: 20 });
+  for (const id of ids) executar(c, 'sala.adicionar', { sala: 'batalha', id }, ctxM);
+  const s = c.salas.batalha;
+  const rnd = Math.random;
+  try {
+    Math.random = () => 0.02; // o ataque do Bandido erra (erro crítico)
+    executar(c, 'combate.atacar', { atacante: ids[1], alvo: ids[0], opcoes: { surpresa: true } }, ctxM);
+  } finally { Math.random = rnd; }
+  const nomes = s.ofertas.filter(o => o.personagem === lobo.id).map(o => o.habilidade);
+  assert.ok(nomes.includes('Predador Apex'), nomes.join(','));
+  assert.ok(nomes.includes('Despertar'));
+  const apex = s.ofertas.find(o => o.habilidade === 'Predador Apex');
+  assert.equal(apex.acao, 'reacao');
+  assert.ok(apex.ataque);
+  const r = executar(c, 'combate.oferta', { id: apex.id, aceitar: true, alvo: ids[1] }, ctxM);
+  assert.ok(r.tipo === 'ataque' || r.id);
+  s.ofertas = [];
+  try {
+    Math.random = () => 0.97; // agora acerta: Predador Apex não aparece
+    executar(c, 'combate.atacar', { atacante: ids[1], alvo: ids[0], opcoes: { surpresa: true } }, ctxM);
+  } finally { Math.random = rnd; }
+  assert.ok(!s.ofertas.some(o => o.habilidade === 'Predador Apex'));
+});
