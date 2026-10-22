@@ -83,3 +83,15 @@ test('monstro do livro vira NPC completo: atributos, defesa como a do personagem
     voltarMonstrosPadrao();
   }
 });
+
+test('afinidade principal reduz à metade os tipos ligados a ela; afinidade sem relação ainda não reduz', () => {
+  const sis = sistema('mss');
+  const alvo = (af) => ({ id: 'm', nome: 'M', pv: { max: 50, atual: 50 }, atributos: { FOR: 10, CONS: 10, AGI: 10, DES: 10, INT: 10, PER: 10, CAR: 10, WILL: 10 }, afinidades: [af] });
+  const fogo = { id: 'a', nome: 'A', pv: { max: 10, atual: 10 }, atributos: { FOR: 10, CONS: 10, AGI: 10, DES: 10, INT: 10, PER: 10, CAR: 10, WILL: 10 },
+    itens: [{ uid: 'f', nome: 'Lança-chamas', tipo: 'arma', dano: '2d6', tipoDano: 'Calor', equipado: true, alcance: 'corpo', pericia: 'arma-branca.lanca' }] };
+  const r1 = resolverAtaque(fogo, alvo('Fogo'), sis, { armaUid: 'f' }, 'nenhuma', () => 0.99);
+  assert.equal(r1.resistencia, 'Calor');
+  assert.equal(r1.porAfinidade, 'Fogo');
+  const r2 = resolverAtaque(fogo, alvo('Água'), sis, { armaUid: 'f' }, 'nenhuma', () => 0.99);
+  assert.ok(!r2.resistencia);
+});

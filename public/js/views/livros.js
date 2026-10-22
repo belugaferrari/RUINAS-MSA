@@ -211,7 +211,7 @@ function planilhaMonstrosMestre() {
   const recarregar = () => { estado.sel.monstrosInfo = null; estado.sel.monstrosPedido = false; };
   return h('details', { class: 'bloco', open: !!estado.sel.monstrosAberto, ontoggle: e => { estado.sel.monstrosAberto = e.target.open; } },
     h('summary', {}, icone('file-spreadsheet'), ' Livro dos Monstros (planilha)'),
-    h('p', { class: 'dica' }, info ? `${info.total} criaturas · ${info.origem === 'mestre' ? `enviado por você${info.arquivo ? ` (${info.arquivo})` : ''}${info.atualizadoEm ? ` · ${formatarData(info.atualizadoEm)}` : ''}` : 'exemplos do app'}.` : 'Carregando…'),
+    h('p', { class: 'dica' }, info ? `${info.total} criaturas · ${info.origem === 'mestre' ? `enviado por você${info.arquivo ? ` (${info.arquivo})` : ''}${info.atualizadoEm ? ` · ${formatarData(info.atualizadoEm)}` : ''}` : 'Livro dos Monstros do autor (vem com as atualizações do app)'}.` : 'Carregando…'),
     h('p', { class: 'dica' }, 'Baixe a planilha, preencha as abas Monstros, Ataques e Habilidades (instruções dentro dela) e envie de volta. Vale para todas as campanhas deste PC; monstros que já estão em campo não mudam.'),
     h('div', { class: 'barra' },
       botao('Baixar planilha', () => baixarArquivo(`/api/monstros.xlsx?sistema=${estado.campanha.sistema || 'mss'}`, 'monstros-ilhas-das-ruinas.xlsx'), { icone: 'download' }),
@@ -225,8 +225,8 @@ function planilhaMonstrosMestre() {
         recarregar();
         aviso(`${r.recebidos} monstros lidos; o livro tem ${r.total}.${r.avisos?.length ? ` Atenção: ${r.avisos.join(' ')}` : ''}`, r.avisos?.length ? 'erro' : 'ok');
       }, { class: 'primario', icone: 'upload' }),
-      info?.origem === 'mestre' ? botao('Voltar aos exemplos', async () => {
-        if (!(await confirmar('Apagar o Livro dos Monstros enviado e voltar aos exemplos do app?'))) return;
+      info?.origem === 'mestre' ? botao('Voltar ao livro do autor', async () => {
+        if (!(await confirmar('Apagar o Livro dos Monstros enviado e voltar ao livro do autor?'))) return;
         await enviarArquivo('/api/monstros/padrao', new FormData());
         recarregar();
       }, { class: 'perigo', icone: 'refresh-cw' }) : null));

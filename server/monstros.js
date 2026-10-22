@@ -13,9 +13,9 @@ const SIGLAS = ['FOR', 'CONS', 'AGI', 'DES', 'INT', 'PER', 'CAR', 'WILL'];
 // Tamanhos (a planilha do autor usa também Miúdo e Imenso; ordem provisória).
 export const TAMANHOS = ['Diminuto', 'Miúdo', 'Pequeno', 'Médio', 'Grande', 'Enorme', 'Imenso', 'Colossal'];
 const MODOS = ['sempre', 'ligar', 'ativar', 'lembrete'];
-// Afinidade elementar (até duas por criatura): a 1ª é o elemento principal — o monstro recebe metade do dano dele.
-// Não existe elemento oposto (autor, 22/10).
-export const ELEMENTOS = ['Elétrico', 'Calor', 'Frio', 'Energia (Mágico)', 'Radiação'];
+// Afinidade elementar (até duas por criatura): a 1ª é a principal — o monstro recebe metade do dano dos tipos ligados a ela
+// (base.json "afinidadesElementais"). Não existe elemento oposto. Afinidade nova da planilha é aceita (sem relação ainda).
+const elementosDe = sis => (sis.afinidadesElementais || []).map(a => a.nome);
 
 // [título na planilha, chave, largura, dica]
 const COL_MONSTROS = [
@@ -32,7 +32,7 @@ const COL_MONSTROS = [
   ['Subperícias (pontos; separe por ;)', 'subpericias', 30, 'Ex.: Esquiva 3; Ataque desarmado 2; Briga › Defesa desarmada 1'],
   ['IP geral', 'ipGeral', 9, null],
   ['IP por tipo', 'ipTipos', 20, 'Ex.: Corte 2; Frio 1'],
-  ['Afinidade elementar 1 (principal)', 'afinidade1', 16, 'Elemento principal: o monstro recebe metade do dano deste elemento. Lista: Elétrico, Calor, Frio, Energia (Mágico), Radiação'],
+  ['Afinidade elementar 1 (principal)', 'afinidade1', 16, 'Afinidade principal: o monstro recebe metade do dano dos tipos ligados a ela. Lista na aba Listas (pode escrever uma nova).'],
   ['Afinidade elementar 2', 'afinidade2', 14, 'Opcional (até duas afinidades)'],
   ['Resistências', 'resistencias', 20, 'Tipos de dano que sofrem metade (separe por ;)'],
   ['Imunidades', 'imunidades', 20, 'Tipos de dano (dano zero) ou efeitos (Dor, Sangramento…)'],
@@ -127,6 +127,10 @@ export async function lerPlanilhaMonstros(buffer, sis) {
   if (!wsM) throw new Error('Aba "Monstros" não encontrada. Use o modelo baixado pelo app.');
   const avisos = [];
   const { per, sub } = nomesPericias(sis);
+  // Subperícias com nome único no sistema (para corrigir "Perícia errada › Subperícia").
+  const contagem = new Map();
+  for (const p of sis.pericias) for (const s of p.subpericias) contagem.set(sem(s.nome), [...(contagem.get(sem(s.nome)) || []), s.id]);
+  const subUnica = new Map([...contagem].filter(([, ids]) => ids.length === 1).map(([k, ids]) => [k, ids[0]]));
   const tipos = sis.tiposCriatura || [];
   const tiposDano = sis.tiposDano || [];
   const tipoDe = t => tipos.find(x => sem(x.nome) === sem(t) || x.id === sem(t))?.id || null;
@@ -144,8 +148,11 @@ export async function lerPlanilhaMonstros(buffer, sis) {
     for (const k of ['afinidade1', 'afinidade2']) {
       const t = texto(l[k]);
       if (!t) continue;
-      const el = ELEMENTOS.find(x => sem(x) === sem(t) || sem(x).startsWith(`${sem(t)} `));
-      if (el && !afinidades.includes(el)) afinidades.push(el); else if (!el) avisos.push(`${nome}: afinidade elementar "${t}" não existe (use ${ELEMENTOS.join(', ')}).`);
+      // Afinidades da lista ficam com a grafia dela; uma nova é aceita como veio (avisa que ainda não tem relação de dano).
+      const el = elementosDe(sis).find(x => sem(x) === sem(t) || sem(x).startsWith(`${sem(t)} `));
+      if (!el) avisos.push(`${nome}: afinidade "${t}" ainda não está na lista (aceita, sem relação com tipo de dano).`);
+      const valor = el || t;
+      if (!afinidades.includes(valor)) afinidades.push(valor);
     }
     if (afinidades.length) m.afinidades = afinidades;
     const tam = TAMANHOS.find(t => sem(t) === sem(l.tamanho));
@@ -162,7 +169,9 @@ export async function lerPlanilhaMonstros(buffer, sis) {
     }
     for (const t of lista(l.subpericias)) {
       const [n, v] = pontos(t);
-      const id = sub.get(chaveSub(n));
+      let id = sub.get(chaveSub(n));
+      // "Esportes › Esquiva": a perícia está errada, mas o nome da subperícia é único → usa a certa (e avisa).
+      if (!id && chaveSub(n).includes(' › ')) { id = subUnica.get(chaveSub(n).split(' › ').pop()); if (id) avisos.push(`${nome}: "${t}" corrigido para ${id}.`); }
       if (id && v != null) subs[id] = v; else avisos.push(`${nome}: subperícia "${t}" não reconhecida.`);
     }
     if (Object.keys(pers).length) m.pericias = pers;
@@ -215,7 +224,7 @@ export async function planilhaMonstros(sis, monstros) {
     '• Aba Monstros: uma linha por criatura. Só "Nome" é obrigatório. Monstros não têm Sanidade nem Humanidade.',
     '• Defesas: calculadas como as do personagem — pelos atributos e pelas perícias/subperícias (Esquiva = Briga + Esquiva + 50), mais as habilidades.',
     '• Aba Ataques: uma linha por ataque (um monstro pode ter vários). O acerto vem da perícia do ataque, como no personagem; "Acerto %" substitui, se preenchido.',
-    '• Afinidade elementar: até duas por criatura (Elétrico, Calor, Frio, Energia, Radiação). A 1ª é a principal: o monstro recebe metade do dano desse elemento. Não existe elemento oposto.',
+    '• Afinidade elementar: até duas por criatura (lista na aba Listas). A 1ª é a principal: o monstro recebe metade do dano dos tipos ligados a ela. Não existe elemento oposto.',
     '• Ataques elementais: um ataque só causa dano elemental se o "Tipo de dano" dele for o elemento (ex.: Sopro gelado = Frio; Mordida = Perfuração).',
     '• Aba Habilidades: poderes especiais. Marque "Única" nas habilidades únicas (não podem ser copiadas nem reveladas por testes como Zoologia).',
     '• Aba Habilidades (efeitos): "Efeitos no app" usa o formato do lápis do mestre (ex.: +1 IP geral; vantagem: ataque; imune: Dor; Furtividade +10%).',
@@ -257,7 +266,7 @@ export async function planilhaMonstros(sis, monstros) {
   const listas = [
     ['Tipo de criatura', (sis.tiposCriatura || []).map(t => t.nome)], ['Tamanho', TAMANHOS], ['Tipo de dano', sis.tiposDano || []],
     ['Alcance', ['corpo', 'distância']], ['Modo', MODOS], ['Subperícias (ataque)', Object.values(nomesSub)], ['Perícias', Object.values(nomesPer)],
-    ['Afinidade elementar', ELEMENTOS], ['Sim/não', ['sim', 'não']],
+    ['Afinidade elementar', elementosDe(sis)], ['Sim/não', ['sim', 'não']],
   ];
   lst.columns = listas.map(([h]) => ({ header: h, width: 26 }));
   lst.getRow(1).font = { bold: true };

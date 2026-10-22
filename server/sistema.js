@@ -14,6 +14,7 @@ const cache = new Map();
 // Com ITENS_EXEMPLO=1 (testes) fica só a lista curta de exemplo do base.json.
 const ITENS_MESTRE = path.join(DATA_DIR, 'catalogo-itens.json');
 const ITENS_PADRAO = path.join(SISTEMAS, 'itens.json');
+const MONSTROS_PADRAO = path.join(SISTEMAS, 'monstros.json');
 function arquivoItens() {
   if (process.env.ITENS_EXEMPLO) return null;
   return [ITENS_MESTRE, ITENS_PADRAO].find(a => fs.existsSync(a)) || null;
@@ -45,7 +46,9 @@ export function sistema(id = SISTEMA_PADRAO) {
   id = idSistema(id);
   const lista = arquivos(id);
   const arqItens = arquivoItens();
-  const arqMonstros = fs.existsSync(ARQ_MONSTROS) ? ARQ_MONSTROS : null;
+  // Livro dos Monstros: o enviado pelo mestre (data/), senão o do autor (conteudo/sistemas/monstros.json).
+  // Nos testes (ITENS_EXEMPLO=1) ficam só os exemplos do base.json.
+  const arqMonstros = fs.existsSync(ARQ_MONSTROS) ? ARQ_MONSTROS : !process.env.ITENS_EXEMPLO && fs.existsSync(MONSTROS_PADRAO) ? MONSTROS_PADRAO : null;
   const assinatura = [...lista, ...(arqItens ? [arqItens] : []), ...(arqMonstros ? [arqMonstros] : [])].map(a => `${a}:${fs.statSync(a).mtimeMs}`).join('|');
   const atual = cache.get(id);
   if (atual && atual.assinatura === assinatura) return atual.dados;

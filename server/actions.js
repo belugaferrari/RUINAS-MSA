@@ -502,7 +502,7 @@ function resolverPendente(c, s, pend, defesa, sis) {
     ? `Acertou! ${b.nome} tomou ${r.dano} de dano (${b.pv.atual}/${b.pv.max} PV)`
     : r.dano ? `${b.nome} defendeu em parte (${r.defesa.nome}): tomou ${r.dano} de dano (${b.pv.atual}/${b.pv.max} PV)`
       : tiro ? `Errou ${b.nome}` : `${b.nome} defendeu (${r.defesa.nome})`;
-  const extras = [...notas, r.imune ? `${b.nome} é imune a ${r.imune}` : null, r.resistencia ? `${String(b.afinidades?.[0] || '').toLowerCase() === String(r.resistencia).toLowerCase() ? 'elemento principal' : 'resistência a'} ${r.resistencia}: metade do dano` : null,
+  const extras = [...notas, r.imune ? `${b.nome} é imune a ${r.imune}` : null, r.resistencia ? (r.porAfinidade ? `afinidade ${r.porAfinidade} contra ${r.resistencia}: metade do dano` : `resistência a ${r.resistencia}: metade do dano`) : null,
     r.vulnerabilidade ? `vulnerável a ${r.vulnerabilidade}: dano dobrado` : null, !r.sucesso && r.defesa.id === 'esquiva' ? `${b.nome} pode se deslocar até 1,5 m` : null, r.perdaSacrificio ? `Sacrifício: ${a.nome} perde ${r.perdaSacrificio} PV` : null].filter(Boolean);
   const entrada = {
     tipo: 'ataque', autor: a.nome, rotulo: `ataca ${b.nome} com ${r.arma}`, sucesso: r.sucesso, critico: r.critico, defendeu: !r.sucesso, alvo: b.nome,

@@ -198,6 +198,7 @@ app.get('/api/monstros/origem', rota(req => {
   autenticado(req);
   const cat = catalogoMonstros();
   return cat ? { origem: 'mestre', atualizadoEm: cat.atualizadoEm, arquivo: cat.arquivo, total: cat.monstros.length } : { origem: 'padrao', total: sistema('mss').monstros.length };
+  // (sem envio do mestre, o livro é o do autor: conteudo/sistemas/monstros.json)
 }));
 
 app.get('/api/monstros.xlsx', async (req, res) => {
