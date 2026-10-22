@@ -257,6 +257,34 @@ export function listaHabilidades(ficha, sistema) {
       regra: x.modo === 'lembrete' && !x.efeitos ? null : { modo: x.modo || 'sempre', efeitos: x.efeitos || '' } })));
 }
 
+// Economia do turno (livro, "A Economia do Turno"): em cada turno, 1 ação principal, 1 de movimento, 1 bônus (só com
+// habilidade ou item que permita) e ações livres; a ação completa gasta a principal e a de movimento; a reação é fora do
+// turno (1 por rodada).
+export const TIPOS_ACAO = [
+  { id: 'completa', nome: 'Ação completa', re: /acao completa/ },
+  { id: 'principal', nome: 'Ação principal', re: /acao principal|acao de combate/ },
+  { id: 'movimento', nome: 'Ação de movimento', re: /acao de movimento/ },
+  { id: 'bonus', nome: 'Ação bônus', re: /acao bonus/ },
+  { id: 'livre', nome: 'Ação livre', re: /acao livre/ },
+  { id: 'reacao', nome: 'Reação', re: /reacao|acao imediata/ },
+];
+export const nomeAcao = id => TIPOS_ACAO.find(t => t.id === id)?.nome || id;
+// Quanto tempo a habilidade gasta: o que o mestre escreveu no lápis ("ação: bônus"), a regra própria ou o texto do livro
+// (na ordem em que aparecem). Lista vazia = o livro não diz (passiva ou a definir).
+export function acoesDaHabilidade(ficha, sistema, hab) {
+  const ajuste = semAcento(ficha?.ajustesHabilidades?.[hab.id] || '');
+  const m = /acao\s*:\s*([a-z ]+)/.exec(ajuste);
+  if (m) { const t = TIPOS_ACAO.find(x => m[1].includes(x.id) || x.re.test(`acao ${m[1]}`)); if (t) return [t.id]; }
+  const regra = hab.regra === undefined ? regraDaHabilidade(hab.nome, sistema) : hab.regra;
+  if (regra?.acao) return [regra.acao];
+  const texto = semAcento(hab.descricao || '');
+  return TIPOS_ACAO.map(t => ({ id: t.id, i: texto.search(t.re) })).filter(x => x.i >= 0).sort((a, b) => a.i - b.i).map(x => x.id);
+}
+// Dados de dano citados no texto da habilidade ("+1D8 de dano", "causa 2d6") — para rolar direto do painel de ataques.
+export const dadosDaHabilidade = hab => [...new Set((String(hab.descricao || '').match(/\b\d*[dD]\d+(?:\s*[+-]\s*\d+(?!\s*%))?/g) || []).map(x => x.replace(/\s+/g, '').toLowerCase().replace(/^d/, '1d')))].slice(0, 4);
+// Habilidade que é um ataque especial (fala de ataque/golpe e de dano) — vai também para as opções de ataque.
+export const ehAtaqueEspecial = hab => /\b(ataque|ataca|atacar|golpe|disparo|dispar|investida|arremess|morde|garra)/.test(semAcento(hab.descricao)) && /dano|\d*d\d+/.test(semAcento(hab.descricao));
+
 // Regra própria da habilidade, pelo nome (sem acento, maiúsculas nem o que vem entre parênteses).
 export const chaveHabilidade = nome => semAcento(nome).replace(/\s*[([].*$/, '').replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
 export function regraDaHabilidade(nome, sistema) {

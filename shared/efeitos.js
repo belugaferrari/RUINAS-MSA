@@ -29,8 +29,9 @@ export function sincronizarEfeitos(p, sistema, { reiniciar = [], rng = Math.rand
       else novo[c.id] = { ...t, qtd: c.qtd };
       continue;
     }
+    // Sangramento: a contagem começa em 1 (perde 1 PV no 1º turno do afetado); depois, a cada 1d4 turnos (autor, 22/10).
     novo[c.id] = c.sangra
-      ? { qtd: c.qtd, turnos: rolar(c.sangra.intervalo, rng), perdidos: 0 }
+      ? { qtd: c.qtd, turnos: c.sangra.primeiro ?? rolar(c.sangra.intervalo, rng), perdidos: 0 }
       : { qtd: c.qtd, turnos: rolar(c.duracao, rng) };
   }
   if (Object.keys(novo).length) p.efeitos = novo;

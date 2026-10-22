@@ -1363,3 +1363,15 @@ span.peao { display: grid; }
 .texto-livro mark { background: rgba(212, 162, 76, .45); color: inherit; border-radius: 3px; padding: 0 .1em; }
 .texto-livro .piscar { animation: piscar-achado 1.6s ease; }
 @keyframes piscar-achado { 0%, 40% { box-shadow: 0 0 0 3px var(--ouro); background: rgba(212, 162, 76, .18); } 100% { box-shadow: none; background: transparent; } }
+
+/* Economia do turno e etiquetas de ação das habilidades. */
+.acoes-turno { display: flex; flex-wrap: wrap; align-items: center; gap: .35em; margin-bottom: .5em; }
+.acao-chip { min-height: 32px; padding: .25em .7em; border-radius: 999px; font-size: .85em; border: 1px solid var(--ouro-esc); background: rgba(212, 162, 76, .12); }
+.acao-chip.usada { opacity: .55; text-decoration: line-through; background: transparent; border-style: dashed; }
+.selo.acao { font-size: .72em; margin-left: .3em; }
+.selo.acao-principal, .selo.acao-completa { border-color: #c0392b; color: #f0a59b; }
+.selo.acao-bonus { border-color: var(--ouro); color: var(--ouro); }
+.selo.acao-reacao { border-color: #5b8bd0; color: #9cbcf0; }
+.selo.acao-movimento { border-color: #4caf7a; color: #8fd6ab; }
+.selo.acao-livre { opacity: .8; }
+.ataque-linha.especial { flex-wrap: wrap; }

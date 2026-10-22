@@ -233,3 +233,14 @@ Regras em `conteudo/sistemas/habilidades-regras.json` (automática / ligar / ati
 - Ainda não automáticos: "vantagem contra Medo" (Desmotivado, Corajoso) e Motivado (+5% ligados à motivação / −5% nos demais) — o mestre aplica como modificador.
 - **Reparo (autor, 22/10):** ND 60 + 10 × pontos de durabilidade perdidos (está no livro). Provisório: perícia sugerida pelo tipo do item (Mecânica, Militar, Elétrica, Computação); sem kit no inventário o app só avisa.
 - Testes comuns nos Rápidos: Cozinhar (Arte › Culinária), Acampar (Sobrevivência básica), Esfolar, Rastrear, Navegar, Pescar, Cultivar, Primeiros socorros, Costurar (Arte › Costura).
+
+## Combate: economia do turno, efeitos e ataques especiais (autor, 22/10)
+- Sangramento: perde 1 PV já no 1º turno do personagem afetado; depois, 1 PV a cada 1d4 turnos, até 6 PV.
+- Só o mestre cancela efeitos ou muda os turnos que faltam (clicando no ícone do efeito).
+- Economia do turno (livro): 1 ação principal, 1 de movimento, 1 bônus (com habilidade/item), ações livres; ação completa = principal + movimento; reação 1 por rodada, fora do turno. O app marca o que foi gasto (o ataque gasta a principal; atacar fora do turno gasta a reação; habilidade de ativar gasta a ação dela) e AVISA quando passa do limite, sem bloquear.
+- Tempo de cada habilidade: lido do texto do livro (104 das 418 citam a ação); nas outras aparece "ação ?" e o mestre define no lápis ("ação: bônus").
+- Ataques especiais e ações de habilidades (todas as classes) entram nas opções de ataque, com "Usar" (anota e gasta a ação) e os dados citados no texto.
+
+**Provisório — conferir**
+- Habilidade que cita mais de uma ação (ex.: Despertar: bônus; livre se for atacado) mostra a primeira; as outras aparecem ao passar o mouse.
+- Ataques especiais com regra automática (dano, alvo, efeito) ainda são poucos: os outros anotam o uso e rolam os dados; o mestre aplica o resto.

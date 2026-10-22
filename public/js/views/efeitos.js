@@ -65,9 +65,9 @@ function iconeEfeito(p, e, mestre) {
   return h('button', { ...props, type: 'button' }, ...conteudo);
 }
 
-// Janela com o desenho grande, o que o efeito faz e quanto falta. O mestre e o dono do personagem mudam os turnos aqui.
-function lerEfeito(p, e, mestreOuDono, turnos) {
-  const mestre = mestreOuDono || p.donoId === estado.usuario?.id;
+// Janela com o desenho grande, o que o efeito faz e quanto falta. Só o MESTRE muda os turnos ou cancela o efeito (autor, 22/10).
+function lerEfeito(p, e, _mestre, turnos) {
+  const mestre = estado.campanha?.papel === 'mestre';
   const campoTurnos = h('input', { type: 'number', min: 0, max: 99, class: 'curto', value: e.turnos ?? '', 'aria-label': 'Turnos que faltam' });
   const salvar = async n => {
     await acao('efeito.turnos', { id: p.id, efeito: e.id, turnos: n });
@@ -81,7 +81,7 @@ function lerEfeito(p, e, mestreOuDono, turnos) {
         h('p', { class: 'meta' }, icone('hourglass'), ` ${turnos[0].toUpperCase()}${turnos.slice(1)}.`),
         h('p', { class: 'dica' }, `Grupo: ${e.grupo}.`),
         mestre ? h('label', { class: 'linha' }, 'Turnos que faltam (0 tira o efeito)', campoTurnos) : null)),
-    mestre ? [['Tirar o efeito', () => salvar(0), 'perigo'], ['Salvar turnos', () => salvar(Math.max(0, parseInt(campoTurnos.value, 10) || 0)), 'primario']] : [['Fechar', () => true]]);
+    mestre ? [['Cancelar o efeito', () => salvar(0), 'perigo'], ['Salvar turnos', () => salvar(Math.max(0, parseInt(campoTurnos.value, 10) || 0)), 'primario']] : [['Fechar', () => true]]);
   // Nos efeitos animados, mostra o movimento de novo na janela.
   document.querySelector('.efeito-leitura .efeito-icone')?.classList.add('chegou');
 }

@@ -357,6 +357,7 @@ export function acoesCartaoBatalha(p, participantes, mestre) {
       const r = await acao('combate.atacar', { atacante: p.id, alvo, opcoes: { ...opcoesGerais(p, mestre), armaUid: estado.sel[chaveArma] } });
       if (estado.sel.ataque) estado.sel.ataque.sacrificio = false;
       if (r.tipo === 'barrado') aviso(r.texto, 'erro');
+      if (r.excesso) aviso(`Atenção: ${r.excesso}.`, 'erro');
     else if (r.tipo === 'ataque') aviso(`${r.autor} ${r.rotulo}: ${r.texto}`, r.sucesso ? 'ok' : 'erro');
       else aviso(`${p.nome} ataca: aguardando a defesa.`);
     }, { class: 'pequeno primario', icone: 'swords', title: `${p.nome} ataca`, disabled: item?.capacidade && (item.carregada || 0) <= 0 }));

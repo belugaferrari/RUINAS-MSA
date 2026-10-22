@@ -4,7 +4,7 @@
 import { h, botao, selecao, aviso, icone, titulo, vazio, pedirTexto, confirmar } from '../ui.js';
 import { estado, render, personagemPorId } from '../estado.js';
 import { acao } from '../api.js';
-import { derivados, listaHabilidades, efeitosHabilidade, modoHabilidade, temHabilidade, tipoCriatura, chaveHabilidade, GRUPOS_IP } from '/shared/regras.js';
+import { derivados, listaHabilidades, efeitosHabilidade, modoHabilidade, temHabilidade, tipoCriatura, chaveHabilidade, GRUPOS_IP, acoesDaHabilidade, nomeAcao, dadosDaHabilidade, ehAtaqueEspecial, TIPOS_ACAO } from '/shared/regras.js';
 import { armasDisponiveis, ipDe, opcoesDefesa, defesaDoAlvo, danoDaArma, recursoDe } from '/shared/combate.js';
 import { trilhaCompacta, escolherCondicao, cargaView } from './ficha.js';
 import { painelSlot, naMao, maoHabil } from './boneco.js';
@@ -179,7 +179,7 @@ function quadroHabilidades(p, mestre) {
     await acao('personagem.atualizar', { id: p.id, patch: { ajustesHabilidades: ajustes } });
   };
   const lapis = x => mestre ? botao('', () => ajustar(x), { class: 'pequeno', icone: 'pencil', title: `Ajustar o que ${x.nome} faz no app` }) : null;
-  const cabeca = x => h('details', {}, h('summary', {}, h('strong', {}, x.nome), x.vezes > 1 ? h('small', { class: 'selo' }, `×${x.vezes}`) : null, h('small', {}, ` ${x.tipo}`)), h('p', { class: 'bloco-texto' }, x.descricao));
+  const cabeca = x => h('details', {}, h('summary', {}, h('strong', {}, x.nome), x.vezes > 1 ? h('small', { class: 'selo' }, `×${x.vezes}`) : null, h('small', {}, ` ${x.tipo}`), seloAcao(p, x)), h('p', { class: 'bloco-texto' }, x.descricao));
   // Grupos: automáticas (o app aplica sozinho), as de ligar no combate (botão) e as que são só regra para lembrar.
   const automaticas = [], comNumero = [], lembretes = [], deAtivar = [];
   for (const x of lista) {
@@ -225,6 +225,13 @@ function quadroHabilidades(p, mestre) {
   ];
 }
 
+// Quanto tempo a habilidade gasta (do texto do livro, da regra própria ou do lápis do mestre: "ação: bônus").
+export function seloAcao(p, x) {
+  const acoes = acoesDaHabilidade(p, estado.sistema, x);
+  if (!acoes.length) return null;
+  return h('span', { class: `selo acao acao-${acoes[0]}`, title: acoes.length > 1 ? `Também citado: ${acoes.slice(1).map(nomeAcao).join(', ')}` : 'Quanto tempo do turno a habilidade gasta' }, nomeAcao(acoes[0]));
+}
+
 // Habilidade de ativar: mostra custo/usos/duração; ativa (ou desativa). Essência monstruosa pede o monstro abatido.
 function botaoAtivar(p, x, lapis) {
   const sis = estado.sistema;
@@ -251,7 +258,7 @@ function botaoAtivar(p, x, lapis) {
   const ef = efeitosHabilidade(p, sis, x).notas.join(' · ');
   return h('li', { class: ativa ? 'ativa' : '' },
     h('div', { class: 'hab-texto' },
-      h('details', {}, h('summary', {}, h('strong', {}, x.nome), h('small', {}, ` ${x.tipo}`)), h('p', { class: 'bloco-texto' }, x.descricao)),
+      h('details', {}, h('summary', {}, h('strong', {}, x.nome), h('small', {}, ` ${x.tipo}`), seloAcao(p, x)), h('p', { class: 'bloco-texto' }, x.descricao)),
       h('small', { class: 'hab-efeito' }, icone('zap'), ` ${ef || r.texto || ''}`),
       h('small', { class: 'dica' }, ativa?.turnos ? `ativa: falta${ativa.turnos > 1 ? 'm' : ''} ${ativa.turnos} turno${ativa.turnos > 1 ? 's' : ''}` : ativa ? 'ativa' : info),
       escolha),
@@ -260,6 +267,7 @@ function botaoAtivar(p, x, lapis) {
         if (!ativa && info && !(await confirmar(`Ativar ${x.nome}? ${info}.`))) return;
         const res = await acao('habilidade.ativar', { id: p.id, hab: x.id, alvo: estado.sel[`essencia:${p.id}`] || null });
         aviso(res.desativou ? `${x.nome} desativada.` : `${x.nome}: ${res.texto}`);
+        if (res.excesso) aviso(`Atenção: ${res.excesso}.`, 'erro');
       }, { class: `pequeno ${ativa ? '' : 'primario'}`, icone: 'flame', disabled: !ativa && ((r.usos && usados >= r.usos.max) || (r.especial === 'essencia' && !estado.sel[`essencia:${p.id}`])) }),
       lapis(x)));
 }
@@ -290,6 +298,7 @@ function quadroAtaques(p, participantes, mestre) {
     if (!alvo) throw new Error('Escolha o alvo (clique no cartão dele no campo).');
     const r = await acao('combate.atacar', { atacante: p.id, alvo, opcoes: { ...opcoesGerais(p, mestre), armaUid: uid } });
     if (estado.sel.ataque) Object.assign(estado.sel.ataque, { sacrificio: false, cargaNucleo: false, investida: null });
+    if (r.excesso) aviso(`Atenção: ${r.excesso}.`, 'erro');
     if (r.tipo === 'barrado') aviso(r.texto, 'erro');
     else if (r.tipo === 'ataque') aviso(`${r.autor} ${r.rotulo}: ${r.texto}`, r.sucesso ? 'ok' : 'erro');
     else aviso(`${p.nome} ataca ${b?.nome}: aguardando a defesa.`);
@@ -335,6 +344,7 @@ function quadroAtaques(p, participantes, mestre) {
   const MANOBRAS = ['briga.desarmar', 'briga.agarrar-imobilizar', 'briga.deslocar', 'briga.investida'];
   const outrasArmas = armas.filter(i => !/^(arma-branca|armas-de-fogo)\./.test(i.pericia || ''));
   return [
+    acoesDoTurno(p),
     h('div', { class: 'barra alvo-ataque' }, icone('crosshair'), h('small', {}, 'Alvo'),
       outros.length ? selecao(outros.map(x => ({ valor: x.id, rotulo: x.nome })), alvo, v => marcarAlvo('batalha', v), { 'aria-label': `Alvo de ${p.nome}` }) : h('em', {}, 'ninguém no campo')),
     auto ? null : h('p', { class: 'dica' }, icone('info'), ` No ${sis.nome} o dado prepara o teste no rolador; o dano e o PV vão à mão.`),
@@ -348,6 +358,7 @@ function quadroAtaques(p, participantes, mestre) {
           h('ul', {}, MANOBRAS.map(id => subs('briga').find(s => s.id === id)).filter(Boolean).map(s => linhaSub(s.id, s.nome))))),
       grupo('Armas brancas', 'arma-branca', i => i.pericia?.startsWith('arma-branca.')),
       grupo('Armas de fogo', 'armas-de-fogo', i => i.pericia?.startsWith('armas-de-fogo.')),
+      ataquesEspeciais(p),
       auto && temHabilidade(p, sis, 'Dano ao sistema') ? h('li', { class: 'ataque-grupo' }, h('div', { class: 'ataque-cabeca' }, h('strong', {}, 'Emissor Neural')),
         h('ul', {}, h('li', { class: 'ataque-linha' },
           h('span', { class: 'ataque-nome' }, 'Dano ao sistema', h('small', {}, ` 2d6 + MOD INT elétrico · ${pct('computacao.operacional')}${b ? ` · ${['drone', 'automato', 'maquina'].includes(tipoCriatura(b)) ? 'Normal' : 'Difícil (item)'}` : ''}`)),
@@ -359,6 +370,51 @@ function quadroAtaques(p, participantes, mestre) {
       outrasArmas.length ? h('li', { class: 'ataque-grupo' }, h('div', { class: 'ataque-cabeca' }, h('strong', {}, 'Outras')), h('ul', {}, outrasArmas.map(linhaArma))) : null),
     auto ? opcoesAtaque(p, mestre) : null,
   ];
+}
+
+// Economia do turno do personagem: o que já gastou (principal, movimento, bônus; reação por rodada). Clicar marca ou
+// desmarca (ex.: andou, sacou a arma). O ataque gasta a principal sozinho. O app só avisa quando passa do limite.
+function acoesDoTurno(p) {
+  const cb = estado.campanha.salas.batalha.combate;
+  if (!cb) return null;
+  const g = cb.gasto?.[p.id] || {};
+  const usado = k => k === 'reacao' ? (g.reacaoRodada === cb.rodada ? g.reacao || 0 : 0) : g[k] || 0;
+  const daVez = cb.ordem[cb.vez]?.id === p.id;
+  const chip = (k, ic, rot, dica) => {
+    const u = usado(k) > 0;
+    return h('button', { type: 'button', class: `acao-chip ${u ? 'usada' : ''}`, 'aria-pressed': u, title: `${dica}${u ? ' — já usada (clique para desmarcar)' : ' — clique para marcar como usada'}`,
+      onclick: () => acao('combate.acao', { id: p.id, tipo: k, desfazer: u, rotulo: u ? null : `${p.nome}: ${rot}` }).then(r => r.excesso && aviso(`Atenção: ${r.excesso}.`, 'erro')) },
+      icone(u ? 'check' : ic), ` ${rot}`);
+  };
+  return h('div', { class: 'acoes-turno' },
+    h('small', { class: 'dica' }, daVez ? 'Seu turno — ações:' : 'Fora do turno — só reação:'),
+    chip('principal', 'swords', 'Principal', 'Ação principal: atacar, correr, manobra, esconder-se'),
+    chip('movimento', 'footprints', 'Movimento', 'Ação de movimento: deslocar-se (pode dividir antes e depois da principal)'),
+    chip('bonus', 'zap', 'Bônus', 'Ação bônus: só com habilidade ou item que permita (ex.: sacar)'),
+    chip('reacao', 'shield', 'Reação', 'Reação: fora do seu turno, 1 por rodada (ex.: ataque de oportunidade)'));
+}
+
+// Ataques especiais e habilidades que gastam ação (de todas as classes): o tempo que gastam, "Usar" (marca a ação do
+// turno e anota) e os dados de dano citados no texto.
+function ataquesEspeciais(p) {
+  const sis = estado.sistema;
+  const lista = listaHabilidades(p, sis).map(x => ({ x, acoes: acoesDaHabilidade(p, sis, x) }))
+    .filter(({ x, acoes }) => acoes.length || ehAtaqueEspecial(x))
+    .sort((a, b) => Number(ehAtaqueEspecial(b.x)) - Number(ehAtaqueEspecial(a.x)));
+  if (!lista.length) return null;
+  const chave = 'abreGrupo:especiais';
+  return h('li', { class: 'ataque-grupo' },
+    h('div', { class: 'ataque-cabeca' }, h('strong', {}, 'Ataques especiais e ações de habilidades')),
+    h('details', { open: estado.sel[chave] ?? true, ontoggle: e => { estado.sel[chave] = e.target.open; } },
+      h('summary', {}, `${lista.length} habilidade${lista.length > 1 ? 's' : ''}`),
+      h('ul', {}, lista.map(({ x, acoes }) => h('li', { class: 'ataque-linha especial' },
+        h('span', { class: 'ataque-nome', title: x.descricao }, ehAtaqueEspecial(x) ? icone('swords') : icone('sparkles'), ` ${x.nome} `,
+          acoes.length ? h('small', { class: `selo acao acao-${acoes[0]}` }, nomeAcao(acoes[0])) : h('small', { class: 'selo', title: 'O livro não diz quanto tempo gasta: o mestre define (lápis: "ação: bônus")' }, 'ação ?')),
+        dadosDaHabilidade(x).map(d => botao(d, () => acao('rolar', { id: p.id, dado: d, rotulo: `${x.nome} (${d})`, sala: 'batalha' }).then(r => aviso(`${x.nome}: ${r.total} [${r.dados.join(', ')}]`)),
+          { class: 'pequeno', icone: 'dices', title: `Rolar ${d} (${x.nome})` })),
+        botao('Usar', () => acao('combate.acao', { id: p.id, tipo: acoes[0] || 'livre', rotulo: `${p.nome} usa ${x.nome}` })
+          .then(r => { aviso(`${x.nome}: ${nomeAcao(acoes[0] || 'livre')} anotada.`); if (r.excesso) aviso(`Atenção: ${r.excesso}.`, 'erro'); }),
+        { class: 'pequeno primario', icone: 'zap', title: `Anota o uso e gasta a ${nomeAcao(acoes[0] || 'livre').toLowerCase()}`, disabled: !estado.campanha.salas.batalha.combate }))))));
 }
 
 // Opções que valem para o próximo ataque (surpresa, localizado…); as do mestre mudam a rolagem.

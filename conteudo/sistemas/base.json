@@ -1159,10 +1159,11 @@
    "id": "sangramento",
    "nome": "Sangramento",
    "grupo": "Dano",
-   "efeitos": "1 PV a cada 1D4 turnos, até 6 PV perdidos. Não acumula; novo dano de Corte reinicia a contagem.",
+   "efeitos": "Perde 1 PV já no 1º turno do personagem afetado; depois, 1 PV a cada 1D4 turnos, até 6 PV perdidos. Não acumula; novo dano de Corte reinicia a contagem.",
    "icone": "droplet",
    "sangra": {
     "pv": 1,
+    "primeiro": 1,
     "intervalo": "1d4",
     "maximo": 6
    },

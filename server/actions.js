@@ -5,7 +5,7 @@ import { resolverAtaque, aplicarAtaque, armasDisponiveis, opcoesDefesa, sobrevid
 import { sincronizarEfeitos, passarTurnoEfeitos, efeitosAoAgir, cargaNoTurno, descansar } from '../shared/efeitos.js';
 import { fichasDeTeste, relatorioFicha } from '../shared/fichasTeste.js';
 import { passarNecessidades, comer, beber, dormir, rolarCaos, climaDoDia, descreverRelogio, fimDoCombate } from '../shared/tempo.js';
-import { podeSeduzir, itemAberto, itemVisivel, xpParaSubir, novaFicha, podeEquipar, rolarDado, rolarAtributosCriacao, testeDMil, gerarEncontro, derivados, problemasFicha, LIMITE_SALA, desgastarItem, repararItem, durabilidadeDe, listaHabilidades, vantagemPorHabilidade, temHabilidade, regraDaHabilidade, tipoCriatura, chaveHabilidade } from '../shared/regras.js';
+import { podeSeduzir, itemAberto, itemVisivel, xpParaSubir, novaFicha, podeEquipar, rolarDado, rolarAtributosCriacao, testeDMil, gerarEncontro, derivados, problemasFicha, LIMITE_SALA, desgastarItem, repararItem, durabilidadeDe, listaHabilidades, vantagemPorHabilidade, temHabilidade, regraDaHabilidade, tipoCriatura, chaveHabilidade, TIPOS_ACAO, nomeAcao } from '../shared/regras.js';
 
 const GRUPO_ENCONTROS = 'encontros';
 const MAX_LOG = 100;
@@ -520,6 +520,25 @@ function resolverPendente(c, s, pend, defesa, sis) {
 
 // Dificuldade do reparo (autor, 22/10): ND 60 + 10 × cada ponto de durabilidade perdido.
 export const ndReparo = it => 60 + 10 * Math.max(0, (it.durabilidade ?? 0) - (it.durabilidadeAtual ?? it.durabilidade ?? 0));
+
+// Economia do turno (livro): 1 ação principal, 1 de movimento e 1 bônus por turno, ações livres à vontade; a completa
+// gasta a principal e a de movimento; a reação é 1 por rodada, fora do turno. O app anota o que foi gasto e AVISA quando
+// passa do limite (não bloqueia: o mestre decide). Devolve o aviso, se houver.
+const LIMITE_ACOES = { principal: 1, movimento: 1, bonus: 1, reacao: 1 };
+function gastarAcao(c, p, tipo, { desfazer = false } = {}) {
+  const cb = c.salas.batalha.combate;
+  if (!cb || !p || !tipo || tipo === 'livre') return null;
+  const g = ((cb.gasto ||= {})[p.id] ||= {});
+  if (g.reacaoRodada !== cb.rodada) { g.reacao = 0; g.reacaoRodada = cb.rodada; }
+  const partes = tipo === 'completa' ? ['principal', 'movimento'] : [tipo];
+  const avisos = [];
+  for (const k of partes) {
+    if (desfazer) { g[k] = Math.max(0, (g[k] || 0) - 1); continue; }
+    if ((g[k] || 0) >= (LIMITE_ACOES[k] ?? 1)) avisos.push(`${p.nome} já usou a ${nomeAcao(k).toLowerCase()} ${k === 'reacao' ? 'nesta rodada' : 'neste turno'}`);
+    g[k] = (g[k] || 0) + 1;
+  }
+  return avisos.length ? avisos.join('; ') : null;
+}
 
 // Núcleo energético com coração humano: cada carga usada causa 1d6 de dano (o mestre marca "coração artificial" na ficha).
 function cargaNoCoracao(p, qtd = 1) {
@@ -1273,6 +1292,8 @@ export const acoes = {
     }
     const p = c.personagens.find(x => x.id === cb.ordem[cb.vez].id);
     s.ativo = p.id;
+    // Novo turno: ação principal, de movimento e bônus voltam (a reação volta a cada rodada).
+    if (cb.gasto?.[p.id]) { const r = cb.gasto[p.id]; cb.gasto[p.id] = { reacao: r.reacao || 0, reacaoRodada: r.reacaoRodada }; }
     const nota = sobrevida(p, sis);
     if (nota) registrar(s.log, { autor: p.nome, rotulo: 'Sobrevida', texto: nota });
   },
@@ -1280,7 +1301,7 @@ export const acoes = {
   // Quantos turnos faltam num efeito (0 tira o efeito). O tempo varia: vem da regra ou da habilidade que causou.
   'efeito.turnos'(c, { id, efeito, turnos }, ctx) {
     const p = personagem(c, id);
-    exigirDonoOuMestre(ctx, p);
+    exigirMestre(ctx); // só o mestre cancela ou muda a duração dos efeitos
     const sis = sistema(c.sistema);
     const cond = (sis.condicoes || []).find(x => x.id === efeito);
     if (!cond) throw erro('Efeito desconhecido.');
@@ -1338,6 +1359,10 @@ export const acoes = {
     // Civilizados (Encantado): quem ele não atacou precisa passar em WILL% Difícil para atacá-lo.
     const barrado = civilizados(c, a, b, sis);
     if (barrado) return barrado;
+    // Economia do turno: o ataque gasta a ação principal; fora do próprio turno, é reação (ex.: ataque de oportunidade).
+    // Ataque extra de habilidade (Quebra-Hordas) não gasta.
+    const cbA = s.combate;
+    const excesso = op.extra ? null : gastarAcao(c, a, cbA && cbA.ordem[cbA.vez]?.id !== a.id ? 'reacao' : 'principal');
     agressaoSubita(c, a, b, sis);
     const notasAgir = efeitosAoAgir(a, sis);
     if (notasAgir.length) registrar(s.log, { autor: a.nome, rotulo: 'Efeitos', texto: notasAgir.join(' · ') });
@@ -1364,10 +1389,10 @@ export const acoes = {
     const pend = { id: uid(), atacante: a.id, alvo: b.id, opcoes: op, arma: arma.nome, alcance: arma.alcance, area: !!op.area, em: Date.now(), municao: itemArma?.capacidade ? itemArma.uid : null,
       armaTipo: tipoDaArma(arma), tipoDano: arma.tipoDano || null };
     // Contra tiro, ou com o alvo pego de surpresa, não há defesa a escolher: resolve na hora.
-    if (op.surpresa || opcoesDefesa(b, arma, sis, { area: pend.area }).length === 1) return resolverPendente(c, s, pend, 'nenhuma', sis);
+    if (op.surpresa || opcoesDefesa(b, arma, sis, { area: pend.area }).length === 1) return { ...resolverPendente(c, s, pend, 'nenhuma', sis), excesso };
     (s.pendentes ||= []).push(pend);
     registrar(s.log, { autor: a.nome, rotulo: `${a.nome} ataca ${b.nome} com ${arma.nome}${op.area ? ' (área)' : ''}`, texto: `aguardando a defesa de ${b.nome}` });
-    return pend;
+    return { ...pend, excesso };
   },
 
   // Oferta de ação extra (Quebra-Hordas, Guerras diplomáticas): quem controla o atacante aceita (com o alvo) ou dispensa.
@@ -1451,10 +1476,22 @@ export const acoes = {
     if (regra.usos) gastarUso(p, chave);
     (p.habAtivas ||= {})[hab.id] = { nome: hab.nome, ...(regra.duracao?.turnos ? { turnos: regra.duracao.turnos } : {}), ...(regra.duracao === 'combate' ? { combate: true } : {}), ...(regra.fim ? { fim: regra.fim } : {}) };
     if (!(p.ativas || []).includes(hab.id)) p.ativas = [...(p.ativas || []), hab.id];
+    const excesso = gastarAcao(c, p, regra.acao);
     const duracao = regra.duracao?.turnos ? `por ${regra.duracao.turnos} turnos` : regra.duracao === 'combate' ? 'até o fim do combate' : '';
     const texto = [regra.acao ? `ação ${regra.acao}` : '', duracao, ...notas].filter(Boolean).join(' · ');
-    registrar(c.salas.batalha.log, { autor: p.nome, rotulo: `${hab.nome} ativada`, texto });
-    return { texto };
+    registrar(c.salas.batalha.log, { autor: p.nome, rotulo: `${hab.nome} ativada`, texto: `${texto}${excesso ? ` · atenção: ${excesso}` : ''}` });
+    return { texto, excesso };
+  },
+
+  // Marcar (ou desmarcar) uma ação do turno: mover, sacar, usar uma habilidade… Anota no registro com o que foi feito.
+  'combate.acao'(c, { id, tipo, rotulo, desfazer }, ctx) {
+    const p = personagem(c, id);
+    exigirDonoOuMestre(ctx, p);
+    if (!c.salas.batalha.combate) throw erro('Não há combate em andamento.');
+    if (!TIPOS_ACAO.some(t => t.id === tipo)) throw erro('Tipo de ação desconhecido.');
+    const excesso = gastarAcao(c, p, tipo, { desfazer: !!desfazer });
+    if (rotulo && !desfazer) registrar(c.salas.batalha.log, { autor: p.nome, rotulo: String(rotulo).slice(0, 80), texto: `${nomeAcao(tipo)}${excesso ? ` · atenção: ${excesso}` : ''}` });
+    return { excesso, gasto: c.salas.batalha.combate.gasto?.[p.id] || {} };
   },
 
   // Gastar 1 carga de um recurso fora do ataque (Núcleo energético servindo de bateria).
