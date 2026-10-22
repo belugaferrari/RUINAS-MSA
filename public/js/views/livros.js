@@ -35,7 +35,9 @@ function filtroBusca(chave, placeholder) {
   });
 }
 
-const busca = chave => (estado.sel[`busca:${chave}`] || '').toLowerCase().trim();
+// Busca sem diferença de acento nem maiúscula ("enojado" acha "Enojado", "pericia" acha "Perícia").
+const sa = t => String(t || '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+const busca = chave => sa(estado.sel[`busca:${chave}`] || '').trim();
 
 export function markdown(texto) {
   const div = h('div', { class: 'texto-livro' });
@@ -64,19 +66,11 @@ export function livroView(nome, nomeLivro) {
 
   const corpo = markdown(texto);
   const q = busca(nome);
-  // Índice a partir dos títulos; a busca esconde as seções que não têm o termo.
   const titulos = [...corpo.querySelectorAll('h1, h2, h3')];
   titulos.forEach((t, i) => { t.id = `${nome}-${i}`; });
-  if (q) {
-    let secao = [];
-    const secoes = [];
-    for (const el of [...corpo.children]) {
-      if (/^H[12]$/.test(el.tagName) && secao.length) { secoes.push(secao); secao = []; }
-      secao.push(el);
-    }
-    secoes.push(secao);
-    for (const s of secoes) if (!s.some(el => el.textContent.toLowerCase().includes(q))) s.forEach(el => { el.hidden = true; });
-  }
+  // Busca: lista cada trecho (parágrafo, item, linha de tabela, título) que tem o termo, com a seção onde está;
+  // o termo fica destacado no texto e um clique leva ao trecho.
+  const resultados = q.length >= 2 ? buscarNoLivro(corpo, q, nome) : [];
   // No celular o índice começa recolhido para o texto aparecer logo.
   const chaveIndice = `indice:${nome}`;
   if (!(chaveIndice in estado.sel)) estado.sel[chaveIndice] = !matchMedia('(max-width: 860px)').matches;
@@ -86,16 +80,83 @@ export function livroView(nome, nomeLivro) {
       h('label', { class: 'busca' }, icone('search'), filtroBusca(nome, 'Buscar no livro…')),
       h('details', { open: estado.sel[chaveIndice], ontoggle: e => { estado.sel[chaveIndice] = e.target.open; } },
         h('summary', {}, icone('bookmark'), 'Índice'),
-        h('ul', {}, titulos.filter(t => !t.closest('[hidden]') && !t.hidden).map(t => h('li', { class: t.tagName.toLowerCase() },
+        h('ul', {}, titulos.map(t => h('li', { class: t.tagName.toLowerCase() },
         h('a', { href: `#${t.id}`, onclick: e => { e.preventDefault(); document.getElementById(t.id)?.scrollIntoView({ behavior: 'smooth' }); } }, t.textContent)))))),
-    corpo);
+    h('div', { class: 'livro-conteudo' },
+      q.length >= 2 ? resultadosBusca(resultados, estado.sel[`busca:${nome}`]) : null,
+      corpo));
+}
+
+// Acha o termo (sem acento) em cada bloco do livro, marca no texto e devolve [{ id, secao, trecho }].
+function buscarNoLivro(corpo, q, nome) {
+  const blocos = [...corpo.querySelectorAll('p, li, tr, h1, h2, h3, h4, h5, h6, blockquote, dt, dd')]
+    .filter(el => !el.querySelector('p, li, tr') && sa(el.textContent).includes(q));
+  const saida = [];
+  let secao = '';
+  const todos = [...corpo.querySelectorAll('h1, h2, h3, h4, p, li, tr, blockquote, dt, dd')];
+  const secaoDe = new Map();
+  for (const el of todos) { if (/^H[1-4]$/.test(el.tagName)) secao = el.textContent.trim(); secaoDe.set(el, secao); }
+  blocos.forEach((el, i) => {
+    el.id ||= `${nome}-r${i}`;
+    el.classList.add('achado');
+    const texto = el.textContent.replace(/\s+/g, ' ').trim();
+    const pos = sa(texto).indexOf(q);
+    const ini = Math.max(0, pos - 50);
+    saida.push({ id: el.id, secao: /^H[1-6]$/.test(el.tagName) ? 'Título' : secaoDe.get(el) || '', trecho: `${ini ? '…' : ''}${texto.slice(ini, pos + q.length + 90)}${pos + q.length + 90 < texto.length ? '…' : ''}`, pos: pos - ini + (ini ? 1 : 0) });
+    marcar(el, q);
+  });
+  return saida;
+}
+
+// Envolve as ocorrências do termo em <mark>, sem diferença de acento (compara letra a letra já normalizada).
+function marcar(el, q) {
+  const andar = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+  const nos = [];
+  while (andar.nextNode()) nos.push(andar.currentNode);
+  for (const no of nos) {
+    const t = no.nodeValue;
+    const norm = [...t].map(ch => sa(ch));
+    const plano = norm.join('');
+    let idx = plano.indexOf(q);
+    if (idx < 0) continue;
+    // Converte a posição no texto normalizado para a posição no texto original.
+    const mapa = [];
+    norm.forEach((n, k) => { for (let j = 0; j < Math.max(1, n.length); j++) mapa.push(k); });
+    const frag = document.createDocumentFragment();
+    let ultimo = 0;
+    while (idx >= 0) {
+      const a = mapa[idx], b = (mapa[idx + q.length - 1] ?? t.length - 1) + 1;
+      frag.append(t.slice(ultimo, a), h('mark', {}, t.slice(a, b)));
+      ultimo = b;
+      idx = plano.indexOf(q, idx + q.length);
+    }
+    frag.append(t.slice(ultimo));
+    no.replaceWith(frag);
+  }
+}
+
+function resultadosBusca(lista, termo) {
+  const ir = id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    el.classList.remove('piscar'); void el.offsetWidth; el.classList.add('piscar');
+  };
+  const mostra = lista.slice(0, 80);
+  return h('section', { class: 'resultados-busca bloco' },
+    h('p', {}, icone('search'), h('strong', {}, ` ${lista.length} resultado${lista.length === 1 ? '' : 's'}`), ` para “${termo.trim()}”`,
+      lista.length > mostra.length ? h('small', { class: 'dica' }, ` (mostrando os ${mostra.length} primeiros)`) : null),
+    lista.length ? h('ol', {}, mostra.map(r => h('li', {},
+      h('button', { type: 'button', class: 'resultado', onclick: () => ir(r.id) },
+        r.secao ? h('small', { class: 'secao' }, r.secao) : null,
+        h('span', {}, r.trecho))))) : h('p', { class: 'dica' }, 'Nada encontrado. Tente uma palavra mais curta (ex.: "enoj", "subperícia", "durabil").'));
 }
 
 export function monstrosView() {
   const mestre = estado.campanha.papel === 'mestre';
   const q = busca('monstros');
   const sis = estado.sistema;
-  const lista = sis.monstros.filter(m => !q || JSON.stringify(m).toLowerCase().includes(q));
+  const lista = sis.monstros.filter(m => !q || sa(JSON.stringify(m)).includes(q));
   const tipoNome = id => (sis.tiposCriatura || []).find(t => t.id === id)?.nome || null;
   const subNome = id => sis.pericias.flatMap(p => p.subpericias.map(x => [x.id, x.nome])).find(x => x[0] === id)?.[1] || id;
   return h('div', {},
@@ -203,7 +264,7 @@ function imagemMonstro(m, mestre) {
 export function classesView() {
   const sis = estado.sistema;
   const q = busca('classes');
-  const lista = sis.classes.filter(c => !q || JSON.stringify(c).toLowerCase().includes(q));
+  const lista = sis.classes.filter(c => !q || sa(JSON.stringify(c)).includes(q));
   const sel = sis.classes.find(c => c.id === estado.sel.classeVista) || null;
   return h('div', {},
     h('div', { class: 'barra' }, titulo('Classes', 'shield', 'h2'), seloRevisao(true, 'base MSS — conferir para o MSA'), h('span', { class: 'espaco' }),
@@ -247,7 +308,7 @@ function detalheClasse(c) {
 export function vantagensView() {
   const sis = estado.sistema;
   const q = busca('vantagens');
-  const f = l => l.filter(x => !q || `${x.nome} ${x.descricao}`.toLowerCase().includes(q));
+  const f = l => l.filter(x => !q || sa(`${x.nome} ${x.descricao}`).includes(q));
   const item = x => h('li', {}, h('strong', {}, x.nome), x.requisito ? h('small', {}, ` [${x.requisito}]`) : null, seloRevisao(x.revisao), ': ', x.descricao);
   return h('div', {},
     h('div', { class: 'barra' }, titulo('Vantagens e defeitos', 'sparkles', 'h2'), seloRevisao(true, 'base MSS — conferir para o MSA'), h('span', { class: 'espaco' }),
@@ -264,7 +325,7 @@ export function vantagensView() {
 export function periciasView() {
   const sis = estado.sistema;
   const q = busca('periciasRef');
-  const lista = sis.pericias.filter(p => !q || JSON.stringify(p).toLowerCase().includes(q));
+  const lista = sis.pericias.filter(p => !q || sa(JSON.stringify(p)).includes(q));
   return h('div', {},
     h('div', { class: 'barra' }, titulo('Perícias e profissões', 'target', 'h2'), seloRevisao(true, 'base MSS — conferir para o MSA'), h('span', { class: 'espaco' }),
       h('label', { class: 'busca' }, icone('search'), filtroBusca('periciasRef', 'Buscar…'))),
@@ -294,7 +355,7 @@ export function lojaView({ titulo: tituloLoja = 'Loja', tipos = null } = {}) {
   const raridadeSel = estado.sel.lojaRaridade || '';
   // Jogadores: só Mundano, Comum e Incomum, mais o que o mestre liberou.
   const todos = sis.itens.filter(i => (mestre || itemVisivel(i, c)) && (!tipos || tipos.includes(i.tipo)) && (!tipoSel || i.tipo === tipoSel) && (!raridadeSel || i.raridade === raridadeSel)
-    && (!q || i.nome.toLowerCase().includes(q) || (i.descricao || '').toLowerCase().includes(q)));
+    && (!q || sa(i.nome).includes(q) || sa(i.descricao).includes(q)));
   // O catálogo tem mais de mil itens: mostra uma página por vez.
   const limite = estado.sel.lojaLimite || POR_PAGINA;
   const itens = todos.slice(0, limite);

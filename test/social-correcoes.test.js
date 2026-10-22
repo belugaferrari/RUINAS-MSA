@@ -66,13 +66,13 @@ test('humor aparente: padrão Neutro, pode ser igual ao real e não muda quando 
   assert.ok(log.every(e => e.privadoPara), 'a mudança do humor real não vai para o registro público');
 });
 
-test('Reparar item: teste de manutenção; 3 falhas seguidas viram sucata', () => {
+test('Reparar item: ND 60 + 10 por ponto perdido; 3 falhas seguidas viram sucata', async () => {
   const { c, lia } = montar();
   lia.itens = [{ uid: 'f1', nome: 'Faca', tipo: 'arma', durabilidade: 5, durabilidadeAtual: 3, reparavel: true }];
   const rnd = Math.random;
   try {
     Math.random = () => 0.5; // d100 51 + ação baixa < ND 200: falha (sem crítico)
-    for (let i = 0; i < 3; i++) executar(c, 'item.repararTeste', { id: lia.id, uid: 'f1', sub: 'engenharia.mecanica', nd: 200 }, ctxA);
+    for (let i = 0; i < 3; i++) executar(c, 'item.repararTeste', { id: lia.id, uid: 'f1', sub: 'engenharia.mecanica' }, ctxA);
   } finally { Math.random = rnd; }
   assert.equal(lia.itens[0].sucata, true);
   assert.throws(() => executar(c, 'item.repararTeste', { id: lia.id, uid: 'f1', sub: 'engenharia.mecanica', nd: 70 }, ctxA), /sucata/);
@@ -83,6 +83,9 @@ test('Reparar item: teste de manutenção; 3 falhas seguidas viram sucata', () =
     assert.ok(r.sucesso);
   } finally { Math.random = rnd; }
   assert.equal(lia.itens[1].durabilidadeAtual, 4);
+  const { ndReparo } = await import('../server/actions.js');
+  assert.equal(ndReparo({ durabilidade: 5, durabilidadeAtual: 3 }), 80);
+  assert.equal(ndReparo({ durabilidade: 5, durabilidadeAtual: 0 }), 110);
 });
 
 test('Intuir humor: falhou → o aparente; passou → o real; a frase é igual e o jogador não sabe se falhou', () => {

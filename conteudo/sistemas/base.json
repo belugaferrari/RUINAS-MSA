@@ -789,7 +789,7 @@
    },
    {
     "id": "enojado",
-    "desvantagemTestes": ["INT", "WILL"],
+    "desvantagemTestes": ["INT", "PER", "CAR", "WILL"],
     "nome": "Enojado",
     "efeitos": "Desvantagem em testes mentais; Vantagem em ataques e iniciativa.",
     "vantagemAtaque": true,

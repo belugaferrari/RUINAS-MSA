@@ -229,7 +229,7 @@ Regras em `conteudo/sistemas/habilidades-regras.json` (automática / ligar / ati
 - Reparar item (cap. 5): teste de manutenção; sucesso +1 de durabilidade (1 por desgaste); erro crítico ou 3 falhas seguidas → sucata.
 
 **Provisório — conferir**
-- Humor nos testes: Atraído → Percepção (PER e perícias de PER) em desvantagem; Amedrontado → Percepção em vantagem; Enojado → testes mentais = INT e WILL (e perícias deles) em desvantagem; Corajoso → Inteligência em desvantagem.
+- Humor nos testes: Atraído → Percepção (PER e perícias de PER) em desvantagem; Amedrontado → Percepção em vantagem; Enojado → testes mentais = INT, PER, CAR e WILL (confirmado pelo autor, 22/10) em desvantagem; Corajoso → Inteligência em desvantagem.
 - Ainda não automáticos: "vantagem contra Medo" (Desmotivado, Corajoso) e Motivado (+5% ligados à motivação / −5% nos demais) — o mestre aplica como modificador.
-- Reparo: dificuldade = a escolhida no rolador (padrão Normal); perícia sugerida pelo tipo do item (Mecânica, Militar, Elétrica, Computação); sem kit no inventário o app só avisa.
-- Testes comuns nos Rápidos: Cozinhar (Arte › Culinária), Acampar (Sobrevivência básica), Esfolar, Rastrear, Navegar, Pescar, Cultivar, Primeiros socorros.
+- **Reparo (autor, 22/10):** ND 60 + 10 × pontos de durabilidade perdidos (está no livro). Provisório: perícia sugerida pelo tipo do item (Mecânica, Militar, Elétrica, Computação); sem kit no inventário o app só avisa.
+- Testes comuns nos Rápidos: Cozinhar (Arte › Culinária), Acampar (Sobrevivência básica), Esfolar, Rastrear, Navegar, Pescar, Cultivar, Primeiros socorros, Costurar (Arte › Costura).

@@ -1352,3 +1352,14 @@ span.peao { display: grid; }
 @keyframes teste-feito { 0% { opacity: 0; transform: scale(.8); } 15% { opacity: 1; transform: scale(1); } 75% { opacity: 1; } 100% { opacity: 0; transform: scale(1.05); } }
 @keyframes teste-feito-giro { from { transform: rotateY(0) scale(.6); } to { transform: rotateY(360deg) scale(1); } }
 @media (prefers-reduced-motion: reduce) { .teste-feito-cartao, .teste-feito-icone { animation: none; } }
+
+/* Busca no Livro de Regras: lista de resultados, termo destacado e o trecho piscando ao clicar. */
+.livro-conteudo { min-width: 0; }
+.resultados-busca { max-height: 42vh; overflow-y: auto; margin-bottom: 1em; }
+.resultados-busca ol { list-style: none; margin: .4em 0 0; padding: 0; display: flex; flex-direction: column; gap: .3em; }
+.resultados-busca .resultado { display: flex; flex-direction: column; align-items: flex-start; gap: .1em; width: 100%; text-align: left; padding: .4em .6em; border: 1px solid var(--borda); border-radius: 8px; background: rgba(0, 0, 0, .15); color: var(--texto); min-height: 0; font-weight: 400; }
+.resultados-busca .resultado:hover { border-color: var(--ouro); }
+.resultados-busca .secao { color: var(--ouro); font-size: .78em; }
+.texto-livro mark { background: rgba(212, 162, 76, .45); color: inherit; border-radius: 3px; padding: 0 .1em; }
+.texto-livro .piscar { animation: piscar-achado 1.6s ease; }
+@keyframes piscar-achado { 0%, 40% { box-shadow: 0 0 0 3px var(--ouro); background: rgba(212, 162, 76, .18); } 100% { box-shadow: none; background: transparent; } }

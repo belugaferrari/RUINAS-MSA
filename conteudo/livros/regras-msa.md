@@ -2641,6 +2641,8 @@ Todo item precisa ou precisará de reparo. Para a maioria dos reparos basta o �
 
 Caso você tire um erro crítico ou 3 erros consecutivos tentando reparar um item, ele se torna ‘sucata’.
 
+**Dificuldade do reparo:** o teste de manutenção tem ND 60 + 10 para cada ponto de durabilidade perdido (ex.: item de durabilidade 5 que está com 3 → perdeu 2 → ND 80). Cada teste bem-sucedido recupera 1 ponto (só 1 por desgaste).
+
 ### Aprimoramentos
 
 Reparos não são a única coisa que pode ser feita junto a um item, eles também podem ser aprimorados.  Aprimoramentos EXIGEM o consumo de outros itens e/ou matérias-primas. Existe uma série de aprimoramentos de itens possíveis, conforme a lista abaixo:

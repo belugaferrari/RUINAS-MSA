@@ -518,6 +518,9 @@ function resolverPendente(c, s, pend, defesa, sis) {
   return entrada;
 }
 
+// Dificuldade do reparo (autor, 22/10): ND 60 + 10 × cada ponto de durabilidade perdido.
+export const ndReparo = it => 60 + 10 * Math.max(0, (it.durabilidade ?? 0) - (it.durabilidadeAtual ?? it.durabilidade ?? 0));
+
 // Núcleo energético com coração humano: cada carga usada causa 1d6 de dano (o mestre marca "coração artificial" na ficha).
 function cargaNoCoracao(p, qtd = 1) {
   if (p.coracaoArtificial || !p.pv) return '';
@@ -890,9 +893,10 @@ export const acoes = {
     return { texto };
   },
 
-  // Reparar item (livro, cap. 5): teste de manutenção (Engenharia/Computação). Sucesso recupera 1 de durabilidade
+  // Reparar item (livro, cap. 5): teste de manutenção (Engenharia/Computação), ND 60 + 10 × pontos de durabilidade perdidos
+  // (autor, 22/10). Sucesso recupera 1 de durabilidade
   // (só 1 por desgaste). Erro crítico ou 3 falhas seguidas: o item vira sucata. Precisa do kit do tipo do item.
-  'item.repararTeste'(c, { id, uid: itemUid, sub, nd }, ctx) {
+  'item.repararTeste'(c, { id, uid: itemUid, sub }, ctx) {
     const p = personagem(c, id);
     exigirDonoOuMestre(ctx, p);
     const sis = sistema(c.sistema);
@@ -906,7 +910,7 @@ export const acoes = {
     const nomeSub = subs.find(x => x[0] === sub)?.[1];
     if (!nomeSub) throw erro('Escolha a perícia do reparo.');
     const d = derivados(p, sis);
-    const ndNum = Math.max(0, parseInt(nd, 10) || 70);
+    const ndNum = ndReparo(it);
     const alvosRef = [sub, sub.split('.')[0]];
     const modo = vantagemPorHabilidade(p, sis, alvosRef) ? 'vantagem' : null;
     const t = testeDMil(d.subpericias[sub] ?? 0, ndNum, sis, { modo });

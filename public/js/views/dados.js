@@ -188,6 +188,7 @@ const TESTES_COMUNS = [
   ['armadilhas.pescaria', 'Pescar', 'fish'],
   ['extracao.cultivo', 'Cultivar', 'sprout'],
   ['medicina.primeiros-socorros', 'Primeiros socorros', 'heart-pulse'],
+  ['arte.costura', 'Costurar', 'scissors'],
 ];
 // Reparo (livro, cap. 5): a perícia depende do item; o app sugere pelo tipo.
 const PERICIAS_REPARO = [
@@ -221,10 +222,11 @@ function testesComuns(p) {
     h('div', { class: 'reparo-rapido' },
       h('strong', {}, icone('hammer'), ' Reparar item'),
       gastos.length ? [
-        selecao(gastos.map(i => ({ valor: i.uid, rotulo: `${i.nome} (${i.durabilidadeAtual ?? i.durabilidade}/${i.durabilidade})${!i.reparavel ? ' — já reparado neste desgaste' : ''}` })), estado.sel[chaveItem], v => { estado.sel[chaveItem] = v; render(); }, { 'aria-label': 'Item para reparar' }),
+        // ND do reparo = 60 + 10 × pontos de durabilidade perdidos.
+        selecao(gastos.map(i => ({ valor: i.uid, rotulo: `${i.nome} (${i.durabilidadeAtual ?? i.durabilidade}/${i.durabilidade} · ND ${60 + 10 * (i.durabilidade - (i.durabilidadeAtual ?? i.durabilidade))})${!i.reparavel ? ' — já reparado neste desgaste' : ''}` })), estado.sel[chaveItem], v => { estado.sel[chaveItem] = v; render(); }, { 'aria-label': 'Item para reparar' }),
         selecao(PERICIAS_REPARO.filter(([id]) => existe(id)).map(([id, nome]) => ({ valor: id, rotulo: `${nome} ${d.subpericias[id] ?? 0}%` })), estado.sel[chaveSub], v => { estado.sel[chaveSub] = v; }, { 'aria-label': 'Perícia do reparo' }),
         botao('Reparar', async () => {
-          const r = await acao('item.repararTeste', { id: p.id, uid: estado.sel[chaveItem], sub: estado.sel[chaveSub], nd: dif?.nd ?? 70 });
+          const r = await acao('item.repararTeste', { id: p.id, uid: estado.sel[chaveItem], sub: estado.sel[chaveSub] });
           aviso(`${r.rotulo}: ${r.total} × ${r.nd} — ${r.texto}`, r.sucesso ? 'ok' : 'erro');
         }, { class: 'primario', icone: 'hammer', disabled: !item?.reparavel, title: 'Sucesso: +1 de durabilidade (só 1 por desgaste). Erro crítico ou 3 falhas seguidas: vira sucata.' }),
       ] : h('small', { class: 'dica' }, 'Nenhum item precisando de reparo.')),
