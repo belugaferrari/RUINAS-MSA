@@ -215,8 +215,10 @@ export function resolverAtaque(atacante, alvo, sistema, op = {}, defesaId = 'nen
   // Imunidade (dano zero), resistência (metade) e vulnerabilidade (dobro) ao tipo de dano (monstros da planilha).
   const tipoD = String(arma.tipoDano || '').toLowerCase();
   const tem2 = lista => (lista || []).some(x => String(x).toLowerCase() === tipoD);
+  // Elemento principal (1ª afinidade elementar do monstro): também recebe metade do dano dele.
+  const elementoPrincipal = String(alvo.afinidades?.[0] || '').toLowerCase();
   if (tipoD && tem2(alvo.imunidades)) { r.dano = 0; r.imune = arma.tipoDano; }
-  else if (tipoD && tem2(alvo.resistencias)) { r.dano = Math.floor(r.dano / 2); r.resistencia = arma.tipoDano; }
+  else if (tipoD && (tem2(alvo.resistencias) || tipoD === elementoPrincipal)) { r.dano = Math.floor(r.dano / 2); r.resistencia = arma.tipoDano; }
   else if (tipoD && tem2(alvo.vulnerabilidades)) { r.dano *= 2; r.vulnerabilidade = arma.tipoDano; }
   if (tem(alvo, 'Queimadura')) { r.dano += 1; r.queimadura = true; }
   const efeito = cfg.efeitosPorTipo[arma.tipoDano];

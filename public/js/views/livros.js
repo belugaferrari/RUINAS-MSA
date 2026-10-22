@@ -123,7 +123,7 @@ export function monstrosView() {
         atr ? h('p', { class: 'meta' }, atr) : null,
         ataques.length ? h('ul', { class: 'lista-ataques-monstro' }, ataques.map(a => h('li', {}, icone('sword'), ' ', h('strong', {}, a.nome),
           a.dano ? ` ${a.dano}${a.tipoDano ? ` ${a.tipoDano}` : ''}${a.alcance === 'distancia' ? ` · ${a.alcanceM ? `${a.alcanceM} m` : 'distância'}` : ''}${a.acerto != null ? ` · ${a.acerto}%` : a.pericia ? ` · ${subNome(a.pericia)}` : ''}` : ''))) : null,
-        m.afinidades?.length ? h('p', { class: 'meta' }, icone('flame'), ` Afinidade elementar: ${m.afinidades.join(', ')}`) : null,
+        m.afinidades?.length ? h('p', { class: 'meta', title: 'Recebe metade do dano do elemento principal' }, icone('flame'), ` Afinidade elementar: ${m.afinidades[0]} (principal, metade do dano)${m.afinidades[1] ? `, ${m.afinidades[1]}` : ''}`) : null,
         m.habilidades?.length ? h('p', {}, icone('sparkles'), ' ', m.habilidades.map(x => `${x.nome}${x.unica ? ' (única)' : ''}`).join(', ')) : null,
         extras.length ? h('p', { class: 'meta' }, extras.join(' · ')) : null,
         m.comportamento ? h('details', {}, h('summary', {}, 'Comportamento'), h('p', {}, m.comportamento)) : null,

@@ -74,6 +74,11 @@ test('monstro do livro vira NPC completo: atributos, defesa como a do personagem
     const golpe = { ...atacante, itens: [{ uid: 'm1', nome: 'Marreta', tipo: 'arma', dano: '1d10', tipoDano: 'Concussão', equipado: true, alcance: 'corpo', pericia: 'arma-branca.concussao' }] };
     const r = resolverAtaque(golpe, p, sis, { armaUid: 'm1' }, 'nenhuma', () => 0.99);
     assert.equal(r.resistencia, 'Concussão');
+    // Elemento principal (Frio): metade do dano de Frio; a 2ª afinidade (Elétrico) não reduz.
+    const gelo = { ...atacante, itens: [{ uid: 'g1', nome: 'Lança de gelo', tipo: 'arma', dano: '2d6', tipoDano: 'Frio', equipado: true, alcance: 'corpo', pericia: 'arma-branca.haste' }] };
+    assert.equal(resolverAtaque(gelo, p, sis, { armaUid: 'g1' }, 'nenhuma', () => 0.99).resistencia, 'Frio');
+    const choque = { ...atacante, itens: [{ uid: 'e1', nome: 'Bastão de choque', tipo: 'arma', dano: '2d6', tipoDano: 'Elétrico', equipado: true, alcance: 'corpo', pericia: 'arma-branca.haste' }] };
+    assert.ok(!resolverAtaque(choque, p, sis, { armaUid: 'e1' }, 'nenhuma', () => 0.99).resistencia);
   } finally {
     voltarMonstrosPadrao();
   }

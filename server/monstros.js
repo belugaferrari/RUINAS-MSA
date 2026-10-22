@@ -12,8 +12,9 @@ const sem = s => String(s ?? '').normalize('NFKD').replace(/[̀-ͯ]/g, '').toLow
 const SIGLAS = ['FOR', 'CONS', 'AGI', 'DES', 'INT', 'PER', 'CAR', 'WILL'];
 export const TAMANHOS = ['Diminuto', 'Pequeno', 'Médio', 'Grande', 'Enorme', 'Colossal'];
 const MODOS = ['sempre', 'ligar', 'ativar', 'lembrete'];
-// Afinidade elementar (até duas por criatura). Elemental no livro: Elétrico, Calor e Frio.
-export const ELEMENTOS = ['Elétrico', 'Calor', 'Frio'];
+// Afinidade elementar (até duas por criatura): a 1ª é o elemento principal — o monstro recebe metade do dano dele.
+// Não existe elemento oposto (autor, 22/10).
+export const ELEMENTOS = ['Elétrico', 'Calor', 'Frio', 'Energia (Mágico)', 'Radiação'];
 
 // [título na planilha, chave, largura, dica]
 const COL_MONSTROS = [
@@ -30,8 +31,8 @@ const COL_MONSTROS = [
   ['Subperícias (pontos; separe por ;)', 'subpericias', 30, 'Ex.: Esquiva 3; Ataque desarmado 2; Briga › Defesa desarmada 1'],
   ['IP geral', 'ipGeral', 9, null],
   ['IP por tipo', 'ipTipos', 20, 'Ex.: Corte 2; Frio 1'],
-  ['Afinidade elementar 1', 'afinidade1', 14, 'Até duas afinidades elementares (Elétrico, Calor, Frio)'],
-  ['Afinidade elementar 2', 'afinidade2', 14, null],
+  ['Afinidade elementar 1 (principal)', 'afinidade1', 16, 'Elemento principal: o monstro recebe metade do dano deste elemento. Lista: Elétrico, Calor, Frio, Energia (Mágico), Radiação'],
+  ['Afinidade elementar 2', 'afinidade2', 14, 'Opcional (até duas afinidades)'],
   ['Resistências', 'resistencias', 20, 'Tipos de dano que sofrem metade (separe por ;)'],
   ['Imunidades', 'imunidades', 20, 'Tipos de dano (dano zero) ou efeitos (Dor, Sangramento…)'],
   ['Vulnerabilidades', 'vulnerabilidades', 20, 'Tipos de dano que sofrem o dobro'],
@@ -142,8 +143,8 @@ export async function lerPlanilhaMonstros(buffer, sis) {
     for (const k of ['afinidade1', 'afinidade2']) {
       const t = texto(l[k]);
       if (!t) continue;
-      const el = ELEMENTOS.find(x => sem(x) === sem(t));
-      if (el && !afinidades.includes(el)) afinidades.push(el); else if (!el) avisos.push(`${nome}: afinidade elementar "${t}" não existe (use Elétrico, Calor ou Frio).`);
+      const el = ELEMENTOS.find(x => sem(x) === sem(t) || sem(x).startsWith(`${sem(t)} `));
+      if (el && !afinidades.includes(el)) afinidades.push(el); else if (!el) avisos.push(`${nome}: afinidade elementar "${t}" não existe (use ${ELEMENTOS.join(', ')}).`);
     }
     if (afinidades.length) m.afinidades = afinidades;
     const tam = TAMANHOS.find(t => sem(t) === sem(l.tamanho));
@@ -213,7 +214,8 @@ export async function planilhaMonstros(sis, monstros) {
     '• Aba Monstros: uma linha por criatura. Só "Nome" é obrigatório. Monstros não têm Sanidade nem Humanidade.',
     '• Defesas: calculadas como as do personagem — pelos atributos e pelas perícias/subperícias (Esquiva = Briga + Esquiva + 50), mais as habilidades.',
     '• Aba Ataques: uma linha por ataque (um monstro pode ter vários). O acerto vem da perícia do ataque, como no personagem; "Acerto %" substitui, se preenchido.',
-    '• Afinidade elementar: até duas por criatura (Elétrico, Calor, Frio).',
+    '• Afinidade elementar: até duas por criatura (Elétrico, Calor, Frio, Energia, Radiação). A 1ª é a principal: o monstro recebe metade do dano desse elemento. Não existe elemento oposto.',
+    '• Ataques elementais: um ataque só causa dano elemental se o "Tipo de dano" dele for o elemento (ex.: Sopro gelado = Frio; Mordida = Perfuração).',
     '• Aba Habilidades: poderes especiais. Marque "Única" nas habilidades únicas (não podem ser copiadas nem reveladas por testes como Zoologia).',
     '• Aba Habilidades (efeitos): "Efeitos no app" usa o formato do lápis do mestre (ex.: +1 IP geral; vantagem: ataque; imune: Dor; Furtividade +10%).',
     '• Listas separadas por ponto e vírgula (;). Ex.: Perícias = "Briga 4; Sentidos 3"; IP por tipo = "Corte 2; Frio 1".',

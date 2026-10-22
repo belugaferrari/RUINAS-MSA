@@ -216,4 +216,5 @@ Regras em `conteudo/sistemas/habilidades-regras.json` (automática / ligar / ati
 - Resistência = metade do dano; vulnerabilidade = dobro; imunidade a um tipo de dano = dano zero (e imunidade a efeito, ex.: Dor, impede o marcador).
 - O livro enviado vale para todas as campanhas do PC (como o catálogo de itens).
 - Criaturas podem ter habilidades únicas (coluna "Única" na aba Habilidades: não podem ser copiadas por Mutante/Transmorfo nem reveladas por Zoologia) e até duas afinidades elementares (autor, 21/10).
-- **Aguardando o autor:** o que a afinidade elementar faz no combate (por enquanto só fica registrada e aparece no cartão). Elemental no livro = Elétrico, Calor e Frio.
+- **Afinidade elementar (autor, 22/10):** o monstro recebe metade do dano do seu elemento principal (a 1ª afinidade); os ataques podem ou não causar dano elemental (é o "Tipo de dano" de cada ataque); não existe elemento oposto. Elementos: Elétrico, Calor, Frio, Energia (Mágico), Radiação. "Frio" entrou na lista de tipos de dano (o livro o cita como elemental).
+- Provisório: a 2ª afinidade não reduz dano (só a principal); resistência e elemento principal juntos não somam (metade uma vez só).
