@@ -238,7 +238,7 @@ test('ações de combate e humor no servidor (MSS) e bloqueio no MSA', () => {
     Object.assign(lia, { humor: 'apatico', humorAparente: 'corajoso', humorImposto: false }); // (um erro crítico daria rebote)
     leitura = executar(c, 'social.manipular', { autor: ids[1], alvo: ids[0], sub: 'manipulacao.empatia', humor: 'ler' }, ctxM);
   } while (!leitura.sucesso);
-  assert.match(leitura.revelado, /está Apático, por trás da aparência de Corajoso/);
+  assert.match(leitura.revelado, /^Você percebe que Lia está Apático\.$/, 'mesma frase da falha, sem entregar a máscara');
   // Toda manipulação é oculta: nenhum jogador vê o teste (nem quem é o alvo); o mestre vê tudo.
   assert.ok(!visaoPara(c, ana, 'jogador').salas.social.log.some(e => e.tipo === 'manipulacao'));
   assert.ok(visaoPara(c, { id: c.mestreId }, 'mestre').salas.social.log.some(e => e.tipo === 'manipulacao'));

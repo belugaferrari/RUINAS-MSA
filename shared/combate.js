@@ -22,14 +22,29 @@ export function rolarDP(modo, rng = Math.random) {
 export function testeContra(acao, nd, sistema, { modo = null, rng = Math.random } = {}) {
   const t = sistema.teste;
   const { dp, dados } = rolarDP(modo, rng);
-  const ds = 1 + Math.floor(rng() * 10);
+  // Com vantagem/desvantagem o DS também rola duas vezes: o maior na vantagem, o menor na desvantagem.
+  const dsDados = [1 + Math.floor(rng() * 10)];
+  if (modo) dsDados.push(1 + Math.floor(rng() * 10));
+  const ds = modo === 'desvantagem' ? Math.min(...dsDados) : Math.max(...dsDados);
   const total = acao + dp;
   const critico = dp >= t.criticoAcerto ? 'acerto' : dp <= t.criticoErro ? 'erro' : null;
   const sucesso = critico === 'acerto' ? true : critico === 'erro' ? false : total >= nd;
-  return { dp, dados, ds, acao, total, nd, sucesso, critico, modo };
+  return { dp, dados, ds, dsDados, acao, total, nd, sucesso, critico, modo };
 }
 
 export const humorDe = (p, sistema) => (sistema.social?.humores || []).find(h => h.id === (p?.humor || 'neutro')) || null;
+
+// Vantagem/desvantagem do humor num teste (Atraído: Percepção em desvantagem; Amedrontado: Percepção em vantagem;
+// Enojado: testes mentais em desvantagem; Corajoso: Inteligência em desvantagem). Vale para o teste do atributo e para
+// as perícias/subperícias baseadas nele. acaoRef: "atr:PER", "per:sentidos" ou "sub:sentidos.visao".
+export function modoHumorTeste(p, sistema, acaoRef) {
+  const h = sistema.modulos?.social ? humorDe(p, sistema) : null;
+  if (!h || !acaoRef) return { vantagem: false, desvantagem: false, humor: h?.nome };
+  const [tipo, id] = String(acaoRef).split(':');
+  const per = tipo === 'per' ? (sistema.pericias || []).find(x => x.id === id) : tipo === 'sub' ? (sistema.pericias || []).find(x => x.id === id.split('.')[0]) : null;
+  const atributo = tipo === 'atr' ? id : per?.atributo;
+  return { vantagem: !!atributo && (h.vantagemTestes || []).includes(atributo), desvantagem: !!atributo && (h.desvantagemTestes || []).includes(atributo), humor: h.nome };
+}
 
 // Bônus geral de testes pelo humor (Apático, Confiante…). Só no sistema com módulo social.
 export const modHumorTestes = (p, sistema) => (sistema.modulos?.social ? humorDe(p, sistema)?.testes || 0 : 0);
@@ -344,8 +359,9 @@ export function espectroDe(relacao, sistema) {
   return 'B';
 }
 
-// Humor que o alvo mostra para a sala (a máscara), ou o real quando não há máscara.
-export const humorAparente = p => p?.humorAparente || p?.humor || 'neutro';
+// Humor que o alvo mostra para a sala (o aparente). O padrão é Neutro, e ele pode ser igual ao real: assim, quando o
+// humor real muda, ninguém vê a mudança (autor, 22/10).
+export const humorAparente = p => p?.humorAparente || 'neutro';
 
 // Teste de manipulação: subperícia de Manipulação contra a R.MNP do alvo.
 // Sucesso: o alvo fica com o humor desejado ("ler", na Empatia, revela o humor real a quem testou).
@@ -370,7 +386,8 @@ export function resolverManipulacao(autor, alvo, sub, humorDesejado, sistema, { 
   const teste = testeContra(acao, nd, sistema, { modo, rng });
   let rebote = null;
   let opcoesRebote = [];
-  if (!teste.sucesso) {
+  // Intuir humor (ler) não tem rebote.
+  if (!teste.sucesso && humorDesejado !== 'ler') {
     const opcoes = ((Array.isArray(regra.falha) ? regra.falha : regra.falha?.[espectro]) || []).filter(x => x !== 'neutro' || regra.falha?.[espectro]?.length > 1);
     // Uma opção: vai direto. Duas: o alvo escolhe entre elas.
     if (opcoes.length === 1) rebote = opcoes[0];
@@ -426,7 +443,7 @@ export function empatiaNatural(participantes, sistema, { relacoes = {}, rng = Ma
   // 1) Influência de cada emissor (um teste só por emissor, usado contra todos).
   const emissores = humanos.map(p => {
     const real = p.humor || 'neutro';
-    const aparente = p.humorAparente || real;
+    const aparente = humorAparente(p);
     const espectro = espectroDoHumor(aparente, sistema);
     const d = derivados(p, sistema);
     const dp = 1 + Math.floor(rng() * 100);
@@ -474,13 +491,11 @@ export function empatiaNatural(participantes, sistema, { relacoes = {}, rng = Ma
     resultados.push({ p: r, de: atual, para: novo, mudou: novo !== atual, motivo, rmnp, testes });
   }
   // 3) Aplica igual a uma manipulação (humor imposto), para o jogador não distinguir uma da outra.
-  // A máscara igual ao novo humor some.
   for (const x of resultados) {
     if (!x.mudou) continue;
     x.p.humor = x.para;
     x.p.humorOpcoes = [];
     x.p.humorImposto = x.para !== 'neutro';
-    if (x.p.humorAparente === x.para) x.p.humorAparente = null;
   }
   return { emissores, resultados };
 }

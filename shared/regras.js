@@ -43,12 +43,15 @@ export function testeDMil(acao, nd, sistema, { metade = false, rng = Math.random
   const dados = [1 + Math.floor(rng() * 100)];
   if (modo === 'vantagem' || modo === 'desvantagem') dados.push(1 + Math.floor(rng() * 100));
   const dp = modo === 'desvantagem' ? Math.min(...dados) : Math.max(...dados);
-  const ds = 1 + Math.floor(rng() * 10);
+  // O DS também rola duas vezes: vantagem fica com o maior, desvantagem com o menor (autor, 22/10).
+  const dsDados = [1 + Math.floor(rng() * 10)];
+  if (dados.length > 1) dsDados.push(1 + Math.floor(rng() * 10));
+  const ds = modo === 'desvantagem' ? Math.min(...dsDados) : Math.max(...dsDados);
   const valor = metade ? Math.floor(acao / 2) : acao;
   const total = valor + dp;
   const critico = dp >= t.criticoAcerto ? 'acerto' : dp <= t.criticoErro ? 'erro' : null;
   const sucesso = nd == null ? null : critico === 'acerto' ? true : critico === 'erro' ? false : total >= nd;
-  return { dp, ds, acao: valor, total, nd, sucesso, critico, ...(dados.length > 1 ? { dados, modo } : {}) };
+  return { dp, ds, acao: valor, total, nd, sucesso, critico, ...(dados.length > 1 ? { dados, dsDados, modo } : {}) };
 }
 
 const regras = s => s.regras || {};

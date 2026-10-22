@@ -71,7 +71,8 @@ test('empatia natural (regra do app): influência contra R.MNP ajustado, contage
   assert.equal(espectroDoHumor('confiante', sis), 'positivo');
   assert.equal(espectroDoHumor('raivoso', sis), 'negativo');
   assert.equal(espectroDoHumor('neutro', sis), 'neutro');
-  const p = (id, car, humor, extra = {}) => ({ id, nome: id, atributos: { CAR: car }, humor, ...extra });
+  // Humor aparente igual ao real (o padrão do app é Neutro; aqui cada um mostra o que sente, salvo máscara).
+  const p = (id, car, humor, extra = {}) => ({ id, nome: id, atributos: { CAR: car }, humor, humorAparente: humor, ...extra });
   // CAR 20 → CAR% 80; d100 fixo 50 → influência 130 (sem máscara). R.MNP = 0 + 50 = 50 → todos passam.
   const grupo = [p('a', 20, 'amigavel'), p('b', 20, 'amigavel'), p('c', 20, 'desconfiado'), p('x', 10, 'indisposto'), p('ap', 10, 'apatico'), p('fera', 30, 'raivoso', { criatura: true })];
   const r = empatiaNatural(grupo, sis, { rng: () => 0.495 });
@@ -94,5 +95,8 @@ test('empatia natural (regra do app): influência contra R.MNP ajustado, contage
   assert.equal(t.humor, 'confiante');
   assert.equal(t.nd, 60);
   assert.equal(t.total, 40 + 51 - 20);
+  // Sem escolher o aparente, a sala vê Neutro: quem está Amigável por dentro não emite.
+  const r4 = empatiaNatural([{ id: 'q', nome: 'q', atributos: { CAR: 20 }, humor: 'amigavel' }, p('z', 10, 'neutro')], sis, { rng: () => 0.495 });
+  assert.equal(r4.emissores.find(e => e.p.id === 'q').humor, 'neutro');
   assert.throws(() => empatiaNatural([grupo[0]], sis));
 });

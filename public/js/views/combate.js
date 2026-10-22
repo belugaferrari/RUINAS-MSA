@@ -219,10 +219,11 @@ export function humorCartao(p, controla, mestre) {
         selecao(permitidos.map(x => ({ valor: x.id, rotulo: x.nome })), real, mudarReal, { 'aria-label': `Humor real de ${p.nome}` })),
     lib.fonte && !mestre ? h('small', { class: 'dica' }, `${lib.fonte}: você pode escolher qualquer humor, a qualquer momento.`) : null,
     h('label', { class: 'linha' }, icone('drama'), h('small', {}, 'Humor aparente'),
-      selecao([{ valor: '', rotulo: 'sem máscara' }, ...humores().filter(x => x.id !== real).map(x => ({ valor: x.id, rotulo: x.nome }))], p.humorAparente || '',
-        v => acao('humor.definir', { id: p.id, humor: v || null, camada: 'aparente' }).catch(e => aviso(e.message, 'erro')), { 'aria-label': `Máscara (humor aparente) de ${p.nome}` })),
+      // Pode ser igual ao real (padrão: Neutro): assim, quando o humor real muda, a sala não vê.
+      selecao(humores().map(x => ({ valor: x.id, rotulo: `${x.nome}${x.id === real ? ' (igual ao real)' : ''}` })), p.humorAparente || 'neutro',
+        v => acao('humor.definir', { id: p.id, humor: v || 'neutro', camada: 'aparente' }).catch(e => aviso(e.message, 'erro')), { 'aria-label': `Humor aparente de ${p.nome}` })),
     p.humorImposto ? h('span', { class: 'selo perigo', title: 'Mudar o humor real agora causa dano de Sanidade (dissonância)' }, 'imposto') : null,
-    p.humorAparente ? h('small', { class: 'dica' }, ` A sala vê ${nomeHumor(p.humorAparente)}.`) : null,
+    h('small', { class: 'dica' }, ` A sala vê ${nomeHumor(p.humorAparente || 'neutro')}.`),
     hReal && hReal.id !== 'neutro' ? h('small', { class: 'dica' }, ` ${hReal.efeitos}`) : null);
 }
 

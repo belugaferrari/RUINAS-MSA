@@ -781,6 +781,7 @@
    },
    {
     "id": "atraido",
+    "desvantagemTestes": ["PER"],
     "nome": "Atraído",
     "efeitos": "R.MNP −15; Vantagem em manipulação; Percepção em Desvantagem.",
     "rmnp": -15,
@@ -788,6 +789,7 @@
    },
    {
     "id": "enojado",
+    "desvantagemTestes": ["INT", "WILL"],
     "nome": "Enojado",
     "efeitos": "Desvantagem em testes mentais; Vantagem em ataques e iniciativa.",
     "vantagemAtaque": true,
@@ -806,12 +808,14 @@
    },
    {
     "id": "corajoso",
+    "desvantagemTestes": ["INT"],
     "nome": "Corajoso",
     "efeitos": "Vantagem contra Medo e na iniciativa; Desvantagem em testes de Inteligência.",
     "vantagemIniciativa": true
    },
    {
     "id": "amedrontado",
+    "vantagemTestes": ["PER"],
     "nome": "Amedrontado",
     "efeitos": "Vantagem em Percepção e iniciativa; Desvantagem em ataques; R.MNP −30.",
     "vantagemIniciativa": true,

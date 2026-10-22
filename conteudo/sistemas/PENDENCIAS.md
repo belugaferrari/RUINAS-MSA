@@ -218,3 +218,18 @@ Regras em `conteudo/sistemas/habilidades-regras.json` (automática / ligar / ati
 - Criaturas podem ter habilidades únicas (coluna "Única" na aba Habilidades: não podem ser copiadas por Mutante/Transmorfo nem reveladas por Zoologia) e até duas afinidades elementares (autor, 21/10).
 - **Afinidade elementar (autor, 22/10):** o monstro recebe metade do dano do seu elemento principal (a 1ª afinidade); os ataques podem ou não causar dano elemental (é o "Tipo de dano" de cada ataque); não existe elemento oposto. Elementos: Elétrico, Calor, Frio, Energia (Mágico), Radiação. "Frio" entrou na lista de tipos de dano (o livro o cita como elemental).
 - Provisório: a 2ª afinidade não reduz dano (só a principal); resistência e elemento principal juntos não somam (metade uma vez só).
+
+## Sala Social e testes (autor, 22/10)
+- Humor aparente: padrão Neutro; pode ser igual ao real (assim a mudança do real não aparece). A troca do humor real só vai para o registro do dono e do mestre.
+- Intuir humor: sem rebote; quem testa recebe "Você percebe que X está …" — falhou → o aparente, passou → o real, sempre com a mesma frase.
+- Testes ocultos da Sala Social: o jogador não vê número nem resultado, só a arte "Teste feito".
+- Afinidades: só mudam antes do 1º teste do personagem na Sala Social (o mestre sempre pode); liberam ao sair da sala ou quando o mestre a esvazia.
+- Avisos ficam 15 s ou até fechar no ✕.
+- Vantagem/desvantagem: o DS também rola duas vezes (maior na vantagem, menor na desvantagem).
+- Reparar item (cap. 5): teste de manutenção; sucesso +1 de durabilidade (1 por desgaste); erro crítico ou 3 falhas seguidas → sucata.
+
+**Provisório — conferir**
+- Humor nos testes: Atraído → Percepção (PER e perícias de PER) em desvantagem; Amedrontado → Percepção em vantagem; Enojado → testes mentais = INT e WILL (e perícias deles) em desvantagem; Corajoso → Inteligência em desvantagem.
+- Ainda não automáticos: "vantagem contra Medo" (Desmotivado, Corajoso) e Motivado (+5% ligados à motivação / −5% nos demais) — o mestre aplica como modificador.
+- Reparo: dificuldade = a escolhida no rolador (padrão Normal); perícia sugerida pelo tipo do item (Mecânica, Militar, Elétrica, Computação); sem kit no inventário o app só avisa.
+- Testes comuns nos Rápidos: Cozinhar (Arte › Culinária), Acampar (Sobrevivência básica), Esfolar, Rastrear, Navegar, Pescar, Cultivar, Primeiros socorros.

@@ -156,7 +156,7 @@ function humorCombate(p) {
   const nome = id => humores.find(x => x.id === (id || 'neutro'))?.nome || 'Neutro';
   const real = humores.find(x => x.id === (p.humor || 'neutro'));
   return h('p', { class: 'humor-combate', title: real?.efeitos || '' }, icone('smile'), ` Humor: `, h('strong', {}, nome(p.humor)),
-    p.humorAparente ? h('small', {}, ` (a sala vê ${nome(p.humorAparente)})`) : null,
+    (p.humorAparente || 'neutro') !== (p.humor || 'neutro') ? h('small', {}, ` (a sala vê ${nome(p.humorAparente || 'neutro')})`) : null,
     real && real.id !== 'neutro' && real.efeitos ? h('small', { class: 'dica' }, ` — ${real.efeitos}`) : null);
 }
 

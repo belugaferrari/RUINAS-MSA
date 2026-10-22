@@ -166,14 +166,69 @@ function secaoRapidos(p) {
       botao('d10 (DS)', () => enviar({ dado: '1d10', rotulo: 'Dado de suporte (d10)' }, r => `DS: ${r.total}`), { icone: 'dices' }),
       botao('1d6 (Sacrifício)', () => enviar({ dado: '1d6', rotulo: 'Sacrifício — dano puro' }, r => `Sacrifício: ${r.total} de dano`), { icone: 'heart' })),
     h('p', { class: 'dica' }, 'Iniciativa = AGI + 1d10. DS: compare com a durabilidade do item (falha) ou com o efeito de dano / dezena da ação.'),
-    p ? [titulo('Descanso e necessidades', 'bed', 'h4'),
-      h('div', { class: 'grade-botoes' },
-        botao('Descanso curto', () => acao('descanso.fazer', { tipo: 'curto', ids: [p.id] }).then(r => aviso(r.linhas.join(' · '))).catch(e => aviso(e.message, 'erro')),
-          { icone: 'coffee', title: 'Refeição (meia ração) + 1 hora: 1 PV' }),
-        botao('Descanso longo…', () => abrirDescanso({ ids: [p.id], quem: p.nome }), { icone: 'bed', title: 'Confirma Conforto, Abrigo e Ergonomia; também tem o descanso interrompido' }),
-        botao('Comer', () => acao('necessidade.comer', { id: p.id }).then(() => aviso(`${p.nome} comeu.`)), { icone: 'utensils', title: 'Zera as horas sem comer e tira a Fome' }),
-        botao('Beber', () => acao('necessidade.beber', { id: p.id }).then(() => aviso(`${p.nome} bebeu.`)), { icone: 'cup-soda', title: 'A Sede acaba na hora' }))] : null,
+    // Descanso: do personagem escolhido; sem personagem (o mestre), do grupo todo.
+    titulo('Descanso e necessidades', 'bed', 'h4'),
+    h('div', { class: 'grade-botoes' },
+      botao(p ? 'Descanso curto' : 'Descanso curto (grupo)', () => acao('descanso.fazer', { tipo: 'curto', ...(p ? { ids: [p.id] } : {}) }).then(r => aviso(r.linhas.join(' · '))).catch(e => aviso(e.message, 'erro')),
+        { icone: 'coffee', title: 'Refeição (meia ração) + 1 hora: 1 PV' }),
+      botao(p ? 'Descanso longo…' : 'Descanso longo (grupo)…', () => abrirDescanso(p ? { ids: [p.id], quem: p.nome } : {}), { icone: 'bed', title: 'Confirma Conforto, Abrigo e Ergonomia; também tem o descanso interrompido' }),
+      p ? botao('Comer', () => acao('necessidade.comer', { id: p.id }).then(() => aviso(`${p.nome} comeu.`)), { icone: 'utensils', title: 'Zera as horas sem comer e tira a Fome' }) : null,
+      p ? botao('Beber', () => acao('necessidade.beber', { id: p.id }).then(() => aviso(`${p.nome} bebeu.`)), { icone: 'cup-soda', title: 'A Sede acaba na hora' }) : null),
+    p ? testesComuns(p) : null,
     ultimo());
+}
+
+// Testes comuns de exploração e sobrevivência: um clique rola a subperícia com a dificuldade escolhida em "Teste".
+const TESTES_COMUNS = [
+  ['arte.culinaria', 'Cozinhar', 'utensils'],
+  ['sobrevivencia.sobrevivencia-basica', 'Acampar (abrigo e fogueira)', 'tent'],
+  ['sobrevivencia.esfolamento', 'Esfolar', 'beef'],
+  ['sobrevivencia.rastreio', 'Rastrear', 'footprints'],
+  ['sobrevivencia.navegacao', 'Navegar', 'compass'],
+  ['armadilhas.pescaria', 'Pescar', 'fish'],
+  ['extracao.cultivo', 'Cultivar', 'sprout'],
+  ['medicina.primeiros-socorros', 'Primeiros socorros', 'heart-pulse'],
+];
+// Reparo (livro, cap. 5): a perícia depende do item; o app sugere pelo tipo.
+const PERICIAS_REPARO = [
+  ['engenharia.mecanica', 'Engenharia › Mecânica (armas brancas, veículos, mecânicos)'],
+  ['engenharia.militar', 'Engenharia › Militar (armas de fogo, blindagens)'],
+  ['engenharia.eletrica', 'Engenharia › Elétrica (baterias, geradores, fiação)'],
+  ['engenharia.civil', 'Engenharia › Civil (abrigos, estruturas)'],
+  ['engenharia.nuclear', 'Engenharia › Nuclear (rádios, baterias avançadas)'],
+  ['computacao.manutencao', 'Computação › Manutenção (computadores e eletrônicos)'],
+];
+function testesComuns(p) {
+  const sis = estado.sistema;
+  const d = derivados(p, sis);
+  const existe = id => sis.pericias.some(x => x.subpericias.some(s => s.id === id));
+  const s = cfg();
+  const dif = sis.teste.dificuldades.find(x => x.nome === s.dif) || sis.teste.dificuldades.find(x => x.nome === 'Normal');
+  // Itens que precisam de reparo: perderam durabilidade, ainda dá para reparar e não viraram sucata.
+  const gastos = (p.itens || []).filter(i => typeof i.durabilidade === 'number' && (i.durabilidadeAtual ?? i.durabilidade) < i.durabilidade && !i.sucata);
+  const chaveItem = `reparo:item:${p.id}`;
+  const chaveSub = `reparo:sub:${p.id}`;
+  if (!gastos.some(i => i.uid === estado.sel[chaveItem])) estado.sel[chaveItem] = gastos[0]?.uid || '';
+  const item = gastos.find(i => i.uid === estado.sel[chaveItem]);
+  const sugerida = !item ? 'engenharia.mecanica' : item.pericia?.startsWith('armas-de-fogo') || /colete|blind|armadura/i.test(item.nome) ? 'engenharia.militar'
+    : /bateria|gerador|el[eé]tric|lanterna|r[aá]dio/i.test(item.nome) ? 'engenharia.eletrica' : /computador|tablet|chip|implante|cibern/i.test(item.nome) ? 'computacao.manutencao' : 'engenharia.mecanica';
+  if (!estado.sel[chaveSub] || estado.sel[`${chaveSub}:item`] !== item?.uid) { estado.sel[chaveSub] = sugerida; estado.sel[`${chaveSub}:item`] = item?.uid; }
+  return [
+    titulo('Testes comuns', 'list-checks', 'h4'),
+    h('p', { class: 'dica' }, `Rolam com a dificuldade escolhida em "Teste" (${dif?.nome || 'Normal'}).`),
+    h('div', { class: 'grade-botoes' }, TESTES_COMUNS.filter(([id]) => existe(id)).map(([id, nome, ic]) =>
+      botao(`${nome} ${d.subpericias[id] ?? 0}%`, () => prepararTeste(p.id, `sub:${id}`), { icone: ic, title: `Teste de ${nome}` }))),
+    h('div', { class: 'reparo-rapido' },
+      h('strong', {}, icone('hammer'), ' Reparar item'),
+      gastos.length ? [
+        selecao(gastos.map(i => ({ valor: i.uid, rotulo: `${i.nome} (${i.durabilidadeAtual ?? i.durabilidade}/${i.durabilidade})${!i.reparavel ? ' — já reparado neste desgaste' : ''}` })), estado.sel[chaveItem], v => { estado.sel[chaveItem] = v; render(); }, { 'aria-label': 'Item para reparar' }),
+        selecao(PERICIAS_REPARO.filter(([id]) => existe(id)).map(([id, nome]) => ({ valor: id, rotulo: `${nome} ${d.subpericias[id] ?? 0}%` })), estado.sel[chaveSub], v => { estado.sel[chaveSub] = v; }, { 'aria-label': 'Perícia do reparo' }),
+        botao('Reparar', async () => {
+          const r = await acao('item.repararTeste', { id: p.id, uid: estado.sel[chaveItem], sub: estado.sel[chaveSub], nd: dif?.nd ?? 70 });
+          aviso(`${r.rotulo}: ${r.total} × ${r.nd} — ${r.texto}`, r.sucesso ? 'ok' : 'erro');
+        }, { class: 'primario', icone: 'hammer', disabled: !item?.reparavel, title: 'Sucesso: +1 de durabilidade (só 1 por desgaste). Erro crítico ou 3 falhas seguidas: vira sucata.' }),
+      ] : h('small', { class: 'dica' }, 'Nenhum item precisando de reparo.')),
+  ];
 }
 
 function secaoSanidade(p) {

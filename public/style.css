@@ -1338,3 +1338,17 @@ span.peao { display: grid; }
 
 .monstro-imagem { width: 100%; max-height: 220px; object-fit: cover; border-radius: 8px; border: 1px solid var(--borda); background: #0004; }
 .lista-ataques-monstro { list-style: none; margin: .3em 0; padding: 0; display: flex; flex-direction: column; gap: .2em; font-size: .92em; }
+#avisos .aviso { display: flex; align-items: flex-start; gap: .5em; }
+#avisos .aviso > span { flex: 1; }
+#avisos .aviso .fechar-aviso { flex: none; min-width: 0; min-height: 0; padding: .1em; background: transparent; border: 0; color: inherit; opacity: .8; }
+.reparo-rapido { display: flex; flex-direction: column; gap: .35em; margin-top: .5em; padding: .5em; border: 1px solid var(--borda); border-radius: 8px; }
+
+/* Teste oculto feito (Sala Social): máscara que gira e some, sem número. */
+.teste-feito { position: fixed; inset: 0; display: grid; place-items: center; pointer-events: none; z-index: 40; }
+.teste-feito-cartao { display: flex; flex-direction: column; align-items: center; gap: .3em; padding: 1.2em 1.8em; border-radius: 16px; background: rgba(20, 14, 10, .92); border: 1px solid var(--ouro); box-shadow: 0 0 40px rgba(212, 162, 76, .35); animation: teste-feito 2.6s ease forwards; }
+.teste-feito-icone { display: grid; place-items: center; width: 64px; height: 64px; border-radius: 50%; border: 2px solid var(--ouro); color: var(--ouro); animation: teste-feito-giro 1.2s ease-out; }
+.teste-feito-icone .ic, .teste-feito-icone svg { width: 34px; height: 34px; }
+.teste-feito-cartao small { opacity: .8; }
+@keyframes teste-feito { 0% { opacity: 0; transform: scale(.8); } 15% { opacity: 1; transform: scale(1); } 75% { opacity: 1; } 100% { opacity: 0; transform: scale(1.05); } }
+@keyframes teste-feito-giro { from { transform: rotateY(0) scale(.6); } to { transform: rotateY(360deg) scale(1); } }
+@media (prefers-reduced-motion: reduce) { .teste-feito-cartao, .teste-feito-icone { animation: none; } }

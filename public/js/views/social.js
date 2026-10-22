@@ -9,6 +9,7 @@ import { resistenciaManipulacao } from '/shared/combate.js';
 import { controladoNaSala, nomeControlado } from './batalha.js';
 import { humorCartao, nomeHumor, nomeSub, reboteTexto, alvoDe, marcarAlvo, iconeHumor, humores } from './combate.js';
 import { efeitosIcones } from './efeitos.js';
+import { mostrarTesteFeito } from './animacao.js';
 
 export function painelSocial(participantes, mestre) {
   const { meus, p, chave } = controladoNaSala('social', participantes, mestre);
@@ -48,7 +49,7 @@ function botaoEmpatiaNatural() {
 function barraPersonagem(p, meus, chave, mestre, participantes) {
   const sis = estado.sistema;
   const real = p.humor || 'neutro';
-  const aparente = p.humorAparente;
+  const aparente = p.humorAparente || 'neutro';
   const efeitosReal = humores().find(x => x.id === real)?.efeitos || '';
   const abrirHumor = () => janela(`Humor de ${p.nome}`, h('div', { class: 'humor-janela' },
     h('p', { class: 'dica' }, 'Humor real: o que você sente (dá os bônus e ônus). Humor aparente: a máscara que a sala vê.'),
@@ -65,9 +66,9 @@ function barraPersonagem(p, meus, chave, mestre, participantes) {
       h('small', {}, 'R.MNP'), h('strong', {}, resistenciaManipulacao(p, sis))) : null,
     sis.modulos?.social ? h('span', { class: 'humores-barra' },
       icHumor(real, `Humor real: ${nomeHumor(real)}${efeitosReal ? ` — ${efeitosReal}` : ''}${p.humorImposto ? ' (imposto: mudar custa Sanidade)' : ''}. Clique para mudar.`, `real ${p.humorImposto ? 'imposto' : ''}`),
-      h('span', { class: `mascara ${aparente ? 'com' : ''}`, title: aparente ? `Humor aparente (a máscara que a sala vê): ${nomeHumor(aparente)}` : 'Sem máscara: a sala vê o seu humor real' },
-        h('button', { type: 'button', class: 'humor-icone aparente', onclick: abrirHumor, 'aria-label': aparente ? `Humor aparente: ${nomeHumor(aparente)}` : 'Sem máscara' },
-          icone('drama'), aparente ? [icone(iconeHumor(aparente)), h('span', {}, nomeHumor(aparente))] : null))) : null,
+      h('span', { class: `mascara ${aparente !== real ? 'com' : ''}`, title: `Humor aparente (o que a sala vê): ${nomeHumor(aparente)}${aparente === real ? ' — igual ao real' : ''}` },
+        h('button', { type: 'button', class: 'humor-icone aparente', onclick: abrirHumor, 'aria-label': `Humor aparente: ${nomeHumor(aparente)}` },
+          icone('drama'), icone(iconeHumor(aparente)), h('span', {}, nomeHumor(aparente))))) : null,
     efeitosIcones(p, { mestre }),
     daManipulacao.length ? h('span', { class: 'vant-manip' }, daManipulacao.map(x => h('span', {
       class: `selo ${ativas.has(x.id) ? 'ok' : ''}`, title: `${x.nome}${ativas.has(x.id) ? ' (ativa)' : ''}: ${x.descricao}`,
@@ -85,7 +86,7 @@ function miniCartao(eu, x, alvo) {
   const afinidade = estado.campanha.relacoes?.[eu.id]?.[x.id]?.tipo || 'Neutro';
   const esp = { Aliado: 'a', Amigável: 'a', Rival: 'c', Inimigo: 'c' }[afinidade] || 'b';
   const mestre = estado.campanha.papel === 'mestre';
-  const visto = x.donoId === estado.usuario.id || mestre ? (x.humorAparente || x.humor) : x.humor;
+  const visto = x.donoId === estado.usuario.id || mestre ? (x.humorAparente || 'neutro') : x.humor;
   const real = x.humor || 'neutro';
   return h('li', { class: `mini-linha ${x.id === alvo ? 'alvo' : ''}` },
     h('button', {
@@ -99,7 +100,7 @@ function miniCartao(eu, x, alvo) {
         mestre
           ? h('small', { class: 'humores-mestre' },
             h('span', { title: 'Humor real' }, icone(iconeHumor(real)), ` ${nomeHumor(real)}`),
-            x.humorAparente ? h('span', { class: 'aparente', title: 'Humor aparente (máscara)' }, icone('drama'), ` ${nomeHumor(x.humorAparente)}`) : null)
+            h('span', { class: 'aparente', title: 'Humor aparente (o que a sala vê)' }, icone('drama'), ` ${nomeHumor(x.humorAparente || 'neutro')}`))
           : h('small', { title: 'Humor como o seu personagem interpreta (pode ser uma máscara)' }, icone(iconeHumor(visto)), ` ${nomeHumor(visto)}`)),
       x.id === alvo ? icone('crosshair') : null),
     h('div', { class: 'mini-acoes' },
@@ -109,6 +110,10 @@ function miniCartao(eu, x, alvo) {
 
 function escolherAfinidade(eu, x, atual) {
   let fechar = () => {};
+  // Depois do 1º teste na Sala Social, só o mestre muda a afinidade.
+  if (estado.campanha.papel !== 'mestre' && (estado.campanha.salas.social.testaram || []).includes(eu.id)) {
+    return aviso('As afinidades só podem ser ajustadas antes do primeiro teste na Sala Social. Peça ao mestre.', 'erro');
+  }
   const definir = async tipo => { await acao('relacao.definir', { de: eu.id, para: x.id, tipo }); fechar(); };
   fechar = janela(`Como ${eu.nome} vê ${x.nome}?`, h('div', { class: 'barra' },
     estado.sistema.relacoes.map(t => botao(t, () => definir(t), { class: `pequeno ${t === atual ? 'primario' : ''}`, 'aria-pressed': t === atual }))),
@@ -133,7 +138,12 @@ function manipulacoes(p, b, mestre) {
     const r = await acao('social.manipular', { autor: p.id, alvo: b.id, sub, humor, mod: mestre ? (parseInt(sel.mod, 10) || 0) + (parseInt(sel.situacaoMod, 10) || 0) : 0 });
     // Teste oculto: o jogador não sabe se funcionou (o mestre vê o resultado no registro).
     const nome = humor === 'ler' ? 'Intuir humor' : nomeSub(sub);
-    aviso(r.oculto ? `${nome} em ${b.nome}: feito em segredo. Só o mestre vê o resultado.` : `${r.autor}: ${r.texto}`, r.oculto ? 'ok' : r.sucesso ? 'ok' : 'erro');
+    // Intuir humor: o que o personagem percebe (o aparente se falhou, o real se passou — escrito igual).
+    // Os outros testes são ocultos: só uma arte dizendo que o teste foi feito.
+    if (r.percebido) aviso(r.percebido);
+    else if (r.oculto) aviso(`${nome} em ${b.nome}: feito em segredo. Só o mestre vê o resultado.`);
+    else aviso(r.revelado || `${r.autor}: ${r.texto}`, r.sucesso ? 'ok' : 'erro');
+    if (r.oculto) mostrarTesteFeito(humor === 'ler' ? 'eye' : 'drama', r.rotulo);
   };
   const d100 = (id) => d.subpericias[id] ?? 0;
   return [
@@ -144,21 +154,22 @@ function manipulacoes(p, b, mestre) {
         onclick: () => { estado.sel[chaveSub] = id; render(); },
       }, h('strong', {}, nomeSub(id)), h('small', {}, `${d100(id)}%`))),
       h('button', {
-        type: 'button', class: `manip intuir ${intuir ? 'ativa' : ''}`, 'aria-pressed': intuir, title: 'Intuir o humor real de alguém (Empatia). É oculto: você não sabe se acertou — o mestre interpreta na mesa.',
+        type: 'button', class: `manip intuir ${intuir ? 'ativa' : ''}`, 'aria-pressed': intuir, title: 'Intuir o humor real de alguém (Empatia). Você recebe o que percebeu: se falhar, o humor aparente; se passar, o real — sem saber qual.',
         onclick: () => { estado.sel[chaveSub] = INTUIR; render(); },
       }, h('strong', {}, 'Intuir humor'), h('small', {}, `Empatia ${d100('manipulacao.empatia')}%`))),
     intuir
       ? h('div', { class: 'causar' },
-        h('small', {}, `Intuir o humor real de ${b?.nome || 'o alvo'} (Empatia, oculto).`),
+        h('small', {}, `Intuir o humor real de ${b?.nome || 'o alvo'} (Empatia). Você recebe o que percebeu, sem saber se acertou.`),
         h('div', { class: 'barra' }, botao(`Intuir o humor de ${b?.nome || 'o alvo'}`, () => manipular('ler'),
-          { class: 'pequeno primario', icone: 'eye', disabled: !b, title: 'O mestre vê o resultado e conta o que o seu personagem percebe' })))
+          { class: 'pequeno primario', icone: 'eye', disabled: !b, title: 'Você recebe o que o seu personagem percebeu' })))
       : h('div', { class: 'causar' },
         h('small', {}, `${nomeSub(sub)}: o que causar em ${b?.nome || 'o alvo'}?`),
         // Sedução: só em quem se atrai pelo gênero de quem seduz.
         sub === 'manipulacao.seducao' && b && !podeSeduzir(p, b).ok ? h('p', { class: 'alerta' }, icone('heart-crack'), ` ${podeSeduzir(p, b).motivo}`) : null,
         h('div', { class: 'barra' }, regra.causa.filter(id => id !== 'ler').map(id => botao(nomeHumor(id), () => manipular(id),
           { class: 'pequeno primario', icone: 'drama', disabled: !b || (sub === 'manipulacao.seducao' && !podeSeduzir(p, b).ok), title: `${p.nome} usa ${nomeSub(sub)} em ${b?.nome || 'o alvo'}` })))),
-    h('p', { class: 'dica' }, `Se falhar (rebote): ${reboteTexto(regra)}.`),
+    // Intuir humor não tem rebote (autor, 22/10).
+    intuir ? null : h('p', { class: 'dica' }, `Se falhar (rebote): ${reboteTexto(regra)}.`),
     b ? botao('Agredir', async () => {
       const custo = sis.social?.agressao?.dano || '1d6';
       if (!(await confirmar(`${p.nome} parte para a agressão contra ${b.nome}? Atacar um humano no meio do diálogo custa ${custo} de Humanidade. Os dois vão para o Campo de Batalha.`))) return;

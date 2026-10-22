@@ -464,7 +464,7 @@ export function linhaRolagem(e) {
       h('strong', {}, `${e.autor} ${e.rotulo}: `),
       h('span', { class: `selo ${e.sucesso ? 'ok' : 'perigo'}` }, icone(e.tipo === 'ataque' ? (e.sucesso ? 'swords' : 'shield') : 'drama'), e.texto));
   }
-  if (e.texto) return h('span', {}, h('strong', {}, e.rotulo), ': ', e.texto);
+  if (e.texto && e.tipo !== 'dmil') return h('span', {}, h('strong', {}, e.rotulo), ': ', e.texto);
   if (e.tipo === 'atributos') {
     return h('span', {}, h('strong', {}, `${e.autor} — ${e.rotulo}: `), h('span', { class: 'total' }, e.valores.map(v => v.total).join(' · ')),
       h('small', {}, ` (soma ${e.total}${e.rerolagens ? `, rerolado ${e.rerolagens}×` : ''})`), e.secreta ? h('span', { class: 'selo' }, 'secreta') : null);
@@ -476,7 +476,8 @@ export function linhaRolagem(e) {
       h('span', { class: 'total' }, e.total),
       e.nd != null ? h('span', { class: `selo ${e.sucesso ? 'ok' : 'perigo'}` }, icone(e.sucesso ? 'check' : 'x'), `${res} (ND ${e.nd})`) : null,
       e.critico ? h('span', { class: 'selo cheio' }, `crítico de ${e.critico}`) : null,
-      h('small', {}, ` (d100 ${e.dados?.length > 1 ? `[${e.dados.join(', ')}] → ${e.dp}` : e.dp} + ação ${e.acao}${e.metade ? ' [metade]' : ''}${e.mod ? ` ${e.mod > 0 ? '+' : ''}${e.mod} já incluso` : ''} · DS ${e.ds})`),
+      e.texto ? h('span', {}, ` — ${e.texto}`) : null,
+      h('small', {}, ` (d100 ${e.dados?.length > 1 ? `[${e.dados.join(', ')}] → ${e.dp}` : e.dp} + ação ${e.acao}${e.metade ? ' [metade]' : ''}${e.mod ? ` ${e.mod > 0 ? '+' : ''}${e.mod} já incluso` : ''} · DS ${e.dsDados?.length > 1 ? `[${e.dsDados.join(', ')}] → ${e.ds}` : e.ds})`),
       e.secreta ? h('span', { class: 'selo' }, 'secreta') : null);
   }
   const partes = [`${e.dado}: [${e.dados.join(', ')}]${e.mod ? (e.mod > 0 ? ` +${e.mod}` : ` ${e.mod}`) : ''}`, ...(e.componentes || []).map(c => `${c.nome} ${c.valor}`)];

@@ -1,11 +1,11 @@
 import { db, save, uid } from './db.js';
 import { imagemDeLink } from '../shared/imagens.js';
 import { sistema, idSistema } from './sistema.js';
-import { resolverAtaque, aplicarAtaque, armasDisponiveis, opcoesDefesa, sobrevida, rolarIniciativa, resolverManipulacao, modHumorTestes, humorDe, espectroDe, humorAparente, empatiaNatural, liberdadeDeHumor, modoRolagem, recursoDe, gastarRecurso, racaDe, distanciaPecas, usosRestantes, gastarUso, testeContra, ipContra } from '../shared/combate.js';
+import { resolverAtaque, aplicarAtaque, armasDisponiveis, opcoesDefesa, sobrevida, rolarIniciativa, resolverManipulacao, modHumorTestes, humorDe, espectroDe, humorAparente, empatiaNatural, liberdadeDeHumor, modoRolagem, modoHumorTeste, recursoDe, gastarRecurso, racaDe, distanciaPecas, usosRestantes, gastarUso, testeContra, ipContra } from '../shared/combate.js';
 import { sincronizarEfeitos, passarTurnoEfeitos, efeitosAoAgir, cargaNoTurno, descansar } from '../shared/efeitos.js';
 import { fichasDeTeste, relatorioFicha } from '../shared/fichasTeste.js';
 import { passarNecessidades, comer, beber, dormir, rolarCaos, climaDoDia, descreverRelogio, fimDoCombate } from '../shared/tempo.js';
-import { podeSeduzir, itemAberto, itemVisivel, xpParaSubir, novaFicha, podeEquipar, rolarDado, rolarAtributosCriacao, testeDMil, gerarEncontro, derivados, problemasFicha, LIMITE_SALA, desgastarItem, repararItem, listaHabilidades, vantagemPorHabilidade, temHabilidade, regraDaHabilidade, tipoCriatura, chaveHabilidade } from '../shared/regras.js';
+import { podeSeduzir, itemAberto, itemVisivel, xpParaSubir, novaFicha, podeEquipar, rolarDado, rolarAtributosCriacao, testeDMil, gerarEncontro, derivados, problemasFicha, LIMITE_SALA, desgastarItem, repararItem, durabilidadeDe, listaHabilidades, vantagemPorHabilidade, temHabilidade, regraDaHabilidade, tipoCriatura, chaveHabilidade } from '../shared/regras.js';
 
 const GRUPO_ENCONTROS = 'encontros';
 const MAX_LOG = 100;
@@ -510,9 +510,9 @@ function resolverPendente(c, s, pend, defesa, sis) {
     atacanteId: a.id, alvoId: b.id, armaTipo: pend.armaTipo || 'desarmado', tipoDano: pend.tipoDano || null,
     morto: (b.marcadores || []).includes('Morto'), desmaiado: (b.marcadores || []).includes('Desmaiado'),
     texto: `${resumo}${r.critico ? ` · crítico de ${r.critico}` : ''}${extras.length ? ` · ${extras.join(' · ')}` : ''}`,
-    detalhe: `d100 ${r.dp} + ação ${r.acao}${mods ? ` (${mods})` : ''} = ${r.total} contra defesa ${r.nd} (${def})${modo} · DS ${r.ds}${danoTxt}`,
+    detalhe: `d100 ${r.dp} + ação ${r.acao}${mods ? ` (${mods})` : ''} = ${r.total} contra defesa ${r.nd} (${def})${modo} · DS ${r.dsDados?.length > 1 ? `[${r.dsDados.join(', ')}] → ${r.ds}` : r.ds}${danoTxt}`,
     // Números dos dados para a animação na tela de todos.
-    dp: r.dp, dados: r.dados, ds: r.ds, total: r.total, nd: r.nd, dano: r.dano, danoDados: r.danoPartes.filter(x => x.dados).map(x => ({ nome: x.nome, expr: x.expr, dados: x.dados })),
+    dp: r.dp, dados: r.dados, ds: r.ds, dsDados: r.dsDados, total: r.total, nd: r.nd, dano: r.dano, danoDados: r.danoPartes.filter(x => x.dados).map(x => ({ nome: x.nome, expr: x.expr, dados: x.dados })),
   };
   registrar(s.log, entrada);
   return entrada;
@@ -890,6 +890,45 @@ export const acoes = {
     return { texto };
   },
 
+  // Reparar item (livro, cap. 5): teste de manutenção (Engenharia/Computação). Sucesso recupera 1 de durabilidade
+  // (só 1 por desgaste). Erro crítico ou 3 falhas seguidas: o item vira sucata. Precisa do kit do tipo do item.
+  'item.repararTeste'(c, { id, uid: itemUid, sub, nd }, ctx) {
+    const p = personagem(c, id);
+    exigirDonoOuMestre(ctx, p);
+    const sis = sistema(c.sistema);
+    const it = (p.itens || []).find(i => i.uid === itemUid);
+    if (!it) throw erro('Item não encontrado.');
+    if (it.sucata) throw erro(`${it.nome} virou sucata: não dá mais para reparar.`);
+    const dur = durabilidadeDe(it);
+    if (dur.tipo !== 'normal' || dur.atual >= dur.max) throw erro(`${it.nome} não precisa de reparo.`);
+    if (!dur.reparavel) throw erro(`${it.nome}: só dá para reparar 1 ponto por desgaste. Espere o próximo desgaste.`);
+    const subs = sis.pericias.flatMap(x => x.subpericias.map(s => [s.id, `${x.nome} › ${s.nome}`]));
+    const nomeSub = subs.find(x => x[0] === sub)?.[1];
+    if (!nomeSub) throw erro('Escolha a perícia do reparo.');
+    const d = derivados(p, sis);
+    const ndNum = Math.max(0, parseInt(nd, 10) || 70);
+    const alvosRef = [sub, sub.split('.')[0]];
+    const modo = vantagemPorHabilidade(p, sis, alvosRef) ? 'vantagem' : null;
+    const t = testeDMil(d.subpericias[sub] ?? 0, ndNum, sis, { modo });
+    const kit = (p.itens || []).some(i => /kit|ferrament/i.test(i.nome));
+    let texto;
+    if (t.sucesso) {
+      texto = repararItem(it);
+      it.falhasReparo = 0;
+    } else {
+      it.falhasReparo = (it.falhasReparo || 0) + 1;
+      if (t.critico === 'erro' || it.falhasReparo >= 3) {
+        it.sucata = true;
+        it.durabilidadeAtual = 0;
+        texto = `${it.nome} virou SUCATA (${t.critico === 'erro' ? 'erro crítico' : '3 falhas seguidas'})`;
+      } else texto = `falhou (${it.falhasReparo}ª falha seguida; na 3ª o item vira sucata)`;
+    }
+    const entrada = { tipo: 'dmil', autor: p.nome, rotulo: `Reparar ${it.nome} (${nomeSub})${modo ? ' (vantagem)' : ''}`, acaoNome: nomeSub, mod: 0, ...t,
+      texto: `${texto}${kit ? '' : ' · sem kit de reparo no inventário (o mestre decide)'}` };
+    registrar(c.log, entrada);
+    return entrada;
+  },
+
   // Falha num teste usando o item (fora do combate automático): o app compara o DS e desgasta se for o caso.
   'item.falha'(c, { id, uid: itemUid, ds, semPrerequisito }, ctx) {
     const p = personagem(c, id);
@@ -961,6 +1000,11 @@ export const acoes = {
     exigirDonoOuMestre(ctx, p);
     personagem(c, para);
     if (de === para) throw erro('Escolha outro personagem.');
+    // Na Sala Social, as afinidades só mudam antes do 1º teste do personagem (evita mexer para melhorar os testes).
+    // Volta a liberar quando ele sai da sala ou o mestre esvazia a sala. O mestre sempre pode.
+    if (!ctx.mestre && tipo !== undefined && (c.salas.social.testaram || []).includes(de) && c.salas.social.participantes.includes(de)) {
+      throw erro('As afinidades só podem ser ajustadas antes do primeiro teste na Sala Social. Peça ao mestre.');
+    }
     const atual = (c.relacoes[de] ||= {})[para] || {};
     const tipos = sistema(c.sistema).relacoes;
     const novo = { tipo: tipo !== undefined ? tipo : atual.tipo, nota: nota !== undefined ? nomeStr(nota) : atual.nota || '' };
@@ -1094,6 +1138,7 @@ export const acoes = {
     if (s.participantes.includes(id)) return;
     if (s.participantes.length >= LIMITE_SALA) throw erro(`A sala já tem ${LIMITE_SALA} integrantes.`);
     s.participantes.push(id);
+    if (nome === 'social' && s.testaram) s.testaram = s.testaram.filter(x => x !== id);
     if (nome === 'batalha') garantirCombate(c);
   },
 
@@ -1102,6 +1147,7 @@ export const acoes = {
     if (!ctx.mestre) exigirDonoOuMestre(ctx, personagem(c, id));
     s.participantes = s.participantes.filter(x => x !== id);
     if (s.ativo === id) s.ativo = null;
+    if (s.testaram) s.testaram = s.testaram.filter(x => x !== id);
     sairDoCombate(s, id);
     const quem = c.personagens.find(p => p.id === id);
     terminarCombatePara(c, quem);
@@ -1168,9 +1214,12 @@ export const acoes = {
       const alvosRef = !acaoRef ? [] : acaoRef.startsWith('sub:') ? [acaoRef.slice(4), acaoRef.slice(4).split('.')[0]] : acaoRef.startsWith('per:') ? [acaoRef.slice(4)] : [];
       const porHabilidade = p && alvosRef.length && vantagemPorHabilidade(p, sis, alvosRef);
       const pedido = ['vantagem', 'desvantagem'].includes(modo) ? modo : null;
-      const modoFinal = modoRolagem(pedido === 'vantagem' || porHabilidade, pedido === 'desvantagem');
+      // O humor também entra sozinho (ex.: Atraído → Percepção em desvantagem).
+      const pelHumor = p ? modoHumorTeste(p, sis, acaoRef) : { vantagem: false, desvantagem: false };
+      const modoFinal = modoRolagem(pedido === 'vantagem' || porHabilidade || pelHumor.vantagem, pedido === 'desvantagem' || pelHumor.desvantagem);
+      const motivo = [porHabilidade && modoFinal === 'vantagem' ? 'habilidade' : null, (pelHumor.vantagem || pelHumor.desvantagem) && modoFinal ? `humor ${pelHumor.humor}` : null].filter(Boolean).join(', ');
       const r = testeDMil(a.valor + modificador, ndNum, sis, { metade: !!metade, modo: modoFinal });
-      entrada = { ...base, tipo: 'dmil', rotulo: `${String(rotulo || a.nome).slice(0, 80)}${modoFinal ? ` (${modoFinal}${porHabilidade && modoFinal === 'vantagem' ? ' por habilidade' : ''})` : ''}`, acaoNome: a.nome, mod: modificador, metade: !!metade, ...r };
+      entrada = { ...base, tipo: 'dmil', rotulo: `${String(rotulo || a.nome).slice(0, 80)}${modoFinal ? ` (${modoFinal}${motivo ? ` — ${motivo}` : ''})` : ''}`, acaoNome: a.nome, mod: modificador, metade: !!metade, ...r };
     }
     if (nome && c.salas[nome]) registrar(c.salas[nome].log, entrada);
     else registrar(c.log, entrada);
@@ -1493,9 +1542,9 @@ export const acoes = {
     const nomeH = hid => sis.social.humores.find(x => x.id === hid)?.nome || 'Neutro';
     if (camada === 'aparente') {
       if (humor && !sis.social.humores.some(x => x.id === humor)) throw erro('Humor desconhecido.');
-      p.humorAparente = humor && humor !== (p.humor || 'neutro') ? humor : null;
-      // A máscara é segredo: o registro público não conta que mudou.
-      registrar(c.salas.social.log, { autor: p.nome, rotulo: `Máscara de ${p.nome}`, texto: p.humorAparente ? `mostrando ${nomeH(p.humorAparente)}` : 'sem máscara', privadoPara: ctx.user.id });
+      // Pode ser igual ao humor real (padrão: Neutro). A troca é segredo: o registro público não conta.
+      p.humorAparente = humor || 'neutro';
+      registrar(c.salas.social.log, { autor: p.nome, rotulo: `Humor aparente de ${p.nome}`, texto: `mostrando ${nomeH(p.humorAparente)}`, privadoPara: ctx.user.id });
       return;
     }
     const h = sis.social.humores.find(x => x.id === humor);
@@ -1528,9 +1577,9 @@ export const acoes = {
     p.humor = h.id;
     p.humorOpcoes = [];
     p.humorImposto = doRebote || (ctx.mestre && h.id !== 'neutro');
-    if (p.humorAparente === p.humor) p.humorAparente = null;
-    registrar(c.salas.social.log, { autor: p.nome, rotulo: `Humor de ${p.nome}`, texto: p.humorAparente ? `${texto} (por trás da máscara)` : texto,
-      privadoPara: p.humorAparente ? (p.donoId || ctx.user.id) : null, secreta: doRebote || undefined });
+    // O humor real é íntimo: a sala só vê o aparente, então a mudança fica só para o dono (e o mestre).
+    registrar(c.salas.social.log, { autor: p.nome, rotulo: `Humor de ${p.nome}`, texto: `${texto} (a sala vê ${nomeH(humorAparente(p))})`,
+      privadoPara: p.donoId || ctx.user.id, secreta: doRebote || undefined });
   },
 
   // Descanso curto ou longo (mestre): regenera PV (e Sanidade no longo), testa os marcadores, recarrega capacidades.
@@ -1731,20 +1780,21 @@ export const acoes = {
     const per = sis.pericias.find(x => x.id === 'manipulacao');
     const nomeSub = per?.subpericias.find(x => x.id === sub)?.nome || sub;
     const nomeEsp = sis.social.espectros?.[espectro]?.nome || espectro;
-    const mudar = novo => { b.humor = novo; b.humorAparente = null; b.humorImposto = novo !== 'neutro'; b.humorOpcoes = []; };
+    // O humor aparente (o que a sala vê) não muda junto: só o dono troca a máscara.
+    const mudar = novo => { b.humor = novo; b.humorImposto = novo !== 'neutro'; b.humorOpcoes = []; };
     // Toda manipulação é OCULTA: só o mestre vê quem testou, a intenção e o resultado. Para os jogadores tudo acontece
     // em silêncio (o alvo só sente o humor mudar). Ler o humor (Empatia) dá a quem leu o que ele percebeu.
     let resultado;
     let percebido = null;
     if (r.ler) {
       const real = nomeH(b.humor || 'neutro');
-      const visto = nomeH(b.humorAparente || b.humor || 'neutro');
+      const visto = nomeH(humorAparente(b));
+      const mascarado = humorAparente(b) !== (b.humor || 'neutro');
       // Falhou: percebe só o que a pessoa mostra — escrito igual, para não entregar a falha.
-      percebido = r.sucesso && b.humorAparente
-        ? `Você percebe que ${b.nome} está ${real}, por trás da aparência de ${visto}.`
-        : `Você percebe que ${b.nome} está ${r.sucesso ? real : visto}.`;
+      // Mesma frase nos dois casos, para não entregar se passou.
+      percebido = `Você percebe que ${b.nome} está ${r.sucesso ? real : visto}.`;
       // Intuir humor: o personagem não sabe se acertou — só o mestre vê e conta na mesa o que ele percebe.
-      resultado = r.sucesso ? `SUCESSO — ${a.nome} intui ${b.nome}: ${b.humorAparente ? `a máscara (${visto}) caiu, real ${real}` : `real ${real}`}` : `FALHOU — ${a.nome} só percebe ${visto}`;
+      resultado = r.sucesso ? `SUCESSO — ${a.nome} intui ${b.nome}: ${mascarado ? `a máscara (${visto}) caiu, real ${real}` : `real ${real}`}` : `FALHOU — ${a.nome} só percebe ${visto}`;
     } else if (r.sucesso) {
       mudar(humor);
       resultado = `SUCESSO — ${b.nome} fica ${nomeH(humor)}`;
@@ -1762,12 +1812,17 @@ export const acoes = {
     const entrada = {
       tipo: 'manipulacao', secreta: true, autor: a.nome, rotulo: r.ler ? `Intuir humor de ${b.nome} (Empatia) — oculto` : `${nomeSub} em ${b.nome} (quer ${nomeH(humor)}) — oculto`, sucesso: r.sucesso, critico: r.critico,
       texto: `${resultado}${r.critico ? ` (crítico de ${r.critico})` : ''}`,
-      detalhe: `d100 ${r.dp}${r.modo ? ` (vantagem [${r.dados.join(', ')}])` : ''} + ${r.acao}${mods ? ` (${mods})` : ''} = ${r.total} contra R.MNP ${r.nd} · espectro ${nomeEsp} · DS ${r.ds}`,
-      dp: r.dp, dados: r.dados, ds: r.ds, total: r.total, nd: r.nd,
+      detalhe: `d100 ${r.dp}${r.modo ? ` (vantagem [${r.dados.join(', ')}])` : ''} + ${r.acao}${mods ? ` (${mods})` : ''} = ${r.total} contra R.MNP ${r.nd} · espectro ${nomeEsp} · DS ${r.dsDados?.length > 1 ? `[${r.dsDados.join(', ')}] → ${r.ds}` : r.ds}`,
+      dp: r.dp, dados: r.dados, ds: r.ds, dsDados: r.dsDados, total: r.total, nd: r.nd,
     };
     registrar(c.salas.social.log, entrada);
+    (c.salas.social.testaram ||= []).includes(a.id) || c.salas.social.testaram.push(a.id);
+    // Intuir humor: quem testou recebe o que percebeu, sempre com a mesma frase (falhou → o aparente; passou → o real),
+    // então nunca sabe se falhou. Fica também no registro, só para ele.
+    if (r.ler) registrar(c.salas.social.log, { autor: a.nome, rotulo: `Intuir humor de ${b.nome}`, texto: percebido, privadoPara: a.donoId || ctx.user.id });
     if (ctx.mestre) return { ...entrada, revelado: percebido };
-    return { oculto: true };
+    // Os outros testes não mostram número nem resultado: só que o teste foi feito (autor, 22/10).
+    return { oculto: true, rotulo: r.ler ? `Intuir humor de ${b.nome}` : `${nomeSub} em ${b.nome}`, percebido };
   },
 
   // Empatia natural (mestre, regra do aplicativo): cada humano influencia os outros com o humor que mostra.

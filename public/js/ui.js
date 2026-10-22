@@ -76,11 +76,14 @@ export function botao(rotulo, aoClicar, props = {}) {
   }, ic ? icone(ic) : null, rotulo ? h('span', {}, rotulo) : null);
 }
 
+// Avisos ficam 15 s (ou até clicar no ✕). No máximo 4 na tela: o mais antigo sai.
 export function aviso(texto, tipo = 'ok') {
   const caixa = document.getElementById('avisos');
-  const el = h('div', { class: `aviso ${tipo}` }, texto);
+  const el = h('div', { class: `aviso ${tipo}`, role: 'status' }, h('span', {}, texto),
+    h('button', { type: 'button', class: 'fechar-aviso so-icone', 'aria-label': 'Fechar aviso', onclick: () => el.remove() }, icone('x')));
   caixa.append(el);
-  setTimeout(() => el.remove(), tipo === 'erro' ? 6000 : 3500);
+  while (caixa.children.length > 4) caixa.firstElementChild.remove();
+  setTimeout(() => el.remove(), 15000);
 }
 
 export function janela(titulo, conteudo, acoes = []) {

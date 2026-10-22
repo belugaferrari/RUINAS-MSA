@@ -39,6 +39,14 @@ export function observarRolagens(c) {
   if (!mostrando) proxima();
 }
 
+// Teste oculto (Sala Social): uma arte rápida, só neste aparelho, dizendo que o teste foi feito — sem número nem resultado.
+export function mostrarTesteFeito(ic, rotulo) {
+  const el = h('div', { class: 'teste-feito', role: 'status', 'aria-live': 'polite' },
+    h('div', { class: 'teste-feito-cartao' }, h('span', { class: 'teste-feito-icone' }, icone(ic)), h('strong', {}, 'Teste feito'), h('small', {}, rotulo)));
+  document.body.append(el);
+  setTimeout(() => el.remove(), 2600);
+}
+
 function proxima() {
   const e = fila.shift();
   if (!e) { mostrando = false; return; }
@@ -53,6 +61,8 @@ function proxima() {
   const ds = dDs.el;
   const rotuloDp = h('small', {}, 'DP · 2d10');
   const extrasDp = (e.dados || []).length > 1 ? h('small', { class: 'dado-extra' }, `rolou ${e.dados.join(' e ')}`) : null;
+  // Vantagem/desvantagem: o DS também rola duas vezes (maior na vantagem, menor na desvantagem).
+  const extrasDs = (e.dsDados || []).length > 1 ? h('small', { class: 'dado-extra' }, `rolou ${e.dsDados.join(' e ')}`) : null;
   const dano = (e.danoDados || []).flatMap(x => x.dados.map(v => h('div', { class: 'dado dano', title: x.nome, 'aria-hidden': 'true' }, h('span', {}, String(v)))));
   // No ataque, só "Acertou" (com o dano tomado) ou "Defendeu".
   const resultado = e.tipo === 'ataque'
@@ -68,7 +78,7 @@ function proxima() {
       h('p', { class: 'dados-quem' }, h('strong', {}, e.autor), ` — ${e.rotulo}`),
       h('div', { class: 'dados-linha' },
         h('div', { class: 'dado-rotulo' }, h('div', { class: 'par-d10' }, dezena, unidade), rotuloDp, extrasDp),
-        h('div', { class: 'dado-rotulo' }, ds, h('small', {}, 'DS · d10')),
+        h('div', { class: 'dado-rotulo' }, ds, h('small', {}, 'DS · d10'), extrasDs),
         dano.length ? h('div', { class: 'dado-rotulo' }, h('div', { class: 'dados-dano' }, dano), h('small', {}, 'dano')) : null),
       resumo,
       h('button', { type: 'button', class: 'pequeno', onclick: ev => { ev.stopPropagation(); fechar(); } }, icone('x'), 'Fechar')));
@@ -95,6 +105,7 @@ function proxima() {
       dDs.rolar((e.ds ?? 0) % 10, { duracao: 1300, atraso: 160 }),
     ]).then(fim);
   }
-  const t = setTimeout(fechar, 8000);
+  // Fica 15 s na tela (ou até clicar em Fechar).
+  const t = setTimeout(fechar, 15000);
 }
 
