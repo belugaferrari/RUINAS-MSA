@@ -100,3 +100,18 @@ test('reações e ações livres aparecem como ataque especial momentâneo para 
   } finally { Math.random = rnd; }
   assert.ok(!s.ofertas.some(o => o.habilidade === 'Predador Apex'));
 });
+
+test('ataque contra vários alvos: uma ação e uma munição, resolvido contra cada alvo', () => {
+  const c = novaCampanha(mestre, { nome: 'T', maxJogadores: 2, nivel: 1, sistema: 'mss' });
+  const ids = ['Atiradora', 'A', 'B', 'C'].map(nome => executar(c, 'personagem.criar', { tipo: 'npc', grupoId: 'encontros', ficha: { nome } }, ctxM).id);
+  for (const id of ids) executar(c, 'sala.adicionar', { sala: 'batalha', id }, ctxM);
+  const at = c.personagens.find(p => p.id === ids[0]);
+  at.itens = [{ uid: 'g', nome: 'Granada', tipo: 'arma', dano: '2d6', tipoDano: 'Concussão', equipado: true, alcance: 'distancia', pericia: 'armas-de-fogo.pistolas', capacidade: 3, carregada: 3 }];
+  const cb = c.salas.batalha.combate;
+  cb.vez = cb.ordem.findIndex(o => o.id === ids[0]);
+  const r = executar(c, 'combate.atacarVarios', { atacante: ids[0], alvos: ids.slice(1), opcoes: { armaUid: 'g', area: true } }, ctxM);
+  assert.equal(r.resultados.length, 3);
+  assert.equal(at.itens[0].carregada, 2, 'uma munição só');
+  assert.equal(cb.gasto[ids[0]].principal, 1, 'uma ação só');
+  assert.throws(() => executar(c, 'combate.atacarVarios', { atacante: ids[0], alvos: [ids[1]], opcoes: { armaUid: 'g' } }, ctxM), /dois alvos/);
+});

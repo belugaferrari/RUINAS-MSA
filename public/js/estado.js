@@ -26,7 +26,8 @@ export function mudar(parcial) {
 }
 
 export const personagemPorId = id => estado.campanha?.personagens.find(p => p.id === id);
-export const meusPersonagens = () => (estado.campanha?.personagens || []).filter(p => p.donoId === estado.usuario?.id);
+// Personagens do jogador (os companheiros dele ficam de fora: aparecem na aba Companheiros e nas salas).
+export const meusPersonagens = () => (estado.campanha?.personagens || []).filter(p => p.donoId === estado.usuario?.id && !p.companheiroDe);
 
 // Regras do sistema (MSA ou MSS) já carregadas, por id.
 const sistemas = new Map();

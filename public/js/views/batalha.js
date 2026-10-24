@@ -295,6 +295,18 @@ function quadroAtaques(p, participantes, mestre) {
   const automaticas = auto ? armasDisponiveis(p, sis) : [];
   const testar = ref => prepararTeste(p.id, ref);
   const atacar = async uid => {
+    // Vários alvos (área ou golpe que pega mais de um): um ataque só, resolvido contra cada alvo escolhido.
+    const sel = estado.sel.ataque || {};
+    const varios = sel.varios ? (sel.alvos || []).filter(id => outros.some(x => x.id === id)) : [];
+    if (sel.varios) {
+      if (varios.length < 2) throw new Error('Marque pelo menos dois alvos em "Vários alvos" (Opções do ataque).');
+      const rv = await acao('combate.atacarVarios', { atacante: p.id, alvos: varios, opcoes: { ...opcoesGerais(p, mestre), armaUid: uid } });
+      if (estado.sel.ataque) Object.assign(estado.sel.ataque, { sacrificio: false, cargaNucleo: false, investida: null });
+      const resumo = rv.resultados.map(x => `${personagemPorId(x.alvo)?.nome || '?'}: ${x.tipo === 'ataque' ? x.texto : x.tipo === 'barrado' ? 'não atacou (Civilizados)' : 'aguardando a defesa'}`);
+      aviso(`${p.nome} ataca ${varios.length} alvos — ${resumo.join(' · ')}`);
+      if (rv.excesso) aviso(`Atenção: ${rv.excesso}.`, 'erro');
+      return;
+    }
     if (!alvo) throw new Error('Escolha o alvo (clique no cartão dele no campo).');
     const r = await acao('combate.atacar', { atacante: p.id, alvo, opcoes: { ...opcoesGerais(p, mestre), armaUid: uid } });
     if (estado.sel.ataque) Object.assign(estado.sel.ataque, { sacrificio: false, cargaNucleo: false, investida: null });
@@ -324,7 +336,7 @@ function quadroAtaques(p, participantes, mestre) {
       it.capacidade ? h('span', { class: `selo ${semBala ? 'perigo' : ''}` }, `${it.carregada || 0}/${it.capacidade}`) : null,
       it.capacidade ? botao('', () => acao('item.recarregar', { id: p.id, uid: it.uid }), { class: 'pequeno', icone: 'refresh-cw', title: `Recarregar ${it.nome}`, disabled: (it.carregada || 0) >= it.capacidade }) : null,
       auto && automaticas.some(a => a.uid === it.uid)
-        ? dado(`${p.nome} ataca ${b?.nome || 'o alvo'} com ${it.nome}`, () => atacar(it.uid), { disabled: semBala || !alvo })
+        ? dado(`${p.nome} ataca ${b?.nome || 'o alvo'} com ${it.nome}`, () => atacar(it.uid), { disabled: semBala || (!alvo && !estado.sel.ataque?.varios) })
         : dado(`Testar ${it.nome}`, () => testar(ref)));
   };
   const linhaSub = (id, nome) => h('li', { class: 'ataque-linha' },
@@ -368,7 +380,7 @@ function quadroAtaques(p, participantes, mestre) {
             aviso(r.texto, r.sucesso ? 'ok' : 'erro');
           }, { disabled: !alvo })))) : null,
       outrasArmas.length ? h('li', { class: 'ataque-grupo' }, h('div', { class: 'ataque-cabeca' }, h('strong', {}, 'Outras')), h('ul', {}, outrasArmas.map(linhaArma))) : null),
-    auto ? opcoesAtaque(p, mestre) : null,
+    auto ? opcoesAtaque(p, mestre, outros) : null,
   ];
 }
 
@@ -418,7 +430,7 @@ function ataquesEspeciais(p) {
 }
 
 // Opções que valem para o próximo ataque (surpresa, localizado…); as do mestre mudam a rolagem.
-function opcoesAtaque(p, mestre) {
+function opcoesAtaque(p, mestre, outros = []) {
   const sel = estado.sel.ataque ||= {};
   const nucleo = recursoDe(p, estado.sistema, 'nucleo');
   const caixa = (chave, rotulo, redesenha = false) => h('label', { class: 'linha' },
@@ -430,6 +442,7 @@ function opcoesAtaque(p, mestre) {
       caixa('surpresa', 'Surpresa'),
       caixa('elevado', 'Terreno elevado'),
       caixa('area', 'Ataque em área', true),
+      caixa('varios', 'Vários alvos', true),
       caixa('cobertura', 'Alvo em cobertura (+30, tiro)'),
       p.tipo === 'pj' ? caixa('sacrificio', 'Sacrifício (+10%, D6 de vida)') : null,
       // Núcleo energético: +2d6 elétrico neste ataque (gasta 1 carga). Máquina Implacável: Investida com dano maior.
@@ -441,7 +454,13 @@ function opcoesAtaque(p, mestre) {
       mestre ? caixa('vantagem', 'Vantagem') : null,
       mestre ? caixa('desvantagem', 'Desvantagem') : null,
       mestre ? h('label', { class: 'linha' }, 'Mod. %', h('input', { type: 'number', class: 'curto', value: sel.mod || 0, onchange: e => { sel.mod = e.target.value; } })) : null,
-      mestre ? h('label', { class: 'linha' }, 'Dano livre', h('input', { class: 'curto', placeholder: '1d6+1', value: sel.danoLivre || '', onchange: e => { sel.danoLivre = e.target.value.trim(); } })) : null));
+      mestre ? h('label', { class: 'linha' }, 'Dano livre', h('input', { class: 'curto', placeholder: '1d6+1', value: sel.danoLivre || '', onchange: e => { sel.danoLivre = e.target.value.trim(); } })) : null),
+    // Vários alvos: marque quem o ataque pega (em área, cada um se defende com Evasão).
+    sel.varios ? h('fieldset', { class: 'alvos-varios' },
+      h('legend', {}, `Alvos (${(sel.alvos || []).filter(id => outros.some(x => x.id === id)).length} marcados)`),
+      outros.map(x => h('label', { class: 'linha' },
+        h('input', { type: 'checkbox', checked: (sel.alvos || []).includes(x.id), onchange: e => { sel.alvos = e.target.checked ? [...new Set([...(sel.alvos || []), x.id])] : (sel.alvos || []).filter(y => y !== x.id); render(); } }),
+        x.nome))) : null);
 }
 
 // ---------- Barra da esquerda: avatares na ordem da iniciativa ----------

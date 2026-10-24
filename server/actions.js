@@ -153,7 +153,8 @@ function mapaPublico(c, area) {
   const img = c.imagens.find(i => i.id === c.mapa.imagemId);
   const vivos = Object.fromEntries(Object.entries(c.mapa.pecas)
     .filter(([id, x]) => c.personagens.some(p => p.id === id) && (mestre || !x.oculto)));
-  return { ...c.mapa, pecas: vivos, marcas: mestre ? (c.mapa.marcas || []) : [], midia: img ? { url: img.url, tipo: img.tipo || 'imagem', titulo: img.titulo } : null };
+  // Objetos no mapa (armadilhas, coberturas, objetos…): os ocultos só o mestre vê.
+  return { ...c.mapa, pecas: vivos, marcas: mestre ? (c.mapa.marcas || []) : [], objetos: (c.mapa.objetos || []).filter(o => mestre || !o.oculto), midia: img ? { url: img.url, tipo: img.tipo || 'imagem', titulo: img.titulo } : null };
 }
 
 // ---------- utilitários ----------
@@ -539,6 +540,13 @@ function gastarAcao(c, p, tipo, { desfazer = false } = {}) {
   }
   return avisos.length ? avisos.join('; ') : null;
 }
+
+export const TIPOS_OBJETO_MAPA = ['armadilha', 'objeto', 'cobertura', 'perigo', 'bau', 'porta'];
+const ehArmadilha = it => /armadilh/i.test(`${it.categoria || ''} ${it.nome || ''}`);
+export const TIPOS_COMPANHEIRO = [
+  { id: 'familiar', nome: 'Familiar' }, { id: 'animal', nome: 'Animal' }, { id: 'montaria', nome: 'Montaria' },
+  { id: 'automato', nome: 'Autômato / drone' }, { id: 'invencao', nome: 'Invenção' }, { id: 'implante', nome: 'Implante' }, { id: 'outro', nome: 'Outro' },
+];
 
 // Núcleo energético com coração humano: cada carga usada causa 1d6 de dano (o mestre marca "coração artificial" na ficha).
 function cargaNoCoracao(p, qtd = 1) {
@@ -1119,6 +1127,79 @@ export const acoes = {
     (c.mapa.marcas ||= []).push({ id: uid(), col: Math.max(0, parseInt(col, 10) || 0), lin: Math.max(0, parseInt(lin, 10) || 0), texto: nomeStr(texto).slice(0, 300) || 'Marcação' });
   },
 
+  // Objetos no mapa (autor, 24/10): o mestre põe armadilhas, coberturas, objetos e perigos (visíveis ou ocultos).
+  'mapa.objeto'(c, { col, lin, nome, tipo, oculto }, ctx) {
+    exigirMestre(ctx);
+    c.mapa ||= novoMapa();
+    const t = TIPOS_OBJETO_MAPA.includes(tipo) ? tipo : 'objeto';
+    (c.mapa.objetos ||= []).push({ id: uid(), tipo: t, nome: nomeStr(nome).slice(0, 80) || 'Objeto', col: Math.max(0, parseInt(col, 10) || 0), lin: Math.max(0, parseInt(lin, 10) || 0), oculto: !!oculto });
+  },
+
+  // Jogador arma uma armadilha que tem pronta no inventário: ela sai do inventário e aparece no mapa (visível).
+  'mapa.armar'(c, { id, uid: itemUid, col, lin }, ctx) {
+    const p = personagem(c, id);
+    exigirDonoOuMestre(ctx, p);
+    const it = (p.itens || []).find(i => i.uid === itemUid);
+    if (!it || !ehArmadilha(it)) throw erro('Escolha uma armadilha pronta no inventário.');
+    if ((it.quantidade || 1) > 1) it.quantidade -= 1; else p.itens = p.itens.filter(i => i !== it);
+    c.mapa ||= novoMapa();
+    (c.mapa.objetos ||= []).push({ id: uid(), tipo: 'armadilha', nome: it.nome, col: Math.max(0, parseInt(col, 10) || 0), lin: Math.max(0, parseInt(lin, 10) || 0), oculto: false, dono: p.id,
+      item: { ...it, quantidade: 1 } });
+    registrar(c.salas.batalha.log, { autor: p.nome, rotulo: `armou ${it.nome}`, texto: `no mapa (coluna ${(parseInt(col, 10) || 0) + 1}, linha ${(parseInt(lin, 10) || 0) + 1})` });
+  },
+
+  // Tirar um objeto do mapa (mestre; ou quem armou a armadilha, que a recolhe de volta ao inventário).
+  'mapa.objetoRemover'(c, { id, recolher }, ctx) {
+    const o = (c.mapa?.objetos || []).find(x => x.id === id);
+    if (!o) return;
+    const dono = o.dono ? c.personagens.find(p => p.id === o.dono) : null;
+    if (!ctx.mestre && !(dono && dono.donoId === ctx.user.id)) throw erro('Só o mestre (ou quem armou) tira este objeto.');
+    if (recolher && dono && o.item) (dono.itens ||= []).push({ ...o.item, uid: uid() });
+    c.mapa.objetos = c.mapa.objetos.filter(x => x.id !== id);
+  },
+
+  'mapa.objetoMover'(c, { id, col, lin, oculto }, ctx) {
+    exigirMestre(ctx);
+    const o = (c.mapa?.objetos || []).find(x => x.id === id);
+    if (!o) throw erro('Objeto não encontrado.');
+    if (col != null) o.col = Math.max(0, parseInt(col, 10) || 0);
+    if (lin != null) o.lin = Math.max(0, parseInt(lin, 10) || 0);
+    if (oculto != null) o.oculto = !!oculto;
+  },
+
+  // ---------- Companheiros (familiares, animais, autômatos, invenções, implantes, montarias) ----------
+  // São personagens do jogador ligados a um personagem dele: entram no Campo de Batalha e no mapa como qualquer um,
+  // e o dono os controla. Podem nascer do Livro dos Monstros (um animal, uma besta) ou em branco.
+  'companheiro.criar'(c, { de, nome, tipo, monstro }, ctx) {
+    const dono = personagem(c, de);
+    exigirDonoOuMestre(ctx, dono);
+    const sis = sistema(c.sistema);
+    const t = TIPOS_COMPANHEIRO.find(x => x.id === tipo)?.id || 'outro';
+    let p;
+    if (monstro) {
+      const m = sis.monstros.find(x => x.nome === monstro);
+      if (!m) throw erro('Criatura não encontrada no Livro dos Monstros.');
+      p = npcDeMonstro(c, m);
+    } else {
+      const f = novaFicha(sis, c);
+      p = { ...f, id: uid(), tipo: 'npc', criatura: t !== 'outro', tipoCriatura: { animal: 'animal', montaria: 'animal', automato: 'automato', invencao: 'maquina', implante: 'maquina' }[t] || 'besta' };
+      delete p.sanidade; delete p.humanidade;
+    }
+    if (!c.grupos.some(g => g.id === 'companheiros')) c.grupos.push({ id: 'companheiros', nome: 'Companheiros' });
+    Object.assign(p, { nome: nomeStr(nome).slice(0, 80) || p.nome || 'Companheiro', grupoId: 'companheiros', donoId: dono.donoId || null, companheiroDe: dono.id, companheiroTipo: t });
+    c.personagens.push(p);
+    registrar(c.log, { autor: dono.nome, rotulo: 'Novo companheiro', texto: `${p.nome} (${TIPOS_COMPANHEIRO.find(x => x.id === t).nome})` });
+    return { id: p.id };
+  },
+
+  'companheiro.remover'(c, { id }, ctx) {
+    const p = personagem(c, id);
+    if (!p.companheiroDe) throw erro('Esse personagem não é um companheiro.');
+    exigirDonoOuMestre(ctx, p);
+    acoes['personagem.remover'](c, { id }, { ...ctx, mestre: true });
+    if (c.mapa?.pecas) delete c.mapa.pecas[id];
+  },
+
   'mapa.desmarcar'(c, { id }, ctx) {
     exigirMestre(ctx);
     if (c.mapa) c.mapa.marcas = (c.mapa.marcas || []).filter(m => m.id !== id);
@@ -1382,7 +1463,7 @@ export const acoes = {
     // Economia do turno: o ataque gasta a ação principal; fora do próprio turno, é reação (ex.: ataque de oportunidade).
     // Ataque extra de habilidade (Quebra-Hordas) não gasta.
     const cbA = s.combate;
-    const excesso = op.extra ? null : gastarAcao(c, a, cbA && cbA.ordem[cbA.vez]?.id !== a.id ? 'reacao' : 'principal');
+    const excesso = op.extra || op.multiplo ? null : gastarAcao(c, a, cbA && cbA.ordem[cbA.vez]?.id !== a.id ? 'reacao' : 'principal');
     agressaoSubita(c, a, b, sis);
     const notasAgir = efeitosAoAgir(a, sis);
     if (notasAgir.length) registrar(s.log, { autor: a.nome, rotulo: 'Efeitos', texto: notasAgir.join(' · ') });
@@ -1392,7 +1473,8 @@ export const acoes = {
     const itemArma = (a.itens || []).find(i => i.uid === arma.uid);
     // Cadência: a arma dispara "cadência" balas por ataque (com menos balas, dispara as que tiver).
     op.disparos = arma.cadencia || 1;
-    if (itemArma?.capacidade) {
+    // Vários alvos: a munição sai só no primeiro (é um único ataque).
+    if (itemArma?.capacidade && !op.multiplo) {
       if ((itemArma.carregada || 0) < 1) throw erro(`${itemArma.nome} está sem munição. Recarregue antes de atirar.`);
       op.disparos = Math.min(op.disparos, itemArma.carregada);
       itemArma.carregada -= op.disparos;
@@ -1413,6 +1495,20 @@ export const acoes = {
     (s.pendentes ||= []).push(pend);
     registrar(s.log, { autor: a.nome, rotulo: `${a.nome} ataca ${b.nome} com ${arma.nome}${op.area ? ' (área)' : ''}`, texto: `aguardando a defesa de ${b.nome}` });
     return { ...pend, excesso };
+  },
+
+  // Ataque contra vários alvos (em área ou não): um ataque só (uma ação, uma munição), resolvido contra cada alvo,
+  // que se defende sozinho (em área, com Evasão: metade do dano se passar).
+  'combate.atacarVarios'(c, { atacante, alvos, opcoes }, ctx) {
+    const lista = [...new Set(Array.isArray(alvos) ? alvos : [])].filter(id => id && id !== atacante);
+    if (lista.length < 2) throw erro('Escolha pelo menos dois alvos.');
+    if (lista.length > LIMITE_SALA) throw erro('Alvos demais.');
+    const resultados = [];
+    lista.forEach((alvo, i) => {
+      const r = acoes['combate.atacar'](c, { atacante, alvo, opcoes: { ...(opcoes || {}), ...(i > 0 ? { multiplo: true } : {}) } }, ctx);
+      resultados.push({ alvo, ...r });
+    });
+    return { tipo: 'varios', resultados, excesso: resultados[0]?.excesso || null };
   },
 
   // Oferta de ação extra (Quebra-Hordas, Guerras diplomáticas): quem controla o atacante aceita (com o alvo) ou dispensa.
