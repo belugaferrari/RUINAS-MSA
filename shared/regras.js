@@ -282,8 +282,17 @@ export function acoesDaHabilidade(ficha, sistema, hab) {
 }
 // Dados de dano citados no texto da habilidade ("+1D8 de dano", "causa 2d6") — para rolar direto do painel de ataques.
 export const dadosDaHabilidade = hab => [...new Set((String(hab.descricao || '').match(/\b\d*[dD]\d+(?:\s*[+-]\s*\d+(?!\s*%))?/g) || []).map(x => x.replace(/\s+/g, '').toLowerCase().replace(/^d/, '1d')))].slice(0, 4);
-// Habilidade que é um ataque especial (fala de ataque/golpe e de dano) — vai também para as opções de ataque.
-export const ehAtaqueEspecial = hab => /\b(ataque|ataca|atacar|golpe|disparo|dispar|investida|arremess|morde|garra)/.test(semAcento(hab.descricao)) && /dano|\d*d\d+/.test(semAcento(hab.descricao));
+// Ataque especial = habilidade que É um ataque que o personagem faz (gasta ação), não um bônus passivo nos ataques
+// ("Ataques desarmados causam +1" é passivo). Sem a ação escrita no livro, gasta a Ação principal (autor, 24/10).
+export function ehAtaqueEspecial(hab) {
+  const t = semAcento(hab.descricao || '');
+  if (!/dano|\d*d\d+/.test(t)) return false;
+  const faz = /(pode|podera|consegue|voce)[^.]{0,60}\b(atacar|um ataque|ataque extra|golpe|disparo|investida|arremess)/.test(t)
+    || /\bataque (especial|brutal|extra)\b/.test(t);
+  const comAcao = TIPOS_ACAO.some(x => x.re.test(t)) && /\b(ataque|atacar|golpe|disparo|investida)/.test(t);
+  return faz || comAcao;
+}
+export const acaoDoAtaqueEspecial = (ficha, sistema, hab) => acoesDaHabilidade(ficha, sistema, hab)[0] || 'principal';
 
 // Regra própria da habilidade, pelo nome (sem acento, maiúsculas nem o que vem entre parênteses).
 export const chaveHabilidade = nome => semAcento(nome).replace(/\s*[([].*$/, '').replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
@@ -315,7 +324,42 @@ export function efeitosHabilidade(ficha, sistema, hab) {
 export function modoHabilidade(ficha, sistema, hab) {
   if (ficha.ajustesHabilidades?.[hab.id]) return hab.regra?.modo === 'sempre' ? 'sempre' : 'ligar';
   if (hab.regra?.modo) return hab.regra.modo;
-  return efeitosHabilidade(ficha, sistema, hab).notas.length ? 'ligar' : 'lembrete';
+  const ef = efeitosHabilidade(ficha, sistema, hab);
+  // Bônus que só vale num tipo de ataque ("ataques desarmados causam +1") e não gasta ação: automático — entra sozinho
+  // quando o ataque é daquele tipo (autor, 24/10).
+  if (bonusSoCondicional(ef) && !acoesDaHabilidade(ficha, sistema, hab).length) return 'sempre';
+  return ef.notas.length ? 'ligar' : 'lembrete';
+}
+const bonusSoCondicional = ef => (ef.danoCond.length || ef.margemEfeito.length) && !ef.danoFixo && !ef.danoDados.length && !ef.testes && !ef.pv
+  && !Object.keys(ef.atributos).length && !Object.keys(ef.pericias).length && !Object.keys(ef.subpericias).length && !ef.ip.geral && !Object.keys(ef.ip.tipos).length;
+
+// Esse ataque é do tipo da condição do bônus? desarmado (Briga/desarmado), branca, distancia, corpo.
+export function armaNaCondicao(arma, cond) {
+  if (!cond) return true;
+  const per = String(arma?.pericia || '');
+  if (cond === 'desarmado') return arma?.uid === 'desarmado' || per.startsWith('briga.') || !!arma?.natural;
+  if (cond === 'branca') return per.startsWith('arma-branca.');
+  if (cond === 'distancia') return arma?.alcance === 'distancia';
+  if (cond === 'corpo') return arma?.alcance !== 'distancia';
+  return true;
+}
+
+// Dano das habilidades num ataque, parte por parte (para mostrar a conta): as ativas/automáticas, mais a do ataque
+// especial usado agora (uma vez só), respeitando a condição de cada bônus (ex.: só desarmado). Também a margem extra do efeito.
+export function danoDasHabilidades(ficha, sistema, arma, especialId = null) {
+  const ativas = new Set(ficha.ativas || []);
+  const partes = [];
+  let margem = 0;
+  for (const x of listaHabilidades(ficha, sistema)) {
+    const vale = ativas.has(x.id) || modoHabilidade(ficha, sistema, x) === 'sempre' || x.id === especialId;
+    if (!vale) continue;
+    const ef = efeitosHabilidade(ficha, sistema, x);
+    if (ef.danoFixo) partes.push({ nome: x.nome, fixo: ef.danoFixo });
+    for (const e of ef.danoDados) partes.push({ nome: x.nome, expr: e });
+    for (const c of ef.danoCond) if (armaNaCondicao(arma, c.cond)) partes.push({ nome: x.nome, ...(c.fixo ? { fixo: c.fixo } : { expr: c.dados }) });
+    for (const m of ef.margemEfeito) if (armaNaCondicao(arma, m.cond)) margem += m.valor;
+  }
+  return { partes, margem };
 }
 
 export function bonusHabilidades(ficha, sistema) {

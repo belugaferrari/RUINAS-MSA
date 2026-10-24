@@ -4,7 +4,7 @@
 import { h, botao, selecao, aviso, icone, titulo, vazio, pedirTexto, confirmar } from '../ui.js';
 import { estado, render, personagemPorId } from '../estado.js';
 import { acao } from '../api.js';
-import { derivados, listaHabilidades, efeitosHabilidade, modoHabilidade, temHabilidade, tipoCriatura, chaveHabilidade, GRUPOS_IP, acoesDaHabilidade, nomeAcao, dadosDaHabilidade, ehAtaqueEspecial, TIPOS_ACAO } from '/shared/regras.js';
+import { derivados, listaHabilidades, efeitosHabilidade, modoHabilidade, temHabilidade, tipoCriatura, chaveHabilidade, GRUPOS_IP, acoesDaHabilidade, nomeAcao, dadosDaHabilidade, ehAtaqueEspecial, TIPOS_ACAO, acaoDoAtaqueEspecial } from '/shared/regras.js';
 import { armasDisponiveis, ipDe, opcoesDefesa, defesaDoAlvo, danoDaArma, recursoDe } from '/shared/combate.js';
 import { trilhaCompacta, escolherCondicao, cargaView } from './ficha.js';
 import { painelSlot, naMao, maoHabil } from './boneco.js';
@@ -370,7 +370,7 @@ function quadroAtaques(p, participantes, mestre) {
           h('ul', {}, MANOBRAS.map(id => subs('briga').find(s => s.id === id)).filter(Boolean).map(s => linhaSub(s.id, s.nome))))),
       grupo('Armas brancas', 'arma-branca', i => i.pericia?.startsWith('arma-branca.')),
       grupo('Armas de fogo', 'armas-de-fogo', i => i.pericia?.startsWith('armas-de-fogo.')),
-      ataquesEspeciais(p),
+      ataquesEspeciais(p, alvo, b),
       auto && temHabilidade(p, sis, 'Dano ao sistema') ? h('li', { class: 'ataque-grupo' }, h('div', { class: 'ataque-cabeca' }, h('strong', {}, 'Emissor Neural')),
         h('ul', {}, h('li', { class: 'ataque-linha' },
           h('span', { class: 'ataque-nome' }, 'Dano ao sistema', h('small', {}, ` 2d6 + MOD INT elétrico · ${pct('computacao.operacional')}${b ? ` · ${['drone', 'automato', 'maquina'].includes(tipoCriatura(b)) ? 'Normal' : 'Difícil (item)'}` : ''}`)),
@@ -408,25 +408,42 @@ function acoesDoTurno(p) {
 
 // Ataques especiais e habilidades que gastam ação (de todas as classes): o tempo que gastam, "Usar" (marca a ação do
 // turno e anota) e os dados de dano citados no texto.
-function ataquesEspeciais(p) {
+function ataquesEspeciais(p, alvo, b) {
   const sis = estado.sistema;
-  const lista = listaHabilidades(p, sis).map(x => ({ x, acoes: acoesDaHabilidade(p, sis, x) }))
-    .filter(({ x, acoes }) => acoes.length || ehAtaqueEspecial(x))
-    .sort((a, b) => Number(ehAtaqueEspecial(b.x)) - Number(ehAtaqueEspecial(a.x)));
+  // Bônus passivos ("ataques desarmados causam +1") não entram aqui: valem sozinhos no ataque do tipo certo.
+  const lista = listaHabilidades(p, sis).map(x => ({ x, ataque: ehAtaqueEspecial(x), acoes: ehAtaqueEspecial(x) ? [acaoDoAtaqueEspecial(p, sis, x)] : acoesDaHabilidade(p, sis, x) }))
+    .filter(({ ataque, acoes }) => ataque || acoes.length)
+    .sort((a, b2) => Number(b2.ataque) - Number(a.ataque));
+  const armas = armasDisponiveis(p, sis);
+  const chaveArma = `especialArma:${p.id}`;
+  if (!armas.some(a => a.uid === estado.sel[chaveArma])) estado.sel[chaveArma] = (armas.find(a => a.uid !== 'desarmado') || armas[0])?.uid;
+  // Ataque especial: ataca o alvo com a arma escolhida; o bônus da habilidade entra uma vez, e gasta a ação dela.
+  const atacarCom = async x => {
+    if (!alvo) throw new Error('Escolha o alvo (clique no cartão dele no campo).');
+    const r = await acao('combate.atacar', { atacante: p.id, alvo, opcoes: { ...opcoesGerais(p, estado.campanha.papel === 'mestre'), armaUid: estado.sel[chaveArma], especial: x.id } });
+    if (r.tipo === 'barrado') aviso(r.texto, 'erro');
+    else if (r.tipo === 'ataque') aviso(`${r.autor} ${r.rotulo}: ${r.texto}`, r.sucesso ? 'ok' : 'erro');
+    else aviso(`${p.nome} usa ${x.nome} em ${b?.nome}: aguardando a defesa.`);
+    if (r.excesso) aviso(`Atenção: ${r.excesso}.`, 'erro');
+  };
   if (!lista.length) return null;
   const chave = 'abreGrupo:especiais';
   return h('li', { class: 'ataque-grupo' },
     h('div', { class: 'ataque-cabeca' }, h('strong', {}, 'Ataques especiais e ações de habilidades')),
     h('details', { open: estado.sel[chave] ?? true, ontoggle: e => { estado.sel[chave] = e.target.open; } },
       h('summary', {}, `${lista.length} habilidade${lista.length > 1 ? 's' : ''}`),
-      h('ul', {}, lista.map(({ x, acoes }) => h('li', { class: 'ataque-linha especial' },
-        h('span', { class: 'ataque-nome', title: x.descricao }, ehAtaqueEspecial(x) ? icone('swords') : icone('sparkles'), ` ${x.nome} `,
-          acoes.length ? h('small', { class: `selo acao acao-${acoes[0]}` }, nomeAcao(acoes[0])) : h('small', { class: 'selo', title: 'O livro não diz quanto tempo gasta: o mestre define (lápis: "ação: bônus")' }, 'ação ?')),
+      lista.some(y => y.ataque) ? h('label', { class: 'linha' }, h('small', {}, 'Arma dos ataques especiais'),
+        selecao(armas.map(a => ({ valor: a.uid, rotulo: `${a.nome} (${a.dano})` })), estado.sel[chaveArma], v => { estado.sel[chaveArma] = v; }, { 'aria-label': 'Arma dos ataques especiais' })) : null,
+      h('ul', {}, lista.map(({ x, ataque, acoes }) => h('li', { class: 'ataque-linha especial' },
+        h('span', { class: 'ataque-nome', title: x.descricao }, ataque ? icone('swords') : icone('sparkles'), ` ${x.nome} `,
+          h('small', { class: `selo acao acao-${acoes[0]}`, title: ataque && !acoesDaHabilidade(p, sis, x).length ? 'O livro não diz: ataque especial gasta a Ação principal' : 'Quanto tempo do turno gasta' }, nomeAcao(acoes[0]))),
         dadosDaHabilidade(x).map(d => botao(d, () => acao('rolar', { id: p.id, dado: d, rotulo: `${x.nome} (${d})`, sala: 'batalha' }).then(r => aviso(`${x.nome}: ${r.total} [${r.dados.join(', ')}]`)),
           { class: 'pequeno', icone: 'dices', title: `Rolar ${d} (${x.nome})` })),
-        botao('Usar', () => acao('combate.acao', { id: p.id, tipo: acoes[0] || 'livre', rotulo: `${p.nome} usa ${x.nome}` })
-          .then(r => { aviso(`${x.nome}: ${nomeAcao(acoes[0] || 'livre')} anotada.`); if (r.excesso) aviso(`Atenção: ${r.excesso}.`, 'erro'); }),
-        { class: 'pequeno primario', icone: 'zap', title: `Anota o uso e gasta a ${nomeAcao(acoes[0] || 'livre').toLowerCase()}`, disabled: !estado.campanha.salas.batalha.combate }))))));
+        ataque
+          ? botao('Atacar', () => atacarCom(x), { class: 'pequeno primario', icone: 'swords', title: `${x.nome}: ataca ${b?.nome || 'o alvo'} e gasta a ${nomeAcao(acoes[0]).toLowerCase()}`, disabled: !alvo })
+          : botao('Usar', () => acao('combate.acao', { id: p.id, tipo: acoes[0] || 'livre', rotulo: `${p.nome} usa ${x.nome}` })
+            .then(r => { aviso(`${x.nome}: ${nomeAcao(acoes[0] || 'livre')} anotada.`); if (r.excesso) aviso(`Atenção: ${r.excesso}.`, 'erro'); }),
+            { class: 'pequeno primario', icone: 'zap', title: `Anota o uso e gasta a ${nomeAcao(acoes[0] || 'livre').toLowerCase()}`, disabled: !estado.campanha.salas.batalha.combate }))))));
 }
 
 // Opções que valem para o próximo ataque (surpresa, localizado…); as do mestre mudam a rolagem.

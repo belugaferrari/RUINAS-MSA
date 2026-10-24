@@ -5,7 +5,7 @@ import { resolverAtaque, aplicarAtaque, armasDisponiveis, opcoesDefesa, sobrevid
 import { sincronizarEfeitos, passarTurnoEfeitos, efeitosAoAgir, cargaNoTurno, descansar } from '../shared/efeitos.js';
 import { fichasDeTeste, relatorioFicha } from '../shared/fichasTeste.js';
 import { passarNecessidades, comer, beber, dormir, rolarCaos, climaDoDia, descreverRelogio, fimDoCombate } from '../shared/tempo.js';
-import { podeSeduzir, itemAberto, itemVisivel, xpParaSubir, novaFicha, podeEquipar, rolarDado, rolarAtributosCriacao, testeDMil, gerarEncontro, derivados, problemasFicha, LIMITE_SALA, desgastarItem, repararItem, durabilidadeDe, listaHabilidades, vantagemPorHabilidade, temHabilidade, regraDaHabilidade, tipoCriatura, chaveHabilidade, TIPOS_ACAO, nomeAcao, acoesDaHabilidade, dadosDaHabilidade, ehAtaqueEspecial } from '../shared/regras.js';
+import { podeSeduzir, itemAberto, itemVisivel, xpParaSubir, novaFicha, podeEquipar, rolarDado, rolarAtributosCriacao, testeDMil, gerarEncontro, derivados, problemasFicha, LIMITE_SALA, desgastarItem, repararItem, durabilidadeDe, listaHabilidades, vantagemPorHabilidade, temHabilidade, regraDaHabilidade, tipoCriatura, chaveHabilidade, TIPOS_ACAO, nomeAcao, acoesDaHabilidade, dadosDaHabilidade, ehAtaqueEspecial, acaoDoAtaqueEspecial } from '../shared/regras.js';
 
 const GRUPO_ENCONTROS = 'encontros';
 const MAX_LOG = 100;
@@ -499,14 +499,18 @@ function resolverPendente(c, s, pend, defesa, sis) {
     : '';
   // Resultado curto para a mesa: Acertou (e o dano tomado) ou Defendeu. As contas ficam no "detalhe" (ver ao passar o mouse).
   const tiro = r.defesa.id === 'nenhuma';
+  // A conta do dano, parte por parte: 2 (1d4 Faca) + 3 (MOD FOR) + 1 (Ataque Desarmado Treinado) − 1 (IP).
+  const conta = r.danoPartes.length
+    ? ` = ${r.danoPartes.map(x => `${x.total} (${x.expr ? `${x.expr} ${x.nome}` : x.nome})`).join(' + ')}${r.ip ? ` − ${r.ip} (IP)` : ''}${r.metadeEvasao ? ' ÷ 2 (Evasão)' : ''}${r.resistencia ? ` ÷ 2 (${r.porAfinidade ? `afinidade ${r.porAfinidade}` : `resistência a ${r.resistencia}`})` : ''}${r.vulnerabilidade ? ' × 2 (vulnerável)' : ''}`
+    : '';
   const resumo = r.sucesso
-    ? `Acertou! ${b.nome} tomou ${r.dano} de dano (${b.pv.atual}/${b.pv.max} PV)`
-    : r.dano ? `${b.nome} defendeu em parte (${r.defesa.nome}): tomou ${r.dano} de dano (${b.pv.atual}/${b.pv.max} PV)`
+    ? `Acertou! ${b.nome} tomou ${r.dano} de dano${conta} (${b.pv.atual}/${b.pv.max} PV)`
+    : r.dano ? `${b.nome} defendeu em parte (${r.defesa.nome}): tomou ${r.dano} de dano${conta} (${b.pv.atual}/${b.pv.max} PV)`
       : tiro ? `Errou ${b.nome}` : `${b.nome} defendeu (${r.defesa.nome})`;
   const extras = [...notas, r.imune ? `${b.nome} é imune a ${r.imune}` : null, r.resistencia ? (r.porAfinidade ? `afinidade ${r.porAfinidade} contra ${r.resistencia}: metade do dano` : `resistência a ${r.resistencia}: metade do dano`) : null,
     r.vulnerabilidade ? `vulnerável a ${r.vulnerabilidade}: dano dobrado` : null, !r.sucesso && r.defesa.id === 'esquiva' ? `${b.nome} pode se deslocar até 1,5 m` : null, r.perdaSacrificio ? `Sacrifício: ${a.nome} perde ${r.perdaSacrificio} PV` : null].filter(Boolean);
   const entrada = {
-    tipo: 'ataque', autor: a.nome, rotulo: `ataca ${b.nome} com ${r.arma}`, sucesso: r.sucesso, critico: r.critico, defendeu: !r.sucesso, alvo: b.nome,
+    tipo: 'ataque', autor: a.nome, rotulo: `ataca ${b.nome} com ${r.arma}${r.especial ? ` — ${r.especial}` : ''}`, sucesso: r.sucesso, critico: r.critico, defendeu: !r.sucesso, alvo: b.nome,
     // Para as artes na tela: quem ataca, quem é o alvo, o tipo de arma e se o alvo caiu.
     atacanteId: a.id, alvoId: b.id, armaTipo: pend.armaTipo || 'desarmado', tipoDano: pend.tipoDano || null,
     morto: (b.marcadores || []).includes('Morto'), desmaiado: (b.marcadores || []).includes('Desmaiado'),
@@ -1463,7 +1467,15 @@ export const acoes = {
     // Economia do turno: o ataque gasta a ação principal; fora do próprio turno, é reação (ex.: ataque de oportunidade).
     // Ataque extra de habilidade (Quebra-Hordas) não gasta.
     const cbA = s.combate;
-    const excesso = op.extra || op.multiplo ? null : gastarAcao(c, a, cbA && cbA.ordem[cbA.vez]?.id !== a.id ? 'reacao' : 'principal');
+    // Ataque especial: gasta a ação dele (a do livro; sem ela, a principal). Fora do turno, a reação.
+    let especial = null;
+    if (op.especial) {
+      especial = listaHabilidades(a, sis).find(x => x.id === op.especial);
+      if (!especial) throw erro(`${a.nome} não tem essa habilidade.`);
+    }
+    const foraDoTurno = cbA && cbA.ordem[cbA.vez]?.id !== a.id;
+    const tipoAcao = especial ? (foraDoTurno ? 'reacao' : acaoDoAtaqueEspecial(a, sis, especial)) : foraDoTurno ? 'reacao' : 'principal';
+    const excesso = op.extra || op.multiplo ? null : gastarAcao(c, a, tipoAcao);
     agressaoSubita(c, a, b, sis);
     const notasAgir = efeitosAoAgir(a, sis);
     if (notasAgir.length) registrar(s.log, { autor: a.nome, rotulo: 'Efeitos', texto: notasAgir.join(' · ') });

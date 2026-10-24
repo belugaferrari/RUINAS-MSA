@@ -8,7 +8,8 @@ process.env.ITENS_EXEMPLO = '1';
 process.env.DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'msa-'));
 const { novaCampanha, executar } = await import('../server/actions.js');
 const { sistema } = await import('../server/sistema.js');
-const { acoesDaHabilidade, listaHabilidades, dadosDaHabilidade } = await import('../shared/regras.js');
+const R = await import('../shared/regras.js');
+const { acoesDaHabilidade, listaHabilidades, dadosDaHabilidade } = R;
 const { sincronizarEfeitos, passarTurnoEfeitos } = await import('../shared/efeitos.js');
 
 const mss = sistema('mss');
@@ -114,4 +115,54 @@ test('ataque contra vários alvos: uma ação e uma munição, resolvido contra 
   assert.equal(at.itens[0].carregada, 2, 'uma munição só');
   assert.equal(cb.gasto[ids[0]].principal, 1, 'uma ação só');
   assert.throws(() => executar(c, 'combate.atacarVarios', { atacante: ids[0], alvos: [ids[1]], opcoes: { armaUid: 'g' } }, ctxM), /dois alvos/);
+});
+
+test('Ataque Desarmado Treinado: automático, +1 só no ataque desarmado, não acumula; a conta do dano aparece', () => {
+  const c = novaCampanha(mestre, { nome: 'T', maxJogadores: 2, nivel: 1, sistema: 'mss' });
+  const ids = ['Lutador', 'Alvo'].map(nome => executar(c, 'personagem.criar', { tipo: 'npc', grupoId: 'encontros', ficha: { nome } }, ctxM).id);
+  const lut = c.personagens.find(p => p.id === ids[0]);
+  const v = mss.vantagens.find(x => x.nome === 'Ataque Desarmado Treinado');
+  lut.vantagens = [v.id];
+  lut.itens = [{ uid: 'f', nome: 'Faca', tipo: 'arma', dano: '1d4', tipoDano: 'Corte', equipado: true, alcance: 'corpo', pericia: 'arma-branca.laminas-curtas' }];
+  for (const id of ids) executar(c, 'sala.adicionar', { sala: 'batalha', id }, ctxM);
+  const hab = listaHabilidades(lut, mss).find(x => x.nome === v.nome);
+  const { modoHabilidade, danoDasHabilidades, ehAtaqueEspecial } = R;
+  assert.equal(modoHabilidade(lut, mss, hab), 'sempre');
+  assert.ok(!ehAtaqueEspecial(hab), 'é bônus passivo, não ataque especial');
+  const desarmado = { uid: 'desarmado', alcance: 'corpo', pericia: 'briga.ataque-desarmado' };
+  assert.deepEqual(danoDasHabilidades(lut, mss, desarmado).partes, [{ nome: v.nome, fixo: 1 }]);
+  assert.deepEqual(danoDasHabilidades(lut, mss, { uid: 'f', alcance: 'corpo', pericia: 'arma-branca.laminas-curtas' }).partes, []);
+  // Ligar/desligar várias vezes não acumula.
+  for (let i = 0; i < 4; i++) executar(c, 'personagem.atualizar', { id: lut.id, patch: { ativas: i % 2 ? [] : [hab.id] } }, ctxM);
+  assert.equal(danoDasHabilidades(lut, mss, desarmado).partes.length, 1);
+  const rnd = Math.random;
+  try {
+    Math.random = () => 0.97;
+    const r = executar(c, 'combate.atacar', { atacante: ids[0], alvo: ids[1], opcoes: { surpresa: true, armaUid: 'desarmado' } }, ctxM);
+    assert.match(r.texto, /\(Ataque Desarmado Treinado\)/);
+    assert.match(r.texto, /tomou \d+ de dano = /);
+    const r2 = executar(c, 'combate.atacar', { atacante: ids[0], alvo: ids[1], opcoes: { surpresa: true, armaUid: 'f' } }, ctxM);
+    assert.ok(!/Ataque Desarmado Treinado/.test(r2.texto), 'não soma no ataque armado');
+  } finally { Math.random = rnd; }
+});
+
+test('ataque especial ataca de verdade, soma o bônus uma vez e gasta a ação dele (principal se o livro não diz)', () => {
+  const c = novaCampanha(mestre, { nome: 'T', maxJogadores: 2, nivel: 1, sistema: 'mss' });
+  const ids = ['Soldado', 'Alvo'].map(nome => executar(c, 'personagem.criar', { tipo: 'npc', grupoId: 'encontros', ficha: { nome } }, ctxM).id);
+  const sol = c.personagens.find(p => p.id === ids[0]);
+  const cl = mss.classes.find(x => x.nome === 'Transmorfo');
+  Object.assign(sol, { classe: cl.id, especializacao: cl.especializacoes.find(e => /LICANT/.test(e.nome)).id, nivel: 20 });
+  for (const id of ids) executar(c, 'sala.adicionar', { sala: 'batalha', id }, ctxM);
+  const apex = listaHabilidades(sol, mss).find(x => x.nome === 'Predador Apex');
+  assert.ok(R.ehAtaqueEspecial(apex));
+  const cb = c.salas.batalha.combate;
+  cb.vez = cb.ordem.findIndex(o => o.id === ids[0]);
+  const rnd = Math.random;
+  try {
+    Math.random = () => 0.97;
+    const r = executar(c, 'combate.atacar', { atacante: ids[0], alvo: ids[1], opcoes: { surpresa: true, especial: apex.id } }, ctxM);
+    assert.equal((r.texto.match(/Predador Apex/g) || []).length, 1, r.texto);
+    assert.match(r.rotulo, /Predador Apex/);
+  } finally { Math.random = rnd; }
+  assert.equal(cb.gasto[ids[0]].reacao, 1, 'Predador Apex é reação');
 });

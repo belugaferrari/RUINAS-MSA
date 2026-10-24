@@ -1,6 +1,6 @@
 // Combate e regras sociais automatizadas (Livro MSS). Só valem quando o sistema da campanha liga
 // "modulos.combate" / "modulos.social". Escolhas provisórias estão em conteudo/sistemas/PENDENCIAS.md.
-import { rolarDado, derivados, ipContraDano, listaHabilidades, vantagemPorHabilidade, tipoCriatura, subirPassos, temHabilidade, regraDaHabilidade } from './regras.js';
+import { rolarDado, derivados, ipContraDano, listaHabilidades, vantagemPorHabilidade, tipoCriatura, subirPassos, temHabilidade, regraDaHabilidade, danoDasHabilidades, efeitosHabilidade, modoHabilidade } from './regras.js';
 
 const d100 = rng => 1 + Math.floor(rng() * 100);
 
@@ -62,7 +62,7 @@ export function passosDeMelhoria(item, p) {
 export const danoDaArma = (item, p) => subirPassos(item.dano, passosDeMelhoria(item, p));
 
 export function armasDisponiveis(p, sistema) {
-  const cfg = sistema.combate;
+  const cfg = sistema.combate || {};
   // Arma quebrada (durabilidade 0) não ataca até ser reparada.
   const armas = (p.itens || []).filter(i => i.equipado && i.tipo === 'arma' && i.dano && !(i.durabilidade != null && (i.durabilidadeAtual ?? i.durabilidade) <= 0)).map(i => ({
     uid: i.uid, nome: i.nome, dano: danoDaArma(i, p), acerto: i.acerto ?? null, pericia: i.pericia || null, tipoDano: i.tipoDano || 'Físico',
@@ -165,6 +165,13 @@ export function resolverAtaque(atacante, alvo, sistema, op = {}, defesaId = 'nen
   add('Sacrifício', op.sacrificio ? cfg.sacrificio.mod : 0);
   add('humor', modHumorTestes(atacante, sistema));
   add('modificador', Math.max(-100, Math.min(100, parseInt(op.mod, 10) || 0)));
+  // Ataque especial usado agora (habilidade que não está ligada): o % de acerto dela entra só neste ataque.
+  const especial = op.especial ? listaHabilidades(atacante, sistema).find(x => x.id === op.especial) : null;
+  if (especial && !(atacante.ativas || []).includes(especial.id) && modoHabilidade(atacante, sistema, especial) !== 'sempre') {
+    const ef = efeitosHabilidade(atacante, sistema, especial);
+    add(especial.nome, (ef.pericias[pericia.split('.')[0]] || 0) + (ef.subpericias[pericia] || 0) + (ef.testes || 0));
+  }
+  const bonusHab = danoDasHabilidades(atacante, sistema, arma, op.especial || null);
   // Ataque natural de monstro pode ter o acerto fixo da planilha; o normal é o valor da subperícia, como no personagem.
   const acao = (arma.acerto ?? da.subpericias[pericia] ?? 0) + mods.reduce((s, m) => s + m.valor, 0);
 
@@ -213,9 +220,12 @@ export function resolverAtaque(atacante, alvo, sistema, op = {}, defesaId = 'nen
       if (teste.sucesso && defesa.id === 'esquiva' && arma.uid !== 'desarmado') doDisparo.push({ nome: 'esquiva contra arma', total: cfg.esquivaArmada });
       if (arma.alcance === 'corpo' && da.mod.FOR) doDisparo.push({ nome: 'MOD FOR', total: da.mod.FOR });
       if (r.perdaSacrificio) doDisparo.push({ nome: 'Sacrifício', total: r.perdaSacrificio });
-      // Habilidades e vantagens ativas que somam dano.
-      if (da.habilidades?.danoFixo) doDisparo.push({ nome: 'habilidades', total: da.habilidades.danoFixo });
-      for (const expr of da.habilidades?.danoDados || []) rolar('habilidades', expr);
+      // Habilidades que somam dano, cada uma com o seu nome (para a conta): as ligadas e automáticas — só as que valem
+      // para este tipo de ataque (ex.: "ataques desarmados") — e o ataque especial usado agora, uma vez.
+      for (const parte of bonusHab.partes) {
+        if (parte.expr) rolar(parte.nome, parte.expr);
+        else doDisparo.push({ nome: parte.nome, total: parte.fixo });
+      }
       if (op.cargaNucleo) rolar('Carga do Núcleo (elétrico)', '2d6');
       if (investida) doDisparo.push({ nome: `Investida (${investida} quadrado${investida > 1 ? 's' : ''})`, total: investida });
     }
@@ -238,7 +248,9 @@ export function resolverAtaque(atacante, alvo, sistema, op = {}, defesaId = 'nen
   else if (tipoD && tem2(alvo.vulnerabilidades)) { r.dano *= 2; r.vulnerabilidade = arma.tipoDano; }
   if (tem(alvo, 'Queimadura')) { r.dano += 1; r.queimadura = true; }
   const efeito = cfg.efeitosPorTipo[arma.tipoDano];
-  if (efeito && teste.sucesso && teste.ds <= arma.efeitoDano) r.efeito = efeito;
+  // Margem do efeito de dano: a da arma mais a das habilidades (ex.: Ataque Desarmado Treinado +1 na Dor).
+  if (efeito && teste.sucesso && teste.ds <= (arma.efeitoDano || 0) + bonusHab.margem) r.efeito = efeito;
+  r.especial = especial?.nome || null;
   return r;
 }
 

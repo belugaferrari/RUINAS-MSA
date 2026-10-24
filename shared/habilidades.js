@@ -10,8 +10,26 @@ const COMBATE = ['briga', 'arma-branca', 'armas-de-fogo'];
 // Além dos números do texto, as regras próprias de cada habilidade (habilidades-regras.json) trazem:
 // R.MNP, imunidades, vantagens (em testes, ataque, iniciativa), defesa extra (às vezes só contra certos tipos de criatura)
 // e mudança na Humanidade máxima.
-const vazio = () => ({ atributos: {}, testes: 0, pericias: {}, subpericias: {}, pv: 0, ip: { geral: 0, tipos: {} }, danoFixo: 0, danoDados: [], notas: [],
-  rmnp: 0, imune: [], vantagens: [], defesas: [], humanidadeMax: 0 });
+// danoCond: dano que só vale num tipo de ataque ({ fixo | dados, cond: 'desarmado' | 'branca' | 'distancia' | 'corpo' }).
+const vazio = () => ({ atributos: {}, testes: 0, pericias: {}, subpericias: {}, pv: 0, ip: { geral: 0, tipos: {} }, danoFixo: 0, danoDados: [], danoCond: [], notas: [],
+  rmnp: 0, imune: [], vantagens: [], defesas: [], humanidadeMax: 0, margemEfeito: [] });
+
+// Condição do bônus de dano pela frase onde ele aparece ("Ataques desarmados causam +1 Dano" → só desarmado).
+const COND_NOME = { desarmado: 'ataques desarmados', branca: 'armas brancas', distancia: 'ataques a distância', corpo: 'corpo a corpo' };
+function condicaoDaFrase(frase) {
+  const f = semAcento(frase);
+  if (/desarmad|briga|socos?|punhos?/.test(f)) return 'desarmado';
+  if (/armas? brancas?|laminas?/.test(f) && !/armas? de fogo/.test(f)) return 'branca';
+  if (/armas? de fogo|a distancia|disparos?|tiros?|projeteis/.test(f)) return 'distancia';
+  if (/corpo[- ]a[- ]corpo/.test(f)) return 'corpo';
+  return null;
+}
+// Frase (até o ponto ou o ponto e vírgula) em volta da posição i.
+const fraseEm = (t, i) => {
+  const ini = Math.max(t.lastIndexOf('.', i), t.lastIndexOf(';', i)) + 1;
+  const fins = [t.indexOf('.', i), t.indexOf(';', i)].filter(x => x >= 0);
+  return t.slice(ini, fins.length ? Math.min(...fins) : undefined);
+};
 
 // Nomes de perícias e subperícias para achar no texto (os mais longos primeiro, para "Armas de Fogo" ganhar de "Armas").
 function nomesDoSistema(sistema) {
@@ -98,15 +116,26 @@ export function efeitosDoTexto(texto, sistema, { tipoIp = () => null } = {}) {
   for (const m of t.matchAll(/\+\s*(\d+)\s*(?:de\s+)?IP\b(?:\s*\([^)]*\))?(?:\s+([A-Za-zÀ-ú]+))?/g)) addIp(parseInt(m[1], 10), m[2]);
 
   // Dano: "Dano +1", "+1 ao dano", "+1 de dano", "+1d6 de dano".
+  // Dano que só vale num tipo de ataque (pela frase): fica em danoCond e entra só nesse ataque.
   for (const m of t.matchAll(/(?:\bdano\s*\+\s*(\d+)(?!\s*d\d)|\+\s*(\d+)\s+(?:(?:ao|de|no)\s+)?dano\b)/gi)) {
     const v = parseInt(m[1] || m[2], 10);
+    const cond = condicaoDaFrase(fraseEm(t, m.index));
+    if (cond) { r.danoCond.push({ fixo: v, cond }); r.notas.push(`dano +${v} (só ${COND_NOME[cond]})`); continue; }
     r.danoFixo += v;
     r.notas.push(`dano +${v}`);
   }
   for (const m of t.matchAll(/\+\s*(\d*)\s*[dD](\d+)\s+(?:de\s+)?dano/g)) {
     const expr = `${m[1] || 1}d${m[2]}`;
+    const cond = condicaoDaFrase(fraseEm(t, m.index));
+    if (cond) { r.danoCond.push({ dados: expr, cond }); r.notas.push(`+${expr} de dano (só ${COND_NOME[cond]})`); continue; }
     r.danoDados.push(expr);
     r.notas.push(`+${expr} de dano`);
+  }
+  // Margem do efeito de dano ("a margem do Efeito de dano 'Dor' sobe em +1"): o efeito acontece com DS maior.
+  for (const m of t.matchAll(/margem do efeito[^.]*?sobe em\s*\+?\s*(\d+)/gi)) {
+    const cond = condicaoDaFrase(fraseEm(t, m.index));
+    r.margemEfeito.push({ valor: parseInt(m[1], 10), cond });
+    r.notas.push(`margem do efeito de dano +${m[1]}${cond ? ` (só ${COND_NOME[cond]})` : ''}`);
   }
   // Formato do mestre (lápis) para o que não é número de perícia: "R.MNP +20", "imune: Dor", "vantagem: Briga › Deslocar, iniciativa".
   for (const m of t.matchAll(/\bR\.?\s?MNP\s*([+-]\s*\d+)/gi)) {
@@ -158,7 +187,7 @@ export function somarEfeitos(lista) {
     for (const [k, v] of Object.entries(x.subpericias)) r.subpericias[k] = (r.subpericias[k] || 0) + v;
     for (const [k, v] of Object.entries(x.ip.tipos)) r.ip.tipos[k] = (r.ip.tipos[k] || 0) + v;
     r.testes += x.testes; r.pv += x.pv; r.ip.geral += x.ip.geral; r.danoFixo += x.danoFixo;
-    r.danoDados.push(...x.danoDados); r.notas.push(...x.notas);
+    r.danoDados.push(...x.danoDados); r.notas.push(...x.notas); r.danoCond.push(...(x.danoCond || [])); r.margemEfeito.push(...(x.margemEfeito || []));
     r.rmnp += x.rmnp || 0; r.humanidadeMax += x.humanidadeMax || 0;
     r.imune.push(...(x.imune || [])); r.vantagens.push(...(x.vantagens || [])); r.defesas.push(...(x.defesas || []));
   }
