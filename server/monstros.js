@@ -5,6 +5,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import ExcelJS from 'exceljs';
 import { DATA_DIR } from './db.js';
+import { TIPOS_DESLOCAMENTO, deslocamentosDoTexto, estagiosDoTexto } from '../shared/monstros.js';
 
 export const ARQ_MONSTROS = path.join(DATA_DIR, 'catalogo-monstros.json');
 
@@ -37,8 +38,9 @@ const COL_MONSTROS = [
   ['Resistências', 'resistencias', 20, 'Tipos de dano que sofrem metade (separe por ;)'],
   ['Imunidades', 'imunidades', 20, 'Tipos de dano (dano zero) ou efeitos (Dor, Sangramento…)'],
   ['Vulnerabilidades', 'vulnerabilidades', 20, 'Tipos de dano que sofrem o dobro'],
-  ['Deslocamento (m)', 'deslocamento', 11, null],
-  ['Outros deslocamentos', 'outrosDeslocamentos', 22, 'Ex.: Natação 9 m; Voo 12 m'],
+  ['Andar (m)', 'deslocamento', 9, 'Deslocamento em terreno padrão. Sem os outros tipos preenchidos, o monstro só anda.'],
+  ...TIPOS_DESLOCAMENTO.filter(t => t.id !== 'andar').map(t => [`${t.nome} (m)`, `desl:${t.id}`, 9, `Deslocamento ${t.nome.toLowerCase()} em metros (em branco: não tem)`]),
+  ['Deslocamentos (observações)', 'outrosDeslocamentos', 26, 'O que não cabe nas colunas: "Natação em lava", "incapaz de andar em terra", "Disparada 30 m"…'],
   ['Sentidos', 'sentidos', 22, 'Ex.: Visão no escuro 18 m; Faro'],
   ['Comportamento', 'comportamento', 50, 'Como o monstro age: o que caça, quando ataca, quando foge, como reage a fogo/barulho…'],
   ['Onde aparece (ilha, região)', 'habitat', 22, null],
@@ -59,6 +61,7 @@ const COL_ATAQUES = [
   ['Chance de efeito (DS ≤)', 'efeitoDano', 12, 'Ex.: 3 = o efeito do tipo de dano acontece com DS 1–3'],
   ['Penetração', 'penetracao', 10, 'Ignora este tanto de IP'],
   ['Observações', 'obs', 40, null],
+  ['Estágios', 'estagios', 10, 'Em branco: em todos. Ex.: 2 (só no estágio 2); 2; 3 ou 2-4'],
 ];
 const COL_HABILIDADES = [
   ['Monstro', 'monstro', 24, null],
@@ -67,7 +70,32 @@ const COL_HABILIDADES = [
   ['Única (sim/não)', 'unica', 10, 'Habilidade única: não pode ser copiada (Mutante, Transmorfo…) nem revelada por testes como Zoologia'],
   ['Efeitos no app', 'efeitos', 36, 'Formato do lápis do mestre. Ex.: +1 IP geral; vantagem: ataque; imune: Dor; Furtividade +10%'],
   ['Descrição', 'descricao', 60, null],
+  ['Estágios', 'estagios', 10, 'Em branco: em todos. Ex.: 2 (só no estágio 2); 2; 3 ou 2-4'],
 ];
+// Estágios: o mesmo monstro mudando/crescendo. Uma linha por estágio; só preencha o que muda (em branco = igual ao da
+// aba Monstros). Ataques e habilidades de um estágio só: coluna "Estágios" nas abas Ataques e Habilidades.
+const COL_ESTAGIOS = [
+  ['Monstro', 'monstro', 24, 'Mesmo nome da aba Monstros'],
+  ['Estágio (nº)', 'numero', 9, '1, 2, 3…'],
+  ['Nome do estágio', 'nome', 18, 'Ex.: Filhote, Adulto, Ancião (opcional)'],
+  ['O que muda', 'descricao', 50, 'Resumo para o mestre'],
+  ['Tamanho', 'tamanho', 12, null],
+  ['Nível', 'nivel', 8, null],
+  ['Dificuldade (encontros)', 'dificuldade', 12, null],
+  ['XP', 'xp', 8, null],
+  ['PV', 'pv', 8, null],
+  ['IP geral', 'ipGeral', 9, null],
+  ...SIGLAS.map(s => [s, `atr:${s}`, 7, null]),
+  ...TIPOS_DESLOCAMENTO.map(t => [`${t.nome} (m)`, `desl:${t.id}`, 9, null]),
+  ['Resistências (a mais)', 'resistencias', 18, 'Somam às da aba Monstros'],
+  ['Imunidades (a mais)', 'imunidades', 18, null],
+  ['Vulnerabilidades (a mais)', 'vulnerabilidades', 18, null],
+  ['Sentidos', 'sentidos', 20, null],
+  ['Comportamento', 'comportamento', 40, null],
+  ['Imagem (link)', 'imagem', 30, 'Opcional: imagem própria do estágio'],
+];
+// Títulos antigos que ainda valem na leitura.
+const APELIDOS = { 'deslocamento (m)': 'deslocamento', 'outros deslocamentos': 'outrosDeslocamentos' };
 
 const texto = v => {
   if (v == null) return '';
@@ -76,14 +104,16 @@ const texto = v => {
 };
 const numero = v => { const n = parseFloat(texto(v).replace(',', '.')); return Number.isFinite(n) ? n : null; };
 const lista = v => texto(v).split(';').map(s => s.trim()).filter(Boolean);
+// "2", "2; 3", "2-4", "Estágios 2 e 3" → [2, 3, 4]; em branco → null (todos).
+const numerosEstagios = v => { const t = texto(v); return t ? estagiosDoTexto(/est/i.test(t) ? t : `Estágios ${t.replace(/;/g, ',')}`) : null; };
 
 // Catálogo em uso: o enviado pelo mestre, ou null (o sistema usa os exemplos do base.json).
 export function catalogoMonstros() {
   if (!fs.existsSync(ARQ_MONSTROS)) return null;
   return JSON.parse(fs.readFileSync(ARQ_MONSTROS, 'utf8'));
 }
-export function salvarCatalogoMonstros(monstros, arquivo) {
-  fs.writeFileSync(ARQ_MONSTROS, JSON.stringify({ atualizadoEm: Date.now(), arquivo, monstros }));
+export function salvarCatalogoMonstros(monstros, arquivo, extra = {}) {
+  fs.writeFileSync(ARQ_MONSTROS, JSON.stringify({ atualizadoEm: Date.now(), arquivo, ...(extra.googleSheets ? { googleSheets: extra.googleSheets } : {}), monstros }));
 }
 export function voltarMonstrosPadrao() {
   if (fs.existsSync(ARQ_MONSTROS)) fs.unlinkSync(ARQ_MONSTROS);
@@ -111,7 +141,7 @@ export async function lerPlanilhaMonstros(buffer, sis) {
   const aba = nome => wb.worksheets.find(w => sem(w.name) === sem(nome));
   const linhas = (ws, cols) => {
     if (!ws) return [];
-    const mapa = Object.fromEntries(cols.map(([t, k]) => [sem(t), k]));
+    const mapa = { ...APELIDOS, ...Object.fromEntries(cols.map(([t, k]) => [sem(t), k])) };
     const idx = {};
     ws.getRow(1).eachCell((cel, col) => { const k = mapa[sem(texto(cel.value))]; if (k) idx[k] = col; });
     const out = [];
@@ -180,7 +210,20 @@ export async function lerPlanilhaMonstros(buffer, sis) {
     for (const t of lista(l.ipTipos)) { const [n, v] = pontos(t); if (v != null) ipTipos[danoDe(n)] = v; }
     if (Object.keys(ipTipos).length) m.ipTipos = ipTipos;
     for (const k of ['resistencias', 'imunidades', 'vulnerabilidades', 'saque']) { const xs = lista(l[k]); if (xs.length) m[k] = k === 'saque' ? xs : xs.map(danoDe); }
-    m.ataques = []; m.habilidades = [];
+    // Deslocamentos por tipo: as colunas; o que estiver só no texto (planilha antiga: "Natação 15 m; Voo (Estágio 2) 12 m")
+    // também entra — o de um estágio vai para o estágio.
+    const desl = {};
+    if (m.deslocamento != null) desl.andar = m.deslocamento;
+    for (const t of TIPOS_DESLOCAMENTO) { const n = numero(l[`desl:${t.id}`]); if (n != null) desl[t.id] = n; }
+    if (m.outrosDeslocamentos) {
+      const doTexto = deslocamentosDoTexto(m.outrosDeslocamentos);
+      for (const [k, v] of Object.entries(doTexto.base)) if (desl[k] == null) desl[k] = v;
+      if (Object.keys(doTexto.porEstagio).length) m.estagiosDoTexto = doTexto.porEstagio;
+      // No texto fica só o que não virou número de coluna ("Natação em lava 12 m", "incapaz de andar em terra"…).
+      if (doTexto.resto.length) m.outrosDeslocamentos = doTexto.resto.join('; '); else delete m.outrosDeslocamentos;
+    }
+    if (Object.keys(desl).length) m.deslocamentos = desl;
+    m.ataques = []; m.habilidades = []; m.estagios = [];
     monstros.push(m);
   }
   const porNome = new Map(monstros.map(m => [sem(m.nome), m]));
@@ -197,6 +240,7 @@ export async function lerPlanilhaMonstros(buffer, sis) {
     a.alcance = /dist/i.test(sem(l.alcance)) ? 'distancia' : 'corpo';
     for (const k of ['alcanceM', 'cadencia', 'efeitoDano', 'penetracao']) { const n = numero(l[k]); if (n != null) a[k] = n; }
     const obs = texto(l.obs); if (obs) a.obs = obs;
+    const est = numerosEstagios(l.estagios); if (est) a.estagios = est;
     m.ataques.push(a);
   }
   for (const l of linhas(aba('Habilidades'), COL_HABILIDADES)) {
@@ -205,7 +249,34 @@ export async function lerPlanilhaMonstros(buffer, sis) {
     if (!nome) continue;
     if (!m) { avisos.push(`Habilidade "${nome}": monstro "${texto(l.monstro)}" não está na aba Monstros.`); continue; }
     const modo = MODOS.find(x => x === sem(l.modo)) || 'lembrete';
-    m.habilidades.push({ nome, modo, efeitos: texto(l.efeitos), descricao: texto(l.descricao), ...(/^(s|sim|x|1|única|unica)$/i.test(texto(l.unica)) ? { unica: true } : {}) });
+    const est = numerosEstagios(l.estagios);
+    m.habilidades.push({ nome, modo, efeitos: texto(l.efeitos), descricao: texto(l.descricao), ...(/^(s|sim|x|1|única|unica)$/i.test(texto(l.unica)) ? { unica: true } : {}), ...(est ? { estagios: est } : {}) });
+  }
+  for (const l of linhas(aba('Estágios'), COL_ESTAGIOS)) {
+    const numeroEst = numero(l.numero);
+    if (numeroEst == null) continue;
+    const m = porNome.get(sem(l.monstro));
+    if (!m) { avisos.push(`Estágio ${numeroEst}: monstro "${texto(l.monstro)}" não está na aba Monstros.`); continue; }
+    const e = { numero: numeroEst };
+    for (const k of ['nome', 'descricao', 'sentidos', 'comportamento', 'imagem']) { const t = texto(l[k]); if (t) e[k] = t; }
+    const tam = TAMANHOS.find(t => sem(t) === sem(l.tamanho)); if (tam) e.tamanho = tam;
+    for (const k of ['nivel', 'dificuldade', 'xp', 'pv', 'ipGeral']) { const n = numero(l[k]); if (n != null) e[k] = n; }
+    const atr = {}; for (const sg of SIGLAS) { const n = numero(l[`atr:${sg}`]); if (n != null) atr[sg] = n; }
+    if (Object.keys(atr).length) e.atributos = atr;
+    const desl = {}; for (const t of TIPOS_DESLOCAMENTO) { const n = numero(l[`desl:${t.id}`]); if (n != null) desl[t.id] = n; }
+    if (Object.keys(desl).length) e.deslocamentos = desl;
+    for (const k of ['resistencias', 'imunidades', 'vulnerabilidades']) { const xs = lista(l[k]); if (xs.length) e[k] = xs.map(danoDe); }
+    m.estagios = [...m.estagios.filter(x => x.numero !== numeroEst), e];
+  }
+  // Deslocamento de estágio escrito só no texto (planilha antiga): vira o estágio, se a aba Estágios não preencheu.
+  for (const m of monstros) {
+    for (const [n, desl] of Object.entries(m.estagiosDoTexto || {})) {
+      const e = m.estagios.find(x => x.numero === Number(n)) || (m.estagios.push({ numero: Number(n) }), m.estagios.at(-1));
+      e.deslocamentos = { ...desl, ...(e.deslocamentos || {}) };
+    }
+    delete m.estagiosDoTexto;
+    m.estagios.sort((a, b) => a.numero - b.numero);
+    if (!m.estagios.length) delete m.estagios;
   }
   return { monstros, avisos };
 }
@@ -228,6 +299,9 @@ export async function planilhaMonstros(sis, monstros) {
     '• Ataques elementais: um ataque só causa dano elemental se o "Tipo de dano" dele for o elemento (ex.: Sopro gelado = Frio; Mordida = Perfuração).',
     '• Aba Habilidades: poderes especiais. Marque "Única" nas habilidades únicas (não podem ser copiadas nem reveladas por testes como Zoologia).',
     '• Aba Habilidades (efeitos): "Efeitos no app" usa o formato do lápis do mestre (ex.: +1 IP geral; vantagem: ataque; imune: Dor; Furtividade +10%).',
+    '• Deslocamentos: "Andar (m)" é o terreno padrão; preencha Nadar, Voar, Flutuar, Escalar, Escavar e Saltar só se o monstro tiver. Em branco = não tem. Detalhes ("em lava", "incapaz de andar em terra") vão em "Deslocamentos (observações)".',
+    '• Aba Estágios: monstros que mudam ou crescem. Uma linha por estágio, preenchendo só o que muda (PV, tamanho, atributos, deslocamentos…); o resto fica igual ao da aba Monstros.',
+    '  Ataques e habilidades de alguns estágios: coluna "Estágios" nas abas Ataques e Habilidades (ex.: 2 ou 2; 3 ou 2-4). Em branco = todos os estágios.',
     '• Listas separadas por ponto e vírgula (;). Ex.: Perícias = "Briga 4; Sentidos 3"; IP por tipo = "Corte 2; Frio 1".',
     '• Imagem: cole o link do Google Drive (Compartilhar > Qualquer pessoa com o link > Copiar link) ou o endereço de uma imagem.',
     '  Para usar um ARQUIVO, deixe em branco e envie no app: Livro dos Monstros > Enviar imagem.',
@@ -249,6 +323,8 @@ export async function planilhaMonstros(sis, monstros) {
   const wsM = wb.addWorksheet('Monstros'); cabec(wsM, COL_MONSTROS);
   const wsA = wb.addWorksheet('Ataques'); cabec(wsA, COL_ATAQUES);
   const wsH = wb.addWorksheet('Habilidades'); cabec(wsH, COL_HABILIDADES);
+  const wsE = wb.addWorksheet('Estágios'); cabec(wsE, COL_ESTAGIOS);
+  const textoEst = xs => (xs?.length ? xs.join('; ') : '');
   const juntar = (obj, nome) => Object.entries(obj || {}).map(([k, v]) => `${nome(k)} ${v}`).join('; ');
   for (const m of monstros) {
     const v = {
@@ -256,11 +332,19 @@ export async function planilhaMonstros(sis, monstros) {
       ipTipos: juntar(m.ipTipos, k => k), ...Object.fromEntries(['resistencias', 'imunidades', 'vulnerabilidades', 'saque'].map(k => [k, (m[k] || []).join('; ')])),
       ...Object.fromEntries(SIGLAS.map(s => [`atr:${s}`, m.atributos?.[s] ?? ''])),
       descricao: m.descricao || '', ipGeral: m.ipGeral ?? m.defesa ?? '', afinidade1: m.afinidades?.[0] || '', afinidade2: m.afinidades?.[1] || '',
+      ...Object.fromEntries(TIPOS_DESLOCAMENTO.map(t => [`desl:${t.id}`, m.deslocamentos?.[t.id] ?? ''])),
+      deslocamento: m.deslocamentos?.andar ?? m.deslocamento ?? '',
     };
     wsM.addRow(COL_MONSTROS.map(([, k]) => v[k] ?? ''));
     const ataques = m.ataques?.length ? m.ataques : m.ataque ? [{ nome: m.ataque.replace(/\s*\d*d\d.*$/i, '') || 'Ataque', dano: /\d*d\d+(?:[+-]\d+)?/i.exec(m.ataque)?.[0] || '1d4' }] : [];
-    for (const a of ataques) wsA.addRow(COL_ATAQUES.map(([, k]) => (k === 'monstro' ? m.nome : k === 'pericia' ? nomesSub[a.pericia] || '' : k === 'alcance' ? (a.alcance === 'distancia' ? 'distância' : 'corpo') : a[k] ?? '')));
-    for (const hb of m.habilidades || []) wsH.addRow(COL_HABILIDADES.map(([, k]) => (k === 'monstro' ? m.nome : k === 'unica' ? (hb.unica ? 'sim' : 'não') : hb[k] ?? '')));
+    for (const a of ataques) wsA.addRow(COL_ATAQUES.map(([, k]) => (k === 'monstro' ? m.nome : k === 'pericia' ? nomesSub[a.pericia] || '' : k === 'alcance' ? (a.alcance === 'distancia' ? 'distância' : 'corpo') : k === 'estagios' ? textoEst(a.estagios) : a[k] ?? '')));
+    for (const hb of m.habilidades || []) wsH.addRow(COL_HABILIDADES.map(([, k]) => (k === 'monstro' ? m.nome : k === 'unica' ? (hb.unica ? 'sim' : 'não') : k === 'estagios' ? textoEst(hb.estagios) : hb[k] ?? '')));
+    for (const e of m.estagios || []) {
+      const v = { ...e, monstro: m.nome, ...Object.fromEntries(SIGLAS.map(sg => [`atr:${sg}`, e.atributos?.[sg] ?? ''])),
+        ...Object.fromEntries(TIPOS_DESLOCAMENTO.map(t => [`desl:${t.id}`, e.deslocamentos?.[t.id] ?? ''])),
+        ...Object.fromEntries(['resistencias', 'imunidades', 'vulnerabilidades'].map(k => [k, (e[k] || []).join('; ')])) };
+      wsE.addRow(COL_ESTAGIOS.map(([, k]) => v[k] ?? ''));
+    }
   }
   const lst = wb.addWorksheet('Listas');
   const listas = [
@@ -288,5 +372,6 @@ export async function planilhaMonstros(sis, monstros) {
   validar(wsM, 'afinidade1', COL_MONSTROS, 7);
   validar(wsM, 'afinidade2', COL_MONSTROS, 7);
   validar(wsH, 'unica', COL_HABILIDADES, 8);
+  validar(wsE, 'tamanho', COL_ESTAGIOS, 1);
   return wb.xlsx.writeBuffer();
 }

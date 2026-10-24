@@ -1,3 +1,4 @@
+import { nomeDeslocamento } from '/shared/monstros.js';
 import { h, campo, botao, selecao, aviso, confirmar, pedirTexto, formatarData, vazio, icone, titulo, tabela, seloRevisao, escolhaComOutra, janela } from '../ui.js';
 import { efeitosIcones } from './efeitos.js';
 import { estado, render } from '../estado.js';
@@ -172,7 +173,7 @@ function estadoCompacto(p, d) {
     perdasPv(p, d, false),
     necessidadesView(p),
     cargaView(d),
-    deslocamentoView(d));
+    deslocamentoView(d, p));
 }
 
 // Necessidades (o mestre passa o tempo): horas sem comer, sem beber e sem descanso longo; comer, beber e descansar.
@@ -206,11 +207,14 @@ function perdasPv(p, d, mestre) {
 }
 
 // Deslocamento por turno (9 m = 6 quadrados para humanos), com o que está reduzindo.
-export function deslocamentoView(d) {
+// Monstros: os outros tipos de deslocamento (nadar, voar…); sem eles, só anda em terreno padrão.
+export function deslocamentoView(d, p = null) {
+  const outros = Object.entries(p?.deslocamentos || {}).filter(([k]) => k !== 'andar');
   const limitado = d.deslocamento < d.deslocamentoBase;
   return h('p', { class: `deslocamento ${d.deslocamento === 0 ? 'preso' : limitado ? 'limitado' : ''}`, title: 'Ação de movimento: quanto anda por turno. Cada quadrado do mapa = 1,5 m (diagonal conta 1).' },
     icone('footprints'), h('strong', {}, ` Deslocamento ${String(d.deslocamento).replace('.', ',')} m`), ` (${d.deslocamentoQuadrados} quadrado${d.deslocamentoQuadrados === 1 ? '' : 's'})`,
-    d.deslocamentoMotivos.length ? h('small', {}, ` — ${d.deslocamentoMotivos.join(', ')}`) : null);
+    d.deslocamentoMotivos.length ? h('small', {}, ` — ${d.deslocamentoMotivos.join(', ')}`) : null,
+    outros.length ? h('small', { class: 'outros-deslocamentos' }, ` · ${outros.map(([k, v]) => `${nomeDeslocamento(k)} ${String(v).replace('.', ',')} m`).join(' · ')}`) : null);
 }
 
 function atributosCompactos(p, d, testar) {
@@ -379,7 +383,7 @@ function trilhas(p, mestre) {
     condicoesView(p, derivados(p, estado.sistema)),
     necessidadesView(p),
     cargaView(derivados(p, estado.sistema)),
-    deslocamentoView(derivados(p, estado.sistema)));
+    deslocamentoView(derivados(p, estado.sistema), p));
 }
 
 function estagioHumanidade(p) {

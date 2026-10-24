@@ -1,9 +1,10 @@
 import { h, botao, selecao, aviso, vazio, icone, titulo, tabela, abas, seloRevisao, confirmar, formatarData, pedirTexto } from '../ui.js';
 import { ICONE_TIPO } from './ficha.js';
 import { estado, render, personagemPorId, meusPersonagens } from '../estado.js';
-import { acao, get, enviarArquivo, baixarArquivo } from '../api.js';
+import { acao, get, post, enviarArquivo, baixarArquivo } from '../api.js';
 import { itemVisivel, itemAberto } from '/shared/regras.js';
 import { imagemDeLink } from '/shared/imagens.js';
+import { buscarMonstros, monstroNoEstagio, textoDeslocamentos } from '/shared/monstros.js';
 import { marked } from '/vendor/marked.js';
 
 const cacheLivros = {};
@@ -152,49 +153,91 @@ function resultadosBusca(lista, termo) {
         h('span', {}, r.trecho))))) : h('p', { class: 'dica' }, 'Nada encontrado. Tente uma palavra mais curta (ex.: "enoj", "subperícia", "durabil").'));
 }
 
+// Livro dos Monstros: lista resumida (miniatura, nome, ND, PV, afinidades) que abre a ficha completa; busca por palavra
+// aproximada ("moloto" acha Moolotos). Monstros com estágios mostram cada estágio (o que muda nele).
 export function monstrosView() {
   const mestre = estado.campanha.papel === 'mestre';
-  const q = busca('monstros');
   const sis = estado.sistema;
-  const lista = sis.monstros.filter(m => !q || sa(JSON.stringify(m)).includes(q));
+  const termo = estado.sel['busca:monstros'] || '';
+  const lista = buscarMonstros(sis.monstros, termo);
+  return h('div', {},
+    h('div', { class: 'barra' }, titulo('Livro dos Monstros', 'skull', 'h2'), h('span', { class: 'espaco' }), h('label', { class: 'busca' }, icone('search'), filtroBusca('monstros', 'Buscar criatura (nome, raça, afinidade, lugar)…'))),
+    mestre ? planilhaMonstrosMestre() : null,
+    h('p', { class: 'dica' }, `${lista.length} de ${sis.monstros.length} criatura${sis.monstros.length === 1 ? '' : 's'}${termo.trim() ? ` para “${termo.trim()}”` : ''}. Clique numa linha para abrir a ficha.`),
+    lista.length ? h('ul', { class: 'lista-monstros' }, lista.map(m => linhaMonstro(m, mestre))) : vazio('Nenhuma criatura encontrada. Tente uma palavra mais curta.', 'search'));
+}
+
+export const urlImagemMonstro = (m, estagio = null) => (estagio != null ? imagemDeLink(estagio.imagem) : null) || estado.campanha.imagensMonstros?.[m.nome] || imagemDeLink(m.imagem);
+export function miniaturaMonstro(m, estagio = null) {
+  const url = urlImagemMonstro(m, estagio);
+  return h('span', { class: 'mini-monstro', 'aria-hidden': 'true' }, url ? h('img', { src: url, alt: '', loading: 'lazy', referrerpolicy: 'no-referrer' }) : icone('skull'));
+}
+export const resumoAfinidades = m => (m.afinidades || []).map((a, i) => h('span', { class: `etiqueta afinidade ${i ? '' : 'principal'}`, title: i ? 'Afinidade elementar' : 'Afinidade principal: recebe metade do dano desse elemento' }, a));
+
+function linhaMonstro(m, mestre) {
+  const chave = `monstroAberto:${m.nome}`;
+  const aberto = !!estado.sel[chave];
+  return h('li', { class: `monstro-linha ${aberto ? 'aberta' : ''}` },
+    h('button', { type: 'button', class: 'monstro-resumo', 'aria-expanded': aberto, onclick: () => { estado.sel[chave] = !aberto; render(); } },
+      miniaturaMonstro(m),
+      h('span', { class: 'monstro-nome' }, h('strong', {}, m.nome), m.raca && m.raca !== m.nome ? h('small', {}, ` ${m.raca}`) : null),
+      h('span', { class: 'selo', title: 'Nível de dificuldade (encontros)' }, `ND ${m.dificuldade ?? '—'}`),
+      h('span', { class: 'selo', title: 'Pontos de vida' }, icone('heart'), ` ${m.pv ?? 'calc.'}`),
+      h('span', { class: 'afinidades' }, resumoAfinidades(m)),
+      m.estagios?.length ? h('span', { class: 'selo ok', title: 'Este monstro tem estágios' }, `${m.estagios.length} estágio${m.estagios.length > 1 ? 's' : ''}`) : null,
+      icone(aberto ? 'chevron-up' : 'chevron-down')),
+    aberto ? fichaMonstro(m, mestre) : null);
+}
+
+function fichaMonstro(base, mestre) {
+  const sis = estado.sistema;
+  const chaveEst = `monstroEstagio:${base.nome}`;
+  const numEst = estado.sel[chaveEst] ?? null;
+  const m = monstroNoEstagio(base, numEst);
+  const est = (base.estagios || []).find(e => e.numero === numEst) || null;
   const tipoNome = id => (sis.tiposCriatura || []).find(t => t.id === id)?.nome || null;
   const subNome = id => sis.pericias.flatMap(p => p.subpericias.map(x => [x.id, x.nome])).find(x => x[0] === id)?.[1] || id;
-  return h('div', {},
-    h('div', { class: 'barra' }, titulo('Livro dos Monstros', 'skull', 'h2'), h('span', { class: 'espaco' }), h('label', { class: 'busca' }, icone('search'), filtroBusca('monstros', 'Buscar criatura…'))),
-    mestre ? planilhaMonstrosMestre() : null,
-    lista.length ? h('div', { class: 'cartoes' }, lista.map(m => {
-      const [img, botoesImg] = imagemMonstro(m, mestre);
-      const ataques = m.ataques?.length ? m.ataques : m.ataque ? [{ nome: m.ataque }] : [];
-      const atr = m.atributos ? Object.entries(m.atributos).map(([k, v]) => `${k} ${v}`).join(' · ') : '';
-      const extras = [
-        m.resistencias?.length ? `Resiste: ${m.resistencias.join(', ')}` : null,
-        m.imunidades?.length ? `Imune: ${m.imunidades.join(', ')}` : null,
-        m.vulnerabilidades?.length ? `Vulnerável: ${m.vulnerabilidades.join(', ')}` : null,
-      ].filter(Boolean);
-      return h('div', { class: 'cartao monstro' },
-        img,
-        titulo(m.nome, 'skull'),
-        h('p', { class: 'meta' }, [tipoNome(m.tipoCriatura), m.tamanho, m.raca && m.raca !== m.nome ? m.raca : null, m.nivel ? `nível ${m.nivel}` : null].filter(Boolean).join(' · ')),
-        h('p', { class: 'meta icones-meta' },
-          h('span', { title: 'Dificuldade' }, icone('flame'), `Dif. ${m.dificuldade ?? '—'}`),
-          h('span', { title: 'Pontos de vida' }, icone('heart'), `PV ${m.pv ?? 'calc.'}`),
-          h('span', { title: 'IP geral' }, icone('shield'), `IP ${m.ipGeral ?? m.defesa ?? 0}`),
-          m.deslocamento ? h('span', { title: 'Deslocamento' }, icone('footprints'), `${m.deslocamento} m`) : null,
-          m.xp ? h('span', { title: 'XP' }, icone('sparkles'), `${m.xp} XP`) : null),
-        atr ? h('p', { class: 'meta' }, atr) : null,
-        ataques.length ? h('ul', { class: 'lista-ataques-monstro' }, ataques.map(a => h('li', {}, icone('sword'), ' ', h('strong', {}, a.nome),
-          a.dano ? ` ${a.dano}${a.tipoDano ? ` ${a.tipoDano}` : ''}${a.alcance === 'distancia' ? ` · ${a.alcanceM ? `${a.alcanceM} m` : 'distância'}` : ''}${a.acerto != null ? ` · ${a.acerto}%` : a.pericia ? ` · ${subNome(a.pericia)}` : ''}` : ''))) : null,
-        m.afinidades?.length ? h('p', { class: 'meta', title: 'Recebe metade do dano do elemento principal' }, icone('flame'), ` Afinidade elementar: ${m.afinidades[0]} (principal, metade do dano)${m.afinidades[1] ? `, ${m.afinidades[1]}` : ''}`) : null,
-        m.habilidades?.length ? h('p', {}, icone('sparkles'), ' ', m.habilidades.map(x => `${x.nome}${x.unica ? ' (única)' : ''}`).join(', ')) : null,
-        extras.length ? h('p', { class: 'meta' }, extras.join(' · ')) : null,
-        m.comportamento ? h('details', {}, h('summary', {}, 'Comportamento'), h('p', {}, m.comportamento)) : null,
-        m.descricao ? h('p', {}, m.descricao) : null,
-        botoesImg,
-        mestre ? botao('Colocar no Campo de Batalha', async () => {
-          await acao('monstro.adicionar', { nome: m.nome });
-          aviso(`${m.nome} entrou no Campo de Batalha.`);
-        }, { class: 'pequeno', icone: 'swords' }) : null);
-    })) : vazio('Nenhuma criatura encontrada.', 'search'));
+  const [img, botoesImg] = imagemMonstro(base, mestre, est);
+  const atr = m.atributos ? Object.entries(m.atributos).map(([k, v]) => `${k} ${v}`).join(' · ') : '';
+  const extras = [
+    m.resistencias?.length ? `Resiste: ${m.resistencias.join(', ')}` : null,
+    m.imunidades?.length ? `Imune: ${m.imunidades.join(', ')}` : null,
+    m.vulnerabilidades?.length ? `Vulnerável: ${m.vulnerabilidades.join(', ')}` : null,
+  ].filter(Boolean);
+  const qtd = estado.sel[`monstroQtd:${base.nome}`] || 1;
+  return h('div', { class: 'cartao monstro ficha-monstro' },
+    base.estagios?.length ? h('div', { class: 'barra estagios', role: 'group', 'aria-label': 'Estágios' }, h('small', {}, 'Estágio:'),
+      [{ numero: null, nome: 'Base' }, ...base.estagios].map(e => botao(e.numero == null ? 'Base' : `${e.numero}${e.nome ? ` · ${e.nome}` : ''}`,
+        () => { estado.sel[chaveEst] = e.numero; render(); }, { class: `pequeno ${numEst === e.numero ? 'primario' : ''}`, 'aria-pressed': numEst === e.numero }))) : null,
+    img,
+    h('p', { class: 'meta' }, [tipoNome(m.tipoCriatura), m.tamanho, m.nivel ? `nível ${m.nivel}` : null, m.nomeEstagio].filter(Boolean).join(' · ')),
+    est?.descricao ? h('p', { class: 'dica' }, icone('trending-up'), ` ${est.descricao}`) : null,
+    h('p', { class: 'meta icones-meta' },
+      h('span', { title: 'Nível de dificuldade' }, icone('flame'), `ND ${m.dificuldade ?? '—'}`),
+      h('span', { title: 'Pontos de vida' }, icone('heart'), `PV ${m.pv ?? 'calc.'}`),
+      h('span', { title: 'IP geral' }, icone('shield'), `IP ${m.ipGeral ?? m.defesa ?? 0}`),
+      m.xp ? h('span', { title: 'XP' }, icone('sparkles'), `${m.xp} XP`) : null),
+    h('p', { class: 'meta', title: 'Sem outro tipo descrito, só anda em terreno padrão' }, icone('footprints'), ` ${textoDeslocamentos(m.deslocamentos) || 'Andar —'}`,
+      m.outrosDeslocamentos ? h('small', {}, ` (${m.outrosDeslocamentos})`) : null),
+    atr ? h('p', { class: 'meta' }, atr) : null,
+    m.ataques.length ? h('ul', { class: 'lista-ataques-monstro' }, m.ataques.map(a => h('li', {}, icone('sword'), ' ', h('strong', {}, a.nome),
+      a.dano ? ` ${a.dano}${a.tipoDano ? ` ${a.tipoDano}` : ''}${a.alcance === 'distancia' ? ` · ${a.alcanceM ? `${a.alcanceM} m` : 'distância'}` : ''}${a.acerto != null ? ` · ${a.acerto}%` : a.pericia ? ` · ${subNome(a.pericia)}` : ''}` : '',
+      a.estagios ? h('small', { class: 'selo' }, `estágio ${a.estagios.join(', ')}`) : null))) : null,
+    m.afinidades?.length ? h('p', { class: 'meta', title: 'Recebe metade do dano do elemento principal' }, icone('flame'), ` Afinidade elementar: ${m.afinidades[0]} (principal, metade do dano)${m.afinidades[1] ? `, ${m.afinidades[1]}` : ''}`) : null,
+    m.habilidades?.length ? h('ul', { class: 'lista-ataques-monstro' }, m.habilidades.map(x => h('li', { title: x.descricao || '' }, icone('sparkles'), ' ', h('strong', {}, x.nome), x.unica ? ' (única)' : '',
+      x.estagios ? h('small', { class: 'selo' }, `estágio ${x.estagios.join(', ')}`) : null, x.descricao ? h('small', {}, ` — ${x.descricao}`) : null))) : null,
+    extras.length ? h('p', { class: 'meta' }, extras.join(' · ')) : null,
+    m.sentidos ? h('p', { class: 'meta' }, icone('eye'), ` ${m.sentidos}`) : null,
+    m.comportamento ? h('details', {}, h('summary', {}, 'Comportamento'), h('p', {}, m.comportamento)) : null,
+    m.habitat ? h('p', { class: 'meta' }, icone('map'), ` ${m.habitat}`) : null,
+    m.descricao ? h('p', {}, m.descricao) : null,
+    botoesImg,
+    mestre ? h('div', { class: 'barra' },
+      h('label', { class: 'linha' }, 'Quantos', h('input', { type: 'number', min: 1, max: 20, class: 'curto', value: qtd, onchange: e => { estado.sel[`monstroQtd:${base.nome}`] = Math.max(1, parseInt(e.target.value, 10) || 1); } })),
+      botao(`Colocar no Campo de Batalha${est ? ` (estágio ${est.numero})` : ''}`, async () => {
+        await acao('monstro.adicionar', { nome: base.nome, estagio: numEst, quantidade: estado.sel[`monstroQtd:${base.nome}`] || 1 });
+        aviso(`${base.nome} entrou no Campo de Batalha.`);
+      }, { class: 'pequeno primario', icone: 'swords' })) : null);
 }
 
 // Livro dos Monstros por planilha (só o mestre): baixar a planilha atual, enviar de volta ou voltar aos exemplos.
@@ -209,10 +252,12 @@ function planilhaMonstrosMestre() {
     h('option', { value: 'atualizar' }, 'Atualizar: troca os monstros da planilha e mantém os outros'),
     h('option', { value: 'substituir' }, 'Substituir: o livro fica só com os monstros da planilha'));
   const recarregar = () => { estado.sel.monstrosInfo = null; estado.sel.monstrosPedido = false; };
+  const googleLink = h('input', { type: 'url', class: 'largo', placeholder: 'Link da planilha no Google (docs.google.com/spreadsheets/…)', value: estado.sel.monstrosGoogle ?? info?.googleSheets ?? '',
+    'aria-label': 'Link da planilha no Google', oninput: e => { estado.sel.monstrosGoogle = e.target.value; } });
   return h('details', { class: 'bloco', open: !!estado.sel.monstrosAberto, ontoggle: e => { estado.sel.monstrosAberto = e.target.open; } },
     h('summary', {}, icone('file-spreadsheet'), ' Livro dos Monstros (planilha)'),
     h('p', { class: 'dica' }, info ? `${info.total} criaturas · ${info.origem === 'mestre' ? `enviado por você${info.arquivo ? ` (${info.arquivo})` : ''}${info.atualizadoEm ? ` · ${formatarData(info.atualizadoEm)}` : ''}` : 'Livro dos Monstros do autor (vem com as atualizações do app)'}.` : 'Carregando…'),
-    h('p', { class: 'dica' }, 'Baixe a planilha, preencha as abas Monstros, Ataques e Habilidades (instruções dentro dela) e envie de volta. Vale para todas as campanhas deste PC; monstros que já estão em campo não mudam.'),
+    h('p', { class: 'dica' }, 'Baixe a planilha, preencha as abas Monstros, Ataques, Habilidades e Estágios (instruções dentro dela) e envie de volta. Vale para todas as campanhas deste PC; monstros que já estão em campo não mudam.'),
     h('div', { class: 'barra' },
       botao('Baixar planilha', () => baixarArquivo(`/api/monstros.xlsx?sistema=${estado.campanha.sistema || 'mss'}`, 'monstros-ilhas-das-ruinas.xlsx'), { icone: 'download' }),
       arquivo, modo,
@@ -229,12 +274,21 @@ function planilhaMonstrosMestre() {
         if (!(await confirmar('Apagar o Livro dos Monstros enviado e voltar ao livro do autor?'))) return;
         await enviarArquivo('/api/monstros/padrao', new FormData());
         recarregar();
-      }, { class: 'perigo', icone: 'refresh-cw' }) : null));
+      }, { class: 'perigo', icone: 'refresh-cw' }) : null),
+    // Planilha no Google: compartilhada como "Qualquer pessoa com o link" (Leitor), o app puxa direto dela.
+    h('div', { class: 'barra' },
+      googleLink,
+      botao('Puxar do Google Planilhas', async () => {
+        const r = await post('/api/monstros/google', { link: googleLink.value, modo: modo.value });
+        recarregar();
+        aviso(`${r.recebidos} monstros lidos do Google; o livro tem ${r.total}.${r.avisos?.length ? ` Atenção: ${r.avisos.join(' ')}` : ''}`, r.avisos?.length ? 'erro' : 'ok');
+      }, { class: 'primario', icone: 'refresh-cw', title: 'A planilha precisa estar em Compartilhar > "Qualquer pessoa com o link" (Leitor)' })),
+    h('p', { class: 'dica' }, 'No Google Planilhas: Compartilhar > Acesso geral > "Qualquer pessoa com o link" (Leitor). Para começar no Google: baixe a planilha daqui e, no Google, Arquivo > Importar > Substituir planilha.'));
 }
 
 // Imagem do monstro: arquivo enviado pelo mestre ou link (Google Drive compartilhado ou endereço na internet).
-function imagemMonstro(m, mestre) {
-  const url = estado.campanha.imagensMonstros?.[m.nome] || imagemDeLink(m.imagem);
+function imagemMonstro(m, mestre, estagio = null) {
+  const url = urlImagemMonstro(m, estagio);
   const arquivo = h('input', {
     type: 'file', accept: 'image/*', hidden: true,
     onchange: async e => {

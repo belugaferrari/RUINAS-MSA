@@ -9,6 +9,8 @@ import { combateView, controleTurnos, nomeHumor, humorCartao, rodaDoHumor, ajust
 import { painelBatalha, ordemLateral } from './batalha.js';
 import { painelSocial } from './social.js';
 import { prepararTeste } from './dados.js';
+import { buscarMonstros } from '/shared/monstros.js';
+import { miniaturaMonstro, resumoAfinidades } from './livros.js';
 
 const TITULOS = { social: 'Sala Social', batalha: 'Campo de Batalha' };
 const ICONES_SALA = { social: 'drama', batalha: 'swords' };
@@ -32,6 +34,7 @@ export function salaView(nome) {
     nome === 'batalha'
       ? [ordemLateral(participantes, mestre), painelBatalha(participantes, mestre), combateView(participantes, mestre)]
       : painelSocial(participantes, mestre),
+    mestre && nome === 'batalha' ? adicionarMonstro() : null,
     mestre && nome === 'batalha' ? encontroAleatorio() : null,
     nome === 'social' ? rodaDoHumor() : null,
     nome === 'social' && mestre ? h('div', { class: 'bloco' }, xpDaSala(participantes)) : null,
@@ -135,6 +138,7 @@ function linhaCampo(s, p, i, total, mestre, meu, veStats, marcavel, alvo) {
     mestre ? botao('', () => acao('sala.ordenar', { sala: 'batalha', id: p.id, direcao: -1 }), { class: 'pequeno', icone: 'chevron-up', disabled: i === 0, title: `Subir ${p.nome} na lista` }) : null,
     mestre ? botao('', () => acao('sala.ordenar', { sala: 'batalha', id: p.id, direcao: 1 }), { class: 'pequeno', icone: 'chevron-down', disabled: i === total - 1, title: `Descer ${p.nome} na lista` }) : null,
     mestre || meu ? botao('Tirar', () => acao('sala.remover', { sala: 'batalha', id: p.id }), { class: 'pequeno perigo', icone: 'log-out', title: `Tirar ${p.nome} da sala` }) : null,
+    mestre ? seletorEstagio(p) : null,
     mestre ? ajustesMestre(p, 'batalha') : null,
   ].filter(Boolean);
   const chave = `menu:${p.id}`;
@@ -147,6 +151,7 @@ function linhaCampo(s, p, i, total, mestre, meu, veStats, marcavel, alvo) {
       h('div', { class: 'linha-nome' },
         h('strong', {}, p.nome),
         h('small', { class: 'meta' }, p.tipo === 'pj' ? `PJ${p.dono ? ` · ${p.dono}` : ''}` : 'NPC'),
+        p.monstro?.estagio != null && mestre ? h('span', { class: 'selo', title: 'Estágio do monstro' }, p.monstro.nomeEstagio || `Estágio ${p.monstro.estagio}`) : null,
         s.ativo === p.id ? h('span', { class: 'selo ok' }, mestre ? 'acionado' : 'em cena') : null,
         semPv ? h('span', { class: 'selo perigo' }, 'fora de combate') : null),
       veStats && p.pv ? h('div', { class: 'linha-stats' },
@@ -162,6 +167,38 @@ function linhaCampo(s, p, i, total, mestre, meu, veStats, marcavel, alvo) {
       acoes.length ? h('details', { class: 'menu-acoes', open: !!estado.sel[chave], ontoggle: e => { estado.sel[chave] = e.target.open; } },
         h('summary', { title: `Ações de ${p.nome}`, 'aria-label': `Ações de ${p.nome}` }, icone('ellipsis')),
         h('div', { class: 'menu-corpo' }, acoes)) : null));
+}
+
+// Mestre: pôr monstros do livro no campo — busca por palavra aproximada (ou a lista toda), estágio e quantidade.
+function adicionarMonstro() {
+  const sis = estado.sistema;
+  const termo = estado.sel['busca:addMonstro'] || '';
+  const todos = !!estado.sel.addMonstroTodos;
+  const lista = termo.trim() || todos ? buscarMonstros(sis.monstros, termo) : [];
+  const mostra = lista.slice(0, todos && !termo.trim() ? 200 : 12);
+  const linha = m => {
+    const chaveEst = `addMonstroEst:${m.nome}`, chaveQtd = `addMonstroQtd:${m.nome}`;
+    return h('li', {},
+      miniaturaMonstro(m),
+      h('span', { class: 'monstro-nome' }, h('strong', {}, m.nome), h('small', {}, ` ND ${m.dificuldade ?? '—'} · PV ${m.pv ?? 'calc.'} `), h('span', { class: 'afinidades' }, resumoAfinidades(m))),
+      m.estagios?.length ? selecao([{ valor: '', rotulo: 'Base' }, ...m.estagios.map(e => ({ valor: String(e.numero), rotulo: `Estágio ${e.numero}${e.nome ? ` · ${e.nome}` : ''}` }))],
+        estado.sel[chaveEst] ?? '', v => { estado.sel[chaveEst] = v; }, { 'aria-label': `Estágio de ${m.nome}` }) : null,
+      h('input', { type: 'number', min: 1, max: 20, class: 'curto', value: estado.sel[chaveQtd] || 1, 'aria-label': `Quantos ${m.nome}`, title: 'Quantos',
+        onchange: e => { estado.sel[chaveQtd] = Math.max(1, parseInt(e.target.value, 10) || 1); } }),
+      botao('Pôr no campo', async () => {
+        const r = await acao('monstro.adicionar', { nome: m.nome, estagio: estado.sel[chaveEst] || null, quantidade: estado.sel[chaveQtd] || 1 });
+        aviso(`${r.ids.length > 1 ? `${r.ids.length}× ` : ''}${m.nome} no Campo de Batalha.`);
+      }, { class: 'pequeno primario', icone: 'swords' }));
+  };
+  return h('details', { class: 'bloco', open: estado.sel.addMonstroAberto ?? true, ontoggle: e => { estado.sel.addMonstroAberto = e.target.open; } },
+    h('summary', {}, icone('skull'), ' Adicionar monstro'),
+    h('div', { class: 'barra' },
+      h('label', { class: 'busca' }, icone('search'), h('input', { type: 'search', placeholder: 'Nome aproximado, raça, afinidade, lugar…', 'data-key': 'busca:addMonstro', value: termo,
+        'aria-label': 'Buscar monstro', oninput: e => { estado.sel['busca:addMonstro'] = e.target.value; render(); } })),
+      botao(todos ? 'Esconder a lista' : `Ver a lista (${sis.monstros.length})`, () => { estado.sel.addMonstroTodos = !todos; render(); }, { class: 'pequeno', icone: 'list-ordered' })),
+    termo.trim() && !lista.length ? h('p', { class: 'dica' }, 'Nenhum monstro parecido. Tente outra palavra.') : null,
+    mostra.length ? h('ul', { class: 'add-monstro-resultados' }, mostra.map(linha)) : null,
+    lista.length > mostra.length ? h('p', { class: 'dica' }, `Mostrando ${mostra.length} de ${lista.length}. Digite mais para filtrar.`) : null);
 }
 
 function encontroAleatorio() {
@@ -180,6 +217,17 @@ function encontroAleatorio() {
         const r = await acao('encontro.gerar', { limite: limite.value, usarMonstros: monstros.checked, grupos: grupos.filter(x => x.cb.checked).map(x => x.g.id) });
         aviso(`Encontro: ${r.nomes.join(', ')} (dificuldade ${r.soma})`);
       }, { class: 'primario', icone: 'dices' })));
+}
+
+// Mestre: muda o estágio do monstro em campo (o dano tomado continua; muda PV máximo, atributos, ataques…).
+function seletorEstagio(p) {
+  const m = p.monstro && estado.sistema.monstros.find(x => x.nome === p.monstro.nome);
+  if (!m?.estagios?.length) return null;
+  return h('label', { class: 'linha', title: 'Estágio do monstro' }, icone('trending-up'),
+    selecao([{ valor: '', rotulo: 'Estágio base' }, ...m.estagios.map(e => ({ valor: String(e.numero), rotulo: `Estágio ${e.numero}${e.nome ? ` · ${e.nome}` : ''}` }))],
+      p.monstro.estagio == null ? '' : String(p.monstro.estagio),
+      v => acao('monstro.estagio', { id: p.id, estagio: v }).then(() => aviso(`${p.nome}: ${v ? `estágio ${v}` : 'estágio base'}.`)).catch(e => aviso(e.message, 'erro')),
+      { 'aria-label': `Estágio de ${p.nome}` }));
 }
 
 const caido = p => (p.marcadores || []).includes('Caído');

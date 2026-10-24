@@ -1,11 +1,10 @@
 {
  "origem": "Planilha \"Monstros-app\" do autor (Google Drive), 22/10/2026",
- "atualizadoEm": 1792708035659,
+ "atualizadoEm": 1792884013549,
  "monstros": [
   {
    "nome": "Moolotos (Cavalgada da Tempestade)",
    "raca": "Moolotos",
-   "outrosDeslocamentos": "Natação 15 m; Flutuar 9 m",
    "sentidos": "Visão no escuro 12 m; Sentir correntes",
    "comportamento": "Animado e brincalhão nas tempestades; no Estágio 2 é violento e ataca seres menores.",
    "habitat": "Mares abertos e caminho de Macabume",
@@ -60,6 +59,11 @@
     "Glândula de Muco Veloz",
     "Couro Brilhante"
    ],
+   "deslocamentos": {
+    "andar": 6,
+    "nadar": 15,
+    "flutuar": 9
+   },
    "ataques": [
     {
      "nome": "Investida da Maré",
@@ -102,7 +106,6 @@
   {
    "nome": "Kririel (Pincel de Deus)",
    "raca": "Kririel",
-   "outrosDeslocamentos": "Natação 9 m",
    "sentidos": "Audição aguçada (largos ouvidos); Olhos de safira",
    "comportamento": "Prepotente e observador; protege vilas se receber bons presentes ou extermina os peixes locais se ofendido.",
    "habitat": "Geleiras, cavernas submersas e vilas costeiras frias",
@@ -161,6 +164,10 @@
     "Ponta de Cauda de Gelo",
     "Cristal de Safira"
    ],
+   "deslocamentos": {
+    "andar": 9,
+    "nadar": 9
+   },
    "ataques": [
     {
      "nome": "Golpe de Cauda de Gelo",
@@ -194,7 +201,6 @@
   {
    "nome": "Torpo (Assassino dos Mares)",
    "raca": "Torpo",
-   "outrosDeslocamentos": "Natação 15 m; Flutuar 6 m",
    "sentidos": "Faro de sangue 30 m; Visão no escuro 15 m",
    "comportamento": "Fome constante; embosca vindo das profundezas e nunca para de atacar até matar ou desmaiar.",
    "habitat": "Mar aberto, recifes grandes e rotas de embarcações",
@@ -253,6 +259,11 @@
     "Carapaça de Torpo",
     "Carne de Predador"
    ],
+   "deslocamentos": {
+    "andar": 3,
+    "nadar": 15,
+    "flutuar": 6
+   },
    "ataques": [
     {
      "nome": "Mordida Serrada",
@@ -296,7 +307,6 @@
   {
    "nome": "Melown (Parasita do Bem)",
    "raca": "Melown",
-   "outrosDeslocamentos": "Natação 6 m; Flutuar 1,5 m",
    "sentidos": "Percepção neural 9 m",
    "comportamento": "Fica à deriva invisível esperando hospedeiros; estimula endorfina e boas lembranças enquanto drena sangue e carne.",
    "habitat": "Águas calmas, banhos termais e ruínas alagadas",
@@ -350,6 +360,11 @@
     "Cérebro Psiônico de Melown",
     "Tentáculo Adesivo"
    ],
+   "deslocamentos": {
+    "andar": 1.5,
+    "nadar": 6,
+    "flutuar": 1.5
+   },
    "ataques": [
     {
      "nome": "Acoplar no Hospedeiro",
@@ -394,7 +409,6 @@
   {
    "nome": "Petras (Última Esperança - Demônio)",
    "raca": "Petras",
-   "outrosDeslocamentos": "Natação 15 m; Flutuar 6 m",
    "sentidos": "Sonar natural 60 m; Visão no escuro 12 m",
    "comportamento": "Bipolar: no Estágio 1 (Anjo) é dócil e guia barcos; no Estágio 2 (Demônio) ataca furiosamente qualquer intruso não nativo.",
    "habitat": "Grandes lagos, represas e mares costeiros",
@@ -451,6 +465,11 @@
     "Couro Escamado",
     "Órgão de Sonar"
    ],
+   "deslocamentos": {
+    "andar": 4.5,
+    "nadar": 15,
+    "flutuar": 6
+   },
    "ataques": [
     {
      "nome": "Mordida do Demônio",
@@ -553,6 +572,10 @@
     "Glândula Ácida de Ulkra",
     "Carapaça de Lagosta"
    ],
+   "deslocamentos": {
+    "andar": 0,
+    "nadar": 9
+   },
    "ataques": [
     {
      "nome": "Bola de Muco Ácido Pegajoso",
@@ -597,7 +620,6 @@
   {
    "nome": "Lishes (Cobra d'Água)",
    "raca": "Lishes",
-   "outrosDeslocamentos": "Natação 9 m",
    "sentidos": "Olhos espelhados; Sentir vibrações na água",
    "comportamento": "No 1º estágio embosca animais nas margens esperando tocarem a água; no 2º estágio fica recluso e territorialista em tocas no fundo.",
    "habitat": "Pântanos, florestas densas, rios, lagos e cavernas",
@@ -654,6 +676,10 @@
     "Carapaça Rígida de Lishes",
     "Carne de Enguia"
    ],
+   "deslocamentos": {
+    "andar": 9,
+    "nadar": 9
+   },
    "ataques": [
     {
      "nome": "Mordida de Presas Metálicas",
@@ -698,7 +724,6 @@
   {
    "nome": "Lina (Pescadora / Peixe-Tigre)",
    "raca": "Lina",
-   "outrosDeslocamentos": "Natação 12 m; Escalada 9 m",
    "sentidos": "Bigodes em folha (sentem movimento na água); Visão noturna",
    "comportamento": "Nômade; vive em bandos de até 5 (defendem-se em grupo no banho de sol), mas caça sozinha de forma furtiva.",
    "habitat": "Margens de rios, árvores de montanha, lagos e oceanos",
@@ -754,6 +779,11 @@
     "Bigodes Foliares",
     "Garras de Lina"
    ],
+   "deslocamentos": {
+    "andar": 12,
+    "nadar": 12,
+    "escalar": 9
+   },
    "ataques": [
     {
      "nome": "Bote Mortal das Águas",
@@ -786,7 +816,7 @@
   {
    "nome": "Smiffings (Semeia-Água)",
    "raca": "Smiffings",
-   "outrosDeslocamentos": "Natação 9 m; Subterrâneo (córregos/lençóis) 6 m",
+   "outrosDeslocamentos": "Subterrâneo (córregos/lençóis) 6 m",
    "sentidos": "Faro de água a longa distância; Tato sísmico",
    "comportamento": "Solitário e faminto; avança como um trator devorando tudo no caminho e fica hiperagressivo se faltar água.",
    "habitat": "Rios, terrenos alagados, lençóis freáticos e esgotos urbanos",
@@ -843,6 +873,11 @@
     "Muco da Vida (Fertilizante)",
     "Espinhos de Smiffings"
    ],
+   "deslocamentos": {
+    "andar": 6,
+    "nadar": 9,
+    "escavar": 6
+   },
    "ataques": [
     {
      "nome": "Passagem de Trator",
@@ -886,7 +921,6 @@
   {
    "nome": "Qua'zor (Foragido da Guerra)",
    "raca": "Qua'zor",
-   "outrosDeslocamentos": "Natação 12 m",
    "sentidos": "Visão alerta durante banhos de sol; Queixo cintilante",
    "comportamento": "Medroso em terra (foge de grupos humanos usando animais dominados como proteção); no mar ataca humanos isolados.",
    "habitat": "Encostas, cavernas escondidas pela maré e oceano aberto",
@@ -944,6 +978,10 @@
     "Órgão Cintilante do Queixo",
     "Presa Dracônica"
    ],
+   "deslocamentos": {
+    "andar": 6,
+    "nadar": 12
+   },
    "ataques": [
     {
      "nome": "Garras Vorazes",
@@ -988,7 +1026,6 @@
   {
    "nome": "Mógg (Cão do Mar)",
    "raca": "Mógg",
-   "outrosDeslocamentos": "Natação 12 m",
    "sentidos": "Visão fora d'água; Olfato subaquático; Pedras oculares (Migs)",
    "comportamento": "Caça em matilha tática liderada por um Alfa; usado por marinhas desde filhote, mas pode devorar treinadores se faminto.",
    "habitat": "Regiões gélidas, praias desertas e frotas navais",
@@ -1046,6 +1083,10 @@
     "Couro de Mógg",
     "Barbatana Dorsal"
    ],
+   "deslocamentos": {
+    "andar": 9,
+    "nadar": 12
+   },
    "ataques": [
     {
      "nome": "Mordida de Orca-Lobo",
@@ -1090,7 +1131,6 @@
   {
    "nome": "Instillu (O Naufragado)",
    "raca": "Instillu",
-   "outrosDeslocamentos": "Natação 9 m",
    "sentidos": "Olfato para decomposição; Visão no escuro 12 m",
    "comportamento": "Carniceiro que derrete presas com ácido antes de comer e gruda em cascos de navios; solta-se se receber comida podre.",
    "habitat": "Ilhas, praias, cascos de embarcações e mar aberto",
@@ -1150,6 +1190,10 @@
     "Língua de Instillu (Iguaria)",
     "Glândula de Ácido Fumegante"
    ],
+   "deslocamentos": {
+    "andar": 6,
+    "nadar": 9
+   },
    "ataques": [
     {
      "nome": "Açoite das Quatro Línguas",
@@ -1195,7 +1239,6 @@
   {
    "nome": "Bombô (Bombô de Malta)",
    "raca": "Bombô",
-   "outrosDeslocamentos": "Natação 12 m; Voo (Estágio 2) 9 m",
    "sentidos": "Sentir lençóis d'água; Antenas fosforescentes (Estágio 2)",
    "comportamento": "Pacífico, recluso e acumulador de quinquilharias em tocas; só protege o ninho se houver ovo.",
    "habitat": "Tocas sob raízes, florestas, lagos e cavernas submersas",
@@ -1251,6 +1294,10 @@
     "Antena Fosforescente",
     "Quinquilharias do Ninho (1d4 itens)"
    ],
+   "deslocamentos": {
+    "andar": 9,
+    "nadar": 12
+   },
    "ataques": [
     {
      "nome": "Gêiser do Vertedouro",
@@ -1290,12 +1337,19 @@
      "efeitos": "Resistência: Calor; Atrai fungos",
      "descricao": "Seus pelos brancos vivem molhados formando poças d'água (facilitando rastreio em terra) e atraindo transcendentais de fungo."
     }
+   ],
+   "estagios": [
+    {
+     "numero": 2,
+     "deslocamentos": {
+      "voar": 9
+     }
+    }
    ]
   },
   {
    "nome": "Orchen (Trans-Oceânico)",
    "raca": "Orchen",
-   "outrosDeslocamentos": "Natação 12 m",
    "sentidos": "Visão oceânica; Percepção de cardumes",
    "comportamento": "Vaga pelos oceanos dia e noite sem dormir; pacato sem fome, mas tritura tudo quando faminto e estoca presas vivas em bolhas.",
    "habitat": "Oceanos abertos e rotas transoceânicas",
@@ -1356,6 +1410,10 @@
     "Líquido Amarelo de Suspensão",
     "Carne Ancestral"
    ],
+   "deslocamentos": {
+    "andar": 0,
+    "nadar": 12
+   },
    "ataques": [
     {
      "nome": "Mordida Colossal",
@@ -1401,7 +1459,7 @@
   {
    "nome": "Nilheas (Aqüus Domenos)",
    "raca": "Nilheas",
-   "outrosDeslocamentos": "Natação 12 m (anda sobre a água); Voo (Estágio 2) 12 m",
+   "outrosDeslocamentos": "Natação 12 m (anda sobre a água)",
    "sentidos": "Visão na tempestade; Camuflagem líquida submersa",
    "comportamento": "Vive em bandos de 4 a 8 guiados por fêmea alfa; herbívora mas territorialista, ataca intrusos com investidas e afogamento.",
    "habitat": "Mares abertos, ondas gigantes e nuvens de tempestade",
@@ -1461,6 +1519,10 @@
     "Essência Líquida de Nilheas",
     "Chifre de Unicórnio d'Água (Estágio 2)"
    ],
+   "deslocamentos": {
+    "andar": 12,
+    "nadar": 12
+   },
    "ataques": [
     {
      "nome": "Trombada Invisível",
@@ -1474,12 +1536,19 @@
      "obs": "Ataca com investida violenta e tentativa de afogamento"
     }
    ],
-   "habilidades": []
+   "habilidades": [],
+   "estagios": [
+    {
+     "numero": 2,
+     "deslocamentos": {
+      "voar": 12
+     }
+    }
+   ]
   },
   {
    "nome": "Sábico (Nilheas de Efreus)",
    "raca": "Sábico",
-   "outrosDeslocamentos": "Voo (Estágio 2) 12 m; Natação 6 m",
    "sentidos": "Visão noturna; Percepção de calor",
    "comportamento": "Noturno, monogâmico e agressivo (especialmente contra Nilheas); congela alimentos antes de comer e protege o parceiro morto congelado até o fim.",
    "habitat": "Tundras, geleiras e picos de montanhas nevadas",
@@ -1541,6 +1610,10 @@
     "Asas de Gelo Místico",
     "Pele Tatuada de Sábico"
    ],
+   "deslocamentos": {
+    "andar": 12,
+    "nadar": 6
+   },
    "ataques": [
     {
      "nome": "Estocada de Chifre Prismático",
@@ -1581,12 +1654,19 @@
      "efeitos": "Revive filhote / IP Físico +2",
      "descricao": "Revestido de gelo prismático que reflete cores e protege contra ataques; seu chifre é capaz de conceder vida aos filhotes natimortos da espécie."
     }
+   ],
+   "estagios": [
+    {
+     "numero": 2,
+     "deslocamentos": {
+      "voar": 12
+     }
+    }
    ]
   },
   {
    "nome": "X'CSO (Minério Mortal)",
    "raca": "X'CSO",
-   "outrosDeslocamentos": "Natação 12 m; Voo/Flutuar (Estágio 2) 9 m",
    "sentidos": "Faro de sangue e minérios metálicos 30 m; Visão (Estágio 2)",
    "comportamento": "Vive em pequenos cardumes escondido na areia de rios ricos em minérios; entra em frenesi berserker ao sentir metais nobres ou Lumrà.",
    "habitat": "Rios e lagos rasos ricos em minérios e minas alagadas",
@@ -1644,6 +1724,10 @@
     "Dentes de X'CSO",
     "Estômago Expansível"
    ],
+   "deslocamentos": {
+    "andar": 6,
+    "nadar": 12
+   },
    "ataques": [
     {
      "nome": "Mordida Frenética de Ferro",
@@ -1684,12 +1768,20 @@
      "efeitos": "Vantagem: ataque contra metal",
      "descricao": "Entra em estado berserker implacável ao sentir o metal negro Lumrà ou metais nobres carregados por mineradores."
     }
+   ],
+   "estagios": [
+    {
+     "numero": 2,
+     "deslocamentos": {
+      "voar": 9,
+      "flutuar": 9
+     }
+    }
    ]
   },
   {
    "nome": "Domchu (Espelho da Alma)",
    "raca": "Domchu",
-   "outrosDeslocamentos": "Natação 9 m; Escalada (Estágio 1) 6 m",
    "sentidos": "Empatia luminosa; Percepção de intenções",
    "comportamento": "Dócil e familiar; vive perto de cachoeiras e recifes, acalma os ânimos ao redor, enterra seus mortos e entra em luto.",
    "habitat": "Cachoeiras, copas de árvores costeiras, baías e recifes",
@@ -1748,6 +1840,10 @@
     "Cristal Azul da Cauda",
     "Crina Tentacular Bioluminescente"
    ],
+   "deslocamentos": {
+    "andar": 9,
+    "nadar": 9
+   },
    "ataques": [
     {
      "nome": "Chicotada de Cauda Cristalina",
@@ -1788,6 +1884,14 @@
      "modo": "lembrete",
      "efeitos": "Defende corpos de aliados",
      "descricao": "Jamais se alimenta de seres inteligentes; defende ferozmente o corpo de parentes mortos até conseguir cavar e enterrá-los."
+    }
+   ],
+   "estagios": [
+    {
+     "numero": 1,
+     "deslocamentos": {
+      "escalar": 6
+     }
     }
    ]
   },
@@ -1856,6 +1960,10 @@
     "Presas Congeladas",
     "Pele de Raposa Ártica"
    ],
+   "deslocamentos": {
+    "andar": 9,
+    "nadar": 9
+   },
    "ataques": [
     {
      "nome": "Bote da Estátua Gélida",
@@ -1899,7 +2007,7 @@
   {
    "nome": "Asgon (Lagarto-Valente)",
    "raca": "Asgon",
-   "outrosDeslocamentos": "Natação 15 m; Escalada em rochedos 6 m",
+   "outrosDeslocamentos": "Escalada em rochedos 6 m",
    "sentidos": "Visão costeira; Detecção de aproximação",
    "comportamento": "Herbívoro medroso que imita dragões; ruge alto e dispara bolas de fogo ou jorros d'água de longe, mas foge se o inimigo encostar nele.",
    "habitat": "Encostas, desfiladeiros costeiros e rochedos rasos",
@@ -1958,6 +2066,11 @@
     "Glândula de Vapor e Fogo",
     "Cauda D'Água"
    ],
+   "deslocamentos": {
+    "andar": 9,
+    "nadar": 15,
+    "escalar": 6
+   },
    "ataques": [
     {
      "nome": "Bola de Fogo Intimidadora",
@@ -2003,7 +2116,6 @@
   {
    "nome": "Demëtra (Manancial da Vida)",
    "raca": "Demëtra",
-   "outrosDeslocamentos": "Natação 12 m; Flutuar 6 m",
    "sentidos": "Visão 360° (4 olhos frontais e 2 dorsais); Percepção no escuro",
    "comportamento": "Caçador paciente que embosca presas distraídas; não sangra e suas partes decepadas ganham vida própria como novos animais marinhos.",
    "habitat": "Mares profundos, praias e margens de rios",
@@ -2064,6 +2176,11 @@
     "Bolsa de Tinta Abissal",
     "Corais Simbióticos"
    ],
+   "deslocamentos": {
+    "andar": 6,
+    "nadar": 12,
+    "flutuar": 6
+   },
    "ataques": [
     {
      "nome": "Açoite de Múltiplos Tentáculos",
@@ -2108,7 +2225,6 @@
   {
    "nome": "Psello (Psico-Choque)",
    "raca": "Psello",
-   "outrosDeslocamentos": "Natação 12 m; Flutuar 6 m",
    "sentidos": "Detecção de mentes pensantes 30 m; 4 globos oculares",
    "comportamento": "Recluso e hiperinteligente; destrói equipamentos de observação, evita animais comuns (que não o atacam) e frita o cérebro de seres inteligentes que se aproximam.",
    "habitat": "Profundezas oceânicas e ruínas submersas de cidades ou templos",
@@ -2167,6 +2283,11 @@
     "Tecido Cerebral Translúcido",
     "Sinapse Azul Energizada"
    ],
+   "deslocamentos": {
+    "andar": 3,
+    "nadar": 12,
+    "flutuar": 6
+   },
    "ataques": [
     {
      "nome": "Choque de Inteligência (Caça-Gênios)",
@@ -2273,6 +2394,10 @@
     "Casca Espinhosa",
     "Sangue Venenoso"
    ],
+   "deslocamentos": {
+    "andar": 9,
+    "nadar": 9
+   },
    "ataques": [
     {
      "nome": "Garras da Prisão",
@@ -2377,6 +2502,9 @@
     "Visor Óptico de Arton",
     "Núcleo de Enmium"
    ],
+   "deslocamentos": {
+    "andar": 9
+   },
    "ataques": [
     {
      "nome": "Marretada de Ferro Fundido",
@@ -2410,7 +2538,6 @@
   {
    "nome": "N04H - Noah (Protótipo 2012)",
    "raca": "N04H (Noah)",
-   "outrosDeslocamentos": "Natação 15 m; Caminhada abissal 12 m",
    "sentidos": "Olhos de luz solar alaranjados; Visão abissal e costeira",
    "comportamento": "Observa vilas costeiras de longe; pacífico se respeitado ou reverenciado com sacrifícios, mas destrói aldeias inteiras em fúria se for atacado.",
    "habitat": "Oceano profundo e arredores de pequenas vilas costeiras",
@@ -2474,6 +2601,10 @@
     "Pluma Metálica Verde de Noah",
     "Núcleo de Luz Solar"
    ],
+   "deslocamentos": {
+    "andar": 12,
+    "nadar": 15
+   },
    "ataques": [
     {
      "nome": "Feixe Solar dos Olhos",
@@ -2519,7 +2650,6 @@
   {
    "nome": "Borus (Peixe de Ferro)",
    "raca": "Borus",
-   "outrosDeslocamentos": "Natação 15 m; Flutuar 9 m",
    "sentidos": "Emissor/Receptor de sinais na barbatana; Inteligência coletiva",
    "comportamento": "No Estágio 1 nada em cardumes de até 200; no Estágio 2 (Borus Orca) devora o cardume menor, anda em grupos de até 10 e nunca desiste de uma presa que fugiu.",
    "habitat": "Mares e oceanos abertos",
@@ -2579,6 +2709,11 @@
     "Propulsor Biometálico",
     "Antena de Sincronia Fina"
    ],
+   "deslocamentos": {
+    "andar": 3,
+    "nadar": 15,
+    "flutuar": 9
+   },
    "ataques": [
     {
      "nome": "Investida de Cardume Metálico",
@@ -2682,6 +2817,10 @@
     "Dentes Diagonais",
     "Carne Real Exuberante (Estágios 2 e 3)"
    ],
+   "deslocamentos": {
+    "andar": 0,
+    "nadar": 12
+   },
    "ataques": [
     {
      "nome": "Mandíbula Esmaga-Ossos",
@@ -2727,7 +2866,6 @@
   {
    "nome": "Megûda (Relógio do Mar)",
    "raca": "Megûda",
-   "outrosDeslocamentos": "Natação 9 m; Flutuar (Estágio 2) 6 m",
    "sentidos": "Relógio biológico absoluto; Bússola geográfica interna",
    "comportamento": "Calmo e metódico (segue rotina diária cronometrada ao minuto: 4:52, 10:28, 14:21, 17:11, 20:01); defende o bando coletivamente e se mata de estresse se preso.",
    "habitat": "Recifes da Baía das Bestas (Junglam) e tocas marinhas",
@@ -2783,6 +2921,10 @@
     "Hélice Afiada",
     "Pedra Amarela Viscosa (apagada)"
    ],
+   "deslocamentos": {
+    "andar": 3,
+    "nadar": 9
+   },
    "ataques": [
     {
      "nome": "Corte de Hélice Precisa",
@@ -2823,12 +2965,19 @@
      "efeitos": "Sabe hora/local exatos; Colapsa se preso",
      "descricao": "Possui noção exata do tempo e espaço sem usar sentidos; se capturado e impedido de cumprir sua rotina diária, desmonta-se de estresse."
     }
+   ],
+   "estagios": [
+    {
+     "numero": 2,
+     "deslocamentos": {
+      "flutuar": 6
+     }
+    }
    ]
   },
   {
    "nome": "Cetrario (Mergulhão)",
    "raca": "Cetrario",
-   "outrosDeslocamentos": "Natação 15 m; Voo 15 m",
    "sentidos": "Visão aérea e subaquática; Percepção de superfície",
    "comportamento": "Caçador de superfície; ataca barcos, baleias e tubarões com investidas surpresas verticais (do fundo para o céu ou mergulhando das nuvens).",
    "habitat": "Mares abertos, rotas de piratas e grandes altitudes sobre o oceano",
@@ -2887,6 +3036,11 @@
     "Couro Hidrodinâmico",
     "Espinhos Dorsais"
    ],
+   "deslocamentos": {
+    "andar": 0,
+    "nadar": 15,
+    "voar": 15
+   },
    "ataques": [
     {
      "nome": "Investida Vertical Transpassante",
@@ -2930,7 +3084,6 @@
   {
    "nome": "Merculo (Impotente)",
    "raca": "Merculo",
-   "outrosDeslocamentos": "Natação 12 m",
    "sentidos": "Audição e olfato colossais (quase cego nos Estágios 1 e 2); 4 olhos e antenas luminosas (Estágio 3)",
    "comportamento": "Imprevisível: encara presas com calma enquanto decide ao acaso se as ignora, presenteia ou destrói implacavelmente; protetor com os filhotes.",
    "habitat": "Fossas oceânicas escuras e costas invadidas",
@@ -2993,6 +3146,10 @@
     "Tentáculo Bioluminescente",
     "Garra Colossal"
    ],
+   "deslocamentos": {
+    "andar": 9,
+    "nadar": 12
+   },
    "ataques": [
     {
      "nome": "Esmagamento de Quatro Braços",
@@ -3038,7 +3195,6 @@
   {
    "nome": "Sagglammen (Ovo Mortal)",
    "raca": "Sagglammen",
-   "outrosDeslocamentos": "Natação 9 m; Salto 4,5 m",
    "sentidos": "Visão anfíbia; Olfato químico",
    "comportamento": "Envenena à distância e aguarda a vítima desmaiar ou alucinar sem sentir dor antes de devorá-la viva.",
    "habitat": "Lagos calmos, pântanos e margens úmidas",
@@ -3102,6 +3258,11 @@
     "Ovo Fecundado",
     "Papo Alucinógeno (Máscara de Sag)"
    ],
+   "deslocamentos": {
+    "andar": 9,
+    "nadar": 9,
+    "saltar": 4.5
+   },
    "ataques": [
     {
      "nome": "Disparo de Ovo Parasita",
@@ -3159,7 +3320,6 @@
   {
    "nome": "Sfines (Cardume Vermelho)",
    "raca": "Sfines",
-   "outrosDeslocamentos": "Natação 15 m; Flutuar (Estágio 2) 9 m",
    "sentidos": "Luz vermelha de mira na testa; Rastreio infalível de alvo marcado",
    "comportamento": "Foca em um único alvo e não o deixa escapar até matar; alimenta-se de metal e ossos (ignora invertebrados).",
    "habitat": "Rios de piracema sangrenta, encostas e ilhas",
@@ -3219,6 +3379,10 @@
     "Lente Vermelha de Mira",
     "Projéteis Metálicos"
    ],
+   "deslocamentos": {
+    "andar": 3,
+    "nadar": 15
+   },
    "ataques": [
     {
      "nome": "Disparo Bucal Calibrado",
@@ -3258,12 +3422,19 @@
      "efeitos": "Come metal e ossos; Nadadeiras viram armas",
      "descricao": "Alimenta-se de estruturas metálicas e ossos; suas nadadeiras afiadas como navalhas produzem som de batalha medieval quando o cardume salta."
     }
+   ],
+   "estagios": [
+    {
+     "numero": 2,
+     "deslocamentos": {
+      "flutuar": 9
+     }
+    }
    ]
   },
   {
    "nome": "Dinerkro (Mordida Mortal)",
    "raca": "Dinerkro",
-   "outrosDeslocamentos": "Natação 12 m",
    "sentidos": "Olhos e narinas de superfície; Percepção de margem",
    "comportamento": "Fica submerso na lama com os dentes e espinhos rochosos à mostra; desfere bote fulminante na iniciativa, esmagando na primeira mordida.",
    "habitat": "Rios, pântanos lamacentos e mangues",
@@ -3324,6 +3495,10 @@
     "Presas Colossais",
     "Crista Foliar Dura"
    ],
+   "deslocamentos": {
+    "andar": 9,
+    "nadar": 12
+   },
    "ataques": [
     {
      "nome": "Bote da Mandíbula Rochosa",
@@ -3369,7 +3544,6 @@
   {
    "nome": "Jonrahuss (Ladrão da Força)",
    "raca": "Jonrahuss",
-   "outrosDeslocamentos": "Natação 15 m",
    "sentidos": "Visão subaquática polar; Faro de sangue",
    "comportamento": "Agressivo e individualista (vive em grandes grupos no gelo, mas não ajuda aliados e luta até a morte entre si); deforma e cresce ao drenar a força das vítimas.",
    "habitat": "Águas gélidas, encostas polares e icebergs",
@@ -3427,6 +3601,10 @@
     "Gordura Isolante Polar",
     "Couro de Jonrahuss"
    ],
+   "deslocamentos": {
+    "andar": 4.5,
+    "nadar": 15
+   },
    "ataques": [
     {
      "nome": "Mordida Drenadora de Força",
@@ -3459,7 +3637,6 @@
   {
    "nome": "Emmengha (Alga-Viva)",
    "raca": "Emmengha",
-   "outrosDeslocamentos": "Natação 12 m; Escavação (Estágio 1) 6 m",
    "sentidos": "Percepção ecológica do ambiente; Camuflagem vegetal perfeita",
    "comportamento": "Pacífico e protetor da natureza (só ataca quem destrói o ambiente ou seres de fogo); afeiçoa-se a meninas pequenas, protegendo-as e alimentando-as.",
    "habitat": "Florestas virgens, poças, praias paradisíacas e rochedos",
@@ -3519,6 +3696,10 @@
     "Algas Controláveis de Emmengha",
     "Essência Clorofílica"
    ],
+   "deslocamentos": {
+    "andar": 9,
+    "nadar": 12
+   },
    "ataques": [
     {
      "nome": "Enredar de Algas Vivas",
@@ -3558,12 +3739,20 @@
      "efeitos": "Enrola plantas (Enraizado) / Derruba árvores",
      "descricao": "Controla a flora ao redor e as longas algas do próprio corpo para prender os pés dos inimigos ou derrubar árvores sobre agressores da natureza."
     }
+   ],
+   "estagios": [
+    {
+     "numero": 1,
+     "deslocamentos": {
+      "escavar": 6
+     }
+    }
    ]
   },
   {
    "nome": "Xilim (Água Negra)",
    "raca": "Xilim",
-   "outrosDeslocamentos": "Natação 4,5 m; Escalada 4,5 m; Lançamento em Concha 15 m",
+   "outrosDeslocamentos": "Lançamento em Concha 15 m",
    "sentidos": "Antenas químicas; Percepção em águas turvas",
    "comportamento": "Carniceiro lento que infesta esgotos e águas imundas; expele gás pestilento e se recolhe na concha cônica para se lançar como projétil ou fugir.",
    "habitat": "Esgotos, rios poluídos, docas, abatedouros e fábricas abandonadas",
@@ -3625,6 +3814,11 @@
     "Gosma de Água Negra",
     "Glândula Pestilenta"
    ],
+   "deslocamentos": {
+    "andar": 4.5,
+    "nadar": 4.5,
+    "escalar": 4.5
+   },
    "ataques": [
     {
      "nome": "Ataque de Concha",
@@ -3672,7 +3866,7 @@
   {
    "nome": "Shya (Serpente de Lâminas)",
    "raca": "Shya",
-   "outrosDeslocamentos": "Natação 12 m; Escalada em paredes 12 m",
+   "outrosDeslocamentos": "Escalada em paredes 12 m",
    "sentidos": "Visão no escuro 18 m; Sensores de vibração",
    "comportamento": "Máquina de matar de cavernas escuras; prende vítimas em teias/gosma e injeta solução alcalina que estabiliza e amolece a presa viva antes de devorá-la.",
    "habitat": "Grandes cavernas escuras com espelhos d'água (símbolo de Karkat)",
@@ -3734,6 +3928,11 @@
     "Pata-Espada de Queratina",
     "Casca Azul-Enegrecida"
    ],
+   "deslocamentos": {
+    "andar": 12,
+    "nadar": 12,
+    "escalar": 12
+   },
    "ataques": [
     {
      "nome": "Tempestade da Centoespada",
@@ -3778,7 +3977,6 @@
   {
    "nome": "Trot (O Evolucionário)",
    "raca": "Trot",
-   "outrosDeslocamentos": "Natação 6 m; Escavação na areia 6 m",
    "sentidos": "3 olhos ópticos (Estágio 2); Mira laser ocular (Estágio 3)",
    "comportamento": "Caranguejo metálico pacífico que coleciona sucatas em tocas-bunker; só ataca se ameaçado, evoluindo de mecânico para vapor e finalmente androide.",
    "habitat": "Praias, mangues e Ilha dos Restos",
@@ -3839,6 +4037,11 @@
     "Processador Caudal",
     "Lente de Feixe Laser"
    ],
+   "deslocamentos": {
+    "andar": 9,
+    "nadar": 6,
+    "escavar": 6
+   },
    "ataques": [
     {
      "nome": "Feixe Laser Ocular (Antrot)",
@@ -3883,7 +4086,6 @@
   {
    "nome": "Millus (Miragem)",
    "raca": "Millus",
-   "outrosDeslocamentos": "Voo 12 m; Natação 12 m",
    "sentidos": "Percepção de intelecto; Visão espiritual",
    "comportamento": "Gato d'água luminoso que brinca com bolhas; rodeia e encara por semanas apenas humanos inteligentes que conseguem vê-lo, levando-os à loucura enquanto os julga.",
    "habitat": "Bosques, lagos e lagoas calmas",
@@ -3940,6 +4142,11 @@
     "Essência de Miragem",
     "Água Luminescente de Millus"
    ],
+   "deslocamentos": {
+    "andar": 9,
+    "voar": 12,
+    "nadar": 12
+   },
    "ataques": [
     {
      "nome": "Julgamento da Miragem",
@@ -3986,7 +4193,7 @@
   {
    "nome": "Daggrèe (Peixe do Espaço)",
    "raca": "Daggrèe",
-   "outrosDeslocamentos": "Voo 18 m; Natação 15 m (inclusive em tempestades de areia)",
+   "outrosDeslocamentos": "Natação 15 m (inclusive em tempestades de areia)",
    "sentidos": "Visão estratosférica; Orientação estelar",
    "comportamento": "Calmo em cardumes nos estágios 1 e 2; no 3º estágio é territorialista nas nuvens e realiza investidas meteóricas devastadoras do céu para a terra.",
    "habitat": "Mares do norte (Surdig, WhaleGate), Cratera do Deserto de Bohan e ruínas de Almdag",
@@ -4044,6 +4251,11 @@
     "Asas Místicas de Daggrèe",
     "Escama Verde-Estelar"
    ],
+   "deslocamentos": {
+    "andar": 3,
+    "voar": 18,
+    "nadar": 15
+   },
    "ataques": [
     {
      "nome": "Mergulho na Água (Estrela da Vingança)",
@@ -4088,7 +4300,6 @@
   {
    "nome": "Afoece (Mimo da Areia)",
    "raca": "Afoece",
-   "outrosDeslocamentos": "Escavação na areia 6 m; Caminhada submersa 6 m",
    "sentidos": "Olfato para comida quente/assada; Tato vibracional na areia",
    "comportamento": "Camufla-se com perfeição na areia; paralisa vítimas e as enterra ao sol para assarem, ou invade acampamentos humanos atraído por comida quente.",
    "habitat": "Praias, dunas costeiras e pedras submersas rasas",
@@ -4148,6 +4359,10 @@
     "Carapaça Porosa Camaleônica",
     "Garra Caudal Espinhosa"
    ],
+   "deslocamentos": {
+    "andar": 9,
+    "escavar": 6
+   },
    "ataques": [
     {
      "nome": "Mordida Tóxica em 3 Estágios",
@@ -4192,7 +4407,6 @@
   {
    "nome": "Momor (Fada Azul)",
    "raca": "Momor",
-   "outrosDeslocamentos": "Natação 12 m; Voo 12 m",
    "sentidos": "Percepção mágica; Sentir pureza da água",
    "comportamento": "Herbívoro glamouroso mas altamente territorialista com suas águas; vive em grupos de até 5 onde a liderança é decidida jorrando água para o alto.",
    "habitat": "Rios, lagos e lagoas em florestas densas",
@@ -4251,6 +4465,11 @@
     "Placa Azul Bioluminescente",
     "Flores Místicas Simbióticas"
    ],
+   "deslocamentos": {
+    "andar": 9,
+    "nadar": 12,
+    "voar": 12
+   },
    "ataques": [
     {
      "nome": "Investida do Rinoceronte Azul",
@@ -4295,7 +4514,6 @@
   {
    "nome": "Mapiraca (Boca Grande)",
    "raca": "Mapiraca",
-   "outrosDeslocamentos": "Natação 15 m; Flutuar (Estágio 2) 9 m",
    "sentidos": "Cheiro de Sangue Quente absoluto na água",
    "comportamento": "Solitário, voraz e insaciável; quanto mais digere no 'Estômago Comprido', mais cresce e mais fome sente, podendo cometer o 'suicídio da gula' mordendo o próprio rabo.",
    "habitat": "Mares abertos e grandes rios",
@@ -4351,6 +4569,10 @@
     "Escamas do Estômago Comprido",
     "Fileira de Dentes Vampíricos"
    ],
+   "deslocamentos": {
+    "andar": 3,
+    "nadar": 15
+   },
    "ataques": [
     {
      "nome": "Abocanhada de Boca Grande",
@@ -4378,6 +4600,14 @@
      "modo": "sempre",
      "efeitos": "Cresce após digerir; Fome perpétua",
      "descricao": "Nunca fica saciado após digerir presas no Estômago Comprido, crescendo continuamente até atacar seres mais fortes ou morder o próprio rabo."
+    }
+   ],
+   "estagios": [
+    {
+     "numero": 2,
+     "deslocamentos": {
+      "flutuar": 9
+     }
     }
    ]
   },
@@ -4446,6 +4676,10 @@
     "Chifre de Leão-Demônio",
     "Cinzas de Coração Carbonizado"
    ],
+   "deslocamentos": {
+    "andar": 12,
+    "nadar": 12
+   },
    "ataques": [
     {
      "nome": "Rugido Carbonizador de Corações",
@@ -4503,7 +4737,7 @@
   {
    "nome": "Uüriki (Cara Vermelha / Rei Macaco)",
    "raca": "Uüriki",
-   "outrosDeslocamentos": "Escalada 12 m; Natação em lava 9 m",
+   "outrosDeslocamentos": "Natação em lava 9 m",
    "sentidos": "Visão tática; Percepção de artefatos",
    "comportamento": "Coleciona adornos/armaduras e vive em bandos de até 10; no 3º estágio (Rei Macaco) age com planos estratégicos, comanda outros transcendentais e enlouquece se roubarem seu bastão.",
    "habitat": "Florestas de fogo, rochedos vulcânicos e rios de lava",
@@ -4564,6 +4798,11 @@
     "Manopla de Pedra Magmática",
     "Adornos de Espólio"
    ],
+   "deslocamentos": {
+    "andar": 12,
+    "escalar": 12,
+    "nadar": 9
+   },
    "ataques": [
     {
      "nome": "Golpe do Quinto Membro (Bastão)",
@@ -4610,7 +4849,7 @@
   {
    "nome": "Kuruju (Tripa de Ouro)",
    "raca": "Kuruju",
-   "outrosDeslocamentos": "Natação em lava 9 m; Flutuar (Estágio 2) 9 m",
+   "outrosDeslocamentos": "Natação em lava 9 m",
    "sentidos": "Percepção de matéria orgânica e minérios no magma",
    "comportamento": "Alimenta-se de crostas orgânicas na lava e expele metais preciosos (ouro, prata, platina); pacífico no 1.º estágio, mas agressivo e voador no 2.º estágio se for retirado do habitat.",
    "habitat": "Rios de lava, vulcões e fazendas de magcultura (Sunfire, Duneshell, Orkennar)",
@@ -4672,6 +4911,10 @@
     "Crosta Espinhosa de Kuruju",
     "Papo Separador de Minério"
    ],
+   "deslocamentos": {
+    "andar": 6,
+    "nadar": 9
+   },
    "ataques": [
     {
      "nome": "Explosão de Despedrar",
@@ -4711,6 +4954,14 @@
      "modo": "sempre",
      "efeitos": "Expele Ouro, Prata e Platina",
      "descricao": "Alimenta-se da matéria orgânica da lava e expele os minérios puros que não digere (pelas fezes no 1.º estágio ou cuspindo pelo papo no 2.º estágio)."
+    }
+   ],
+   "estagios": [
+    {
+     "numero": 2,
+     "deslocamentos": {
+      "flutuar": 9
+     }
     }
    ]
   },
@@ -4778,6 +5029,10 @@
     "Placa de Armadura de Barro e Lava",
     "Núcleo Ígneo de Reno"
    ],
+   "deslocamentos": {
+    "andar": 9,
+    "nadar": 9
+   },
    "ataques": [
     {
      "nome": "Quebra-Chão (Onda Sísmica)",
@@ -4883,6 +5138,9 @@
     "Crosta de Lava das Mãos",
     "Chifre do Poço de Sangue"
    ],
+   "deslocamentos": {
+    "andar": 12
+   },
    "ataques": [
     {
      "nome": "Mordida da Boca do Diabo",
@@ -4921,6 +5179,15 @@
      "modo": "sempre",
      "efeitos": "Camuflagem +20% no magma",
      "descricao": "Passa dias submerso nos poços de sangue e emerge silenciosamente apenas com o topo da cabeça parecendo uma pedra a boiar."
+    }
+   ],
+   "estagios": [
+    {
+     "numero": 2,
+     "deslocamentos": {
+      "andar": 12,
+      "nadar": 12
+     }
     }
    ]
   },
@@ -4986,6 +5253,9 @@
     "Glândula Ígnea da Garganta",
     "Escamas Negras de Fuligem"
    ],
+   "deslocamentos": {
+    "andar": 9
+   },
    "ataques": [
     {
      "nome": "Açoite de Cauda Cabeça-de-Fogo",
@@ -5026,12 +5296,19 @@
      "efeitos": "Dano de Fogo no contacto corporal",
      "descricao": "No 2.º estágio aquece os espinhos das costas e da cauda até ficarem em brasa, queimando atacantes corpo-a-corpo, e ganha patas extras para andar nas paredes."
     }
+   ],
+   "estagios": [
+    {
+     "numero": 2,
+     "deslocamentos": {
+      "escalar": 9
+     }
+    }
    ]
   },
   {
    "nome": "Colorei (Gueomidris / Rei de Pedra)",
    "raca": "Colorei",
-   "outrosDeslocamentos": "Salto 6 m; Escalada 9 m",
    "sentidos": "Prontidão absoluta (percebe qualquer ação física ou mágica); Olhos camaleónicos",
    "comportamento": "Furtivo nas rochas ou imóvel por dias como gárgula de grafite; se avistado, rodeia a presa durante horas em prontidão absoluta e caça em grupos hierárquicos de 3 a 7.",
    "habitat": "Desertos rochosos, terras de Duneshell e Dosgil",
@@ -5092,6 +5369,11 @@
     "Pele de Grafite do Rei de Pedra",
     "Presas Flamejantes"
    ],
+   "deslocamentos": {
+    "andar": 15,
+    "saltar": 6,
+    "escalar": 9
+   },
    "ataques": [
     {
      "nome": "Bote Real Ígneo",
@@ -5197,6 +5479,10 @@
     "Pelagem Metálica Alaranjada",
     "Garras Incandescentes"
    ],
+   "deslocamentos": {
+    "andar": 12,
+    "nadar": 9
+   },
    "ataques": [
     {
      "nome": "Patada do Senhor das Camadas",
@@ -5229,7 +5515,6 @@
   {
    "nome": "Ellagus (Leomidris)",
    "raca": "Ellagus",
-   "outrosDeslocamentos": "Salto 6 m",
    "sentidos": "Visão de planície; Presença de comando",
    "comportamento": "Rei impiedoso das planícies de fogo que julga quem vive ou morre e jamais se esconde ou recua; as fêmeas (Estágio 2) caçam em bandos de 5 e os machos (Estágio 3) guardam o território.",
    "habitat": "Planícies abertas, grandes desertos e alto de rochedos nos países de fogo",
@@ -5289,6 +5574,10 @@
     "Garras Reais de Leomidris",
     "Coração Explosivo"
    ],
+   "deslocamentos": {
+    "andar": 12,
+    "saltar": 6
+   },
    "ataques": [
     {
      "nome": "Presença Explosiva (Rugido)",
@@ -5395,6 +5684,10 @@
     "Garras com Serras de CX REN G4",
     "Blindagem Espinhosa"
    ],
+   "deslocamentos": {
+    "andar": 9,
+    "escalar": 9
+   },
    "ataques": [
     {
      "nome": "Canhão de Fogo Caudal",
@@ -5503,6 +5796,10 @@
     "Bloco de Composto Vulcânico Fértil",
     "Tentáculo Colossal"
    ],
+   "deslocamentos": {
+    "andar": 9,
+    "nadar": 12
+   },
    "ataques": [
     {
      "nome": "Toxina Toxtáculos",
@@ -5620,6 +5917,9 @@
     "Núcleo de Cinza e Magma",
     "Chifre Demoníaco"
    ],
+   "deslocamentos": {
+    "andar": 15
+   },
    "ataques": [
     {
      "nome": "Investida Explosiva de Rastilho",
@@ -5724,6 +6024,10 @@
     "Chifres Queimados",
     "Ovo de Magroide"
    ],
+   "deslocamentos": {
+    "andar": 9,
+    "nadar": 12
+   },
    "ataques": [
     {
      "nome": "Golpe de Arma Inflamada",
@@ -5828,6 +6132,9 @@
     "Ovo Redondo de Tertegmo",
     "Rocha de Magma Frio"
    ],
+   "deslocamentos": {
+    "andar": 6
+   },
    "ataques": [
     {
      "nome": "Toque de Extinguir Calor",
@@ -5866,12 +6173,26 @@
      "efeitos": "No 3.º estágio usa o casco como arma",
      "descricao": "Cresce continuamente com a idade e ergue-se em duas patas para arremessar todo o seu peso de 600kg contra invasores."
     }
+   ],
+   "estagios": [
+    {
+     "numero": 2,
+     "deslocamentos": {
+      "nadar": 6
+     }
+    },
+    {
+     "numero": 3,
+     "deslocamentos": {
+      "nadar": 6
+     }
+    }
    ]
   },
   {
    "nome": "Iggon (Inimigo da Magia)",
    "raca": "Iggon",
-   "outrosDeslocamentos": "Voo (Estágio 3) 15 m; Natação em lava 9 m",
+   "outrosDeslocamentos": "Natação em lava 9 m",
    "sentidos": "Sentir Magia a 150 m; Visão de predador",
    "comportamento": "Solitário e alerta sobre rochas no magma; entra em fúria implacável assim que sente um ser místico ou o uso de qualquer poder mágico/energia num raio de 150m.",
    "habitat": "Encostas de vulcões e rochas flutuantes no magma",
@@ -5933,6 +6254,10 @@
     "Asas Dracónicas",
     "Glândula de Fogo Interno"
    ],
+   "deslocamentos": {
+    "andar": 9,
+    "nadar": 9
+   },
    "ataques": [
     {
      "nome": "Garras Caça-Feiticeiros",
@@ -5972,12 +6297,20 @@
      "efeitos": "IP Energia/Mágico +6; Voo no 3.º estágio",
      "descricao": "A sua couraça dissipa feitiços e poderes elementais, sendo cobiçada para a fabricação das melhores armaduras."
     }
+   ],
+   "estagios": [
+    {
+     "numero": 3,
+     "deslocamentos": {
+      "voar": 15
+     }
+    }
    ]
   },
   {
    "nome": "Ashmann (Guardião da Lua)",
    "raca": "Ashmann",
-   "outrosDeslocamentos": "Escalada em árvores 12 m; Flutuar espectral (Estágio 1) 12 m",
+   "outrosDeslocamentos": "Escalada em árvores 12 m",
    "sentidos": "Visão noturna espiritual; Percepção de almas",
    "comportamento": "Misterioso e noturno; observa das copas das árvores sob o luar, aplica a Marca da Loucura na vítima e desaparece nas sombras enquanto ela enlouquece.",
    "habitat": "Florestas noturnas e santuários lunares antigos",
@@ -6037,6 +6370,10 @@
     "Marca da Testa",
     "Essência Lunar do Submundo"
    ],
+   "deslocamentos": {
+    "andar": 12,
+    "escalar": 12
+   },
    "ataques": [
     {
      "nome": "Marca da Loucura",
@@ -6077,12 +6414,19 @@
      "efeitos": "Imune: Dano Físico no 1.º estágio",
      "descricao": "Na sua primeira fase evolutiva é um puro espectro lunar sem peso terreno, incapaz de ser atingido por ataques físicos."
     }
+   ],
+   "estagios": [
+    {
+     "numero": 1,
+     "deslocamentos": {
+      "flutuar": 12
+     }
+    }
    ]
   },
   {
    "nome": "Zibiabu (Ladrão da Verdade)",
    "raca": "Zibiabu",
-   "outrosDeslocamentos": "Flutuar constante 15 m",
    "sentidos": "Olhos da Verdade de Plennarius (identifica o item mais valioso/vital do alvo)",
    "comportamento": "Solitário, herbívoro e brincalhão; prega partidas mudando o que os olhos veem, toca no equipamento mais importante do aventureiro para o fazer sumir e foge a rir.",
    "habitat": "Diversas regiões, florestas de fogo e ruínas antigas",
@@ -6142,6 +6486,10 @@
     "Olho Ilusório de Zibiabu",
     "Objeto Anteriormente Escondido"
    ],
+   "deslocamentos": {
+    "andar": 12,
+    "flutuar": 15
+   },
    "ataques": [
     {
      "nome": "Toque de Esconder (Roubo Divino)",
@@ -6186,7 +6534,7 @@
   {
    "nome": "Himalattus (Acolhedora)",
    "raca": "Himalattus",
-   "outrosDeslocamentos": "Escavação subterrânea 12 m; Avanço Momentâneo (elástico) 15 m",
+   "outrosDeslocamentos": "Avanço Momentâneo (elástico) 15 m",
    "sentidos": "Sentido geográfico subterrâneo; Tremor sísmico",
    "comportamento": "Escava sob os desertos de fogo e brota do chão; usa o Avanço Momentâneo para emergir, agarrar uma presa menor e puxá-la de volta para o subsolo separando-a do grupo.",
    "habitat": "Desertos de fogo e planícies vulcânicas",
@@ -6248,6 +6596,10 @@
     "Casco-Vulcão",
     "Espinhos Circulares"
    ],
+   "deslocamentos": {
+    "andar": 6,
+    "escavar": 12
+   },
    "ataques": [
     {
      "nome": "Bote Elástico Subterrâneo",
@@ -6292,7 +6644,6 @@
   {
    "nome": "Ferij (Mãe do Mal)",
    "raca": "Ferij",
-   "outrosDeslocamentos": "Escalada 12 m",
    "sentidos": "Visão no calor e fumaça",
    "comportamento": "Macaco incendiário agressivo e caótico que vive em bandos pirotécnicos nas florestas de fogo; gera crias demoníacas de chamas incessantemente para atacar tudo ao redor.",
    "habitat": "Florestas de fogo e clareiras vulcânicas",
@@ -6351,6 +6702,10 @@
     "Pelagem Pulsante de Brasas",
     "Garras de Ferij"
    ],
+   "deslocamentos": {
+    "andar": 12,
+    "escalar": 12
+   },
    "ataques": [
     {
      "nome": "Ataque da Horda de Crias do Mal",
@@ -6453,6 +6808,10 @@
     "Queratina Negra de Carvão",
     "Aguilhão de Weensai"
    ],
+   "deslocamentos": {
+    "andar": 9,
+    "escalar": 9
+   },
    "ataques": [
     {
      "nome": "Aguilhão de Veneno de Fogo",
@@ -6545,6 +6904,10 @@
     "Concha Metálica de Sallamar",
     "Muco Paralisante de Absorção"
    ],
+   "deslocamentos": {
+    "andar": 6,
+    "escalar": 6
+   },
    "ataques": [
     {
      "nome": "Toque Paralisante e Absorção",
@@ -6589,7 +6952,6 @@
   {
    "nome": "Gon'avos (Centelha)",
    "raca": "Gon'avos",
-   "outrosDeslocamentos": "Salto vertical até 5 m",
    "sentidos": "Visão atraída por brilho e cores",
    "comportamento": "Curioso e brincalhão; estica a pele viscosa revelando fendas incandescentes, aquece armas/objetos com a língua e cospe pedras em chamas guardadas no papo.",
    "habitat": "Florestas de fogo e rachaduras de cavernas vulcânicas",
@@ -6649,6 +7011,10 @@
     "Língua Incandescente",
     "Pedras de Papo Ígneas"
    ],
+   "deslocamentos": {
+    "andar": 9,
+    "saltar": 5
+   },
    "ataques": [
     {
      "nome": "Língua de Incandescência",
@@ -6767,6 +7133,10 @@
     "Pelagem Auto-Ígnea de Yalla",
     "Escamas Camaleónicas de Pedra"
    ],
+   "deslocamentos": {
+    "andar": 12,
+    "escalar": 9
+   },
    "ataques": [
     {
      "nome": "Mordida de Plasma Incandescente",
@@ -6811,7 +7181,7 @@
   {
    "nome": "Tara-mato (Tubarão da Terra)",
    "raca": "Tara-mato",
-   "outrosDeslocamentos": "Natação em lava e areia 12 m; Voo (Estágio 2) 12 m",
+   "outrosDeslocamentos": "Natação em lava e areia 12 m",
    "sentidos": "Tato sísmico subterrâneo; Detecção de intrusos",
    "comportamento": "Solitário e extremamente territorialista; nada impercetível sob a lava ou areia cedendo o solo no seu rasto e cria um Clone de Terra perfeito para cercar e atacar intrusos.",
    "habitat": "Rios de lava e desertos de sedimentos magmáticos",
@@ -6873,6 +7243,10 @@
     "Couro de Sedimentos Magmáticos",
     "Núcleo de Clone Terroso"
    ],
+   "deslocamentos": {
+    "andar": 6,
+    "nadar": 12
+   },
    "ataques": [
     {
      "nome": "Investida de Nariz Perfurante",
@@ -6911,12 +7285,19 @@
      "efeitos": "Invisível sob terra/lava; Voo no 2.º estágio",
      "descricao": "Move-se impercetível sob a areia e a lava (fazendo o solo ceder à superfície) e no 2.º estágio ganha capacidade plena de voo."
     }
+   ],
+   "estagios": [
+    {
+     "numero": 2,
+     "deslocamentos": {
+      "voar": 12
+     }
+    }
    ]
   },
   {
    "nome": "Triq Q (Para-Raio das Fendas)",
    "raca": "Triq Q",
-   "outrosDeslocamentos": "Escalada e Subterrâneo 9 m",
    "sentidos": "Perceção de campos elétricos e tempestades",
    "comportamento": "Vive em enormes ninhos subterrâneos e forma espirais para-raios nas tempestades; no 2.º estágio forma túneis de proteção para os menores e usa Reanimação elétrica para reviver outros Triq Q mortos.",
    "habitat": "Rachaduras do solo, cânions e montanhas magmáticas",
@@ -6977,6 +7358,11 @@
     "Escamas Ventrais Douradas",
     "Antena Desfibriladora"
    ],
+   "deslocamentos": {
+    "andar": 9,
+    "escalar": 9,
+    "escavar": 9
+   },
    "ataques": [
     {
      "nome": "Mordida Trovão",
@@ -7082,6 +7468,10 @@
     "Sílica Vulcânica Abrasiva",
     "Núcleo de Arenito"
    ],
+   "deslocamentos": {
+    "andar": 12,
+    "escavar": 9
+   },
    "ataques": [
     {
      "nome": "Abalroamento de Proa Rochosa",
@@ -7126,7 +7516,6 @@
   {
    "nome": "Cannunj (Balança do Caos)",
    "raca": "Cannunj",
-   "outrosDeslocamentos": "Salto 4,5 m",
    "sentidos": "Visão simétrica dual; Percepção de probabilidades",
    "comportamento": "Criatura simétrica e implacável que alterna entre frenesi imprevisível (Caos) e precisão cirúrgica (Ordem), forçando o campo de batalha a seguir a sua lei de equilíbrio.",
    "habitat": "Planaltos magmáticos e ruínas de templos antigos",
@@ -7184,6 +7573,10 @@
     "Núcleo Dual de Cannunj",
     "Carapaça Assimétrica Branca e Negra"
    ],
+   "deslocamentos": {
+    "andar": 9,
+    "saltar": 4.5
+   },
    "ataques": [
     {
      "nome": "Golpe da Assimetria (Caos/Ordem)",
@@ -7289,6 +7682,10 @@
     "Muco de Vapor Venenoso",
     "Couro de Caldeira"
    ],
+   "deslocamentos": {
+    "andar": 9,
+    "nadar": 12
+   },
    "ataques": [
     {
      "nome": "Gêiser de Vapor Sulfuroso",
@@ -7333,7 +7730,6 @@
   {
    "nome": "Grabbo (Tenaz das Fontes Termais)",
    "raca": "Grabbo",
-   "outrosDeslocamentos": "Natação 9 m",
    "sentidos": "Olhos periscópicos; Recetores de pressão na água",
    "comportamento": "Emboscador paciente de lagos termais e poços salobros; agarra a vítima com as suas tenazes gigantes, injeta neurotoxina pelas farpas internas e puxa-a para o fundo para a afogar.",
    "habitat": "Lagoas vulcânicas, mangues quentes e rios subterrâneos",
@@ -7394,6 +7790,10 @@
     "Glândula de Salmoura Tóxica",
     "Casca Termorresistente"
    ],
+   "deslocamentos": {
+    "andar": 6,
+    "nadar": 9
+   },
    "ataques": [
     {
      "nome": "Pinça Guilhotina Tóxica",
@@ -7439,7 +7839,6 @@
   {
    "nome": "Ishi-m1o (Unidade Hidro-Térmica)",
    "raca": "Ishi-m1o",
-   "outrosDeslocamentos": "Natação a jato 15 m",
    "sentidos": "Sonar hidro-mecânico; Visor de pressão",
    "comportamento": "Transcendental biomecânico de 3 estágios que patrulha fendas hidrotermais e costas vulcânicas; usa turbinas internas para disparar lâminas de água de alta pressão capazes de cortar aço.",
    "habitat": "Fendas hidrotermais, costas de lava e ruínas navais submersas",
@@ -7503,6 +7902,10 @@
     "Liga de Enmium Inoxidável",
     "Núcleo Condensador"
    ],
+   "deslocamentos": {
+    "andar": 9,
+    "nadar": 15
+   },
    "ataques": [
     {
      "nome": "Cortador Hidrodinâmico de Alta Pressão",
@@ -7547,7 +7950,7 @@
   {
    "nome": "Rocotorapus (Polvo de Basalto)",
    "raca": "Rocotorapus",
-   "outrosDeslocamentos": "Escalada em rochas 9 m; Levitação telecinética curta 6 m",
+   "outrosDeslocamentos": "Escalada em rochas 9 m",
    "sentidos": "Telepatia tátil; Camuflagem mineral perfeita",
    "comportamento": "Cefalópode terrestre de rocha vulcânica que manipula pedras e os próprios tentáculos pesados com telecinese; embosca presas esmagando a mente e o corpo em simultâneo.",
    "habitat": "Cavernas de basalto, desfiladeiros vulcânicos e ruínas monolíticas",
@@ -7609,6 +8012,11 @@
     "Gânglio Telecinético de Rocotorapus",
     "Cristais de Rocha"
    ],
+   "deslocamentos": {
+    "andar": 6,
+    "escalar": 9,
+    "flutuar": 6
+   },
    "ataques": [
     {
      "nome": "Esmagamento de Tentáculos de Basalto",
@@ -7655,7 +8063,6 @@
   {
    "nome": "Cino'vaos (Vidente das Cinzas)",
    "raca": "Cino'vaos",
-   "outrosDeslocamentos": "Flutuar místico 12 m",
    "sentidos": "Precognição curta; Visão através de cinzas e ilusões",
    "comportamento": "Criatura enigmática envolta em véus de cinza vulcânica que prevê movimentos inimigos e materializa miragens místicas que ganham massa real para ferir invasores.",
    "habitat": "Desertos de cinzas, picos vulcânicos e santuários místicos",
@@ -7716,6 +8123,10 @@
     "Terceiro Olho de Cino'vaos",
     "Artefato Cristalizado"
    ],
+   "deslocamentos": {
+    "andar": 9,
+    "flutuar": 12
+   },
    "ataques": [
     {
      "nome": "Lâmina de Miragem Sólida",

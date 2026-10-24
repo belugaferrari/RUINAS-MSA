@@ -4,6 +4,7 @@ import { sistema, idSistema } from './sistema.js';
 import { resolverAtaque, aplicarAtaque, armasDisponiveis, opcoesDefesa, sobrevida, rolarIniciativa, resolverManipulacao, modHumorTestes, humorDe, espectroDe, humorAparente, empatiaNatural, liberdadeDeHumor, modoRolagem, modoHumorTeste, recursoDe, gastarRecurso, racaDe, distanciaPecas, usosRestantes, gastarUso, testeContra, ipContra } from '../shared/combate.js';
 import { sincronizarEfeitos, passarTurnoEfeitos, efeitosAoAgir, cargaNoTurno, descansar } from '../shared/efeitos.js';
 import { fichasDeTeste, relatorioFicha, kitDeTeste } from '../shared/fichasTeste.js';
+import { monstroNoEstagio, textoDeslocamentos } from '../shared/monstros.js';
 import { passarNecessidades, comer, beber, dormir, rolarCaos, climaDoDia, descreverRelogio, fimDoCombate } from '../shared/tempo.js';
 import { podeSeduzir, itemAberto, itemVisivel, xpParaSubir, novaFicha, podeEquipar, rolarDado, rolarAtributosCriacao, testeDMil, gerarEncontro, derivados, problemasFicha, LIMITE_SALA, desgastarItem, repararItem, durabilidadeDe, listaHabilidades, vantagemPorHabilidade, temHabilidade, regraDaHabilidade, tipoCriatura, chaveHabilidade, TIPOS_ACAO, nomeAcao, acoesDaHabilidade, dadosDaHabilidade, ehAtaqueEspecial, acaoDoAtaqueEspecial, perderPv, textoPv, duracaoDaHabilidade, podeRepetir, textoDuracao } from '../shared/regras.js';
 
@@ -301,17 +302,20 @@ function valorAcao(p, ref, sis) {
 }
 
 // Imagem do monstro: a que o mestre pôs na campanha (arquivo enviado ou link) ou a da planilha (link).
-export const imagemDoMonstro = (c, m) => c.imagensMonstros?.[m.nome] || imagemDeLink(m.imagem) || null;
+export const imagemDoMonstro = (c, m) => (m.estagio != null ? imagemDeLink(m.imagem) : null) || c.imagensMonstros?.[m.nome] || imagemDeLink(m.imagem) || null;
 
 // Monstro do Livro dos Monstros vira um NPC com ficha de combate: atributos e perícias (as defesas saem daí, como no
 // personagem), ataques naturais (armas equipadas), IP, resistências, habilidades próprias e o saque no inventário.
 // Monstro não tem Sanidade nem Humanidade.
-function npcDeMonstro(c, m) {
+// Com estágios, o monstro entra no estágio pedido (PV, atributos, deslocamentos, ataques e habilidades daquele estágio).
+function npcDeMonstro(c, base, estagio = null) {
   const sis = sistema(c.sistema);
+  const m = monstroNoEstagio(base, estagio);
   const f = novaFicha(sis, c);
   const p = {
     ...f, id: uid(), tipo: 'npc', grupoId: GRUPO_ENCONTROS, donoId: null, criatura: true,
-    nome: m.nome, nivel: m.nivel || 1, dificuldade: m.dificuldade, xp: m.xp || 0, foto: imagemDoMonstro(c, m) || '',
+    nome: m.nome, nivel: m.nivel || 1, dificuldade: m.dificuldade, xp: m.xp || 0, foto: imagemDoMonstro(c, m) || imagemDoMonstro(c, base) || '',
+    monstro: { nome: base.nome, estagio: m.estagio ?? null, nomeEstagio: m.nomeEstagio || null }, deslocamentos: m.deslocamentos,
     raca: m.raca || '', tipoCriatura: m.tipoCriatura || 'monstro', tamanho: m.tamanho || '', afinidades: [...(m.afinidades || [])].slice(0, 2),
     atributos: { ...f.atributos, ...(m.atributos || {}) }, pericias: { ...(m.pericias || {}) }, subpericias: { ...(m.subpericias || {}) },
     ipExtra: m.ipGeral ?? m.defesa ?? 0, ipTipos: { ...(m.ipTipos || {}) },
@@ -320,7 +324,9 @@ function npcDeMonstro(c, m) {
     ...(m.deslocamento ? { deslocamentoBase: m.deslocamento } : {}),
     anotacoes: [
       m.comportamento ? `Comportamento: ${m.comportamento}` : '', m.sentidos ? `Sentidos: ${m.sentidos}` : '',
-      m.outrosDeslocamentos ? `Deslocamentos: ${m.outrosDeslocamentos}` : '', m.habitat ? `Onde aparece: ${m.habitat}` : '',
+      m.deslocamentos && Object.keys(m.deslocamentos).length ? `Deslocamentos: ${textoDeslocamentos(m.deslocamentos)}` : '',
+      m.outrosDeslocamentos ? `Deslocamentos (obs.): ${m.outrosDeslocamentos}` : '', m.habitat ? `Onde aparece: ${m.habitat}` : '',
+      m.descricaoEstagio ? `${m.nomeEstagio}: ${m.descricaoEstagio}` : '',
       !m.ataques?.length && m.ataque ? `Ataque: ${m.ataque}` : '', m.descricao || '',
     ].filter(Boolean).join('\n'),
   };
@@ -2228,16 +2234,46 @@ export const acoes = {
     if (url) c.imagensMonstros[nome] = url; else delete c.imagensMonstros[nome];
   },
 
-  'monstro.adicionar'(c, { nome }, ctx) {
+  // Monstro do livro no Campo de Batalha (no estágio escolhido; "quantidade" põe vários de uma vez).
+  'monstro.adicionar'(c, { nome, estagio = null, quantidade = 1 }, ctx) {
     exigirMestre(ctx);
     const m = sistema(c.sistema).monstros.find(x => x.nome === nome);
     if (!m) throw erro('Criatura não encontrada.');
+    if (estagio != null && estagio !== '' && !(m.estagios || []).some(e => e.numero === Number(estagio))) throw erro(`${m.nome} não tem o estágio ${estagio}.`);
     const s = c.salas.batalha;
-    if (s.participantes.length >= LIMITE_SALA) throw erro('O Campo de Batalha está cheio.');
-    const p = npcDeMonstro(c, m);
-    c.personagens.push(p);
-    s.participantes.push(p.id);
+    const n = Math.max(1, Math.min(20, parseInt(quantidade, 10) || 1));
+    if (s.participantes.length + n > LIMITE_SALA) throw erro('O Campo de Batalha está cheio.');
+    const ids = [];
+    for (let i = 0; i < n; i++) {
+      const p = npcDeMonstro(c, m, estagio === '' ? null : estagio);
+      // Vários iguais: numerados (Cão das Ruínas 1, 2…), para escolher o alvo.
+      if (n > 1) p.nome = `${p.nome} ${i + 1}`;
+      c.personagens.push(p);
+      s.participantes.push(p.id);
+      ids.push(p.id);
+    }
     garantirCombate(c);
+    return { ids };
+  },
+
+  // Troca o estágio do monstro em campo: muda PV máximo (o dano já tomado continua), atributos, deslocamentos,
+  // ataques e habilidades; efeitos, marcadores e o saque ficam.
+  'monstro.estagio'(c, { id, estagio }, ctx) {
+    exigirMestre(ctx);
+    const p = personagem(c, id);
+    const m = p.monstro && sistema(c.sistema).monstros.find(x => x.nome === p.monstro.nome);
+    if (!m) throw erro('Este personagem não veio do Livro dos Monstros.');
+    const n = estagio === '' || estagio == null ? null : Number(estagio);
+    if (n != null && !(m.estagios || []).some(e => e.numero === n)) throw erro(`${m.nome} não tem o estágio ${n}.`);
+    const novo = npcDeMonstro(c, m, n);
+    const dano = Math.max(0, p.pv.max - p.pv.atual);
+    for (const k of ['nivel', 'dificuldade', 'xp', 'tamanho', 'atributos', 'pericias', 'subpericias', 'ipExtra', 'ipTipos', 'resistencias', 'imunidades',
+      'vulnerabilidades', 'habilidadesProprias', 'deslocamentos', 'monstro', 'anotacoes']) p[k] = novo[k];
+    if (novo.deslocamentoBase != null) p.deslocamentoBase = novo.deslocamentoBase; else delete p.deslocamentoBase;
+    if (novo.foto && novo.foto !== p.foto && m.estagios?.some(e => e.imagem)) p.foto = novo.foto;
+    p.itens = [...novo.itens.filter(i => i.natural), ...(p.itens || []).filter(i => !i.natural)];
+    p.pv = { max: novo.pv.max, atual: novo.pv.max - dano };
+    registrar(c.salas.batalha.log, { autor: p.nome, rotulo: `${p.nome} muda de estágio`, texto: `${p.monstro.nomeEstagio || 'estágio base'} · PV ${p.pv.atual}/${p.pv.max}` });
   },
 
   'encontro.gerar'(c, { limite, usarMonstros, grupos }, ctx) {

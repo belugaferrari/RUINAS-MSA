@@ -255,3 +255,8 @@ Regras em `conteudo/sistemas/habilidades-regras.json` (automática / ligar / ati
 - Despertar: o livro não diz quanto dura — o app deixa até o fim do combate (o mestre pode encerrar antes no ícone).
 - Arma natural: Ataque Desarmado Treinado também soma nela (usa a perícia do desarmado). Confirmar.
 - Garras/presas: dano de perfuração para as duas (autor, 24/10).
+
+## 24/10 — Monstros: estágios e deslocamentos
+- A planilha antiga tinha os estágios só no texto. O app criou estágios apenas onde o deslocamento citava um estágio
+  ("Voo (Estágio 2) 12 m"). O resto (PV, poderes de cada estágio) o autor preenche na aba Estágios.
+- Ficha "Base" = a linha da aba Monstros. Ataque/habilidade com a coluna Estágios preenchida só aparece nesses estágios.

@@ -1,6 +1,7 @@
 // Aba Mapa: a imagem, GIF ou vídeo escolhido pelo mestre, centralizado, com a grade de RPG por cima
 // (cada quadrado = 1,5 m) e os peões dos personagens. O mestre escolhe o mapa e ajusta a grade;
 // mestre e Suporte arrastam os peões; os jogadores só veem.
+import { nomeDeslocamento } from '/shared/monstros.js';
 import { h, botao, selecao, aviso, icone, titulo, vazio, passador, pedirTexto, janela } from '../ui.js';
 import { estado, render, personagemPorId, meusPersonagens } from '../estado.js';
 import { acao } from '../api.js';
@@ -237,7 +238,8 @@ function peao(x, g, mover, sel) {
   const d = p.itens && p.atributos ? derivados(p, estado.sistema) : null;
   const mov = restricaoMovimento(p, estado.sistema, d);
   const avisoMov = (mov.nivel ? ` — ${mov.nivel === 'preso' ? 'não pode se mover' : 'movimento limitado'}: ${mov.motivos.join(', ')}` : '')
-    + (d ? ` · deslocamento ${String(d.deslocamento).replace('.', ',')} m (${d.deslocamentoQuadrados} quadrados)` : '');
+    + (d ? ` · deslocamento ${String(d.deslocamento).replace('.', ',')} m (${d.deslocamentoQuadrados} quadrados)` : '')
+    + (p.deslocamentos ? Object.entries(p.deslocamentos).filter(([k]) => k !== 'andar').map(([k, v]) => ` · ${nomeDeslocamento(k)} ${String(v).replace('.', ',')} m`).join('') : '');
   // Quem só vê (jogadores) recebe uma figura, não um botão.
   const el = h(mover ? 'button' : 'span', {
     type: mover ? 'button' : null, role: mover ? null : 'img', class: `peao ${p.tipo} ${sel === p.id ? 'escolhido' : ''} ${semPv ? 'sem-pv' : ''} ${x.oculto ? 'oculto' : ''} ${mov.nivel ? `mov-${mov.nivel}` : ''}`,

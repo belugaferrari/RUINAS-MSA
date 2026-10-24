@@ -95,3 +95,81 @@ test('afinidade principal reduz à metade os tipos ligados a ela; afinidade sem 
   const r2 = resolverAtaque(fogo, alvo('Água'), sis, { armaUid: 'f' }, 'nenhuma', () => 0.99);
   assert.ok(!r2.resistencia);
 });
+
+const { monstroNoEstagio, buscarMonstros, deslocamentosDoTexto, deslocamentosDe } = await import('../shared/monstros.js');
+const lula = {
+  nome: 'Lula Abissal', raca: 'Lula Abissal', tipoCriatura: 'monstro', tamanho: 'Pequeno', dificuldade: 2, pv: 20, deslocamento: 3,
+  deslocamentos: { andar: 3, nadar: 12 }, atributos: { FOR: 10, CONS: 10, AGI: 14, DES: 10, INT: 4, PER: 12, CAR: 4, WILL: 8 },
+  ataques: [{ nome: 'Tentáculo', dano: '1d6', alcance: 'corpo' }, { nome: 'Jato de tinta', dano: '1d4', alcance: 'distancia', estagios: [2, 3] }],
+  habilidades: [{ nome: 'Camuflagem', modo: 'lembrete', descricao: 'Muda de cor.' }, { nome: 'Voo de cardume', modo: 'lembrete', descricao: 'Plana.', estagios: [3] }],
+  estagios: [
+    { numero: 2, nome: 'Adulta', descricao: 'Cresce e solta tinta.', tamanho: 'Grande', pv: 45, atributos: { FOR: 16 } },
+    { numero: 3, nome: 'Anciã', pv: 80, deslocamentos: { voar: 9 }, resistencias: ['Frio'] },
+  ],
+};
+
+test('estágios: cada estágio troca só o que preencheu; ataques e habilidades de estágio só aparecem nele', () => {
+  const base = monstroNoEstagio(lula, null);
+  assert.equal(base.pv, 20);
+  assert.deepEqual(base.ataques.map(a => a.nome), ['Tentáculo']);
+  const e2 = monstroNoEstagio(lula, 2);
+  assert.equal(e2.pv, 45); assert.equal(e2.tamanho, 'Grande'); assert.equal(e2.atributos.FOR, 16); assert.equal(e2.atributos.AGI, 14);
+  assert.deepEqual(e2.ataques.map(a => a.nome), ['Tentáculo', 'Jato de tinta']);
+  assert.equal(e2.nomeEstagio, 'Adulta');
+  const e3 = monstroNoEstagio(lula, 3);
+  assert.deepEqual(e3.deslocamentos, { andar: 3, nadar: 12, voar: 9 });
+  assert.deepEqual(e3.habilidades.map(x => x.nome), ['Camuflagem', 'Voo de cardume']);
+  assert.deepEqual(e3.resistencias, ['Frio']);
+});
+
+test('planilha: aba Estágios, colunas de deslocamento e coluna Estágios em ataques/habilidades voltam iguais', async () => {
+  const sis = sistema('mss');
+  const buf = await planilhaMonstros(sis, [lula]);
+  const { monstros, avisos } = await lerPlanilhaMonstros(Buffer.from(buf), sis);
+  assert.deepEqual(avisos, []);
+  const m = monstros[0];
+  assert.deepEqual(m.deslocamentos, lula.deslocamentos);
+  assert.deepEqual(m.estagios, lula.estagios);
+  assert.deepEqual(m.ataques[1].estagios, [2, 3]);
+  assert.deepEqual(m.habilidades[1].estagios, [3]);
+});
+
+test('deslocamentos do texto antigo: tipos, estágio e observações; sem nada, só anda', () => {
+  const r = deslocamentosDoTexto('Natação em lava 12 m; Voo (Estágio 2) 12 m; Disparada 30 m');
+  assert.deepEqual(r.base, { nadar: 12 });
+  assert.deepEqual(r.porEstagio, { 2: { voar: 12 } });
+  assert.deepEqual(r.resto, ['Natação em lava 12 m', 'Disparada 30 m']);
+  assert.deepEqual(deslocamentosDe({ deslocamento: 6 }), { andar: 6 });
+});
+
+test('busca de monstro por palavra aproximada', () => {
+  const lista = [lula, rino, { nome: 'Moolotos (Cavalgada da Tempestade)', afinidades: ['Tóxico'] }];
+  assert.equal(buscarMonstros(lista, 'moloto')[0].nome, 'Moolotos (Cavalgada da Tempestade)');
+  assert.equal(buscarMonstros(lista, 'rinoseronte')[0].nome, rino.nome);
+  assert.equal(buscarMonstros(lista, 'toxico')[0].nome, 'Moolotos (Cavalgada da Tempestade)');
+  assert.equal(buscarMonstros(lista, 'xyzw').length, 0);
+});
+
+test('Campo de Batalha: monstro entra no estágio pedido, vários de uma vez, e muda de estágio mantendo o dano', () => {
+  salvarCatalogoMonstros([lula], 'teste.xlsx');
+  try {
+    const c = novaCampanha({ id: 'm', name: 'M' }, { nome: 'T', maxJogadores: 2, nivel: 1, sistema: 'mss' });
+    const ctxM = { user: { id: 'm' }, mestre: true };
+    const r = executar(c, 'monstro.adicionar', { nome: lula.nome, estagio: 2, quantidade: 2 }, ctxM);
+    assert.equal(r.ids.length, 2);
+    const p = c.personagens.find(x => x.id === r.ids[0]);
+    assert.equal(p.nome, 'Lula Abissal 1');
+    assert.equal(p.pv.max, 45);
+    assert.deepEqual(p.monstro, { nome: lula.nome, estagio: 2, nomeEstagio: 'Adulta' });
+    assert.ok(p.itens.some(i => i.nome === 'Jato de tinta'));
+    p.pv.atual = 35; // tomou 10
+    executar(c, 'monstro.estagio', { id: p.id, estagio: 3 }, ctxM);
+    assert.equal(p.pv.max, 80); assert.equal(p.pv.atual, 70);
+    assert.equal(p.deslocamentos.voar, 9);
+    executar(c, 'monstro.estagio', { id: p.id, estagio: '' }, ctxM);
+    assert.equal(p.pv.max, 20); assert.equal(p.pv.atual, 10);
+    assert.ok(!p.itens.some(i => i.nome === 'Jato de tinta'));
+    assert.throws(() => executar(c, 'monstro.estagio', { id: p.id, estagio: 7 }, ctxM), /não tem o estágio/);
+    assert.throws(() => executar(c, 'monstro.estagio', { id: p.id, estagio: 2 }, { user: { id: 'a' }, mestre: false }));
+  } finally { voltarMonstrosPadrao(); }
+});

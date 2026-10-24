@@ -197,7 +197,7 @@ app.post('/api/itens', upload.single('arquivo'), rota(async req => {
 app.get('/api/monstros/origem', rota(req => {
   autenticado(req);
   const cat = catalogoMonstros();
-  return cat ? { origem: 'mestre', atualizadoEm: cat.atualizadoEm, arquivo: cat.arquivo, total: cat.monstros.length } : { origem: 'padrao', total: sistema('mss').monstros.length };
+  return cat ? { origem: 'mestre', atualizadoEm: cat.atualizadoEm, arquivo: cat.arquivo, total: cat.monstros.length, googleSheets: cat.googleSheets || null } : { origem: 'padrao', total: sistema('mss').monstros.length };
   // (sem envio do mestre, o livro é o do autor: conteudo/sistemas/monstros.json)
 }));
 
@@ -213,20 +213,39 @@ app.get('/api/monstros.xlsx', async (req, res) => {
 });
 
 // modo "atualizar": troca os monstros de mesmo nome e mantém os outros; "substituir": fica só com os da planilha.
-app.post('/api/monstros', upload.single('arquivo'), rota(async req => {
-  exigirAlgumMestre(req);
-  if (!req.file) throw new Error('Envie a planilha .xlsx.');
-  const { monstros: novos, avisos } = await lerPlanilhaMonstros(req.file.buffer, sistema('mss'));
+async function importarMonstros(buffer, modo, arquivo, extra = {}) {
+  const { monstros: novos, avisos } = await lerPlanilhaMonstros(buffer, sistema('mss'));
   if (!novos.length) throw new Error('A planilha não tem monstros (aba "Monstros", coluna "Nome").');
   let monstros = novos;
-  if (req.body.modo !== 'substituir') {
+  if (modo !== 'substituir') {
     const sem = x => String(x).normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
     const nomes = new Set(novos.map(m => sem(m.nome)));
     monstros = [...sistema('mss').monstros.filter(m => !nomes.has(sem(m.nome))), ...novos];
   }
-  salvarCatalogoMonstros(monstros, req.file.originalname);
+  salvarCatalogoMonstros(monstros, arquivo, extra);
   io.emit('sistema:atualizado');
   return { recebidos: novos.length, total: monstros.length, avisos: avisos.slice(0, 30) };
+}
+app.post('/api/monstros', upload.single('arquivo'), rota(async req => {
+  exigirAlgumMestre(req);
+  if (!req.file) throw new Error('Envie a planilha .xlsx.');
+  return importarMonstros(req.file.buffer, req.body.modo, req.file.originalname, { googleSheets: catalogoMonstros()?.googleSheets });
+}));
+// Puxa direto da planilha do Google (compartilhada como "Qualquer pessoa com o link pode ver"): o Google entrega
+// a planilha como .xlsx e ela entra igual ao envio do arquivo. O link fica guardado para a próxima vez.
+app.post('/api/monstros/google', rota(async req => {
+  exigirAlgumMestre(req);
+  const link = String(req.body?.link || '').trim();
+  const id = /\/spreadsheets\/d\/([\w-]{20,})/.exec(link)?.[1] || (/^[\w-]{20,}$/.test(link) ? link : null);
+  if (!id) throw new Error('Cole o link da planilha do Google (docs.google.com/spreadsheets/d/…).');
+  let r;
+  try { r = await fetch(`https://docs.google.com/spreadsheets/d/${id}/export?format=xlsx`, { redirect: 'follow' }); } catch { throw new Error('Não consegui falar com o Google. Confira a internet deste PC.'); }
+  const tipo = r.headers.get('content-type') || '';
+  if (!r.ok || !/spreadsheetml|octet-stream/.test(tipo)) {
+    throw new Error('O Google não liberou a planilha. No Google Planilhas: Compartilhar > Acesso geral > "Qualquer pessoa com o link" (Leitor) e tente de novo.');
+  }
+  const buffer = Buffer.from(await r.arrayBuffer());
+  return importarMonstros(buffer, req.body?.modo, 'Google Planilhas', { googleSheets: `https://docs.google.com/spreadsheets/d/${id}/edit` });
 }));
 
 app.post('/api/monstros/padrao', rota(req => {

@@ -1400,3 +1400,24 @@ span.peao { display: grid; }
 
 /* Habilidade ativa (Despertar…): chama dourada junto dos efeitos. */
 .efeito-icone.hab-ativa { --cor-ef: #e0a526; }
+
+/* Livro dos Monstros: lista resumida que abre a ficha */
+.lista-monstros { list-style: none; margin: .5em 0; padding: 0; display: flex; flex-direction: column; gap: .35em; }
+.monstro-linha { border: 1px solid var(--borda); border-left: 4px solid #7a3530; border-radius: 8px; background: var(--painel2, #2a2118); }
+.monstro-resumo { display: flex; align-items: center; gap: .6em; width: 100%; padding: .4em .6em; background: none; border: 0; color: inherit; text-align: left; cursor: pointer; flex-wrap: wrap; min-height: 52px; }
+.monstro-resumo:hover { background: #ffffff08; }
+.monstro-resumo > .ic:last-child { margin-left: auto; }
+.monstro-nome { flex: 1 1 12em; min-width: 0; }
+.monstro-nome small { opacity: .7; }
+.mini-monstro { width: 44px; height: 44px; border-radius: 6px; overflow: hidden; flex: none; display: grid; place-items: center; background: #0005; border: 1px solid var(--borda); }
+.mini-monstro img { width: 100%; height: 100%; object-fit: cover; }
+.afinidades { display: inline-flex; gap: .25em; flex-wrap: wrap; }
+.etiqueta.afinidade.principal { border-color: var(--ouro, #c9a227); }
+.ficha-monstro { margin: 0 .5em .6em; border-left: 0; }
+.barra.estagios { flex-wrap: wrap; }
+/* Campo de Batalha: adicionar monstro */
+.add-monstro-resultados { list-style: none; margin: .4em 0 0; padding: 0; display: flex; flex-direction: column; gap: .25em; max-height: 340px; overflow-y: auto; }
+.add-monstro-resultados li { display: flex; align-items: center; gap: .5em; flex-wrap: wrap; padding: .25em .4em; border: 1px solid var(--borda); border-radius: 6px; }
+.add-monstro-resultados .monstro-nome { flex: 1 1 10em; }
+@media (max-width: 600px) { .monstro-resumo .afinidades { flex-basis: 100%; padding-left: calc(44px + .6em); } }
+input.largo { flex: 1 1 20em; min-width: 0; }
