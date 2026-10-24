@@ -169,5 +169,18 @@
     "modo": "sempre",
     "especial": "civilizados",
     "texto": "quem não foi atacado por você precisa passar em WILL% Difícil para lhe atacar (automático); quem lhe ataca primeiro fica com −10% em todos os testes até o fim da batalha"
+  },
+  "despertar": {
+    "modo": "ativar",
+    "especial": "pvTemp",
+    "pvTemp": "1d6",
+    "pvTempMais": "corpo monstruoso",
+    "armaNatural": 1,
+    "imune": [
+      "Amedrontado"
+    ],
+    "humor": "corajoso",
+    "duracao": "combate",
+    "texto": "1d6 PV temporários e Arma natural +1 (os dois +1 por Corpo monstruoso), imune a medo, humor Corajoso, até o fim do combate; atacado ou ameaçado, pode despertar como ação livre"
   }
 }

@@ -35,9 +35,27 @@ export function observarEfeitos(c) {
 // Linha de ícones. "mestre" deixa clicar para mudar os turnos que faltam.
 export function efeitosIcones(p, { mestre = false, grande = false } = {}) {
   const lista = estado.sistema?.condicoes ? efeitosVisiveis(p, estado.sistema) : [];
-  if (!lista.length) return null;
+  const habs = Object.entries(p.habAtivas || {});
+  if (!lista.length && !habs.length) return null;
   return h('div', { class: `efeitos-icones ${grande ? 'grande' : ''}`, 'aria-label': `Efeitos em ${p.nome}` },
+    habs.map(([id, a]) => iconeHabilidade(p, id, a)),
     lista.map(e => iconeEfeito(p, e, mestre)));
+}
+
+// Habilidade ativa (Despertar, Aceleração sináptica…): chama dourada com os turnos que faltam. O mestre pode encerrar.
+function iconeHabilidade(p, id, a) {
+  const dur = a.turnos ? `faltam ${a.turnos} turno(s)` : a.combate ? 'até o fim do combate' : a.descanso ? 'até o próximo descanso' : 'até o mestre encerrar';
+  const titulo = `${a.nome} ativa — ${dur}`;
+  return h('button', {
+    type: 'button', class: 'efeito-icone hab-ativa', title: titulo, 'aria-label': `${titulo}. Clique para ler`,
+    onclick: ev => {
+      ev.stopPropagation();
+      const mestre = estado.campanha?.papel === 'mestre';
+      janela(`${a.nome} — ${p.nome}`, h('p', {}, icone('flame'), ` Ativa ${dur}. Enquanto durar, não pode ser ativada de novo.`),
+        mestre ? [['Encerrar agora', () => acao('habilidade.encerrar', { id: p.id, hab: id }).then(() => aviso(`${a.nome} encerrada.`)), 'perigo'], ['Fechar', () => true]] : [['Fechar', () => true]]);
+    },
+  }, h('span', { class: 'efeito-desenho', 'aria-hidden': 'true' }, icone('flame')),
+  a.turnos ? h('span', { class: 'efeito-turnos', 'aria-hidden': 'true' }, String(a.turnos)) : null);
 }
 
 function iconeEfeito(p, e, mestre) {

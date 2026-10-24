@@ -1,5 +1,5 @@
 import { liberdadeDeHumor } from '/shared/combate.js';
-import { h, botao, selecao, aviso, confirmar, vazio, formatarData, icone, titulo } from '../ui.js';
+import { h, botao, selecao, aviso, confirmar, vazio, formatarData, icone, titulo, barraPv, numeroPv } from '../ui.js';
 import { efeitosIcones, marcadoresLivres } from './efeitos.js';
 import { estado, personagemPorId, meusPersonagens, render } from '../estado.js';
 import { acao } from '../api.js';
@@ -100,10 +100,9 @@ function cartaoParticipante(nome, s, p, i, total, mestre, participantes) {
     h('div', { class: 'info' },
       h('strong', {}, p.nome), s.ativo === p.id ? h('span', { class: 'selo ok' }, mestre ? 'acionado' : 'em cena') : null,
       h('div', { class: 'meta' }, p.tipo === 'pj' ? `PJ${p.dono ? ` · ${p.dono}` : ''}` : 'NPC'),
-      veStats && p.pv ? h('div', { class: 'barra-pv', title: `PV ${p.pv.atual}/${p.pv.max}` },
-        h('i', { style: { width: `${Math.max(0, Math.min(100, (100 * p.pv.atual) / (p.pv.max || 1)))}%` } })) : null,
+      veStats && p.pv ? barraPv(p) : null,
       veStats && p.pv ? h('div', { class: 'meta icones-meta' },
-        h('span', {}, icone('heart'), `${p.pv.atual}/${p.pv.max}`),
+        h('span', {}, icone('heart'), numeroPv(p)),
         h('span', {}, icone('brain'), p.sanidade?.atual ?? '-'),
         h('span', {}, icone('hand-heart'), p.humanidade?.atual ?? '-')) : null,
       efeitosIcones(p, { mestre }),
@@ -151,9 +150,9 @@ function linhaCampo(s, p, i, total, mestre, meu, veStats, marcavel, alvo) {
         s.ativo === p.id ? h('span', { class: 'selo ok' }, mestre ? 'acionado' : 'em cena') : null,
         semPv ? h('span', { class: 'selo perigo' }, 'fora de combate') : null),
       veStats && p.pv ? h('div', { class: 'linha-stats' },
-        h('div', { class: 'barra-pv', title: `PV ${p.pv.atual}/${p.pv.max}` }, h('i', { style: { width: `${Math.max(0, Math.min(100, (100 * p.pv.atual) / (p.pv.max || 1)))}%` } })),
+        barraPv(p),
         h('span', { class: 'meta icones-meta' },
-          h('span', {}, icone('heart'), `${p.pv.atual}/${p.pv.max}`),
+          h('span', {}, icone('heart'), numeroPv(p)),
           h('span', {}, icone('brain'), p.sanidade?.atual ?? '-'),
           h('span', {}, icone('hand-heart'), p.humanidade?.atual ?? '-'))) : null),
     h('div', { class: 'lado' },

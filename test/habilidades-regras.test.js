@@ -163,8 +163,10 @@ test('Carga de Emergência: precisa de bateria, 1 vez por descanso longo, PV tem
   executar(c, 'habilidade.ativar', { id: eu.id, hab: hab.id }, ctxM);
   assert.ok(eu.pvTemp >= 2 && eu.pvTemp <= 12);
   const temp = eu.pvTemp, pv = eu.pv.atual;
-  aplicarAtaque(p(ids[1]), eu, { sucesso: true, dano: temp + 1 }, mss);
-  assert.equal(eu.pv.atual, pv - 1);
+  // Os PV temporários saem por último (autor, 24/10): o dano tira dos normais e os temporários ficam.
+  aplicarAtaque(p(ids[1]), eu, { sucesso: true, dano: 3 }, mss);
+  assert.equal(eu.pv.atual, pv - 3);
+  assert.equal(eu.pvTemp, temp);
   executar(c, 'habilidade.ativar', { id: eu.id, hab: hab.id }, ctxM); // desativa
   assert.throws(() => executar(c, 'habilidade.ativar', { id: eu.id, hab: hab.id }, ctxM), /já foi usada/);
 });

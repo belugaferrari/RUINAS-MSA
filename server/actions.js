@@ -3,9 +3,9 @@ import { imagemDeLink } from '../shared/imagens.js';
 import { sistema, idSistema } from './sistema.js';
 import { resolverAtaque, aplicarAtaque, armasDisponiveis, opcoesDefesa, sobrevida, rolarIniciativa, resolverManipulacao, modHumorTestes, humorDe, espectroDe, humorAparente, empatiaNatural, liberdadeDeHumor, modoRolagem, modoHumorTeste, recursoDe, gastarRecurso, racaDe, distanciaPecas, usosRestantes, gastarUso, testeContra, ipContra } from '../shared/combate.js';
 import { sincronizarEfeitos, passarTurnoEfeitos, efeitosAoAgir, cargaNoTurno, descansar } from '../shared/efeitos.js';
-import { fichasDeTeste, relatorioFicha } from '../shared/fichasTeste.js';
+import { fichasDeTeste, relatorioFicha, kitDeTeste } from '../shared/fichasTeste.js';
 import { passarNecessidades, comer, beber, dormir, rolarCaos, climaDoDia, descreverRelogio, fimDoCombate } from '../shared/tempo.js';
-import { podeSeduzir, itemAberto, itemVisivel, xpParaSubir, novaFicha, podeEquipar, rolarDado, rolarAtributosCriacao, testeDMil, gerarEncontro, derivados, problemasFicha, LIMITE_SALA, desgastarItem, repararItem, durabilidadeDe, listaHabilidades, vantagemPorHabilidade, temHabilidade, regraDaHabilidade, tipoCriatura, chaveHabilidade, TIPOS_ACAO, nomeAcao, acoesDaHabilidade, dadosDaHabilidade, ehAtaqueEspecial, acaoDoAtaqueEspecial } from '../shared/regras.js';
+import { podeSeduzir, itemAberto, itemVisivel, xpParaSubir, novaFicha, podeEquipar, rolarDado, rolarAtributosCriacao, testeDMil, gerarEncontro, derivados, problemasFicha, LIMITE_SALA, desgastarItem, repararItem, durabilidadeDe, listaHabilidades, vantagemPorHabilidade, temHabilidade, regraDaHabilidade, tipoCriatura, chaveHabilidade, TIPOS_ACAO, nomeAcao, acoesDaHabilidade, dadosDaHabilidade, ehAtaqueEspecial, acaoDoAtaqueEspecial, perderPv, textoPv, duracaoDaHabilidade, podeRepetir, textoDuracao } from '../shared/regras.js';
 
 const GRUPO_ENCONTROS = 'encontros';
 const MAX_LOG = 100;
@@ -391,6 +391,7 @@ function encerrarAtivacoes(c, p, sis, soCombate = true) {
   const fim = [];
   for (const [id, a] of Object.entries(p.habAtivas || {})) {
     if (soCombate && !a.combate && !a.turnos) continue;
+    if (a.humorAntes && p.humor === a.humor) p.humor = a.humorAntes;
     delete p.habAtivas[id];
     p.ativas = (p.ativas || []).filter(x => x !== id);
     fim.push(a.nome || id);
@@ -400,6 +401,104 @@ function encerrarAtivacoes(c, p, sis, soCombate = true) {
   if (p.onusCivilizado) fim.push('ônus de Civilizados');
   for (const k of ['atacouNoCombate', 'passouCivilizado', 'onusCivilizado']) delete p[k];
   if (fim.length) registrar(c.salas.batalha.log, { autor: p.nome, rotulo: 'Fim das habilidades ativadas', texto: fim.join(', ') });
+}
+
+// Marca guardada em p.habAtivas: nome, turnos que faltam, se acaba no fim do combate ou no descanso.
+function marcaDeDuracao(nome, dur) {
+  return { nome, ...(dur?.turnos ? { turnos: dur.turnos } : {}), ...(dur === 'combate' ? { combate: true } : {}), ...(dur === 'descanso' ? { descanso: true } : {}) };
+}
+// Encerra uma habilidade ativa: tira o efeito ligado, a Essência e os PV temporários dela, e devolve o humor de antes.
+function encerrarHabilidade(c, p, hab) {
+  const a = p.habAtivas?.[hab.id];
+  if (!a) return;
+  delete p.habAtivas[hab.id];
+  p.ativas = (p.ativas || []).filter(x => x !== hab.id);
+  if (hab.regra?.especial === 'essencia') delete p.essencia;
+  if (hab.regra?.especial === 'pvTemp') delete p.pvTemp;
+  if (a.humorAntes && p.humor === a.humor) p.humor = a.humorAntes;
+  registrar(c.salas.batalha.log, { autor: p.nome, rotulo: `${hab.nome} encerrada`, texto: '' });
+}
+
+// Ativa a habilidade (botão Ativar, ou a oferta de reação/ação livre, que diz a ação gasta).
+function ativarHabilidade(c, p, sis, hab, { ctx, alvo = null, acao = null }) {
+  const regra = hab.regra;
+  const acaoUsada = acao || regra.acao || acoesDaHabilidade(p, sis, hab)[0] || null;
+
+  // Já ativa: não ativa de novo enquanto durar (a não ser que o texto permita); o mestre pode encerrar antes.
+  if ((p.habAtivas || {})[hab.id] && !podeRepetir(hab)) {
+    if (!ctx.mestre) throw erro(`${hab.nome} já está ativa (${textoDuracao(regra.duracao) || 'até o mestre encerrar'}): não dá para ativar de novo.`);
+    encerrarHabilidade(c, p, hab);
+    return { desativou: true };
+  }
+  const chave = chaveHabilidade(hab.nome);
+  if (usosRestantes(p, sis, chave) <= 0) throw erro(`${hab.nome} já foi usada (volta no descanso longo).`);
+  if (regra.requerItem && !(p.itens || []).some(i => new RegExp(regra.requerItem, 'i').test(i.nome))) throw erro(`${hab.nome} precisa de um item: ${regra.requerItem.replace('|', ' ou ')}.`);
+  const notas = [];
+  let essencia = null;
+  if (regra.especial === 'essencia') {
+    const m = personagem(c, alvo);
+    const abatido = m.semPv || (m.pv && m.pv.atual <= 0) || (m.marcadores || []).some(x => ['Morto', 'Desmaiado'].includes(x));
+    if (!c.salas.batalha.participantes.includes(m.id) || !abatido || tipoCriatura(m) === 'humanoide') throw erro('Escolha um monstro abatido no Campo de Batalha.');
+    if (!m.atributos) throw erro(`${m.nome} não tem atributos na ficha: o mestre precisa preencher.`);
+    const [sigla, valor] = Object.entries(derivados(m, sis).atributos).sort((x, y) => y[1] - x[1])[0];
+    essencia = { sigla, valor, de: m.nome };
+    notas.push(`${sigla} ${valor} (de ${m.nome})`);
+  }
+  if (regra.custo?.recurso) {
+    try { gastarRecurso(p, sis, regra.custo.recurso, regra.custo.qtd || 1); } catch (e) { throw erro(e.message); }
+    notas.push(`gastou ${regra.custo.qtd || 1} carga(s)${cargaNoCoracao(p, regra.custo.qtd || 1)}`);
+  }
+  if (regra.custo?.hum && p.humanidade) {
+    const d = rolarDado(regra.custo.hum);
+    p.humanidade.atual = Math.max(0, p.humanidade.atual - d.total);
+    notas.push(`perdeu ${d.total} HUM [${d.dados.join(', ')}]`);
+  }
+  if (regra.especial === 'pvTemp') {
+    const d = rolarDado(regra.pvTemp);
+    // Despertar: +1 por vez que pegou Corpo monstruoso.
+    const mais = regra.pvTempMais ? (listaHabilidades(p, sis).find(x => chaveHabilidade(x.nome) === regra.pvTempMais)?.vezes || 0) : 0;
+    p.pvTemp = Math.max(p.pvTemp || 0, d.total + mais);
+    notas.push(`${d.total + mais} PV temporários [${d.dados.join(', ')}]${mais ? ` +${mais}` : ''}`);
+  }
+  let humorAntes;
+  if (regra.humor && sis.social?.humores?.some(x => x.id === regra.humor)) {
+    humorAntes = p.humor || 'neutro';
+    p.humor = regra.humor;
+    notas.push(`humor ${sis.social.humores.find(x => x.id === regra.humor).nome}`);
+  }
+  if (essencia) p.essencia = essencia;
+  if (regra.usos) gastarUso(p, chave);
+  (p.habAtivas ||= {})[hab.id] = { ...marcaDeDuracao(hab.nome, regra.duracao), ...(regra.fim ? { fim: regra.fim } : {}), ...(humorAntes ? { humorAntes, humor: regra.humor } : {}) };
+  if (!(p.ativas || []).includes(hab.id)) p.ativas = [...(p.ativas || []), hab.id];
+  const excesso = gastarAcao(c, p, acaoUsada);
+  const duracao = textoDuracao(regra.duracao);
+  const texto = [acaoUsada ? nomeAcao(acaoUsada) : '', duracao, ...notas].filter(Boolean).join(' · ');
+  registrar(c.salas.batalha.log, { autor: p.nome, rotulo: `${hab.nome} ativada`, texto: `${texto}${excesso ? ` · atenção: ${excesso}` : ''}` });
+  return { texto, excesso };
+}
+
+// Usa a habilidade (ver habilidade.usar); "acao" vem da oferta de reação/ação livre.
+function usarHabilidade(c, p, sis, hab, acao = null) {
+  const dur = duracaoDaHabilidade(hab);
+  if (dur && p.habAtivas?.[hab.id] && !podeRepetir(hab)) throw erro(`${hab.nome} já está ativa (${textoDuracao(dur)}): não dá para usar de novo enquanto durar.`);
+  if (dur) (p.habAtivas ||= {})[hab.id] = marcaDeDuracao(hab.nome, dur);
+  const tipo = acao || acoesDaHabilidade(p, sis, hab)[0] || 'livre';
+  const excesso = c.salas.batalha.combate ? gastarAcao(c, p, tipo) : null;
+  const texto = [nomeAcao(tipo), textoDuracao(dur)].filter(Boolean).join(' · ');
+  registrar(c.salas.batalha.log, { autor: p.nome, rotulo: `${p.nome} usa ${hab.nome}`, texto: `${texto}${excesso ? ` · atenção: ${excesso}` : ''}` });
+  return { texto, excesso, ativa: !!dur };
+}
+
+// Kit da ficha de teste (até 1500 créditos do catálogo): entra na mochila e o que tem slot já vai equipado.
+function darKitDeTeste(c, p, sis, ctx) {
+  const nomes = [];
+  for (const modelo of kitDeTeste(sis, p)) {
+    const it = itemDoCatalogo(modelo.id, sis);
+    (p.itens ||= []).push(it);
+    nomes.push(it.nome);
+    if (it.slot) try { acoes['item.equipar'](c, { id: p.id, uid: it.uid, equipar: true }, ctx); } catch { /* sem espaço: fica na mochila */ }
+  }
+  return nomes;
 }
 
 function terminarCombatePara(c, p) {
@@ -495,7 +594,7 @@ function resolverPendente(c, s, pend, defesa, sis) {
   const modo = r.modo ? ` · ${r.modo} (${(r.modo === 'vantagem' ? r.motivosVantagem : r.motivosDesvantagem).join(', ')}) d100 [${r.dados.join(', ')}]` : '';
   const def = r.defesa.partes.map(x => `${x.nome} ${x.valor}`).join(' + ');
   const danoTxt = r.dano
-    ? ` — dano ${r.dano}${r.metadeEvasao ? ' (metade pela Evasão)' : ''} (${r.danoPartes.map(x => `${x.nome} ${x.dados ? `[${x.dados.join(', ')}]` : ''}${x.total}`).join(' + ')}${r.ip ? ` − IP ${r.ip}` : ''}${r.queimadura ? ' +1 queimadura' : ''}) · ${b.nome} ${b.pv.atual}/${b.pv.max} PV`
+    ? ` — dano ${r.dano}${r.metadeEvasao ? ' (metade pela Evasão)' : ''} (${r.danoPartes.map(x => `${x.nome} ${x.dados ? `[${x.dados.join(', ')}]` : ''}${x.total}`).join(' + ')}${r.ip ? ` − IP ${r.ip}` : ''}${r.queimadura ? ' +1 queimadura' : ''}) · ${b.nome} ${textoPv(b)} PV`
     : '';
   // Resultado curto para a mesa: Acertou (e o dano tomado) ou Defendeu. As contas ficam no "detalhe" (ver ao passar o mouse).
   const tiro = r.defesa.id === 'nenhuma';
@@ -504,8 +603,8 @@ function resolverPendente(c, s, pend, defesa, sis) {
     ? ` = ${r.danoPartes.map(x => `${x.total} (${x.expr ? `${x.expr} ${x.nome}` : x.nome})`).join(' + ')}${r.ip ? ` − ${r.ip} (IP)` : ''}${r.metadeEvasao ? ' ÷ 2 (Evasão)' : ''}${r.resistencia ? ` ÷ 2 (${r.porAfinidade ? `afinidade ${r.porAfinidade}` : `resistência a ${r.resistencia}`})` : ''}${r.vulnerabilidade ? ' × 2 (vulnerável)' : ''}`
     : '';
   const resumo = r.sucesso
-    ? `Acertou! ${b.nome} tomou ${r.dano} de dano${conta} (${b.pv.atual}/${b.pv.max} PV)`
-    : r.dano ? `${b.nome} defendeu em parte (${r.defesa.nome}): tomou ${r.dano} de dano${conta} (${b.pv.atual}/${b.pv.max} PV)`
+    ? `Acertou! ${b.nome} tomou ${r.dano} de dano${conta} (${textoPv(b)} PV)`
+    : r.dano ? `${b.nome} defendeu em parte (${r.defesa.nome}): tomou ${r.dano} de dano${conta} (${textoPv(b)} PV)`
       : tiro ? `Errou ${b.nome}` : `${b.nome} defendeu (${r.defesa.nome})`;
   const extras = [...notas, r.imune ? `${b.nome} é imune a ${r.imune}` : null, r.resistencia ? (r.porAfinidade ? `afinidade ${r.porAfinidade} contra ${r.resistencia}: metade do dano` : `resistência a ${r.resistencia}: metade do dano`) : null,
     r.vulnerabilidade ? `vulnerável a ${r.vulnerabilidade}: dano dobrado` : null, !r.sucesso && r.defesa.id === 'esquiva' ? `${b.nome} pode se deslocar até 1,5 m` : null, r.perdaSacrificio ? `Sacrifício: ${a.nome} perde ${r.perdaSacrificio} PV` : null].filter(Boolean);
@@ -545,6 +644,34 @@ function gastarAcao(c, p, tipo, { desfazer = false } = {}) {
   return avisos.length ? avisos.join('; ') : null;
 }
 
+// Ônus das mãos no ataque (ver combate.atacar). Devolve true quando é o segundo ataque (o da outra mão).
+function maosDoAtaque(c, a, op, sis) {
+  const pedeDois = !!op.doisAtaques;
+  delete op.doisAtaques; delete op.maos; delete op.duasArmas;
+  const cfg = sis.combate?.maos || {};
+  const nasMaos = (a.itens || []).filter(i => i.equipado && i.slot === 'maos' && i.tipo === 'arma' && (i.ocupa ?? 1) < 2);
+  const usada = nasMaos.find(i => i.uid === op.armaUid);
+  if (!usada || op.multiplo) return false;
+  const mao = (usada.mao ?? 0) === (a.maoHabil === 'esquerda' ? 1 : 0) ? 'habil' : 'inabil';
+  const ambi = temHabilidade(a, sis, 'Ambidestria');
+  const s = c.salas.batalha;
+  const g = s.combate ? ((s.combate.gasto ||= {})[a.id] ||= {}) : ((s.maosForaDeCombate ||= {})[a.id] ||= {});
+  if (g.segundaMao && g.segundaMao.mao === mao && g.segundaMao.uid !== usada.uid) {
+    delete g.segundaMao;
+    op.maos = ambi ? { nome: 'segundo ataque (Ambidestria)', valor: cfg.ambidestria ?? -20 }
+      : { nome: `dois ataques (mão ${mao === 'habil' ? 'hábil' : 'inábil'})`, valor: cfg.dois?.[mao] ?? (mao === 'habil' ? -20 : -40) };
+    return true;
+  }
+  delete g.segundaMao;
+  if (pedeDois && nasMaos.length >= 2) {
+    g.segundaMao = { mao: mao === 'habil' ? 'inabil' : 'habil', uid: usada.uid };
+    if (!ambi) op.maos = { nome: `dois ataques (mão ${mao === 'habil' ? 'hábil' : 'inábil'})`, valor: cfg.dois?.[mao] ?? (mao === 'habil' ? -20 : -40) };
+    return false;
+  }
+  if (mao === 'inabil' && !ambi) op.maos = { nome: 'mão inábil', valor: cfg.inabil ?? -20 };
+  return false;
+}
+
 export const TIPOS_OBJETO_MAPA = ['armadilha', 'objeto', 'cobertura', 'perigo', 'bau', 'porta'];
 const ehArmadilha = it => /armadilh/i.test(`${it.categoria || ''} ${it.nome || ''}`);
 export const TIPOS_COMPANHEIRO = [
@@ -556,8 +683,8 @@ export const TIPOS_COMPANHEIRO = [
 function cargaNoCoracao(p, qtd = 1) {
   if (p.coracaoArtificial || !p.pv) return '';
   const d = rolarDado(`${qtd}d6`);
-  p.pv.atual -= d.total;
-  return ` · coração humano: ${d.total} de dano (${p.pv.atual}/${p.pv.max} PV)`;
+  perderPv(p, d.total);
+  return ` · coração humano: ${d.total} de dano (${textoPv(p)} PV)`;
 }
 
 // Civilizados (Encantado, nível 12): os adversários precisam passar em WILL% Difícil para atacá-lo, a não ser que ele os
@@ -593,8 +720,8 @@ function passarTurnoHabilidades(p) {
     let txt = `${a.nome} acabou`;
     if (a.fim?.dano && p.pv) {
       const d = rolarDado(a.fim.dano);
-      p.pv.atual -= d.total;
-      txt += ` — ${a.fim.nome || 'dano'}: ${d.total} [${d.dados.join(', ')}] (${p.pv.atual}/${p.pv.max} PV)`;
+      perderPv(p, d.total);
+      txt += ` — ${a.fim.nome || 'dano'}: ${d.total} [${d.dados.join(', ')}] (${textoPv(p)} PV)`;
     }
     notas.push(txt);
   }
@@ -628,11 +755,12 @@ function criarOfertas(c, s, a, b, r, pend, sis) {
       const acoes = acoesDaHabilidade(b, sis, hab);
       const tipo = acoes.find(x => x === 'reacao' || x === 'livre');
       if (!tipo || (tipo === 'reacao' && reacaoUsada)) continue;
+      if (b.habAtivas?.[hab.id] && !podeRepetir(hab)) continue;
       const t = semAc(hab.descricao);
       if (/falha\w*[^.]{0,40}ataque|ataque[^.]{0,40}falha/.test(t) && r.sucesso) continue;
       if (/corpo[- ]a[- ]corpo/.test(t) && pend.alcance === 'distancia') continue;
       s.ofertas = s.ofertas.filter(o => !(o.personagem === b.id && o.habilidade === hab.nome));
-      s.ofertas.push({ id: uid(), tipo: 'reacao', habilidade: hab.nome, personagem: b.id, alvos: [a.id], acao: tipo, ataque: ehAtaqueEspecial(hab), dados: dadosDaHabilidade(hab),
+      s.ofertas.push({ id: uid(), tipo: 'reacao', habilidade: hab.nome, habId: hab.id, personagem: b.id, alvos: [a.id], acao: tipo, ataque: ehAtaqueEspecial(hab), dados: dadosDaHabilidade(hab),
         texto: `${b.nome} ${r.sucesso ? 'foi atingido' : 'escapou'} (ataque de ${a.nome}): pode usar ${hab.nome} como ${nomeAcao(tipo).toLowerCase()} agora` });
     }
   }
@@ -1081,10 +1209,20 @@ export const acoes = {
     for (const f of fichasDeTeste(sis, n, c)) {
       const p = { ...f, id: uid(), tipo: 'pj', donoId: null, backups: [], itens: [], dinheiro: sis.regras?.creditosIniciais ?? 0, xp: 0 };
       c.personagens.push(p);
+      darKitDeTeste(c, p, sis, ctx);
       const r = relatorioFicha(p, sis, c);
       relatorio.push({ nome: p.nome, avisos: r.avisos, lembretes: r.lembretes.length, comEfeito: r.comEfeito, total: r.total });
     }
     return { relatorio };
+  },
+
+  // Itens para as fichas de teste que já existem e estão sem nada (até 1500 créditos cada, já equipados).
+  'teste.itens'(c, d, ctx) {
+    exigirMestre(ctx);
+    const sis = sistema(c.sistema);
+    const fichas = c.personagens.filter(p => p.tipo === 'pj' && /^Teste · /.test(p.nome) && !(p.itens || []).length);
+    if (!fichas.length) throw erro('Nenhuma ficha de teste sem itens.');
+    return { relatorio: fichas.map(p => ({ nome: p.nome, itens: darKitDeTeste(c, p, sis, ctx) })) };
   },
 
   'mapa.definir'(c, { imagemId }, ctx) {
@@ -1305,7 +1443,10 @@ export const acoes = {
   'pv.alterar'(c, { id, delta }, ctx) {
     const p = personagem(c, id);
     exigirDonoOuMestre(ctx, p);
-    p.pv.atual = Math.min(p.pv.max, Math.max(-p.pv.max, p.pv.atual + (parseInt(delta, 10) || 0)));
+    const n = parseInt(delta, 10) || 0;
+    // Perder PV respeita os temporários (saem por último); curar só devolve os normais.
+    if (n < 0) perderPv(p, -n);
+    p.pv.atual = Math.min(p.pv.max, Math.max(-p.pv.max, p.pv.atual + Math.max(0, n)));
   },
 
   // Rolagens acontecem no servidor para todos verem o mesmo resultado.
@@ -1457,10 +1598,10 @@ export const acoes = {
     if (!a.pv || !b.pv) throw erro('Os dois precisam ter PV na ficha.');
     const op = { ...(opcoes || {}) };
     if (!ctx.mestre) { delete op.vantagem; delete op.desvantagem; delete op.danoLivre; }
-    // Uma arma em cada mão: a da mão hábil ataca com o ônus de "duas armas" e a da outra mão com o de "mão inábil".
-    const nasMaos = (a.itens || []).filter(i => i.equipado && i.slot === 'maos' && i.tipo === 'arma' && (i.ocupa ?? 1) < 2);
-    const usada = nasMaos.find(i => i.uid === op.armaUid);
-    if (nasMaos.length >= 2 && usada) op.duasArmas = (usada.mao ?? 0) === (a.maoHabil === 'esquerda' ? 1 : 0) ? 'principal' : 'inabil';
+    // Mãos: a hábil ataca sem ônus e a inábil com −20%. Dois ataques no turno, um com cada mão ("Dois ataques" no
+    // primeiro): hábil −20% e inábil −40%, e o segundo não gasta outra ação. Ambidestria: sem mão inábil, e nos dois
+    // ataques só o segundo tem −20%.
+    const segundaMao = maosDoAtaque(c, a, op, sis);
     // Civilizados (Encantado): quem ele não atacou precisa passar em WILL% Difícil para atacá-lo.
     const barrado = civilizados(c, a, b, sis);
     if (barrado) return barrado;
@@ -1475,7 +1616,7 @@ export const acoes = {
     }
     const foraDoTurno = cbA && cbA.ordem[cbA.vez]?.id !== a.id;
     const tipoAcao = especial ? (foraDoTurno ? 'reacao' : acaoDoAtaqueEspecial(a, sis, especial)) : foraDoTurno ? 'reacao' : 'principal';
-    const excesso = op.extra || op.multiplo ? null : gastarAcao(c, a, tipoAcao);
+    const excesso = op.extra || op.multiplo || segundaMao ? null : gastarAcao(c, a, tipoAcao);
     agressaoSubita(c, a, b, sis);
     const notasAgir = efeitosAoAgir(a, sis);
     if (notasAgir.length) registrar(s.log, { autor: a.nome, rotulo: 'Efeitos', texto: notasAgir.join(' · ') });
@@ -1548,6 +1689,10 @@ export const acoes = {
         registrar(s.log, { autor: a.nome, rotulo: `${of.habilidade} (${nomeAcao(of.acao)})`, texto: `contra ${b.nome}` });
         return r;
       }
+      // Habilidade de ativar (Despertar quando atacado): ativa de verdade, gastando a ação da oferta (livre ou reação).
+      const hab = listaHabilidades(a, sis).find(x => x.id === of.habId);
+      if (hab?.regra?.modo === 'ativar') return ativarHabilidade(c, a, sis, hab, { ctx, acao: of.acao });
+      if (hab && duracaoDaHabilidade(hab)) return usarHabilidade(c, a, sis, hab, of.acao);
       const excesso = gastarAcao(c, a, of.acao);
       registrar(s.log, { autor: a.nome, rotulo: `${a.nome} usa ${of.habilidade}`, texto: `${nomeAcao(of.acao)}${excesso ? ` · atenção: ${excesso}` : ''}` });
       return { texto: `${a.nome} usou ${of.habilidade} (${nomeAcao(of.acao)}).`, excesso };
@@ -1574,53 +1719,29 @@ export const acoes = {
     exigirDonoOuMestre(ctx, p);
     const sis = sistema(c.sistema);
     const hab = listaHabilidades(p, sis).find(x => x.id === habId);
-    const regra = hab?.regra;
-    if (!hab || regra?.modo !== 'ativar') throw erro('Essa habilidade não é de ativar.');
-    if ((p.habAtivas || {})[hab.id]) {
-      delete p.habAtivas[hab.id];
-      p.ativas = (p.ativas || []).filter(x => x !== hab.id);
-      if (regra.especial === 'essencia') delete p.essencia;
-      if (regra.especial === 'pvTemp') delete p.pvTemp;
-      registrar(c.salas.batalha.log, { autor: p.nome, rotulo: `${hab.nome} desativada`, texto: '' });
-      return { desativou: true };
-    }
-    const chave = chaveHabilidade(hab.nome);
-    if (usosRestantes(p, sis, chave) <= 0) throw erro(`${hab.nome} já foi usada (volta no descanso longo).`);
-    if (regra.requerItem && !(p.itens || []).some(i => new RegExp(regra.requerItem, 'i').test(i.nome))) throw erro(`${hab.nome} precisa de um item: ${regra.requerItem.replace('|', ' ou ')}.`);
-    const notas = [];
-    let essencia = null;
-    if (regra.especial === 'essencia') {
-      const m = personagem(c, alvo);
-      const abatido = m.semPv || (m.pv && m.pv.atual <= 0) || (m.marcadores || []).some(x => ['Morto', 'Desmaiado'].includes(x));
-      if (!c.salas.batalha.participantes.includes(m.id) || !abatido || tipoCriatura(m) === 'humanoide') throw erro('Escolha um monstro abatido no Campo de Batalha.');
-      if (!m.atributos) throw erro(`${m.nome} não tem atributos na ficha: o mestre precisa preencher.`);
-      const [sigla, valor] = Object.entries(derivados(m, sis).atributos).sort((x, y) => y[1] - x[1])[0];
-      essencia = { sigla, valor, de: m.nome };
-      notas.push(`${sigla} ${valor} (de ${m.nome})`);
-    }
-    if (regra.custo?.recurso) {
-      try { gastarRecurso(p, sis, regra.custo.recurso, regra.custo.qtd || 1); } catch (e) { throw erro(e.message); }
-      notas.push(`gastou ${regra.custo.qtd || 1} carga(s)${cargaNoCoracao(p, regra.custo.qtd || 1)}`);
-    }
-    if (regra.custo?.hum && p.humanidade) {
-      const d = rolarDado(regra.custo.hum);
-      p.humanidade.atual = Math.max(0, p.humanidade.atual - d.total);
-      notas.push(`perdeu ${d.total} HUM [${d.dados.join(', ')}]`);
-    }
-    if (regra.especial === 'pvTemp') {
-      const d = rolarDado(regra.pvTemp);
-      p.pvTemp = Math.max(p.pvTemp || 0, d.total);
-      notas.push(`${d.total} PV temporários [${d.dados.join(', ')}]`);
-    }
-    if (essencia) p.essencia = essencia;
-    if (regra.usos) gastarUso(p, chave);
-    (p.habAtivas ||= {})[hab.id] = { nome: hab.nome, ...(regra.duracao?.turnos ? { turnos: regra.duracao.turnos } : {}), ...(regra.duracao === 'combate' ? { combate: true } : {}), ...(regra.fim ? { fim: regra.fim } : {}) };
-    if (!(p.ativas || []).includes(hab.id)) p.ativas = [...(p.ativas || []), hab.id];
-    const excesso = gastarAcao(c, p, regra.acao);
-    const duracao = regra.duracao?.turnos ? `por ${regra.duracao.turnos} turnos` : regra.duracao === 'combate' ? 'até o fim do combate' : '';
-    const texto = [regra.acao ? `ação ${regra.acao}` : '', duracao, ...notas].filter(Boolean).join(' · ');
-    registrar(c.salas.batalha.log, { autor: p.nome, rotulo: `${hab.nome} ativada`, texto: `${texto}${excesso ? ` · atenção: ${excesso}` : ''}` });
-    return { texto, excesso };
+    if (!hab || hab.regra?.modo !== 'ativar') throw erro('Essa habilidade não é de ativar.');
+    return ativarHabilidade(c, p, sis, hab, { ctx, alvo });
+  },
+
+  // Usar uma habilidade que gasta ação mas não tem regra própria. Se ela dura um tempo (Despertar, Adaptação corpórea…),
+  // fica ativa (ícone no personagem) e não pode ser usada de novo enquanto durar, a não ser que o texto permita.
+  'habilidade.usar'(c, { id, hab: habId }, ctx) {
+    const p = personagem(c, id);
+    exigirDonoOuMestre(ctx, p);
+    const sis = sistema(c.sistema);
+    const hab = listaHabilidades(p, sis).find(x => x.id === habId);
+    if (!hab) throw erro(`${p.nome} não tem essa habilidade.`);
+    if (hab.regra?.modo === 'ativar') return ativarHabilidade(c, p, sis, hab, { ctx });
+    return usarHabilidade(c, p, sis, hab);
+  },
+
+  // O mestre encerra uma habilidade ativa antes do fim (clicando no ícone dela no personagem).
+  'habilidade.encerrar'(c, { id, hab: habId }, ctx) {
+    exigirMestre(ctx);
+    const p = personagem(c, id);
+    if (!p.habAtivas?.[habId]) throw erro('Essa habilidade não está ativa.');
+    encerrarHabilidade(c, p, { id: habId, nome: p.habAtivas[habId].nome, regra: regraDaHabilidade(p.habAtivas[habId].nome, sistema(c.sistema)) });
+    return null;
   },
 
   // Marcar (ou desmarcar) uma ação do turno: mover, sacar, usar uma habilidade… Anota no registro com o que foi feito.
@@ -1665,8 +1786,8 @@ export const acoes = {
       if (maquina && b.pv) {
         const ip = ipContra(b, sis, 'Elétrico');
         const dano = Math.max(sis.combate?.danoMinimo ?? 0, rol.total - ip);
-        b.pv.atual -= dano;
-        texto += `${dano} de dano elétrico em ${b.nome} [${rol.dados.join(', ')}]${ip ? ` − IP ${ip}` : ''} (${b.pv.atual}/${b.pv.max} PV)`;
+        perderPv(b, dano);
+        texto += `${dano} de dano elétrico em ${b.nome} [${rol.dados.join(', ')}]${ip ? ` − IP ${ip}` : ''} (${textoPv(b)} PV)`;
       } else texto += `${rol.total} de dano elétrico num item de ${b.nome} [${rol.dados.join(', ')}] — o mestre aplica no item`;
     }
     registrar(c.salas.batalha.log, { autor: p.nome, rotulo: `Dano ao sistema em ${b.nome}`, texto, sucesso: t.sucesso });
@@ -1796,6 +1917,8 @@ export const acoes = {
       // Descanso curto é a refeição (meia ração); o longo, se não foi interrompido, tira o Sono.
       if (tipo === 'curto') notas.push(comer(p, sis));
       if (tipo === 'longo' && !interrompido) { const dormiu = dormir(p, sis); if (dormiu) notas.push(dormiu); else (p.necessidades ||= { comida: 0, agua: 0, sono: 0 }).sono = 0; }
+      // Descansar encerra as habilidades que duram "até o próximo descanso" (Adaptação corpórea…).
+      encerrarAtivacoes(c, p, sis, false);
       // Descanso longo recarrega os usos de habilidades "por descanso longo" (Juggernaut, Carga de Emergência…).
       if (tipo === 'longo' && !interrompido && p.usos) {
         for (const k of Object.keys(p.usos)) if (sis.habilidadesRegras?.[k]?.usos?.recarga === 'descanso-longo') delete p.usos[k];

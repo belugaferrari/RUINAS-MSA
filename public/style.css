@@ -336,8 +336,10 @@ label.busca input { padding-left: 2em; width: 100%; }
 .indice label.busca { width: 100%; }
 
 /* salas */
-.barra-pv { height: 6px; border-radius: 3px; background: #3a1c19; overflow: hidden; margin: .25em 0; max-width: 220px; }
-.barra-pv i { display: block; height: 100%; background: linear-gradient(90deg, #c0392b, #e05a4f); transition: width .3s; }
+.barra-pv { display: flex; height: 6px; border-radius: 3px; background: #3a1c19; overflow: hidden; margin: .25em 0; max-width: 220px; }
+.barra-pv i.temp { background: linear-gradient(90deg, #2e9e5b, #53c47f); }
+.pv-temp { color: #53c47f; font-weight: 700; }
+.barra-pv i { display: block; flex: none; height: 100%; background: linear-gradient(90deg, #c0392b, #e05a4f); transition: width .3s; }
 details.bloco summary { display: flex; align-items: center; gap: .4em; }
 
 /* criação */
@@ -463,7 +465,9 @@ details.bloco summary { display: flex; align-items: center; gap: .4em; }
 .tabela-atributos td, .tabela-atributos th { padding: .25em .4em; }
 select { max-width: 100%; text-overflow: ellipsis; }
 .ficha details > summary { cursor: pointer; color: var(--ouro); display: flex; align-items: center; gap: .3em; margin: .6em 0 .3em; }
-.barra-trilha { height: 10px; border-radius: 5px; background: var(--fundo); border: 1px solid var(--borda); overflow: hidden; margin-top: .35em; }
+.barra-trilha { display: flex; height: 10px; border-radius: 5px; background: var(--fundo); border: 1px solid var(--borda); overflow: hidden; margin-top: .35em; }
+.barra-trilha i { flex: none; }
+.barra-trilha i.temp, .trilha-compacta.pv .barra-trilha i.temp { background: linear-gradient(90deg, #2e9e5b, #53c47f); }
 .barra-trilha i { display: block; height: 100%; background: linear-gradient(90deg, var(--ouro-esc), var(--ouro-claro)); transition: width .3s; }
 .estagio-hum summary { cursor: pointer; color: var(--ouro); display: flex; align-items: center; gap: .3em; flex-wrap: wrap; }
 mark.revisao { background: #5a4510; color: #ffe7a8; border-bottom: 1px dashed var(--ouro); padding: 0 .15em; border-radius: 2px; }
@@ -1393,3 +1397,6 @@ span.peao { display: grid; }
 .objeto-mapa.obj-cobertura { border-color: #5b8bd0; color: #9cbcf0; }
 .objeto-mapa.obj-perigo { border-color: #ff7a2a; color: #ffb27a; }
 .objeto-mapa.oculto { opacity: .5; border-style: dashed; }
+
+/* Habilidade ativa (Despertar…): chama dourada junto dos efeitos. */
+.efeito-icone.hab-ativa { --cor-ef: #e0a526; }

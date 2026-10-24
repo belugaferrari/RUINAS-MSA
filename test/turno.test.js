@@ -11,6 +11,7 @@ const { sistema } = await import('../server/sistema.js');
 const R = await import('../shared/regras.js');
 const { acoesDaHabilidade, listaHabilidades, dadosDaHabilidade } = R;
 const { sincronizarEfeitos, passarTurnoEfeitos } = await import('../shared/efeitos.js');
+const C = await import('../shared/combate.js');
 
 const mss = sistema('mss');
 const mestre = { id: 'm', name: 'Mestre' };
@@ -165,4 +166,95 @@ test('ataque especial ataca de verdade, soma o bônus uma vez e gasta a ação d
     assert.match(r.rotulo, /Predador Apex/);
   } finally { Math.random = rnd; }
   assert.equal(cb.gasto[ids[0]].reacao, 1, 'Predador Apex é reação');
+});
+
+test('duas armas: hábil sem ônus, inábil −20%; dois ataques (um com cada mão) −20%/−40% numa ação só; Ambidestria muda', () => {
+  const c = novaCampanha(mestre, { nome: 'T', maxJogadores: 2, nivel: 1, sistema: 'mss' });
+  const ids = ['Bal', 'Alvo'].map(nome => executar(c, 'personagem.criar', { tipo: 'npc', grupoId: 'encontros', ficha: { nome } }, ctxM).id);
+  const bal = c.personagens.find(p => p.id === ids[0]);
+  const faca = (uid, mao) => ({ uid, nome: `Faca ${uid}`, tipo: 'arma', slot: 'maos', mao, dano: '1d4', tipoDano: 'Corte', equipado: true, alcance: 'corpo', pericia: 'arma-branca.laminas-curtas' });
+  bal.itens = [faca('d', 0), faca('e', 1)];
+  for (const id of ids) executar(c, 'sala.adicionar', { sala: 'batalha', id }, ctxM);
+  const cb = c.salas.batalha.combate;
+  cb.vez = cb.ordem.findIndex(o => o.id === ids[0]);
+  const ataque = (uid, extra = {}) => executar(c, 'combate.atacar', { atacante: ids[0], alvo: ids[1], opcoes: { surpresa: true, armaUid: uid, ...extra } }, ctxM);
+  const mod = r => ((JSON.stringify(r).match(/(mão inábil|dois ataques \(mão [^)]+\)|segundo ataque \(Ambidestria\)) [−-]\d+/) || [''])[0]).replace('−', '-').replace(/%$/, '');
+  const novoTurno = () => { cb.gasto = {}; };
+  assert.equal(mod(ataque('d')), '');
+  novoTurno();
+  assert.equal(mod(ataque('e')), 'mão inábil -20');
+  novoTurno();
+  assert.equal(mod(ataque('d', { doisAtaques: true })), 'dois ataques (mão hábil) -20');
+  const r2 = ataque('e');
+  assert.equal(mod(r2), 'dois ataques (mão inábil) -40');
+  assert.ok(!r2.excesso, 'o segundo ataque não gasta outra ação');
+  assert.equal(cb.gasto[ids[0]].principal, 1);
+  // Ambidestria: sem mão inábil; nos dois ataques, só o segundo tem −20%.
+  bal.vantagens = [mss.vantagens.find(x => x.nome === 'Ambidestria').id];
+  novoTurno();
+  assert.equal(mod(ataque('e')), '');
+  novoTurno();
+  assert.equal(mod(ataque('e', { doisAtaques: true })), '');
+  assert.equal(mod(ataque('d')), 'segundo ataque (Ambidestria) -20');
+});
+
+test('Despertar: dura o combate, ícone de ativa, não ativa de novo; PV temporários e arma natural (perfuração, +1 por Corpo monstruoso)', () => {
+  const c = novaCampanha(mestre, { nome: 'T', maxJogadores: 2, nivel: 1, sistema: 'mss' });
+  const ids = ['Lobo', 'Alvo'].map(nome => executar(c, 'personagem.criar', { tipo: 'npc', grupoId: 'encontros', ficha: { nome } }, ctxM).id);
+  const lobo = c.personagens.find(p => p.id === ids[0]);
+  const cl = mss.classes.find(x => x.nome === 'Transmorfo');
+  Object.assign(lobo, { classe: cl.id, especializacao: cl.especializacoes.find(e => /LICANT/.test(e.nome)).id, nivel: 6 });
+  for (const id of ids) executar(c, 'sala.adicionar', { sala: 'batalha', id }, ctxM);
+  const hab = listaHabilidades(lobo, mss).find(x => x.nome === 'Despertar');
+  const corpo = listaHabilidades(lobo, mss).find(x => x.nome === 'Corpo monstruoso')?.vezes || 0;
+  const { armasDisponiveis, imuneA } = C;
+  assert.ok(!armasDisponiveis(lobo, mss).some(a => a.uid === 'natural'), 'sem despertar, sem garras');
+  const pvAntes = lobo.pv.atual;
+  executar(c, 'habilidade.usar', { id: lobo.id, hab: hab.id }, ctxM);
+  assert.ok(lobo.habAtivas[hab.id].combate);
+  assert.ok(lobo.pvTemp >= 1 + corpo && lobo.pvTemp <= 6 + corpo);
+  assert.equal(lobo.humor, 'corajoso');
+  assert.ok(imuneA(lobo, mss, 'Amedrontado'));
+  assert.equal(R.textoPv(lobo), `${pvAntes}+${lobo.pvTemp}/${lobo.pv.max}`);
+  const nat = armasDisponiveis(lobo, mss).find(a => a.uid === 'natural');
+  assert.equal(nat.tipoDano, 'Perfuração');
+  assert.equal(nat.dano, mss.combate.desarmado.dano);
+  assert.deepEqual(nat.bonusNatural, [{ nome: 'Despertar', fixo: 1 + corpo }]);
+  // O jogador não ativa de novo; o mestre encerra.
+  lobo.donoId = ana.id;
+  assert.throws(() => executar(c, 'habilidade.ativar', { id: lobo.id, hab: hab.id }, ctxA), /já está ativa/);
+  assert.throws(() => executar(c, 'habilidade.usar', { id: lobo.id, hab: hab.id }, ctxA), /já está ativa/);
+  assert.throws(() => executar(c, 'habilidade.encerrar', { id: lobo.id, hab: hab.id }, ctxA));
+  executar(c, 'habilidade.encerrar', { id: lobo.id, hab: hab.id }, ctxM);
+  assert.ok(!lobo.habAtivas[hab.id] && !lobo.pvTemp);
+  assert.equal(lobo.humor, 'neutro');
+});
+
+test('PV temporários saem por último: o dano tira dos normais até 0, depois dos verdes', () => {
+  const p = { pv: { max: 54, atual: 54 }, pvTemp: 3 };
+  R.perderPv(p, 10);
+  assert.deepEqual([p.pv.atual, p.pvTemp], [44, 3]);
+  R.perderPv(p, 46);
+  assert.deepEqual([p.pv.atual, p.pvTemp], [0, 1]);
+  R.perderPv(p, 4);
+  assert.equal(p.pv.atual, -3);
+  assert.ok(!p.pvTemp);
+});
+
+test('fichas de teste vêm com itens (até 1500 créditos) já equipados; "Dar itens" serve as antigas sem itens', () => {
+  const c = novaCampanha(mestre, { nome: 'T', maxJogadores: 2, nivel: 1, sistema: 'mss' });
+  executar(c, 'teste.fichas', { nivel: 6 }, ctxM);
+  const fichas = c.personagens.filter(p => /^Teste · /.test(p.nome));
+  assert.ok(fichas.length >= 5);
+  for (const p of fichas) {
+    const total = p.itens.reduce((s, i) => s + (i.preco || 0), 0);
+    assert.ok(total <= 1500, `${p.nome}: ${total}`);
+    if (p.itens.some(i => i.tipo === 'arma')) assert.ok(p.itens.some(i => i.tipo === 'arma' && i.equipado), `${p.nome} sem arma equipada: ${JSON.stringify(p.itens.map(i => [i.nome, i.slot, i.ocupa, i.equipado]))}`);
+  }
+  // Só as que estão sem itens recebem (no catálogo de exemplo, o kit pode sair vazio).
+  for (const p of fichas) p.itens = [{ uid: 'x', nome: 'x' }];
+  fichas[0].itens = [];
+  const r = executar(c, 'teste.itens', {}, ctxM);
+  assert.deepEqual(r.relatorio.map(x => x.nome), [fichas[0].nome]);
+  assert.throws(() => executar(c, 'teste.itens', {}, ctxA));
 });

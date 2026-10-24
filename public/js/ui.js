@@ -177,3 +177,14 @@ export function escolhaComOutra(chave, opcoes, valor, salvar, { rotuloOutra = 'O
     outra ? campo(`${chave}:outra`, naLista ? '' : valor, v => salvar(String(v).trim()), { placeholder, 'aria-label': `${props['aria-label'] || 'Valor'} (outra)` }) : null);
 }
 const estadoOutra = new Set();
+
+// Barra de PV: os normais em vermelho e os temporários em verde logo depois ("54+3"; os verdes saem por último).
+export function barraPv(p) {
+  const temp = p.pvTemp > 0 ? p.pvTemp : 0;
+  const escala = Math.max(p.pv.max || 1, Math.max(0, p.pv.atual) + temp);
+  const pct = n => `${Math.max(0, Math.min(100, (100 * n) / escala))}%`;
+  return h('div', { class: 'barra-pv', title: `PV ${p.pv.atual}/${p.pv.max}${temp ? ` + ${temp} temporários` : ''}` },
+    h('i', { style: { width: pct(p.pv.atual) } }),
+    temp ? h('i', { class: 'temp', style: { width: pct(temp) } }) : null);
+}
+export const numeroPv = p => h('span', { class: 'numero-pv' }, `${p.pv.atual}`, p.pvTemp > 0 ? h('b', { class: 'pv-temp' }, `+${p.pvTemp}`) : null, `/${p.pv.max}`);

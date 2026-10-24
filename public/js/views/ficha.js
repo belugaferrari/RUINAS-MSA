@@ -94,13 +94,17 @@ function temporarios(p) {
 // Título em cima (nome e estado), barra embaixo com o valor no centro, entre − e +.
 export function trilhaCompacta(p, chave, rotulo, ic, extra = null) {
   const t = p[chave] || { max: 0, atual: 0 };
-  const pct = Math.max(0, Math.min(100, (100 * t.atual) / (t.max || 1)));
+  // PV temporários: faixa verde depois da vermelha e "40+4 / 54" (saem por último).
+  const temp = chave === 'pv' && p.pvTemp > 0 ? p.pvTemp : 0;
+  const escala = Math.max(t.max || 1, Math.max(0, t.atual) + temp);
+  const pct = Math.max(0, Math.min(100, (100 * t.atual) / escala));
   return h('div', { class: `trilha-compacta ${chave}` },
     h('div', { class: 'cabeca' }, h('span', { class: 'rotulo' }, icone(ic), rotulo), extra ? h('small', { class: 'extra' }, ` · ${extra}`) : null),
     h('div', { class: 'linha' },
       botao('', () => atualizar(p, { [chave]: { ...t, atual: t.atual - 1 } }), { class: 'pequeno', icone: 'minus', title: `Diminuir ${rotulo}` }),
       h('div', { class: 'barra-trilha', role: 'meter', 'aria-valuemin': 0, 'aria-valuemax': t.max, 'aria-valuenow': t.atual, 'aria-label': rotulo },
-        h('i', { style: { width: `${pct}%` } }), h('span', { class: `valor ${t.atual <= 0 ? 'perigo' : ''}` }, `${t.atual} / ${t.max}`)),
+        h('i', { style: { width: `${pct}%` } }), temp ? h('i', { class: 'temp', style: { width: `${(100 * temp) / escala}%` }, title: `${temp} PV temporários` }) : null,
+        h('span', { class: `valor ${t.atual <= 0 && !temp ? 'perigo' : ''}` }, `${t.atual}${temp ? `+${temp}` : ''} / ${t.max}`)),
       botao('', () => atualizar(p, { [chave]: { ...t, atual: Math.min(t.max, t.atual + 1) } }), { class: 'pequeno', icone: 'plus', title: `Aumentar ${rotulo}` })));
 }
 
@@ -350,7 +354,7 @@ function trilha(p, chave, rotulo) {
     h('div', { class: 'trilha-topo' },
       h('strong', {}, rotulo),
       botao('', () => atualizar(p, { [chave]: { ...t, atual: t.atual - 1 } }), { class: 'pequeno', icone: 'minus', title: `Diminuir ${rotulo}` }),
-      h('span', { class: `valor ${t.atual <= 0 ? 'perigo' : ''}` }, `${t.atual} / ${t.max}`),
+      h('span', { class: `valor ${t.atual <= 0 ? 'perigo' : ''}` }, `${t.atual}`, chave === 'pv' && p.pvTemp > 0 ? h('b', { class: 'pv-temp', title: 'PV temporários (saem por último)' }, `+${p.pvTemp}`) : null, ` / ${t.max}`),
       botao('', () => atualizar(p, { [chave]: { ...t, atual: Math.min(t.max, t.atual + 1) } }), { class: 'pequeno', icone: 'plus', title: `Aumentar ${rotulo}` })),
     t.max > 40
       ? h('div', { class: 'barra-trilha', role: 'meter', 'aria-valuemin': 0, 'aria-valuemax': t.max, 'aria-valuenow': t.atual, 'aria-label': rotulo },

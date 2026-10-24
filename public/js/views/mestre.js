@@ -324,14 +324,19 @@ function fichasTesteView() {
   const nivel = h('input', { type: 'number', min: 3, max: 20, value: 6, class: 'curto', 'aria-label': 'Nível das fichas de teste' });
   return h('section', { class: 'bloco' },
     titulo('Fichas de teste', 'flask-conical'),
-    h('p', { class: 'dica' }, 'Cria um personagem-jogador livre de cada classe (com especialização, vantagens e perícias) para testar as habilidades. Eles aparecem em Jogadores e podem ser apagados depois.'),
+    h('p', { class: 'dica' }, 'Cria um personagem-jogador livre de cada classe (com especialização, vantagens, perícias e até 1500 créditos em itens já equipados) para testar as habilidades. Eles aparecem em Jogadores e podem ser apagados depois.'),
     h('div', { class: 'barra' }, h('label', { class: 'linha' }, 'Nível', nivel),
       botao('Criar fichas de teste', async () => {
         const r = await acao('teste.fichas', { nivel: nivel.value });
         janela('Fichas de teste criadas', h('ul', { class: 'lista-regras' }, r.relatorio.map(x => h('li', {},
           h('strong', {}, x.nome), h('small', {}, ` — ${x.total} habilidades/vantagens, ${x.comEfeito} com bônus que o app soma, ${x.lembretes} só lembrete`),
           x.avisos.length ? h('ul', {}, x.avisos.map(a => h('li', { class: 'perigo' }, a))) : h('small', { class: 'bloco-texto' }, 'Sem problemas encontrados.')))));
-      }, { class: 'primario', icone: 'users' })));
+      }, { class: 'primario', icone: 'users' }),
+      // Fichas de teste criadas antes, sem itens: até 1500 créditos cada, já equipados.
+      botao('Dar itens às fichas de teste', async () => {
+        const r = await acao('teste.itens', {});
+        janela('Itens das fichas de teste', h('ul', { class: 'lista-regras' }, r.relatorio.map(x => h('li', {}, h('strong', {}, x.nome), h('small', {}, ` — ${x.itens.join(', ')}`)))));
+      }, { icone: 'backpack', title: 'Até 1500 créditos em itens para cada ficha de teste sem itens, já equipados' })));
 }
 
 function abaCampanha() {

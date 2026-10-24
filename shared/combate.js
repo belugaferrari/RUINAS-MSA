@@ -1,6 +1,6 @@
 // Combate e regras sociais automatizadas (Livro MSS). Só valem quando o sistema da campanha liga
 // "modulos.combate" / "modulos.social". Escolhas provisórias estão em conteudo/sistemas/PENDENCIAS.md.
-import { rolarDado, derivados, ipContraDano, listaHabilidades, vantagemPorHabilidade, tipoCriatura, subirPassos, temHabilidade, regraDaHabilidade, danoDasHabilidades, efeitosHabilidade, modoHabilidade } from './regras.js';
+import { rolarDado, derivados, ipContraDano, listaHabilidades, vantagemPorHabilidade, tipoCriatura, subirPassos, temHabilidade, regraDaHabilidade, danoDasHabilidades, efeitosHabilidade, modoHabilidade, perderPv, chaveHabilidade } from './regras.js';
 
 const d100 = rng => 1 + Math.floor(rng() * 100);
 
@@ -70,7 +70,28 @@ export function armasDisponiveis(p, sistema) {
     // Cadência: quantos disparos (balas e danos) por ataque — da arma ou da subperícia (ex.: Rifle de Assalto 2).
     cadencia: Math.max(1, i.cadencia ?? cfg.cadencia?.[i.pericia] ?? 1),
   }));
-  return [{ uid: 'desarmado', efeitoDano: cfg.efeitoPadrao, ...cfg.desarmado }, ...armas];
+  const natural = armaNaturalDe(p, sistema);
+  return [{ uid: 'desarmado', efeitoDano: cfg.efeitoPadrao, ...cfg.desarmado }, ...(natural ? [natural] : []), ...armas];
+}
+
+// Arma natural (garras e presas do Transmorfo desperto; com Garras Retráteis, mesmo sem despertar): ataque especial com o
+// mesmo dado e a mesma perícia do desarmado, mas com dano de perfuração e os bônus (+1 do Despertar, +1 por Corpo
+// monstruoso, +1 das Garras Retráteis). Monstros têm as armas naturais da planilha como itens.
+export function armaNaturalDe(p, sistema) {
+  const cfg = sistema.combate || {};
+  if (!cfg.desarmado) return null;
+  const habs = listaHabilidades(p, sistema);
+  const desperto = habs.find(x => x.regra?.armaNatural && p.habAtivas?.[x.id]);
+  const retrateis = habs.find(x => chaveHabilidade(x.nome) === 'garras retrateis');
+  if (!desperto && !retrateis) return null;
+  const corpo = habs.find(x => chaveHabilidade(x.nome) === 'corpo monstruoso')?.vezes || 0;
+  const bonusNatural = [];
+  if (desperto) bonusNatural.push({ nome: desperto.nome, fixo: desperto.regra.armaNatural + corpo });
+  if (retrateis) bonusNatural.push({ nome: retrateis.nome, fixo: 1 });
+  return {
+    ...cfg.desarmado, uid: 'natural', nome: 'Garras e presas (arma natural)', tipoDano: 'Perfuração', natural: true,
+    efeitoDano: cfg.chancePorTipo?.['Perfuração'] ?? cfg.efeitoPadrao, bonusNatural,
+  };
 }
 
 // Defesas que o alvo pode escolher contra este ataque (quem escolhe é o defensor):
@@ -142,7 +163,7 @@ export function d6Atual(pv) {
 }
 
 // Resolve um ataque completo: acerto × defesa, dano − IP, efeito pelo DS. Não altera nada: devolve o que aplicar.
-// op: { armaUid, danoLivre, localizado, duasArmas: 'principal'|'inabil', sacrificio, surpresa, elevado, cobertura, area, vantagem, desvantagem, mod }
+// op: { armaUid, danoLivre, localizado, maos: { nome, valor } (posto pelo servidor), sacrificio, surpresa, elevado, cobertura, area, vantagem, desvantagem, mod }
 // defesa: id escolhido pelo defensor (ver opcoesDefesa).
 export function resolverAtaque(atacante, alvo, sistema, op = {}, defesaId = 'nenhuma', rng = Math.random) {
   const cfg = sistema.combate;
@@ -161,7 +182,7 @@ export function resolverAtaque(atacante, alvo, sistema, op = {}, defesaId = 'nen
   const mods = [];
   const add = (nome, valor) => valor && mods.push({ nome, valor });
   add('localizado', op.localizado ? cfg.localizado.mod : 0);
-  if (op.duasArmas) add(op.duasArmas === 'inabil' ? 'mão inábil' : 'duas armas', cfg.duasArmas[op.duasArmas] || 0);
+  if (op.maos) add(op.maos.nome, op.maos.valor || 0);
   add('Sacrifício', op.sacrificio ? cfg.sacrificio.mod : 0);
   add('humor', modHumorTestes(atacante, sistema));
   add('modificador', Math.max(-100, Math.min(100, parseInt(op.mod, 10) || 0)));
@@ -222,6 +243,7 @@ export function resolverAtaque(atacante, alvo, sistema, op = {}, defesaId = 'nen
       if (r.perdaSacrificio) doDisparo.push({ nome: 'Sacrifício', total: r.perdaSacrificio });
       // Habilidades que somam dano, cada uma com o seu nome (para a conta): as ligadas e automáticas — só as que valem
       // para este tipo de ataque (ex.: "ataques desarmados") — e o ataque especial usado agora, uma vez.
+      for (const b of arma.bonusNatural || []) doDisparo.push({ nome: b.nome, total: b.fixo });
       for (const parte of bonusHab.partes) {
         if (parte.expr) rolar(parte.nome, parte.expr);
         else doDisparo.push({ nome: parte.nome, total: parte.fixo });
@@ -304,14 +326,10 @@ export function aplicarAtaque(atacante, alvo, r, sistema = null) {
   if (!r.sucesso && !r.dano) return [];
   const notas = [];
   const antes = alvo.pv.atual;
-  // PV temporários (Carga de Emergência) absorvem o dano primeiro.
-  let dano = r.dano;
-  if (alvo.pvTemp > 0 && dano > 0) {
-    const abs = Math.min(alvo.pvTemp, dano);
-    alvo.pvTemp -= abs; dano -= abs;
-    notas.push(`${abs} nos PV temporários`);
-  }
-  alvo.pv.atual -= dano;
+  // PV temporários são os últimos a sair (ver perderPv).
+  const tempAntes = alvo.pvTemp || 0;
+  const abs = perderPv(alvo, r.dano);
+  if (abs) notas.push(`${abs} nos PV temporários`);
   // Juggernaut: a 1ª vez (por descanso longo) que o PV ficaria abaixo de 0 no combate, fica com 1 PV.
   if (sistema && alvo.pv.atual < 0 && antes >= 0 && temHabilidade(alvo, sistema, 'Juggernaut') && usosRestantes(alvo, sistema, 'juggernaut') > 0) {
     alvo.pv.atual = 1;
@@ -323,7 +341,7 @@ export function aplicarAtaque(atacante, alvo, r, sistema = null) {
   if (r.efeito && imuneA(alvo, sistema, r.efeito)) notas.push(`imune a ${r.efeito}`);
   else if (r.efeito) { marcar(r.efeito); notas.push(r.efeito); }
   if (antes < 0 && !r.naoLetal) { marcar('Morto'); notas.push('morto (dano com PV negativo)'); }
-  else if (alvo.pv.atual <= 0 && antes > 0) { marcar('Desmaiado'); notas.push(r.naoLetal ? 'desmaiado (não letal)' : 'desmaiado'); }
+  else if (alvo.pv.atual <= 0 && !(alvo.pvTemp > 0) && antes + tempAntes > 0) { marcar('Desmaiado'); notas.push(r.naoLetal ? 'desmaiado (não letal)' : 'desmaiado'); }
   return notas;
 }
 

@@ -249,3 +249,9 @@ Regras em `conteudo/sistemas/habilidades-regras.json` (automática / ligar / ati
 - **Aguardando o autor:** a planilha de monstros do Drive usa afinidades além dos elementos (Água, Fogo, Tóxico, Neutro, Vampiro, Submundo, Místico, Ordem, Caos, Terra, Psíquico, Metal, Areia, Planta, Pedra, Ar). Falta definir a lista oficial e a qual tipo de dano cada uma corresponde para a regra da metade do dano.
 - **Livro dos Monstros do autor (22/10):** os 75 monstros da planilha "Monstros-app" (Google Drive) viraram o livro padrão do app (conteudo/sistemas/monstros.json); os 2 exemplos inventados foram tirados. Duas subperícias com a perícia errada foram corrigidas pelo nome (Esportes › Esquiva → Briga › Esquiva; Armas de Fogo › Chicote → Arma Branca › Chicote).
 - **Afinidades elementais (autor, 22/10):** todas as da planilha valem (Água, Ar, Areia, Caos, Elétrico, Fogo, Frio, Gelo, Metal, Místico, Neutro, Ordem, Pedra, Planta, Psíquico, Submundo, Terra, Tóxico, Vampiro; mais Calor, Energia, Radiação). Relação com os tipos de dano (base.json "afinidadesElementais"): Fogo/Calor → Calor; Frio/Gelo → Frio; Elétrico → Elétrico; Tóxico → Venenoso; Psíquico → Psíquico; Energia → Energia; Radiação → Radiação. **Aguardando o autor:** Água, Ar, Areia, Caos, Metal, Místico, Neutro, Ordem, Pedra, Planta, Submundo, Terra, Vampiro (por enquanto não reduzem dano).
+
+## 24/10 — a confirmar com o autor
+- Duas armas: no "Dois ataques (um com cada mão)" o segundo ataque não gasta outra ação (os dois cabem na Ação principal). Confirmar.
+- Despertar: o livro não diz quanto dura — o app deixa até o fim do combate (o mestre pode encerrar antes no ícone).
+- Arma natural: Ataque Desarmado Treinado também soma nela (usa a perícia do desarmado). Confirmar.
+- Garras/presas: dano de perfuração para as duas (autor, 24/10).

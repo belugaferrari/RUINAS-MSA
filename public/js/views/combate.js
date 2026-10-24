@@ -1,6 +1,6 @@
 // Campo de Batalha: controle de turno (qualquer sistema) e combate automático; Sala Social: Roda do Humor.
 // O ataque automático e a Roda do Humor só ligam nos sistemas com esses módulos (hoje, o MSS).
-import { h, botao, selecao, aviso, icone, titulo, confirmar, pedirTexto } from '../ui.js';
+import { h, botao, selecao, aviso, icone, titulo, confirmar, pedirTexto, numeroPv } from '../ui.js';
 import { estado, personagemPorId, render } from '../estado.js';
 import { acao } from '../api.js';
 import { derivados } from '/shared/regras.js';
@@ -34,7 +34,7 @@ export function painelVez(cb, mestre) {
   const armas = (p.itens || []).filter(i => i.equipado && i.capacidade);
   return h('div', { class: `painel-vez ${meu ? 'minha' : ''}` },
     h('strong', {}, icone('zap'), meu ? ` Sua vez: ${p.nome}` : ` Vez de ${p.nome}`),
-    p.pv ? h('span', { class: 'selo' }, icone('heart'), `${p.pv.atual}/${p.pv.max}`) : null,
+    p.pv ? h('span', { class: 'selo' }, icone('heart'), numeroPv(p)) : null,
     armas.map(i => h('span', { class: 'municao' },
       h('span', { class: `selo ${(i.carregada || 0) <= 0 ? 'perigo' : ''}` }, `${i.nome}: ${i.carregada || 0}/${i.capacidade}`),
       botao('', () => acao('item.municao', { id: p.id, uid: i.uid, delta: -1 }), { class: 'pequeno', icone: 'minus', title: `Gastar 1 bala de ${i.nome}`, disabled: (i.carregada || 0) <= 0 }),
@@ -329,7 +329,7 @@ export function alvoDe(p, sala, participantes) {
 // Opções do formulário "Opções do ataque" (surpresa, localizado…) valem para os botões dos cartões.
 export function opcoesGerais(p, mestre) {
   const sel = estado.sel.ataque || {};
-  const op = { localizado: sel.localizado, surpresa: sel.surpresa, elevado: sel.elevado, cobertura: sel.cobertura, area: sel.area, duasArmas: sel.duasArmas || null };
+  const op = { localizado: sel.localizado, surpresa: sel.surpresa, elevado: sel.elevado, cobertura: sel.cobertura, area: sel.area, doisAtaques: sel.doisAtaques || null };
   if (p.tipo === 'pj') op.sacrificio = sel.sacrificio;
   if (sel.cargaNucleo) op.cargaNucleo = true;
   if (sel.investida != null) op.investida = sel.investida;

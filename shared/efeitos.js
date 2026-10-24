@@ -1,7 +1,7 @@
 // Efeitos com tempo (Sangramento, Dor, Aturdido…): os marcadores dizem QUAIS efeitos o personagem tem;
 // p.efeitos guarda os contadores de turno de cada um, por id da condição.
 // A contagem anda no fim do turno de quem sofre o efeito (controle de turno do Campo de Batalha).
-import { rolarDado, condicoesAtivas, testeDMil } from './regras.js';
+import { rolarDado, condicoesAtivas, testeDMil, perderPv, textoPv } from './regras.js';
 import { regrasNecessidades, testeVantagem } from './tempo.js';
 
 const semAcento = s => String(s || '').normalize('NFKD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
@@ -55,14 +55,14 @@ export function passarTurnoEfeitos(p, sistema, rng = Math.random) {
     if (c.sangra) {
       // Sangramento: perde PV quando a contagem chega a 0 e sorteia o próximo intervalo, até o limite.
       const pv = c.sangra.pv ?? 1;
-      if (p.pv) p.pv.atual -= pv;
+      if (p.pv) perderPv(p, pv);
       t.perdidos = (t.perdidos || 0) + pv;
       if (t.perdidos >= (c.sangra.maximo ?? 6)) {
         tirarCondicao(p, c);
-        notas.push(`${c.nome}: perdeu ${pv} PV${p.pv ? ` (${p.pv.atual}/${p.pv.max})` : ''} e o sangramento parou`);
+        notas.push(`${c.nome}: perdeu ${pv} PV${p.pv ? ` (${textoPv(p)})` : ''} e o sangramento parou`);
       } else {
         t.turnos = rolar(c.sangra.intervalo, rng);
-        notas.push(`${c.nome}: perdeu ${pv} PV${p.pv ? ` (${p.pv.atual}/${p.pv.max})` : ''}; próxima perda em ${t.turnos} turno(s)`);
+        notas.push(`${c.nome}: perdeu ${pv} PV${p.pv ? ` (${textoPv(p)})` : ''}; próxima perda em ${t.turnos} turno(s)`);
       }
     } else {
       tirarCondicao(p, c);
@@ -78,8 +78,8 @@ export function efeitosAoAgir(p, sistema) {
   const notas = [];
   for (const c of condicoesAtivas(p, sistema)) {
     if (!c.pvPorAcao || !p.pv) continue;
-    p.pv.atual -= c.pvPorAcao;
-    notas.push(`${c.nome}: ${p.nome} perde ${c.pvPorAcao} PV ao agir (${p.pv.atual}/${p.pv.max})`);
+    perderPv(p, c.pvPorAcao);
+    notas.push(`${c.nome}: ${p.nome} perde ${c.pvPorAcao} PV ao agir (${textoPv(p)})`);
   }
   return notas;
 }
@@ -124,8 +124,8 @@ export function cargaNoTurno(p, d) {
   const esmagado = (d.condicoes || []).some(c => c.esmagado);
   if (esmagado && p.pv) {
     const dano = Math.max(1, Math.floor((d.carga - d.cargaLevantamento) / 20));
-    p.pv.atual -= dano;
-    notas.push(`Esmagado: perdeu ${dano} PV (${p.pv.atual}/${p.pv.max})`);
+    perderPv(p, dano);
+    notas.push(`Esmagado: perdeu ${dano} PV (${textoPv(p)})`);
   }
   if (d.cargaNivel === 'supercarregado' && !esmagado) {
     p.turnosSupercarregado = (p.turnosSupercarregado || 0) + 1;
@@ -150,7 +150,7 @@ export function descansar(p, sistema, tipo, pvMax, cond = {}, percentualCONS = 0
     if (!p.pv || n <= 0) return;
     const antes = p.pv.atual;
     p.pv.atual = Math.min(pvMax ?? p.pv.max, p.pv.atual + n);
-    notas.push(p.pv.atual > antes ? `+${p.pv.atual - antes} PV (${p.pv.atual}/${p.pv.max})` : 'PV já no máximo');
+    notas.push(p.pv.atual > antes ? `+${p.pv.atual - antes} PV (${textoPv(p)})` : 'PV já no máximo');
   };
   // Vantagens e defeitos: Absorver Nutrientes / Metabolismo Acelerado (curto 2 PV, +1 por dado), Regeneração Lenta (metade),
   // Soldado de Campanha (sem ônus de Conforto/Ergonomia; vantagem contra doença), Insônia e Insônia pós-traumática.

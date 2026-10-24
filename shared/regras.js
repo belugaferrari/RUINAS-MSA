@@ -741,3 +741,31 @@ export function repararItem(i) {
   i.reparavel = false;
   return `${i.nome} reparado: ${i.durabilidadeAtual}/${i.durabilidade}`;
 }
+
+// PV temporários (Despertar, Carga de Emergência…): aparecem à parte ("54+3") e são os ÚLTIMOS a sair. O dano tira
+// dos PV normais até 0; depois, dos temporários; o que ainda sobrar volta aos normais (abaixo de 0).
+export function perderPv(p, n) {
+  if (!p?.pv || !(n > 0)) return 0;
+  const normais = Math.max(0, Math.min(n, p.pv.atual));
+  const temp = Math.min(p.pvTemp || 0, n - normais);
+  if (temp) p.pvTemp -= temp;
+  if (!(p.pvTemp > 0)) delete p.pvTemp;
+  p.pv.atual -= n - temp;
+  return temp;
+}
+export const textoPv = p => p?.pv ? `${p.pv.atual}${p.pvTemp > 0 ? `+${p.pvTemp}` : ''}/${p.pv.max}` : '';
+
+// Habilidade que dura um tempo depois de usada (Despertar, Adaptação corpórea…): fica ativa (ícone no personagem) e não
+// pode ser usada de novo enquanto durar, a não ser que o texto permita. Duração: da regra própria ou do texto do livro.
+export function duracaoDaHabilidade(hab) {
+  if (hab?.regra?.duracao) return hab.regra.duracao;
+  const t = hab?.descricao || '';
+  if (/até o próximo descanso|até descansar/i.test(t)) return 'descanso';
+  const m = t.match(/por (\d+) (turnos|rodadas)/i);
+  if (m) return { turnos: Number(m[1]) };
+  if (/\b(dura|durante|enquanto|concede os seguintes|assume uma forma|se transforma)\b/i.test(t)) return 'combate';
+  return null;
+}
+export const podeRepetir = hab => !!hab?.regra?.repetir
+  || (/(mais de uma vez|quantas vezes quiser|várias vezes|acumul)/i.test(hab?.descricao || '') && !/não[^.]{0,40}(mais de uma vez|acumul)/i.test(hab?.descricao || ''));
+export const textoDuracao = d => d?.turnos ? `por ${d.turnos} turnos` : d === 'combate' ? 'até o fim do combate' : d === 'descanso' ? 'até o próximo descanso' : '';

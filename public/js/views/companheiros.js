@@ -1,7 +1,7 @@
 // Aba Companheiros: familiares, animais, montarias, autômatos, invenções e implantes do personagem.
 // Cada um é um personagem do jogador ligado ao personagem dele: entra no Campo de Batalha (o dono controla) e no mapa
 // (o mestre põe). Pode nascer de uma criatura do Livro dos Monstros ou em branco; o mestre ajusta a ficha (aba NPCs › Companheiros).
-import { h, botao, selecao, aviso, confirmar, vazio, icone, titulo, janela } from '../ui.js';
+import { h, botao, selecao, aviso, confirmar, vazio, icone, titulo, janela, barraPv, numeroPv } from '../ui.js';
 import { estado, render } from '../estado.js';
 import { acao } from '../api.js';
 import { efeitosIcones } from './efeitos.js';
@@ -27,8 +27,8 @@ export function companheirosView(p) {
         h('div', { class: 'barra' },
           h('span', { class: 'avatar rosto', 'data-pid': x.id }, x.foto ? h('img', { src: x.foto, alt: '' }) : x.nome.slice(0, 1)),
           h('div', {}, h('strong', {}, x.nome), h('div', { class: 'meta' }, nomeTipo(x.companheiroTipo)))),
-        x.pv ? h('div', { class: 'barra-pv', title: `PV ${x.pv.atual}/${x.pv.max}` }, h('i', { style: { width: `${Math.max(0, Math.min(100, (100 * x.pv.atual) / (x.pv.max || 1)))}%` } })) : null,
-        x.pv ? h('p', { class: 'meta icones-meta' }, h('span', {}, icone('heart'), `${x.pv.atual}/${x.pv.max}`)) : null,
+        x.pv ? barraPv(x) : null,
+        x.pv ? h('p', { class: 'meta icones-meta' }, h('span', {}, icone('heart'), numeroPv(x))) : null,
         efeitosIcones(x, { mestre }),
         h('div', { class: 'barra' },
           botao('Ficha', () => janela(`Ficha de ${x.nome}`, fichaView(x), [['Fechar', () => true]]), { class: 'pequeno', icone: 'user' }),

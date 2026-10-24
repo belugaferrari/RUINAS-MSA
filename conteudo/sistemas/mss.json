@@ -29,9 +29,10 @@
    "mod": -30,
    "dano": "1d6"
   },
-  "duasArmas": {
-   "principal": -20,
-   "inabil": -40
+  "maos": {
+   "inabil": -20,
+   "dois": { "habil": -20, "inabil": -40 },
+   "ambidestria": -20
   },
   "sacrificio": {
    "mod": 10
