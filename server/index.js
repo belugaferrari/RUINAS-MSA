@@ -14,6 +14,8 @@ import { novaCampanha, resumoCampanha, visaoPara, entrarNaCampanha, executar, ac
 migrarCampanhas();
 import { modeloNpcs, lerNpcs } from './excel.js';
 import { lerPlanilhaMonstros, planilhaMonstros, catalogoMonstros, salvarCatalogoMonstros, voltarMonstrosPadrao } from './monstros.js';
+import { configPublica, salvarConfigIA, gerarTexto } from './ia.js';
+import { SISTEMA_IA, pedidoIA } from '../shared/encontro.js';
 import { catalogoItens, origemCatalogo, lerPlanilhaItens, planilhaDoCatalogo, salvarCatalogoMestre, voltarCatalogoPadrao } from './itens.js';
 import { montarSprite } from './icones.js';
 import { avatarPorId, svgAvatar } from '../shared/avatares.js';
@@ -102,6 +104,23 @@ app.post('/api/campanhas/:id/imagens', upload.single('arquivo'), rota(req => {
   save();
   transmitir(c);
   return img;
+}));
+
+// IA para o cenário do encontro (Gemini grátis, Ollama no PC ou Claude). As chaves ficam só neste PC (data/ia.json).
+app.get('/api/ia', rota(req => { exigirAlgumMestre(req); return configPublica(); }));
+app.post('/api/ia', rota(req => { exigirAlgumMestre(req); return salvarConfigIA(req.body || {}); }));
+// Reescreve o cenário do encontro gerado com a IA configurada (o sorteio e a variação já foram feitos).
+app.post('/api/campanhas/:id/encontro/cenario', rota(async req => {
+  const c = campanhaDoMestre(req);
+  const g = c.encontroGerado;
+  if (!g) throw new Error('Gere um encontro primeiro.');
+  const sis = sistema(c.sistema);
+  const { texto, fonte } = await gerarTexto(SISTEMA_IA, pedidoIA(g.criaturas, sis.monstros, { hora: c.relogio?.horas ?? null, clima: c.clima?.nome || null, extra: g.contexto }));
+  if (c.encontroGerado?.id !== g.id) throw new Error('O encontro mudou enquanto a IA escrevia. Tente de novo.');
+  g.cenario = { texto: texto.slice(0, 4000), fonte };
+  save();
+  transmitir(c);
+  return g.cenario;
 }));
 
 // Imagem de um monstro do Livro dos Monstros (só o mestre). A alternativa é colar um link (ação monstro.imagem).

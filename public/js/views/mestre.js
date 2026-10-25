@@ -320,6 +320,49 @@ function descansoView() {
     botao('Descansar…', () => abrirDescanso(), { class: 'primario', icone: 'bed' }));
 }
 
+// IA do cenário do encontro (Campo de Batalha > Encontro por ND). A chave fica só neste PC; o navegador não a recebe.
+function iaView() {
+  const cfg = estado.sel.iaConfig;
+  if (cfg === undefined && !estado.sel.iaPedido) {
+    estado.sel.iaPedido = true;
+    get('/api/ia').then(r => { estado.sel.iaConfig = r; render(); }).catch(() => { estado.sel.iaConfig = null; render(); });
+  }
+  if (!cfg) return h('section', { class: 'bloco' }, titulo('Inteligência artificial', 'sparkles'), h('p', { class: 'dica' }, cfg === null ? 'Só o mestre configura a IA.' : 'Carregando…'));
+  const f = (estado.sel.iaForm ||= { provedor: cfg.provedor, gemini: { chave: '', modelo: cfg.gemini.modelo }, ollama: { ...cfg.ollama }, claude: { chave: '', modelo: cfg.claude.modelo } });
+  const entrada = (obj, chave, props = {}) => h('input', { value: obj[chave] ?? '', onchange: e => { obj[chave] = e.target.value; }, ...props });
+  const salvar = async () => {
+    estado.sel.iaConfig = await post('/api/ia', f);
+    estado.sel.iaForm = null;
+    aviso('Configuração da IA salva neste PC.');
+  };
+  const p = f.provedor;
+  return h('section', { class: 'bloco' },
+    titulo('Inteligência artificial', 'sparkles'),
+    h('p', { class: 'dica' }, 'Escreve o cenário do "Encontro por ND" (Campo de Batalha). Sem IA, o app monta o cenário com o comportamento e o habitat da planilha. A IA recebe só o que o livro diz da criatura e o momento da campanha.'),
+    h('label', { class: 'linha' }, 'Usar',
+      selecao([{ valor: 'nenhum', rotulo: 'Sem IA' }, { valor: 'gemini', rotulo: 'Gemini (Google) — grátis com cota diária' }, { valor: 'ollama', rotulo: 'Ollama — IA no próprio PC, grátis' }, { valor: 'claude', rotulo: 'Claude (Anthropic) — pago por uso' }],
+        p, v => { f.provedor = v; render(); }, { 'aria-label': 'Provedor de IA' })),
+    p === 'gemini' ? h('div', { class: 'form' },
+      h('ol', { class: 'dica' },
+        h('li', {}, 'Entre em aistudio.google.com com a sua conta Google.'),
+        h('li', {}, 'Clique em "Get API key" (Obter chave de API) > "Create API key" e copie a chave.'),
+        h('li', {}, 'Cole aqui e salve. No plano grátis há limite de pedidos por dia, e o Google pode usar os textos enviados para melhorar os produtos dele.')),
+      h('label', { class: 'linha' }, `Chave${cfg.gemini.temChave ? ' (já salva — deixe em branco para manter)' : ''}`, entrada(f.gemini, 'chave', { type: 'password', autocomplete: 'off', placeholder: 'AIza…' })),
+      h('label', { class: 'linha' }, 'Modelo', entrada(f.gemini, 'modelo', { class: 'curto-largo' }))) : null,
+    p === 'ollama' ? h('div', { class: 'form' },
+      h('ol', { class: 'dica' },
+        h('li', {}, 'Instale o Ollama (ollama.com) neste PC.'),
+        h('li', {}, `No terminal, baixe um modelo: ollama pull ${f.ollama.modelo || 'llama3.1'} (precisa de 8 GB de memória ou mais).`),
+        h('li', {}, 'Deixe o Ollama aberto enquanto joga.')),
+      h('label', { class: 'linha' }, 'Endereço', entrada(f.ollama, 'url')),
+      h('label', { class: 'linha' }, 'Modelo', entrada(f.ollama, 'modelo'))) : null,
+    p === 'claude' ? h('div', { class: 'form' },
+      h('p', { class: 'dica' }, 'Crie uma chave em console.anthropic.com (precisa de créditos). Cada cenário custa cerca de 1 centavo de dólar com o modelo padrão.'),
+      h('label', { class: 'linha' }, `Chave${cfg.claude.temChave ? ' (já salva — deixe em branco para manter)' : ''}`, entrada(f.claude, 'chave', { type: 'password', autocomplete: 'off', placeholder: 'sk-ant-…' })),
+      h('label', { class: 'linha' }, 'Modelo', entrada(f.claude, 'modelo'))) : null,
+    botao('Salvar', salvar, { class: 'primario', icone: 'save' }));
+}
+
 function fichasTesteView() {
   const nivel = h('input', { type: 'number', min: 3, max: 20, value: 6, class: 'curto', 'aria-label': 'Nível das fichas de teste' });
   return h('section', { class: 'bloco' },
@@ -354,6 +397,7 @@ function abaCampanha() {
     suportesView(),
     descansoView(),
     fichasTesteView(),
+    iaView(),
     h('section', { class: 'bloco' },
       titulo('Configurações', 'settings'),
       h('div', { class: 'form' },

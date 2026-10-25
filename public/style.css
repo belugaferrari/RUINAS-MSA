@@ -1425,3 +1425,7 @@ input.largo { flex: 1 1 20em; min-width: 0; }
 
 .aviso-revisar summary { color: var(--perigo, #e05a4f); cursor: pointer; }
 .aviso-revisar ul { margin: .3em 0; font-size: .9em; }
+
+/* Encontro por ND */
+.encontro-nd input[type=number] { width: 5.5em; flex: none; }
+.encontro-resultado .cenario { margin: .5em 0; }

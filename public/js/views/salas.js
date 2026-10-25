@@ -2,14 +2,14 @@ import { liberdadeDeHumor } from '/shared/combate.js';
 import { h, botao, selecao, aviso, confirmar, vazio, formatarData, icone, titulo, barraPv, numeroPv } from '../ui.js';
 import { efeitosIcones, marcadoresLivres } from './efeitos.js';
 import { estado, personagemPorId, meusPersonagens, render } from '../estado.js';
-import { acao } from '../api.js';
+import { acao, get, post } from '../api.js';
 import { LIMITE_SALA } from '/shared/regras.js';
 import { linhaRolagem } from './ficha.js';
 import { combateView, controleTurnos, nomeHumor, humorCartao, rodaDoHumor, ajustesMestre, xpDaSala, alvoMarcado, marcarAlvo } from './combate.js';
 import { painelBatalha, ordemLateral } from './batalha.js';
 import { painelSocial } from './social.js';
 import { prepararTeste } from './dados.js';
-import { buscarMonstros, textoND } from '/shared/monstros.js';
+import { buscarMonstros, textoND, monstroNoEstagio } from '/shared/monstros.js';
 import { miniaturaMonstro, resumoAfinidades, filtroTipos, estagioInicial } from './livros.js';
 
 const TITULOS = { social: 'Sala Social', batalha: 'Campo de Batalha' };
@@ -35,6 +35,7 @@ export function salaView(nome) {
       ? [ordemLateral(participantes, mestre), painelBatalha(participantes, mestre), combateView(participantes, mestre)]
       : painelSocial(participantes, mestre),
     mestre && nome === 'batalha' ? adicionarMonstro() : null,
+    mestre && nome === 'batalha' ? encontroPorND() : null,
     mestre && nome === 'batalha' ? encontroAleatorio() : null,
     nome === 'social' ? rodaDoHumor() : null,
     nome === 'social' && mestre ? h('div', { class: 'bloco' }, xpDaSala(participantes)) : null,
@@ -202,13 +203,70 @@ function adicionarMonstro() {
     lista.length > mostra.length ? h('p', { class: 'dica' }, `Mostrando ${mostra.length} de ${lista.length}. Digite mais para filtrar.`) : null);
 }
 
+// Encontro por faixa de ND (só o mestre): sorteia a criatura (ou o estágio), varia até 10% atributos e perícias,
+// PV atual entre 50% e 100%, e escreve o cenário (sem IA, ou com a IA configurada na aba Campanha).
+function encontroPorND() {
+  const c = estado.campanha;
+  const f = (estado.sel.encontroND ||= { ndMin: 1, ndMax: 3, quantidade: 1, mesma: true, contexto: '' });
+  const g = c.encontroGerado;
+  const ia = estado.sel.iaConfig;
+  if (ia === undefined && !estado.sel.iaPedido) {
+    estado.sel.iaPedido = true;
+    get('/api/ia').then(r => { estado.sel.iaConfig = r; render(); }).catch(() => { estado.sel.iaConfig = null; });
+  }
+  const temIA = ia && ia.provedor !== 'nenhum';
+  const nomeIA = { gemini: 'Gemini', ollama: 'Ollama', claude: 'Claude' }[ia?.provedor] || 'IA';
+  const num = (chave, rotulo, props = {}) => h('label', { class: 'linha' }, rotulo,
+    h('input', { type: 'number', class: 'curto', value: f[chave], step: chave.startsWith('nd') ? 0.25 : 1, min: chave.startsWith('nd') ? 0 : 1, ...props,
+      onchange: e => { f[chave] = e.target.value; } }));
+  const gerar = async () => {
+    await acao('encontro.sortear', { ndMin: f.ndMin, ndMax: f.ndMax, quantidade: f.quantidade, mesma: f.mesma, contexto: f.contexto });
+    if (temIA) await escreverIA();
+  };
+  const escreverIA = async () => {
+    estado.sel.iaEscrevendo = true; render();
+    try { await post(`/api/campanhas/${c.id}/encontro/cenario`, {}); } catch (e) { aviso(`${e.message} Ficou o cenário sem IA.`, 'erro'); } finally { estado.sel.iaEscrevendo = false; render(); }
+  };
+  const sis = estado.sistema;
+  return h('details', { class: 'bloco encontro-nd', open: estado.sel.encontroNDAberto ?? true, ontoggle: e => { estado.sel.encontroNDAberto = e.target.open; } },
+    h('summary', {}, icone('dices'), ' Encontro por ND'),
+    h('div', { class: 'barra' },
+      num('ndMin', 'ND de'), num('ndMax', 'até'), num('quantidade', 'Quantos', { max: 12 }),
+      h('label', { class: 'linha' }, h('input', { type: 'checkbox', checked: !!f.mesma, onchange: e => { f.mesma = e.target.checked; } }), 'mesma criatura')),
+    h('label', { class: 'linha' }, 'Contexto (opcional)', h('input', { class: 'largo', value: f.contexto, placeholder: 'ex.: perto do farol, à noite, depois da tempestade', maxlength: 500, onchange: e => { f.contexto = e.target.value; } })),
+    h('div', { class: 'barra' },
+      botao(g ? 'Sortear outro' : 'Sortear encontro', gerar, { class: 'primario', icone: 'dices', disabled: !!estado.sel.iaEscrevendo }),
+      h('small', { class: 'dica' }, temIA ? `Cenário escrito pelo ${nomeIA}.` : 'Cenário sem IA (configure uma IA na aba Campanha).')),
+    g ? h('div', { class: 'cartao encontro-resultado' },
+      h('ul', { class: 'add-monstro-resultados' }, g.criaturas.map((cr, i) => {
+        const m = sis.monstros.find(x => x.nome === cr.nome);
+        const pvMax = m ? (monstroNoEstagio(m, cr.estagio).pv ?? null) : null;
+        return h('li', {},
+          m ? miniaturaMonstro(m, m.estagios?.find(e => e.numero === cr.estagio) || null) : null,
+          h('span', { class: 'monstro-nome' }, h('strong', {}, `${g.criaturas.length > 1 ? `${i + 1}. ` : ''}${cr.nome}`), cr.nomeEstagio ? h('small', {}, ` ${cr.nomeEstagio}`) : null,
+            h('small', {}, ` · ND ${textoND(cr.nd)}${pvMax ? ` · PV ${Math.max(1, Math.round(pvMax * cr.fracaoPv))}/${pvMax}` : ` · PV ${Math.round(cr.fracaoPv * 100)}%`}`)),
+          h('small', { class: 'dica', title: 'Atributos variados em até 10%' }, Object.entries(cr.variacao.atributos).map(([k, v]) => `${k} ${v}`).join(' · ')));
+      })),
+      h('div', { class: 'cenario' },
+        estado.sel.iaEscrevendo ? h('p', { class: 'dica' }, icone('hourglass'), ` ${nomeIA} escrevendo o cenário…`) : h('p', { class: 'bloco-texto' }, g.cenario.texto),
+        h('small', { class: 'dica' }, `Cenário: ${g.cenario.fonte}. Só você vê até ler para a mesa.`)),
+      h('div', { class: 'barra' },
+        botao(g.colocado ? 'Colocar de novo' : 'Colocar no Campo de Batalha', async () => {
+          const r = await acao('encontro.colocar', {});
+          aviso(`${r.ids.length} criatura${r.ids.length > 1 ? 's' : ''} no Campo de Batalha.`);
+        }, { class: 'primario', icone: 'swords' }),
+        botao('Ler para a mesa', () => acao('encontro.mostrar', {}).then(() => aviso('Cenário no registro do Campo de Batalha.')), { icone: 'scroll', title: 'Põe o cenário no registro: os jogadores veem' }),
+        temIA ? botao(`Reescrever com ${nomeIA}`, escreverIA, { icone: 'sparkles', disabled: !!estado.sel.iaEscrevendo }) : null,
+        botao('Descartar', () => acao('encontro.descartar', {}), { class: 'perigo', icone: 'x' }))) : null);
+}
+
 function encontroAleatorio() {
   const c = estado.campanha;
   const limite = h('input', { type: 'number', min: 0.25, step: 0.25, value: 5, class: 'curto' });
   const monstros = h('input', { type: 'checkbox', checked: true });
   const grupos = c.grupos.filter(g => g.id !== 'encontros').map(g => ({ g, cb: h('input', { type: 'checkbox' }) }));
   return h('details', { class: 'bloco', open: !!estado.sel.encontroAberto, ontoggle: e => { estado.sel.encontroAberto = e.target.open; } },
-    h('summary', {}, icone('skull'), 'Encontro aleatório'),
+    h('summary', {}, icone('skull'), 'Encontro aleatório (soma de dificuldade)'),
     h('p', { class: 'dica' }, 'Soma a "dificuldade" das criaturas sorteadas sem passar do limite. NPCs usam o campo Dificuldade (ou o nível). Regras definitivas virão depois.'),
     h('div', { class: 'barra' },
       h('label', { class: 'linha' }, 'Dificuldade máxima', limite),

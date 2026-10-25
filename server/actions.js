@@ -5,6 +5,7 @@ import { resolverAtaque, aplicarAtaque, armasDisponiveis, opcoesDefesa, sobrevid
 import { sincronizarEfeitos, passarTurnoEfeitos, efeitosAoAgir, cargaNoTurno, descansar } from '../shared/efeitos.js';
 import { fichasDeTeste, relatorioFicha, kitDeTeste, periciasDeTeste } from '../shared/fichasTeste.js';
 import { monstroNoEstagio, textoDeslocamentos, textoND, ladoNoMapa } from '../shared/monstros.js';
+import { sortearEncontro, cenarioSemIA } from '../shared/encontro.js';
 import { passarNecessidades, comer, beber, dormir, rolarCaos, climaDoDia, descreverRelogio, fimDoCombate } from '../shared/tempo.js';
 import { podeSeduzir, itemAberto, itemVisivel, xpParaSubir, novaFicha, podeEquipar, rolarDado, rolarAtributosCriacao, testeDMil, gerarEncontro, derivados, problemasFicha, LIMITE_SALA, desgastarItem, repararItem, durabilidadeDe, listaHabilidades, vantagemPorHabilidade, temHabilidade, regraDaHabilidade, tipoCriatura, chaveHabilidade, TIPOS_ACAO, nomeAcao, acoesDaHabilidade, dadosDaHabilidade, ehAtaqueEspecial, acaoDoAtaqueEspecial, perderPv, textoPv, duracaoDaHabilidade, podeRepetir, textoDuracao } from '../shared/regras.js';
 
@@ -2338,6 +2339,64 @@ export const acoes = {
       if (bate) c.mapa.pecas[p.id] = { ...peca, ...lugarLivre(c, l, p.id) };
     }
     registrar(c.salas.batalha.log, { autor: p.nome, rotulo: `${p.nome} muda de estágio`, texto: `${p.monstro.nomeEstagio || 'estágio base'} · PV ${p.pv.atual}/${p.pv.max}` });
+  },
+
+  // Encontro por faixa de ND (só o mestre vê): sorteia, varia até 10% e escreve o cenário sem IA. A IA (se configurada)
+  // reescreve o cenário pela rota /api/campanhas/:id/encontro/cenario. Nada entra no campo até o mestre colocar.
+  'encontro.sortear'(c, { ndMin, ndMax, quantidade = 1, mesma = true, contexto = '' }, ctx) {
+    exigirMestre(ctx);
+    const sis = sistema(c.sistema);
+    const num = v => { const n = parseFloat(String(v ?? '').replace(',', '.')); return Number.isFinite(n) ? n : null; };
+    const min = num(ndMin) ?? 0, max = num(ndMax) ?? 99;
+    if (min > max) throw erro('O ND mínimo está maior que o máximo.');
+    let criaturas;
+    try { criaturas = sortearEncontro(sis.monstros, { ndMin: min, ndMax: max, quantidade, mesma: !!mesma }, sis); } catch (e) { throw erro(e.message); }
+    const extra = String(contexto || '').slice(0, 500);
+    const momento = { hora: c.relogio?.horas ?? null, clima: c.clima?.nome || null, extra };
+    c.encontroGerado = { id: uid(), em: Date.now(), ndMin: min, ndMax: max, contexto: extra, criaturas,
+      cenario: { texto: cenarioSemIA(criaturas, sis.monstros, momento), fonte: 'sem IA' } };
+    return c.encontroGerado;
+  },
+
+  // Põe as criaturas sorteadas no Campo de Batalha (e no mapa), com a variação e o PV atual sorteados.
+  'encontro.colocar'(c, d, ctx) {
+    exigirMestre(ctx);
+    const g = c.encontroGerado;
+    if (!g) throw erro('Gere um encontro primeiro.');
+    const sis = sistema(c.sistema);
+    const s = c.salas.batalha;
+    if (s.participantes.length + g.criaturas.length > LIMITE_SALA) throw erro('O Campo de Batalha não tem lugar para todos.');
+    const repetidos = g.criaturas.length > 1;
+    const ids = g.criaturas.map((cr, i) => {
+      const m = sis.monstros.find(x => x.nome === cr.nome);
+      if (!m) throw erro(`${cr.nome} não está mais no Livro dos Monstros.`);
+      const p = npcDeMonstro(c, m, cr.estagio);
+      // Variação de até 10% por cima da ficha do livro (o que não variou fica igual).
+      for (const k of ['atributos', 'pericias', 'subpericias']) p[k] = { ...p[k], ...cr.variacao[k] };
+      if (repetidos) p.nome = `${p.nome} ${i + 1}`;
+      p.pv.atual = Math.max(1, Math.round(p.pv.max * cr.fracaoPv));
+      c.personagens.push(p);
+      s.participantes.push(p.id);
+      porNoMapa(c, p);
+      return p.id;
+    });
+    garantirCombate(c);
+    registrar(s.log, { autor: 'Mestre', rotulo: 'Encontro', texto: g.criaturas.map(x => `${x.nome}${x.nomeEstagio ? ` (${x.nomeEstagio})` : ''}`).join(', '), secreta: true });
+    g.colocado = true;
+    return { ids };
+  },
+
+  // Lê o cenário para a mesa: vai para o registro do Campo de Batalha (todos veem).
+  'encontro.mostrar'(c, d, ctx) {
+    exigirMestre(ctx);
+    const g = c.encontroGerado;
+    if (!g?.cenario?.texto) throw erro('Gere um encontro primeiro.');
+    registrar(c.salas.batalha.log, { autor: 'Mestre', rotulo: 'Cenário', texto: g.cenario.texto });
+  },
+
+  'encontro.descartar'(c, d, ctx) {
+    exigirMestre(ctx);
+    delete c.encontroGerado;
   },
 
   'encontro.gerar'(c, { limite, usarMonstros, grupos }, ctx) {

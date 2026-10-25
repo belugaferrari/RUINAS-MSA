@@ -273,3 +273,8 @@ Regras em `conteudo/sistemas/habilidades-regras.json` (automática / ligar / ati
       Bombô: "Braçada de Gorila" usa Ataque desarmado sem pontos em Briga. 98 criaturas sem subperícia de defesa.
 - [ ] **Rever os NDs** (Dificuldade), inclusive valores menores que 1 (0,5 = 1/2; 0,25 = 1/4) para animais fracos
       (rato, pomba, coelho…). Hoje o menor ND da planilha é 1.
+
+## 25/10 — Encontro por ND (com IA opcional)
+- Escolhas provisórias: o encontro gerado só aparece para o mestre; "Ler para a mesa" põe o cenário no registro;
+  "Quantos" + "mesma criatura" (bando) ou criaturas diferentes dentro da faixa.
+- Ataques em área no mapa (círculo/cone/linha): o autor vai pensar mais antes de fazer.
