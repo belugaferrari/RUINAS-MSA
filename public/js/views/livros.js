@@ -4,7 +4,7 @@ import { estado, render, personagemPorId, meusPersonagens } from '../estado.js';
 import { acao, get, post, enviarArquivo, baixarArquivo } from '../api.js';
 import { itemVisivel, itemAberto } from '/shared/regras.js';
 import { imagemDeLink } from '/shared/imagens.js';
-import { buscarMonstros, monstroNoEstagio, textoDeslocamentos } from '/shared/monstros.js';
+import { buscarMonstros, monstroNoEstagio, textoDeslocamentos, textoND, periciasAcimaDoLimite } from '/shared/monstros.js';
 import { marked } from '/vendor/marked.js';
 
 const cacheLivros = {};
@@ -163,6 +163,7 @@ export function monstrosView() {
   return h('div', {},
     h('div', { class: 'barra' }, titulo('Livro dos Monstros', 'skull', 'h2'), h('span', { class: 'espaco' }), h('label', { class: 'busca' }, icone('search'), filtroBusca('monstros', 'Buscar criatura (nome, raça, afinidade, lugar)…'))),
     mestre ? planilhaMonstrosMestre() : null,
+    mestre ? lembretesLivro(sis) : null,
     filtro,
     h('p', { class: 'dica' }, `${lista.length} de ${sis.monstros.length} criatura${sis.monstros.length === 1 ? '' : 's'}${termo.trim() ? ` para “${termo.trim()}”` : ''}. Clique numa linha para abrir a ficha.`),
     lista.length ? h('ul', { class: 'lista-monstros' }, lista.map(m => linhaMonstro(m, mestre))) : vazio('Nenhuma criatura encontrada. Tente uma palavra mais curta.', 'search'));
@@ -187,6 +188,20 @@ export function filtroTipos(chave, lista) {
 
 // Estágio mostrado de início: o 1º (a planilha do autor descreve cada estágio por inteiro); "Base" continua na lista.
 export const estagioInicial = m => m.estagios?.[0]?.numero ?? null;
+// Lembretes do autor (25/10): rever perícias de todos os seres e os NDs (inclusive menores que 1). Some quando ele dispensa.
+function lembretesLivro(sis) {
+  let dispensado = false;
+  try { dispensado = localStorage.getItem('lembrete:livro-monstros:25-10') === 'ok'; } catch { /* sem armazenamento */ }
+  if (dispensado) return null;
+  const acima = sis.monstros.filter(m => periciasAcimaDoLimite(m, sis).length);
+  return h('div', { class: 'bloco aviso-revisar lembrete' },
+    h('strong', {}, icone('triangle-alert'), ' Lembretes de revisão'),
+    h('ul', {},
+      h('li', {}, `Rever as perícias de todos os seres. ${acima.length} passam do limite (base + subperícia ≤ 5 + 5 × nível) — marcados com "revisar"${acima.length ? `: ${acima.slice(0, 8).map(m => m.nome.replace(/\s*\(.*$/, '')).join(', ')}${acima.length > 8 ? '…' : ''}` : ''}.`),
+      h('li', {}, 'Rever os NDs, inclusive valores menores que 1 (0,5 = 1/2; 0,25 = 1/4) para criaturas fracas.')),
+    botao('Já revisei', () => { try { localStorage.setItem('lembrete:livro-monstros:25-10', 'ok'); } catch { /* ok */ } render(); }, { class: 'pequeno', icone: 'check' }));
+}
+
 export const urlImagemMonstro = (m, estagio = null) => (estagio != null ? imagemDeLink(estagio.imagem) : null) || estado.campanha.imagensMonstros?.[m.nome] || imagemDeLink(m.imagem)
   || imagemDeLink(m.estagios?.find(e => e.imagem)?.imagem) || null;
 export function miniaturaMonstro(m, estagio = null) {
@@ -203,10 +218,11 @@ function linhaMonstro(m, mestre) {
     h('button', { type: 'button', class: 'monstro-resumo', 'aria-expanded': aberto, onclick: () => { estado.sel[chave] = !aberto; render(); } },
       miniaturaMonstro(m, m.estagios?.[0] || null),
       h('span', { class: 'monstro-nome' }, h('strong', {}, m.nome), m.raca && m.raca !== m.nome ? h('small', {}, ` ${m.raca}`) : null),
-      h('span', { class: 'selo', title: 'Nível de dificuldade (encontros)' }, `ND ${m.dificuldade ?? '—'}`),
+      h('span', { class: 'selo', title: 'Nível de dificuldade (encontros)' }, `ND ${textoND(m.dificuldade)}`),
       h('span', { class: 'selo', title: 'Pontos de vida' }, icone('heart'), ` ${m.pv ?? 'calc.'}`),
       h('span', { class: 'afinidades' }, resumoAfinidades(m)),
       m.estagios?.length ? h('span', { class: 'selo ok', title: 'Este monstro tem estágios' }, `${m.estagios.length} estágio${m.estagios.length > 1 ? 's' : ''}`) : null,
+      mestre && periciasAcimaDoLimite(m, estado.sistema).length ? h('span', { class: 'selo perigo', title: 'Perícia acima do limite do nível: abra para ver' }, icone('triangle-alert'), ' revisar') : null,
       icone(aberto ? 'chevron-up' : 'chevron-down')),
     aberto ? fichaMonstro(m, mestre) : null);
 }
@@ -234,8 +250,12 @@ function fichaMonstro(base, mestre) {
     img,
     h('p', { class: 'meta' }, [tipoNome(m.tipoCriatura), m.tamanho, m.nivel ? `nível ${m.nivel}` : null, m.nomeEstagio].filter(Boolean).join(' · ')),
     est?.descricao ? h('p', { class: 'dica' }, icone('trending-up'), ` ${est.descricao}`) : null,
+    // Mestre: perícias acima do limite (base + subperícia ≤ 5 + 5 × nível da criatura ou do estágio).
+    mestre && periciasAcimaDoLimite(base, sis).length ? h('details', { class: 'aviso-revisar' },
+      h('summary', {}, icone('triangle-alert'), ` Revisar perícias (${periciasAcimaDoLimite(base, sis).length})`),
+      h('ul', {}, periciasAcimaDoLimite(base, sis).map(a => h('li', {}, a)))) : null,
     h('p', { class: 'meta icones-meta' },
-      h('span', { title: 'Nível de dificuldade' }, icone('flame'), `ND ${m.dificuldade ?? '—'}`),
+      h('span', { title: 'Nível de dificuldade' }, icone('flame'), `ND ${textoND(m.dificuldade)}`),
       h('span', { title: 'Pontos de vida' }, icone('heart'), `PV ${m.pv ?? 'calc.'}`),
       h('span', { title: 'IP geral' }, icone('shield'), `IP ${m.ipGeral ?? m.defesa ?? 0}`),
       m.xp ? h('span', { title: 'XP' }, icone('sparkles'), `${m.xp} XP`) : null),
@@ -305,7 +325,9 @@ function planilhaMonstrosMestre() {
         recarregar();
         aviso(`${r.recebidos} monstros lidos do Google; o livro tem ${r.total}.${r.avisos?.length ? ` Atenção: ${r.avisos.join(' ')}` : ''}`, r.avisos?.length ? 'erro' : 'ok');
       }, { class: 'primario', icone: 'refresh-cw', title: 'A planilha precisa estar em Compartilhar > "Qualquer pessoa com o link" (Leitor)' })),
-    h('p', { class: 'dica' }, 'No Google Planilhas: Compartilhar > Acesso geral > "Qualquer pessoa com o link" (Leitor). Para começar no Google: baixe a planilha daqui e, no Google, Arquivo > Importar > Substituir planilha.'));
+    h('p', { class: 'dica' }, info?.googleSheets
+      ? 'Ligado à planilha do Google: o app puxa sozinho ao abrir e a cada 30 minutos. "Puxar do Google Planilhas" atualiza na hora. Enviar um arquivo .xlsx desliga a atualização automática.'
+      : 'No Google Planilhas: Compartilhar > Acesso geral > "Qualquer pessoa com o link" (Leitor). Depois de puxar uma vez, o app passa a atualizar sozinho (ao abrir e a cada 30 minutos).'));
 }
 
 // Imagem do monstro: arquivo enviado pelo mestre ou link (Google Drive compartilhado ou endereço na internet).

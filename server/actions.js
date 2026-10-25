@@ -4,7 +4,7 @@ import { sistema, idSistema } from './sistema.js';
 import { resolverAtaque, aplicarAtaque, armasDisponiveis, opcoesDefesa, sobrevida, rolarIniciativa, resolverManipulacao, modHumorTestes, humorDe, espectroDe, humorAparente, empatiaNatural, liberdadeDeHumor, modoRolagem, modoHumorTeste, recursoDe, gastarRecurso, racaDe, distanciaPecas, usosRestantes, gastarUso, testeContra, ipContra } from '../shared/combate.js';
 import { sincronizarEfeitos, passarTurnoEfeitos, efeitosAoAgir, cargaNoTurno, descansar } from '../shared/efeitos.js';
 import { fichasDeTeste, relatorioFicha, kitDeTeste } from '../shared/fichasTeste.js';
-import { monstroNoEstagio, textoDeslocamentos } from '../shared/monstros.js';
+import { monstroNoEstagio, textoDeslocamentos, textoND } from '../shared/monstros.js';
 import { passarNecessidades, comer, beber, dormir, rolarCaos, climaDoDia, descreverRelogio, fimDoCombate } from '../shared/tempo.js';
 import { podeSeduzir, itemAberto, itemVisivel, xpParaSubir, novaFicha, podeEquipar, rolarDado, rolarAtributosCriacao, testeDMil, gerarEncontro, derivados, problemasFicha, LIMITE_SALA, desgastarItem, repararItem, durabilidadeDe, listaHabilidades, vantagemPorHabilidade, temHabilidade, regraDaHabilidade, tipoCriatura, chaveHabilidade, TIPOS_ACAO, nomeAcao, acoesDaHabilidade, dadosDaHabilidade, ehAtaqueEspecial, acaoDoAtaqueEspecial, perderPv, textoPv, duracaoDaHabilidade, podeRepetir, textoDuracao } from '../shared/regras.js';
 
@@ -2278,7 +2278,7 @@ export const acoes = {
 
   'encontro.gerar'(c, { limite, usarMonstros, grupos }, ctx) {
     exigirMestre(ctx);
-    limite = Math.max(1, parseInt(limite, 10) || 1);
+    limite = Math.max(0.125, parseFloat(String(limite).replace(',', '.')) || 1);
     const candidatos = [];
     if (usarMonstros) for (const m of sistema(c.sistema).monstros) candidatos.push({ origem: 'monstro', dificuldade: m.dificuldade, m });
     for (const p of c.personagens) {
@@ -2304,7 +2304,7 @@ export const acoes = {
       s.participantes.push(p.id);
       nomes.push(p.nome);
     }
-    registrar(s.log, { autor: 'Mestre', rotulo: `Encontro aleatório (dificuldade ${soma}/${limite})`, texto: nomes.join(', ') });
+    registrar(s.log, { autor: 'Mestre', rotulo: `Encontro aleatório (dificuldade ${textoND(soma)}/${textoND(limite)})`, texto: nomes.join(', ') });
     garantirCombate(c);
     return { nomes, soma };
   },

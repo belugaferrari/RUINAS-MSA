@@ -1,6 +1,8 @@
 // Monstros: tipos de deslocamento, estágios (o mesmo monstro mudando/crescendo) e busca por palavra aproximada.
 // Vale no servidor (planilha, Campo de Batalha) e na tela (Livro dos Monstros).
 
+import { limitePericia } from './regras.js';
+
 const sem = s => String(s ?? '').normalize('NFKD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
 
 // Tipos de deslocamento (autor, 24/10). Sem nada descrito, o monstro só anda em terreno padrão.
@@ -73,6 +75,9 @@ export function monstroNoEstagio(m, n) {
   if (est) {
     for (const k of ['tamanho', 'nivel', 'dificuldade', 'xp', 'pv', 'ipGeral', 'comportamento', 'sentidos', 'imagem']) if (est[k] != null && est[k] !== '') v[k] = est[k];
     if (est.atributos) v.atributos = { ...(m.atributos || {}), ...est.atributos };
+    // Perícias do estágio: substituem as de mesmo nome da aba Monstros (as outras ficam).
+    if (est.pericias) v.pericias = { ...(m.pericias || {}), ...est.pericias };
+    if (est.subpericias) v.subpericias = { ...(m.subpericias || {}), ...est.subpericias };
     if (est.deslocamentos) v.deslocamentos = { ...v.deslocamentos, ...est.deslocamentos };
     for (const k of ['resistencias', 'imunidades', 'vulnerabilidades']) if (est[k]?.length) v[k] = [...new Set([...(m[k] || []), ...est[k]])];
     if (est.descricao) v.descricaoEstagio = est.descricao;
@@ -128,3 +133,27 @@ export function buscarMonstros(lista, termo) {
   return lista.map(m => ({ m, n: notaBusca(termo, `${m.nome} ${m.raca || ''}`, [m.tipoCriatura, m.habitat, (m.afinidades || []).join(' '), m.tamanho].join(' ')) }))
     .filter(x => x.n > 0).sort((a, b) => b.n - a.n).map(x => x.m);
 }
+
+// Limite de perícia (o mesmo do personagem, com o nível da criatura): perícia base + subperícia ≤ 5 + 5 × nível.
+// Devolve os avisos da ficha base e de cada estágio (com o nível e as perícias daquele estágio).
+export function periciasAcimaDoLimite(m, sistema) {
+  const subDe = Object.fromEntries((sistema.pericias || []).flatMap(p => p.subpericias.map(x => [x.id, p])));
+  const nomePer = Object.fromEntries((sistema.pericias || []).map(p => [p.id, p.nome]));
+  const avisos = [];
+  for (const n of [null, ...(m.estagios || []).map(e => e.numero)]) {
+    const v = monstroNoEstagio(m, n);
+    const lim = limitePericia(v.nivel || 1, sistema);
+    const onde = n == null ? '' : ` (estágio ${n})`;
+    for (const [id, x] of Object.entries(v.pericias || {})) if (x > lim) avisos.push(`${nomePer[id] || id} ${x}${onde}: passa do limite ${lim} do nível ${v.nivel || 1}`);
+    for (const [id, x] of Object.entries(v.subpericias || {})) {
+      const p = subDe[id];
+      const total = x + (v.pericias?.[p?.id] || 0);
+      if (total > lim) avisos.push(`${p ? `${p.nome} › ${p.subpericias.find(s => s.id === id).nome}` : id} ${total}${onde}: passa do limite ${lim} do nível ${v.nivel || 1}`);
+    }
+  }
+  return [...new Set(avisos)];
+}
+
+// ND pode ser menor que 1 (0,5 = 1/2; 0,25 = 1/4…): mostra como fração quando for uma das comuns.
+const FRACOES = { 0.5: '1/2', 0.25: '1/4', 0.125: '1/8', 0.75: '3/4' };
+export const textoND = nd => (nd == null || nd === '' ? '—' : FRACOES[nd] || String(nd).replace('.', ','));

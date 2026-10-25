@@ -597,11 +597,12 @@ export function gerarEncontro(candidatos, limite, rng = Math.random, maxCriatura
   const escolhidos = [];
   let soma = 0;
   for (let tentativas = 0; tentativas < 200 && escolhidos.length < maxCriaturas; tentativas++) {
-    const cabem = candidatos.filter(c => (c.dificuldade || 1) + soma <= limite);
+    // ND pode ser menor que 1 (0,5…); sem ND, conta 1.
+    const cabem = candidatos.filter(c => (c.dificuldade ?? 1) + soma <= limite);
     if (!cabem.length) break;
     const c = cabem[Math.floor(rng() * cabem.length)];
     escolhidos.push(c);
-    soma += c.dificuldade || 1;
+    soma += c.dificuldade ?? 1;
   }
   return { escolhidos, soma };
 }

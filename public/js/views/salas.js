@@ -9,7 +9,7 @@ import { combateView, controleTurnos, nomeHumor, humorCartao, rodaDoHumor, ajust
 import { painelBatalha, ordemLateral } from './batalha.js';
 import { painelSocial } from './social.js';
 import { prepararTeste } from './dados.js';
-import { buscarMonstros } from '/shared/monstros.js';
+import { buscarMonstros, textoND } from '/shared/monstros.js';
 import { miniaturaMonstro, resumoAfinidades, filtroTipos, estagioInicial } from './livros.js';
 
 const TITULOS = { social: 'Sala Social', batalha: 'Campo de Batalha' };
@@ -180,7 +180,7 @@ function adicionarMonstro() {
     const chaveEst = `addMonstroEst:${m.nome}`, chaveQtd = `addMonstroQtd:${m.nome}`;
     return h('li', {},
       miniaturaMonstro(m, m.estagios?.[0] || null),
-      h('span', { class: 'monstro-nome' }, h('strong', {}, m.nome), h('small', {}, ` ND ${m.dificuldade ?? '—'} · PV ${m.pv ?? 'calc.'} `), h('span', { class: 'afinidades' }, resumoAfinidades(m))),
+      h('span', { class: 'monstro-nome' }, h('strong', {}, m.nome), h('small', {}, ` ND ${textoND(m.dificuldade)} · PV ${m.pv ?? 'calc.'} `), h('span', { class: 'afinidades' }, resumoAfinidades(m))),
       m.estagios?.length ? selecao([{ valor: '', rotulo: 'Base' }, ...m.estagios.map(e => ({ valor: String(e.numero), rotulo: `Estágio ${e.numero}${e.nome ? ` · ${e.nome}` : ''}` }))],
         estado.sel[chaveEst] ?? String(estagioInicial(m) ?? ''), v => { estado.sel[chaveEst] = v; }, { 'aria-label': `Estágio de ${m.nome}` }) : null,
       h('input', { type: 'number', min: 1, max: 20, class: 'curto', value: estado.sel[chaveQtd] || 1, 'aria-label': `Quantos ${m.nome}`, title: 'Quantos',
@@ -204,7 +204,7 @@ function adicionarMonstro() {
 
 function encontroAleatorio() {
   const c = estado.campanha;
-  const limite = h('input', { type: 'number', min: 1, value: 5, class: 'curto' });
+  const limite = h('input', { type: 'number', min: 0.25, step: 0.25, value: 5, class: 'curto' });
   const monstros = h('input', { type: 'checkbox', checked: true });
   const grupos = c.grupos.filter(g => g.id !== 'encontros').map(g => ({ g, cb: h('input', { type: 'checkbox' }) }));
   return h('details', { class: 'bloco', open: !!estado.sel.encontroAberto, ontoggle: e => { estado.sel.encontroAberto = e.target.open; } },
@@ -216,7 +216,7 @@ function encontroAleatorio() {
       grupos.map(({ g, cb }) => h('label', { class: 'linha' }, cb, g.nome)),
       botao('Gerar encontro', async () => {
         const r = await acao('encontro.gerar', { limite: limite.value, usarMonstros: monstros.checked, grupos: grupos.filter(x => x.cb.checked).map(x => x.g.id) });
-        aviso(`Encontro: ${r.nomes.join(', ')} (dificuldade ${r.soma})`);
+        aviso(`Encontro: ${r.nomes.join(', ')} (dificuldade ${textoND(r.soma)})`);
       }, { class: 'primario', icone: 'dices' })));
 }
 

@@ -260,3 +260,14 @@ Regras em `conteudo/sistemas/habilidades-regras.json` (automática / ligar / ati
 - A planilha antiga tinha os estágios só no texto. O app criou estágios apenas onde o deslocamento citava um estágio
   ("Voo (Estágio 2) 12 m"). O resto (PV, poderes de cada estágio) o autor preenche na aba Estágios.
 - Ficha "Base" = a linha da aba Monstros. Ataque/habilidade com a coluna Estágios preenchida só aparece nesses estágios.
+
+## 25/10 — LEMBRETES DO AUTOR (Livro dos Monstros)
+- [ ] **Rever as perícias de todos os seres** (monstros e animais). O valor da planilha é o investido (como na ficha);
+      o limite é base + subperícia ≤ 5 + 5 × nível da criatura (ou do estágio). O app marca "revisar" no Livro
+      (só o mestre vê) e avisa ao puxar a planilha. Hoje passam do limite: Abutre, Morcego, Coelho, Coruja, Bode,
+      Macaco, Pomba, Sapo Venenoso, Aranha Venenosa, Corvo, Escorpião, Rato, Raposa, Gato, Piranha (todos nível 1).
+      Contando os estágios são 23: estágios de nível baixo (filhote nível 1) herdam as perícias do adulto — preencher as
+      perícias de cada estágio na aba Estágios (colunas novas Perícias / Subperícias).
+      Bombô: "Braçada de Gorila" usa Ataque desarmado sem pontos em Briga. 98 criaturas sem subperícia de defesa.
+- [ ] **Rever os NDs** (Dificuldade), inclusive valores menores que 1 (0,5 = 1/2; 0,25 = 1/4) para animais fracos
+      (rato, pomba, coelho…). Hoje o menor ND da planilha é 1.

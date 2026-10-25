@@ -229,13 +229,17 @@ async function importarMonstros(buffer, modo, arquivo, extra = {}) {
 app.post('/api/monstros', upload.single('arquivo'), rota(async req => {
   exigirAlgumMestre(req);
   if (!req.file) throw new Error('Envie a planilha .xlsx.');
-  return importarMonstros(req.file.buffer, req.body.modo, req.file.originalname, { googleSheets: catalogoMonstros()?.googleSheets });
+  // Enviar arquivo troca a origem: a planilha do Google para de atualizar sozinha.
+  return importarMonstros(req.file.buffer, req.body.modo, req.file.originalname);
 }));
 // Puxa direto da planilha do Google (compartilhada como "Qualquer pessoa com o link pode ver"): o Google entrega
 // a planilha como .xlsx e ela entra igual ao envio do arquivo. O link fica guardado para a próxima vez.
 app.post('/api/monstros/google', rota(async req => {
   exigirAlgumMestre(req);
-  const link = String(req.body?.link || '').trim();
+  return puxarDoGoogle(req.body?.link, req.body?.modo);
+}));
+async function puxarDoGoogle(link, modo) {
+  link = String(link || '').trim();
   const id = /\/spreadsheets\/d\/([\w-]{20,})/.exec(link)?.[1] || (/^[\w-]{20,}$/.test(link) ? link : null);
   if (!id) throw new Error('Cole o link da planilha do Google (docs.google.com/spreadsheets/d/…).');
   let r;
@@ -245,8 +249,15 @@ app.post('/api/monstros/google', rota(async req => {
     throw new Error('O Google não liberou a planilha. No Google Planilhas: Compartilhar > Acesso geral > "Qualquer pessoa com o link" (Leitor) e tente de novo.');
   }
   const buffer = Buffer.from(await r.arrayBuffer());
-  return importarMonstros(buffer, req.body?.modo, 'Google Planilhas', { googleSheets: `https://docs.google.com/spreadsheets/d/${id}/edit` });
-}));
+  return importarMonstros(buffer, modo, 'Google Planilhas', { googleSheets: `https://docs.google.com/spreadsheets/d/${id}/edit`, modo });
+}
+// Livro ligado a uma planilha do Google: o app puxa sozinho ao abrir e a cada 30 minutos (sem internet, fica o último).
+async function atualizarDoGoogle() {
+  const cat = catalogoMonstros();
+  if (!cat?.googleSheets) return;
+  try { const r = await puxarDoGoogle(cat.googleSheets, cat.modo); console.log(`Livro dos Monstros atualizado do Google: ${r.recebidos} criaturas.`); } catch (e) { console.log(`Livro dos Monstros: não deu para puxar do Google (${e.message})`); }
+}
+if (!process.env.ITENS_EXEMPLO) { setTimeout(atualizarDoGoogle, 5000); setInterval(atualizarDoGoogle, 30 * 60 * 1000).unref(); }
 
 app.post('/api/monstros/padrao', rota(req => {
   exigirAlgumMestre(req);

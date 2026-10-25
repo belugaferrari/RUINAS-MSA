@@ -103,7 +103,7 @@ const lula = {
   ataques: [{ nome: 'Tentáculo', dano: '1d6', alcance: 'corpo' }, { nome: 'Jato de tinta', dano: '1d4', alcance: 'distancia', estagios: [2, 3] }],
   habilidades: [{ nome: 'Camuflagem', modo: 'lembrete', descricao: 'Muda de cor.' }, { nome: 'Voo de cardume', modo: 'lembrete', descricao: 'Plana.', estagios: [3] }],
   estagios: [
-    { numero: 2, nome: 'Adulta', descricao: 'Cresce e solta tinta.', tamanho: 'Grande', pv: 45, atributos: { FOR: 16 } },
+    { numero: 2, nome: 'Adulta', descricao: 'Cresce e solta tinta.', tamanho: 'Grande', nivel: 3, pv: 45, atributos: { FOR: 16 }, pericias: { briga: 5 }, subpericias: { 'briga.esquiva': 6 } },
     { numero: 3, nome: 'Anciã', pv: 80, deslocamentos: { voar: 9 }, resistencias: ['Frio'] },
   ],
 };
@@ -172,4 +172,25 @@ test('Campo de Batalha: monstro entra no estágio pedido, vários de uma vez, e 
     assert.throws(() => executar(c, 'monstro.estagio', { id: p.id, estagio: 7 }, ctxM), /não tem o estágio/);
     assert.throws(() => executar(c, 'monstro.estagio', { id: p.id, estagio: 2 }, { user: { id: 'a' }, mestre: false }));
   } finally { voltarMonstrosPadrao(); }
+});
+
+const { periciasAcimaDoLimite, textoND } = await import('../shared/monstros.js');
+test('perícias do estágio substituem as da ficha base; o limite (5 + 5 × nível) vale para a criatura e cada estágio', async () => {
+  const sis = sistema('mss');
+  const base = { ...lula, nivel: 1, pericias: { briga: 4, esportes: 3 }, subpericias: { 'briga.esquiva': 7 } };
+  const e2 = monstroNoEstagio(base, 2);
+  assert.deepEqual(e2.pericias, { briga: 5, esportes: 3 });
+  assert.equal(e2.subpericias['briga.esquiva'], 6);
+  const avisos = periciasAcimaDoLimite(base, sis);
+  assert.equal(avisos.length, 2, avisos.join(' | ')); // base: 4 + 7 = 11 > 10; estágio 3 (nível 1): idem; estágio 2 (nível 3): 11 ≤ 20
+  assert.ok(avisos.every(a => /Esquiva 11/.test(a)));
+  const { avisos: daPlanilha } = await lerPlanilhaMonstros(Buffer.from(await planilhaMonstros(sis, [base])), sis);
+  assert.equal(daPlanilha.filter(a => /limite/.test(a)).length, 2);
+});
+
+test('ND menor que 1: planilha aceita 0,5 e 1/4; o app mostra como fração', async () => {
+  const sis = sistema('mss');
+  const { monstros } = await lerPlanilhaMonstros(Buffer.from(await planilhaMonstros(sis, [{ ...lula, dificuldade: 0.5 }])), sis);
+  assert.equal(monstros[0].dificuldade, 0.5);
+  assert.equal(textoND(0.5), '1/2'); assert.equal(textoND(0.25), '1/4'); assert.equal(textoND(1.5), '1,5'); assert.equal(textoND(null), '—');
 });
