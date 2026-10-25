@@ -278,3 +278,10 @@ Regras em `conteudo/sistemas/habilidades-regras.json` (automática / ligar / ati
 - Escolhas provisórias: o encontro gerado só aparece para o mestre; "Ler para a mesa" põe o cenário no registro;
   "Quantos" + "mesma criatura" (bando) ou criaturas diferentes dentro da faixa.
 - Ataques em área no mapa (círculo/cone/linha): o autor vai pensar mais antes de fazer.
+
+## 25/10 — Objetos do mapa (parte A)
+- Árvore = cobertura total (autor). Cobertura automática só no ataque a distância (livro); o mestre pode ignorar.
+- Habilidades que mudam a cobertura já ligadas: Tiro preciso (ignora parcial com armas de fogo), Combate de Trincheira
+  (parcial vira total contra atiradores a mais de 9 m). Outras: avisar quais.
+- Ainda não: a área (cone/linha) parar no obstáculo; terreno difícil custar o dobro no deslocamento (hoje só aparece no mapa);
+  a parte B (IA lendo a imagem do mapa e criando os objetos).

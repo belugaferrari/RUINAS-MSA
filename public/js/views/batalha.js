@@ -9,6 +9,7 @@ import { armasDisponiveis, ipDe, opcoesDefesa, defesaDoAlvo, danoDaArma, recurso
 import { trilhaCompacta, escolherCondicao, cargaView } from './ficha.js';
 import { painelSlot, naMao, maoHabil } from './boneco.js';
 import { FORMAS_AREA, areaDoTexto } from '/shared/area.js';
+import { coberturaPeloMapa } from '/shared/objetosMapa.js';
 import { efeitosIcones } from './efeitos.js';
 import { prepararTeste } from './dados.js';
 import { distanciaNoMapa } from './mapa.js';
@@ -378,7 +379,8 @@ function quadroAtaques(p, participantes, mestre) {
   return [
     acoesDoTurno(p),
     h('div', { class: 'barra alvo-ataque' }, icone('crosshair'), h('small', {}, 'Alvo'),
-      outros.length ? selecao(outros.map(x => ({ valor: x.id, rotulo: x.nome })), alvo, v => marcarAlvo('batalha', v), { 'aria-label': `Alvo de ${p.nome}` }) : h('em', {}, 'ninguém no campo')),
+      outros.length ? selecao(outros.map(x => ({ valor: x.id, rotulo: x.nome })), alvo, v => marcarAlvo('batalha', v), { 'aria-label': `Alvo de ${p.nome}` }) : h('em', {}, 'ninguém no campo'),
+      seloCobertura(p, alvo)),
     auto ? null : h('p', { class: 'dica' }, icone('info'), ` No ${sis.nome} o dado prepara o teste no rolador; o dano e o PV vão à mão.`),
     h('ul', { class: 'lista-ataques' },
       h('li', { class: 'ataque-grupo' },
@@ -490,6 +492,16 @@ function botaoUsar(p, x, acoes) {
     title: bloqueada ? `${x.nome} já está ativa (${dur || 'até o mestre encerrar'})` : `Anota o uso e gasta a ${nomeAcao(acoes[0] || 'livre').toLowerCase()}${dur ? ` · fica ativa ${dur}` : ''}` });
 }
 
+// Cobertura do alvo pelo mapa (objetos entre os dois): vale no ataque a distância; o mestre pode ignorar nas opções.
+function seloCobertura(p, alvo) {
+  if (!alvo) return null;
+  const cob = coberturaPeloMapa(estado.campanha, p.id, alvo);
+  if (!cob) return null;
+  const ignorada = estado.sel.ataque?.ignorarCoberturaMapa;
+  return h('span', { class: `selo ${cob.nivel === 'total' ? 'perigo' : ''}`, title: 'Pelos objetos do mapa entre os dois. Vale no ataque a distância; habilidades podem mudar (Tiro preciso, Combate de Trincheira).' },
+    icone('shield'), cob.nivel === 'total' ? ` cobertura total (${cob.objeto}): sem tiro` : ` cobertura parcial (${cob.objeto}): −30% no tiro`, ignorada ? ' — ignorada pelo mestre' : '');
+}
+
 // Opções que valem para o próximo ataque (surpresa, localizado…); as do mestre mudam a rolagem.
 function opcoesAtaque(p, mestre, outros = []) {
   const sel = estado.sel.ataque ||= {};
@@ -522,6 +534,7 @@ function opcoesAtaque(p, mestre, outros = []) {
         h('input', { type: 'checkbox', checked: sel.investida != null, onchange: e => { sel.investida = e.target.checked ? 1 : null; render(); } }), 'Investida',
         sel.investida != null ? h('input', { type: 'number', class: 'curto', min: 0, value: sel.investida, 'aria-label': 'Quadrados avançados', onchange: e => { sel.investida = Math.max(0, parseInt(e.target.value, 10) || 0); } }) : null,
         sel.investida != null ? h('small', {}, ' quadrados') : null) : null,
+      mestre ? caixa('ignorarCoberturaMapa', 'Ignorar a cobertura do mapa', true) : null,
       mestre ? caixa('vantagem', 'Vantagem') : null,
       mestre ? caixa('desvantagem', 'Desvantagem') : null,
       mestre ? h('label', { class: 'linha' }, 'Mod. %', h('input', { type: 'number', class: 'curto', value: sel.mod || 0, onchange: e => { sel.mod = e.target.value; } })) : null,

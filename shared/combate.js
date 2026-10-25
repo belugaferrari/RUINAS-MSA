@@ -189,7 +189,7 @@ export function resolverAtaque(atacante, alvo, sistema, op = {}, defesaId = 'nen
   if (tipoCriatura(atacante) !== 'humanoide') delete op.sacrificio;
   add('Sacrifício', op.sacrificio ? cfg.sacrificio.mod : 0);
   // Alvo com cobertura parcial: −30% no ataque a distância (livro). Mira (gasta a ação de movimento): +30%.
-  add('cobertura parcial do alvo', op.cobertura && arma.alcance === 'distancia' ? -(cfg.coberturaParcial ?? 30) : 0);
+  add(`cobertura parcial do alvo${op.coberturaDoMapa ? ` (${op.coberturaDoMapa})` : ''}`, op.cobertura && arma.alcance === 'distancia' ? -(cfg.coberturaParcial ?? 30) : 0);
   add('Mira', op.mira ? cfg.mira ?? 30 : 0);
   add('humor', modHumorTestes(atacante, sistema));
   add('modificador', Math.max(-100, Math.min(100, parseInt(op.mod, 10) || 0)));

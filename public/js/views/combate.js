@@ -333,7 +333,7 @@ export function opcoesGerais(p, mestre) {
   if (tipoCriatura(p) === 'humanoide') op.sacrificio = sel.sacrificio;
   if (sel.cargaNucleo) op.cargaNucleo = true;
   if (sel.investida != null) op.investida = sel.investida;
-  if (mestre) Object.assign(op, { vantagem: sel.vantagem, desvantagem: sel.desvantagem, mod: sel.mod, danoLivre: sel.danoLivre || null });
+  if (mestre) Object.assign(op, { vantagem: sel.vantagem, desvantagem: sel.desvantagem, mod: sel.mod, danoLivre: sel.danoLivre || null, ignorarCoberturaMapa: !!sel.ignorarCoberturaMapa });
   return op;
 }
 

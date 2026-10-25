@@ -283,3 +283,46 @@ test('ataque em área no mapa: o servidor recalcula a área, pega quem está den
   delete c.mapa.pecas[ids[0]];
   assert.throws(() => executar(c, 'combate.atacarArea', { atacante: ids[0], forma: 'circulo', metros: 3, ponto: { x: 1, y: 1 } }, ctxM), /precisa estar no mapa/);
 });
+
+test('objetos do mapa: cobertura automática no tiro (parcial −30%, total sem tiro, o mestre ignora), obstáculo no movimento, pintar e modo fantasma', async () => {
+  const O = await import('../shared/objetosMapa.js');
+  const c = novaCampanha(mestre, { nome: 'T', maxJogadores: 2, nivel: 1, sistema: 'mss' });
+  const [atir, alvo] = ['Atiradora', 'Alvo'].map(nome => executar(c, 'personagem.criar', { tipo: 'npc', grupoId: 'encontros', ficha: { nome } }, ctxM).id);
+  for (const id of [atir, alvo]) executar(c, 'sala.adicionar', { sala: 'batalha', id }, ctxM);
+  const a = c.personagens.find(p => p.id === atir);
+  a.itens = [{ uid: 'p', nome: 'Pistola', tipo: 'arma', dano: '1d6', tipoDano: 'Perfuração', equipado: true, alcance: 'distancia', pericia: 'armas-de-fogo.pistolas' }];
+  c.mapa = { imagemId: 'x', grade: { colunas: 20, ox: 0, oy: 0, visivel: true }, pecas: { [atir]: { col: 0, lin: 0 }, [alvo]: { col: 6, lin: 0 } }, objetos: [] };
+  const cb = c.salas.batalha.combate;
+  const atirar = (op = {}, ctx = ctxM) => { cb.vez = cb.ordem.findIndex(o => o.id === atir); cb.gasto = {}; return executar(c, 'combate.atacar', { atacante: atir, alvo, opcoes: { armaUid: 'p', surpresa: true, ...op } }, ctx); };
+  // Mesa no caminho: cobertura parcial (−30% no acerto, com o nome do objeto).
+  executar(c, 'mapa.objeto', { tipo: 'mesa', col: 3, lin: 0 }, ctxM);
+  assert.deepEqual(O.coberturaPeloMapa(c, atir, alvo), { nivel: 'parcial', objeto: 'Mesa' });
+  assert.match(JSON.stringify(atirar()), /cobertura parcial do alvo \(Mesa\)/);
+  // Árvore (cobertura total, autor 25/10): sem linha de tiro; o mestre pode ignorar.
+  executar(c, 'mapa.objeto', { tipo: 'arvore', col: 4, lin: 0 }, ctxM);
+  assert.throws(() => atirar(), /cobertura total \(Árvore\)/);
+  assert.ok(!/cobertura/.test(JSON.stringify(atirar({ ignorarCoberturaMapa: true }))), 'mestre ignora');
+  // Árvore bloqueia a passagem e a visão.
+  assert.throws(() => executar(c, 'mapa.mover', { id: alvo, col: 4, lin: 0 }, ctxM), /bloqueia/);
+  assert.ok(!O.enxerga(c, atir, alvo));
+  // Pintar parede: um pedaço por quadrado, sem repetir.
+  executar(c, 'mapa.pintar', { tipo: 'parede', quadrados: [{ col: 10, lin: 0 }, { col: 10, lin: 1 }, { col: 10, lin: 1 }] }, ctxM);
+  assert.equal(c.mapa.objetos.filter(o => o.tipo === 'parede').length, 2);
+  assert.throws(() => executar(c, 'mapa.pintar', { tipo: 'mesa', quadrados: [{ col: 1, lin: 1 }] }, ctxM), /não se pinta/);
+  // Porta aberta: o mestre tira a cobertura e o bloqueio.
+  executar(c, 'mapa.objeto', { tipo: 'porta', col: 12, lin: 5 }, ctxM);
+  const porta = c.mapa.objetos.at(-1);
+  executar(c, 'mapa.objetoRegras', { id: porta.id, regras: { cobertura: 'nenhuma', bloqueia: false, visao: false } }, ctxM);
+  assert.equal(O.regrasObjeto(porta).cobertura, null);
+  // Modo fantasma: NPC fora da visão de todos os PJs fica invisível para os jogadores.
+  const pj = executar(c, 'personagem.criar', { tipo: 'pj', ficha: { nome: 'Lia' } }, ctxM).id;
+  c.mapa.pecas[pj] = { col: 0, lin: 2 };
+  c.personagens.find(p => p.id === pj).tipo = 'pj';
+  c.mapa.objetos.push({ id: 'muro', tipo: 'parede', col: 3, lin: 0, l: 1, a: 6 });
+  assert.ok(O.foraDaVisaoDosPJs(c).includes(alvo), 'atrás do muro: nenhum PJ enxerga');
+  executar(c, 'mapa.fantasmas', { ocultar: true }, ctxM);
+  assert.ok(c.mapa.pecas[alvo].oculto);
+  executar(c, 'mapa.fantasmas', { ocultar: false }, ctxM);
+  assert.ok(!c.mapa.pecas[alvo].oculto);
+  assert.throws(() => executar(c, 'mapa.fantasmas', {}, { user: { id: 'j' }, mestre: false }));
+});

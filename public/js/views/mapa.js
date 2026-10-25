@@ -3,6 +3,7 @@
 // mestre e Suporte arrastam os peões; os jogadores só veem.
 import { nomeDeslocamento, ladoNoMapa } from '/shared/monstros.js';
 import { FORMAS_AREA, quadradosDaArea, atingidosPelaArea } from '/shared/area.js';
+import { TIPOS_OBJETO, tipoObjeto, regrasObjeto, tamanhoObjeto, foraDaVisaoDosPJs } from '/shared/objetosMapa.js';
 import { h, botao, selecao, aviso, icone, titulo, vazio, passador, pedirTexto, janela } from '../ui.js';
 import { estado, render, personagemPorId, meusPersonagens } from '../estado.js';
 import { acao } from '../api.js';
@@ -60,13 +61,19 @@ export function mapaView() {
   // Ataque em área: só vale com o atacante no mapa (jogador marca no próprio personagem; o mestre, em qualquer um).
   const area = estado.sel.areaAtaque && mapa.pecas?.[estado.sel.areaAtaque.atacante] ? estado.sel.areaAtaque : null;
   const clicavel = mover || !!armando || !!area;
+  // Mestre: NPCs fora da visão de todos os PJs ficam nublados (lembrete do Esconder-se / modo fantasma).
+  const foraDaVisao = new Set(mestre ? foraDaVisaoDosPJs({ mapa, personagens: c.personagens }) : []);
   const quadro = mapa.midia ? h('div', {
     class: `mapa-quadro ${g.visivel ? 'com-grade' : ''} ${clicavel ? 'movel' : ''}`,
     style: { '--cols': g.colunas, '--ox': g.ox, '--oy': g.oy, '--aspecto': aspectos.get(`${mapa.midia.tipo}:${mapa.midia.url}`) || 1.5 },
     // Com um peão escolhido, clicar num quadrado leva ele para lá.
     // No modo "marcar" (só o mestre), clicar num quadrado cria uma marcação secreta.
     // Ataque em área: a área segue o ponteiro (desenhada direto, sem redesenhar a tela) e o clique fixa.
-    onpointermove: area ? e => desenharArea(e.currentTarget, area, pontoDoMapa(e.currentTarget, g, e.clientX, e.clientY), mapa) : null,
+    onpointermove: area ? e => desenharArea(e.currentTarget, area, pontoDoMapa(e.currentTarget, g, e.clientX, e.clientY), mapa)
+      : mestre && pondo && tipoObjeto(pondo.tipo).pintar ? e => pintarArrastando(e, g, pondo) : null,
+    onpointerdown: mestre && pondo && tipoObjeto(pondo.tipo).pintar ? e => { if (!e.target.closest('.peao')) pintura = { tipo: pondo.tipo, quadrados: new Map() }; pintarArrastando(e, g, pondo); } : null,
+    onpointerup: mestre && pondo && tipoObjeto(pondo.tipo).pintar ? () => terminarPintura() : null,
+    onpointerleave: mestre && pondo && tipoObjeto(pondo.tipo).pintar ? () => terminarPintura() : null,
     onclick: clicavel ? async e => {
       if (area) {
         estado.sel.areaPonto = pontoDoMapa(e.currentTarget, g, e.clientX, e.clientY);
@@ -81,6 +88,7 @@ export function mapaView() {
         return;
       }
       if (mestre && pondo) {
+        if (tipoObjeto(pondo.tipo).pintar) { await acao('mapa.pintar', { tipo: pondo.tipo, quadrados: [{ col, lin }] }).catch(err => aviso(err.message, 'erro')); return; }
         await acao('mapa.objeto', { col, lin, ...pondo }).catch(err => aviso(err.message, 'erro'));
         return;
       }
@@ -102,7 +110,7 @@ export function mapaView() {
     h('div', { class: 'mapa-grade', 'aria-hidden': 'true' }),
     mestre ? (mapa.marcas || []).map(marca) : null,
     (mapa.objetos || []).map(o => objetoMapa(o, mestre)),
-    pecas.map(x => peao(x, g, mover, sel)),
+    pecas.map(x => peao(x, g, mover, sel, foraDaVisao.has(x.p.id))),
     area ? h('div', { class: 'area-camada', 'aria-hidden': 'true' }, area && estado.sel.areaPonto ? quadradosAreaEls(area, estado.sel.areaPonto, mapa) : null) : null) : vazio(mestre ? 'Escolha o mapa abaixo (envie imagens, GIFs ou vídeos na aba Imagens).' : 'O mestre ainda não escolheu um mapa.', 'map');
 
   return h('div', { class: 'mapa-tela' },
@@ -125,6 +133,12 @@ export function mapaView() {
             { class: `pequeno ${estado.sel.mapaMarcar ? 'primario' : ''}`, icone: 'eye-off', 'aria-pressed': !!estado.sel.mapaMarcar, title: 'Marcações (armadilhas, gatilhos…) que só você vê' }),
           (mapa.marcas || []).length ? h('small', { class: 'dica' }, `${mapa.marcas.length} marcação(ões) secreta(s) — os jogadores e o Suporte não veem.`) : null) : null,
         mestre && mapa.midia ? porObjeto() : null,
+        // Modo fantasma: esconde dos jogadores os NPCs fora da visão de todos os PJs (os nublados), ou mostra todos.
+        mestre && mapa.midia ? h('div', { class: 'barra' },
+          botao(`Modo fantasma${foraDaVisao.size ? ` (${foraDaVisao.size} fora da visão)` : ''}`, () => acao('mapa.fantasmas', { ocultar: true }).then(r => aviso(r.ids.length ? `${r.ids.length} NPC(s) invisíveis para os jogadores.` : 'Nenhum NPC fora da visão dos PJs.')),
+            { class: 'pequeno', icone: 'ghost', disabled: !foraDaVisao.size, title: 'Deixa invisíveis para os jogadores os NPCs que nenhum PJ enxerga (atrás de parede, árvore, veículo, mato alto…)' }),
+          botao('Mostrar todos os NPCs', () => acao('mapa.fantasmas', { ocultar: false }), { class: 'pequeno', icone: 'eye' }),
+          h('small', { class: 'dica' }, 'Nublado = nenhum PJ enxerga (só você vê o nublado).')) : null,
         !mestre && mapa.midia ? armarArmadilha() : null),
       h('aside', { class: 'bloco mapa-lado' },
         titulo('No mapa', 'users', 'h3'),
@@ -141,17 +155,30 @@ export function mapaView() {
 }
 
 // Objetos no mapa (armadilhas, coberturas, objetos, perigos, baús, portas). Os ocultos só o mestre vê (meio apagados).
-const ICONE_OBJETO = { armadilha: 'triangle-alert', objeto: 'box', cobertura: 'shield', perigo: 'flame', bau: 'package', porta: 'door-closed' };
-const NOME_OBJETO = { armadilha: 'Armadilha', objeto: 'Objeto', cobertura: 'Cobertura', perigo: 'Perigo', bau: 'Baú', porta: 'Porta' };
+// Objeto do mapa: ocupa l × a quadrados; a cor diz a regra (cobertura total, parcial, terreno difícil, bloqueia a visão).
+const textoRegras = r => [r.cobertura === 'total' ? 'cobertura total' : r.cobertura === 'parcial' ? 'cobertura parcial (−30%)' : null,
+  r.bloqueia ? 'bloqueia a passagem' : r.dificil ? 'terreno difícil' : null, r.visao ? 'bloqueia a visão' : null, r.movel ? 'pode ser movido' : null].filter(Boolean).join(' · ');
 function objetoMapa(o, mestre) {
   const dono = o.dono ? personagemPorId(o.dono) : null;
   const meu = dono && dono.donoId === estado.usuario?.id;
+  const r = regrasObjeto(o);
+  const { l, a } = tamanhoObjeto(o);
+  const classes = [`objeto-mapa obj-${o.tipo}`, o.oculto ? 'oculto' : '', r.cobertura ? `cob-${r.cobertura}` : '', r.bloqueia ? 'bloqueia' : r.dificil ? 'dificil' : '', r.visao ? 'sem-visao' : ''].join(' ');
   return h('button', {
-    type: 'button', class: `objeto-mapa obj-${o.tipo} ${o.oculto ? 'oculto' : ''}`, style: { '--col': o.col, '--lin': o.lin },
-    title: `${NOME_OBJETO[o.tipo] || 'Objeto'}: ${o.nome}${dono ? ` (armada por ${dono.nome})` : ''}${o.oculto ? ' — oculto' : ''}`, 'aria-label': `${NOME_OBJETO[o.tipo] || 'Objeto'}: ${o.nome}`,
+    type: 'button', class: classes, style: { '--col': o.col, '--lin': o.lin, '--l': l, '--a': a },
+    title: `${r.nome}${o.nome && o.nome !== r.nome ? `: ${o.nome}` : ''} — ${textoRegras(r) || 'sem efeito nas regras'}${dono ? ` (armada por ${dono.nome})` : ''}${o.oculto ? ' — oculto' : ''}`,
+    'aria-label': `${r.nome}: ${o.nome}`,
     onclick: e => {
+      if (estado.sel.areaAtaque) return; // marcando área: vale como clique no mapa
       e.stopPropagation();
       const acoesJ = [];
+      const editar = mestre ? h('div', { class: 'form' },
+        h('label', { class: 'linha' }, 'Cobertura', selecao([{ valor: 'nenhuma', rotulo: 'nenhuma' }, { valor: 'parcial', rotulo: 'parcial (−30%)' }, { valor: 'total', rotulo: 'total' }], r.cobertura || 'nenhuma',
+          v => acao('mapa.objetoRegras', { id: o.id, regras: { cobertura: v } }), { 'aria-label': 'Cobertura' })),
+        ...[['bloqueia', 'Bloqueia a passagem'], ['dificil', 'Terreno difícil'], ['visao', 'Bloqueia a visão']].map(([k, rot]) => h('label', { class: 'linha' },
+          h('input', { type: 'checkbox', checked: !!r[k], onchange: ev => acao('mapa.objetoRegras', { id: o.id, regras: { [k]: ev.target.checked } }) }), rot)),
+        h('label', { class: 'linha' }, 'Tamanho', h('input', { type: 'number', class: 'curto', min: 1, max: 20, value: l, 'aria-label': 'Largura em quadrados', onchange: ev => acao('mapa.objetoRegras', { id: o.id, l: ev.target.value }) }), '×',
+          h('input', { type: 'number', class: 'curto', min: 1, max: 20, value: a, 'aria-label': 'Altura em quadrados', onchange: ev => acao('mapa.objetoRegras', { id: o.id, a: ev.target.value }) }), ' quadrados')) : null;
       if (mestre) {
         acoesJ.push([o.oculto ? 'Mostrar aos jogadores' : 'Ocultar', () => acao('mapa.objetoMover', { id: o.id, oculto: !o.oculto })]);
         acoesJ.push(['Mover (clique no destino)', () => { estado.sel.mapaMoverObjeto = o.id; render(); }]);
@@ -159,24 +186,36 @@ function objetoMapa(o, mestre) {
       if (meu && o.item) acoesJ.push(['Recolher para o inventário', () => acao('mapa.objetoRemover', { id: o.id, recolher: true })]);
       if (mestre || meu) acoesJ.push(['Tirar do mapa', () => acao('mapa.objetoRemover', { id: o.id }), 'perigo']);
       acoesJ.push(['Fechar', () => true]);
-      janela(`${NOME_OBJETO[o.tipo] || 'Objeto'}: ${o.nome}`, h('div', {},
+      janela(`${r.nome}${o.nome && o.nome !== r.nome ? `: ${o.nome}` : ''}`, h('div', {},
+        h('p', { class: 'meta' }, textoRegras(r) || 'Sem efeito nas regras.'),
         o.item?.descricao ? h('p', {}, o.item.descricao) : null,
         dono ? h('p', { class: 'meta' }, `Armada por ${dono.nome}.`) : null,
-        o.oculto ? h('p', { class: 'dica' }, icone('eye-off'), ' Oculto: os jogadores não veem.') : null), acoesJ);
+        o.oculto ? h('p', { class: 'dica' }, icone('eye-off'), ' Oculto: os jogadores não veem.') : null,
+        editar), acoesJ);
     },
-  }, icone(ICONE_OBJETO[o.tipo] || 'box'));
+  }, icone(r.icone || 'box'));
 }
 
-// Mestre: escolher o tipo e o nome do objeto e clicar nos quadrados para pôr.
+// Mestre: escolher o objeto do catálogo e clicar nos quadrados para pôr. Parede, mato, água e entulho se "pintam":
+// arraste pelo mapa e cada quadrado vira um pedaço.
 function porObjeto() {
-  const f = (estado.sel.novoObjeto ||= { tipo: 'armadilha', nome: '', oculto: false });
+  const f = (estado.sel.novoObjeto ||= { tipo: 'parede', nome: '', oculto: false, l: '', a: '' });
   const ativo = !!estado.sel.mapaObjeto;
-  return h('div', { class: 'barra' },
-    selecao(Object.entries(NOME_OBJETO).map(([valor, rotulo]) => ({ valor, rotulo })), f.tipo, v => { f.tipo = v; if (ativo) estado.sel.mapaObjeto = { ...f }; }, { 'aria-label': 'Tipo de objeto' }),
-    h('input', { class: 'curto', value: f.nome, placeholder: 'Nome (ex.: fosso, barril)', 'aria-label': 'Nome do objeto', oninput: e => { f.nome = e.target.value; if (ativo) estado.sel.mapaObjeto = { ...f }; } }),
-    h('label', { class: 'linha' }, h('input', { type: 'checkbox', checked: f.oculto, onchange: e => { f.oculto = e.target.checked; if (ativo) estado.sel.mapaObjeto = { ...f }; } }), 'oculto'),
-    botao(ativo ? 'Pondo: clique no mapa (clique aqui para parar)' : 'Pôr objeto', () => { estado.sel.mapaObjeto = ativo ? null : { ...f }; estado.sel.mapaMarcar = false; render(); },
-      { class: `pequeno ${ativo ? 'primario' : ''}`, icone: 'box', 'aria-pressed': ativo, title: 'Armadilhas, coberturas, objetos, perigos, baús e portas (visíveis ou ocultos)' }));
+  const t = tipoObjeto(f.tipo);
+  const atualizar = () => { if (ativo) estado.sel.mapaObjeto = { ...f }; };
+  const grupos = [...new Set(TIPOS_OBJETO.map(x => x.grupo))];
+  return h('div', { class: 'barra por-objeto' },
+    h('select', { 'aria-label': 'Tipo de objeto', onchange: e => { f.tipo = e.target.value; f.l = ''; f.a = ''; atualizar(); render(); } },
+      grupos.map(g => h('optgroup', { label: g }, TIPOS_OBJETO.filter(x => x.grupo === g).map(x => h('option', { value: x.id, selected: x.id === f.tipo }, x.nome))))),
+    t.pintar ? null : h('label', { class: 'linha', title: 'Tamanho em quadrados (largura × altura)' },
+      h('input', { type: 'number', class: 'curto', min: 1, max: 20, value: f.l || t.l || 1, 'aria-label': 'Largura', onchange: e => { f.l = e.target.value; atualizar(); } }), '×',
+      h('input', { type: 'number', class: 'curto', min: 1, max: 20, value: f.a || t.a || 1, 'aria-label': 'Altura', onchange: e => { f.a = e.target.value; atualizar(); } })),
+    h('input', { class: 'curto', value: f.nome, placeholder: 'Nome (opcional)', 'aria-label': 'Nome do objeto', oninput: e => { f.nome = e.target.value; atualizar(); } }),
+    h('label', { class: 'linha' }, h('input', { type: 'checkbox', checked: f.oculto, onchange: e => { f.oculto = e.target.checked; atualizar(); } }), 'oculto'),
+    botao(ativo ? (t.pintar ? 'Pintando: arraste no mapa (clique aqui para parar)' : 'Pondo: clique no mapa (clique aqui para parar)') : (t.pintar ? 'Pintar' : 'Pôr objeto'),
+      () => { estado.sel.mapaObjeto = ativo ? null : { ...f }; estado.sel.mapaMarcar = false; render(); },
+      { class: `pequeno ${ativo ? 'primario' : ''}`, icone: t.pintar ? 'paintbrush' : 'box', 'aria-pressed': ativo, title: textoRegras(t) || t.nome }),
+    h('small', { class: 'dica' }, textoRegras(t)));
 }
 
 // Jogador: armar uma armadilha que tem pronta no inventário (ela sai do inventário e aparece no mapa).
@@ -229,6 +268,25 @@ const girarMapa = () => (estado.sel.mapaGirar ?? emPe());
 // Saiu da tela cheia do navegador (Esc, voltar do celular): sai do modo do mapa também; girou o aparelho: redesenha.
 document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && estado.sel.mapaCheia) sairTelaCheia(); });
 window.addEventListener('resize', () => { if (estado.sel.mapaCheia && estado.sel.mapaGirar == null) render(); });
+
+// ---------- Pintar objetos arrastando (parede, mato, água, entulho) ----------
+let pintura = null;
+function pintarArrastando(e, g, pondo) {
+  if (!pintura || !(e.buttons & 1) && e.type === 'pointermove') return;
+  const { col, lin } = quadradoDoPonto(e.currentTarget, g, e.clientX, e.clientY);
+  const k = `${col}:${lin}`;
+  if (pintura.quadrados.has(k)) return;
+  pintura.quadrados.set(k, { col, lin });
+  // Mostra na hora (o servidor confirma ao soltar).
+  const q = h('span', { class: `objeto-mapa obj-${pondo.tipo} pintando`, style: { '--col': col, '--lin': lin, '--l': 1, '--a': 1 } });
+  e.currentTarget.append(q);
+}
+function terminarPintura() {
+  if (!pintura) return;
+  const p = pintura;
+  pintura = null;
+  if (p.quadrados.size > 1) acao('mapa.pintar', { tipo: p.tipo, quadrados: [...p.quadrados.values()] }).catch(err => aviso(err.message, 'erro'));
+}
 
 // ---------- Ataque em área ----------
 const origemArea = (area, mapa) => { const o = mapa.pecas[area.atacante]; return { ...o, lado: ladoNoMapa(personagemPorId(area.atacante)) }; };
@@ -295,7 +353,7 @@ function quadradoDoPonto(quadro, g, x, y) {
   };
 }
 
-function peao(x, g, mover, sel) {
+function peao(x, g, mover, sel, nublado = false) {
   const { p } = x;
   const semPv = p.semPv || (p.pv && p.pv.atual <= 0);
   // Movimento limitado por efeito (ou carga, para quem vê os itens): círculo em volta do peão para lembrar.
@@ -306,8 +364,8 @@ function peao(x, g, mover, sel) {
     + (p.deslocamentos ? Object.entries(p.deslocamentos).filter(([k]) => k !== 'andar').map(([k, v]) => ` · ${nomeDeslocamento(k)} ${String(v).replace('.', ',')} m`).join('') : '');
   // Quem só vê (jogadores) recebe uma figura, não um botão.
   const el = h(mover ? 'button' : 'span', {
-    type: mover ? 'button' : null, role: mover ? null : 'img', class: `peao ${p.tipo} ${sel === p.id ? 'escolhido' : ''} ${semPv ? 'sem-pv' : ''} ${x.oculto ? 'oculto' : ''} ${mov.nivel ? `mov-${mov.nivel}` : ''}`,
-    'data-pid': p.id, style: { '--col': x.col, '--lin': x.lin, '--lado': ladoNoMapa(p) }, title: `${p.nome}${x.oculto ? ' (invisível para os jogadores)' : ''}${avisoMov}`, 'aria-label': `${p.nome} (coluna ${x.col + 1}, linha ${x.lin + 1})${avisoMov}`,
+    type: mover ? 'button' : null, role: mover ? null : 'img', class: `peao ${p.tipo} ${sel === p.id ? 'escolhido' : ''} ${semPv ? 'sem-pv' : ''} ${x.oculto ? 'oculto' : ''} ${nublado ? 'fora-de-visao' : ''} ${mov.nivel ? `mov-${mov.nivel}` : ''}`,
+    'data-pid': p.id, style: { '--col': x.col, '--lin': x.lin, '--lado': ladoNoMapa(p) }, title: `${p.nome}${x.oculto ? ' (invisível para os jogadores)' : ''}${nublado ? ' — fora da visão dos PJs (pode se esconder)' : ''}${avisoMov}`, 'aria-label': `${p.nome} (coluna ${x.col + 1}, linha ${x.lin + 1})${avisoMov}`,
     onclick: mover ? e => {
       // Marcando ataque em área: o clique no peão vale como clique no mapa (centro da explosão em cima dele).
       if (estado.sel.areaAtaque) return;

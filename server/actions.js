@@ -7,6 +7,7 @@ import { fichasDeTeste, relatorioFicha, kitDeTeste, periciasDeTeste } from '../s
 import { monstroNoEstagio, textoDeslocamentos, textoND, ladoNoMapa } from '../shared/monstros.js';
 import { sortearEncontro, cenarioSemIA } from '../shared/encontro.js';
 import { FORMAS_AREA, quadradosDaArea, atingidosPelaArea } from '../shared/area.js';
+import { TIPOS_OBJETO, tipoObjeto, coberturaPeloMapa, foraDaVisaoDosPJs, bloqueadoPorObjeto } from '../shared/objetosMapa.js';
 import { passarNecessidades, comer, beber, dormir, rolarCaos, climaDoDia, descreverRelogio, fimDoCombate } from '../shared/tempo.js';
 import { podeSeduzir, itemAberto, itemVisivel, xpParaSubir, novaFicha, podeEquipar, rolarDado, rolarAtributosCriacao, testeDMil, gerarEncontro, derivados, problemasFicha, LIMITE_SALA, desgastarItem, repararItem, durabilidadeDe, listaHabilidades, vantagemPorHabilidade, temHabilidade, regraDaHabilidade, tipoCriatura, chaveHabilidade, TIPOS_ACAO, nomeAcao, acoesDaHabilidade, dadosDaHabilidade, ehAtaqueEspecial, acaoDoAtaqueEspecial, perderPv, textoPv, duracaoDaHabilidade, podeRepetir, textoDuracao } from '../shared/regras.js';
 
@@ -678,6 +679,21 @@ function gastarAcao(c, p, tipo, { desfazer = false } = {}) {
   return avisos.length ? avisos.join('; ') : null;
 }
 
+// Cobertura automática pelo mapa (autor, 25/10): os objetos entre quem atira e o alvo. O mestre pode ignorar
+// ("ignorar cobertura do mapa"); habilidades mudam o efeito: Tiro preciso (atacante, armas de fogo) ignora a parcial;
+// Combate de Trincheira (alvo) faz a parcial valer como total contra quem atira de mais de 9 m.
+function coberturaDoAtaque(c, a, b, op, sis) {
+  const arma = armasDisponiveis(a, sis).find(x => x.uid === (op.armaUid || 'desarmado'));
+  if (!arma || arma.alcance !== 'distancia' || op.area || op.ignorarCoberturaMapa) return;
+  let cob = coberturaPeloMapa(c, a.id, b.id);
+  if (!cob) return;
+  if (cob.nivel === 'parcial' && temHabilidade(b, sis, 'Combate de Trincheira') && (distanciaPecas(c, a.id, b.id) ?? 0) > 9) cob = { ...cob, nivel: 'total', objeto: `${cob.objeto}, Combate de Trincheira` };
+  if (cob.nivel === 'parcial' && temHabilidade(a, sis, 'Tiro preciso') && String(arma.pericia || '').startsWith('armas-de-fogo')) return;
+  if (cob.nivel === 'total') throw erro(`${b.nome} está atrás de cobertura total (${cob.objeto}): sem linha de tiro.`);
+  op.cobertura = true;
+  op.coberturaDoMapa = cob.objeto;
+}
+
 // Ônus das mãos no ataque (ver combate.atacar). Devolve true quando é o segundo ataque (o da outra mão).
 function maosDoAtaque(c, a, op, sis) {
   const pedeDois = !!op.doisAtaques;
@@ -706,7 +722,7 @@ function maosDoAtaque(c, a, op, sis) {
   return false;
 }
 
-export const TIPOS_OBJETO_MAPA = ['armadilha', 'objeto', 'cobertura', 'perigo', 'bau', 'porta'];
+export const TIPOS_OBJETO_MAPA = TIPOS_OBJETO.map(t => t.id);
 const ehArmadilha = it => /armadilh/i.test(`${it.categoria || ''} ${it.nome || ''}`);
 export const TIPOS_COMPANHEIRO = [
   { id: 'familiar', nome: 'Familiar' }, { id: 'animal', nome: 'Animal' }, { id: 'montaria', nome: 'Montaria' },
@@ -1297,7 +1313,11 @@ export const acoes = {
     const antes = c.mapa.pecas[id];
     // O Suporte não enxerga peões ocultos, então também não mexe neles.
     if (antes?.oculto && !ctx.mestre) throw erro('Personagem não encontrado no mapa.');
-    c.mapa.pecas[id] = { ...antes, col: Math.max(0, Math.min(999, parseInt(col, 10) || 0)), lin: Math.max(0, Math.min(999, parseInt(lin, 10) || 0)) };
+    const novo = { col: Math.max(0, Math.min(999, parseInt(col, 10) || 0)), lin: Math.max(0, Math.min(999, parseInt(lin, 10) || 0)) };
+    // Obstáculo (parede, árvore, veículo…) não deixa o peão entrar no quadrado.
+    const bloq = bloqueadoPorObjeto(c.mapa.objetos, novo.col, novo.lin, ladoNoMapa(personagem(c, id)));
+    if (bloq) throw erro(`${bloq.nome || tipoObjeto(bloq.tipo).nome} bloqueia esse quadrado.`);
+    c.mapa.pecas[id] = { ...antes, ...novo };
   },
 
   // Mestre: põe no mapa, no primeiro lugar livre que caiba o tamanho de cada um ("Pôr no mapa", "Pôr os do Campo").
@@ -1326,11 +1346,54 @@ export const acoes = {
   },
 
   // Objetos no mapa (autor, 24/10): o mestre põe armadilhas, coberturas, objetos e perigos (visíveis ou ocultos).
-  'mapa.objeto'(c, { col, lin, nome, tipo, oculto }, ctx) {
+  // Objeto no mapa: tipo do catálogo (parede, árvore, mesa…), tamanho em quadrados (l × a) e nome.
+  'mapa.objeto'(c, { col, lin, nome, tipo, oculto, l, a }, ctx) {
     exigirMestre(ctx);
     c.mapa ||= novoMapa();
-    const t = TIPOS_OBJETO_MAPA.includes(tipo) ? tipo : 'objeto';
-    (c.mapa.objetos ||= []).push({ id: uid(), tipo: t, nome: nomeStr(nome).slice(0, 80) || 'Objeto', col: Math.max(0, parseInt(col, 10) || 0), lin: Math.max(0, parseInt(lin, 10) || 0), oculto: !!oculto });
+    const t = tipoObjeto(TIPOS_OBJETO_MAPA.includes(tipo) ? tipo : 'objeto');
+    const tam = v => Math.max(1, Math.min(20, parseInt(v, 10) || 0)) || null;
+    (c.mapa.objetos ||= []).push({ id: uid(), tipo: t.id, nome: nomeStr(nome).slice(0, 80) || t.nome, col: Math.max(0, parseInt(col, 10) || 0), lin: Math.max(0, parseInt(lin, 10) || 0), oculto: !!oculto,
+      ...(tam(l) && tam(l) !== (t.l || 1) ? { l: tam(l) } : t.l ? { l: t.l } : {}), ...(tam(a) && tam(a) !== (t.a || 1) ? { a: tam(a) } : t.a ? { a: t.a } : {}) });
+  },
+
+  // Pintar (parede, mato, água, entulho): um objeto de 1 quadrado em cada quadrado arrastado (sem repetir).
+  'mapa.pintar'(c, { tipo, quadrados }, ctx) {
+    exigirMestre(ctx);
+    c.mapa ||= novoMapa();
+    const t = tipoObjeto(tipo);
+    if (!t.pintar) throw erro(`${t.nome} não se pinta: ponha com um clique.`);
+    const ja = new Set((c.mapa.objetos || []).filter(o => o.tipo === t.id).map(o => `${o.col}:${o.lin}`));
+    for (const q of [].concat(quadrados || []).slice(0, 2000)) {
+      const col = Math.max(0, parseInt(q.col, 10) || 0), lin = Math.max(0, parseInt(q.lin, 10) || 0);
+      if (ja.has(`${col}:${lin}`)) continue;
+      ja.add(`${col}:${lin}`);
+      (c.mapa.objetos ||= []).push({ id: uid(), tipo: t.id, nome: t.nome, col, lin, oculto: false });
+    }
+  },
+
+  // O mestre muda as regras de um objeto (porta aberta, mesa virada = cobertura…) ou o tamanho.
+  'mapa.objetoRegras'(c, { id, regras, l, a, nome }, ctx) {
+    exigirMestre(ctx);
+    const o = (c.mapa?.objetos || []).find(x => x.id === id);
+    if (!o) throw erro('Objeto não encontrado.');
+    if (regras) {
+      const r = {};
+      if (['nenhuma', 'parcial', 'total'].includes(regras.cobertura)) r.cobertura = regras.cobertura === 'nenhuma' ? null : regras.cobertura;
+      for (const k of ['bloqueia', 'visao', 'dificil']) if (k in regras) r[k] = !!regras[k];
+      o.regras = { ...(o.regras || {}), ...r };
+    }
+    if (l != null) o.l = Math.max(1, Math.min(20, parseInt(l, 10) || 1));
+    if (a != null) o.a = Math.max(1, Math.min(20, parseInt(a, 10) || 1));
+    if (nome != null) o.nome = nomeStr(nome).slice(0, 80) || o.nome;
+  },
+
+  // Modo fantasma: esconde dos jogadores os NPCs que estão fora da visão de todos os PJs (ou mostra todos de novo).
+  'mapa.fantasmas'(c, { ocultar = true }, ctx) {
+    exigirMestre(ctx);
+    const pecas = c.mapa?.pecas || {};
+    const ids = ocultar ? foraDaVisaoDosPJs(c) : Object.keys(pecas).filter(id => c.personagens.find(p => p.id === id)?.tipo === 'npc');
+    for (const id of ids) if (pecas[id]) pecas[id].oculto = !!ocultar;
+    return { ids };
   },
 
   // Jogador arma uma armadilha que tem pronta no inventário: ela sai do inventário e aparece no mapa (visível).
@@ -1653,7 +1716,10 @@ export const acoes = {
     if (!s.participantes.includes(a.id) || !s.participantes.includes(b.id)) throw erro('Atacante e alvo precisam estar no Campo de Batalha.');
     if (!a.pv || !b.pv) throw erro('Os dois precisam ter PV na ficha.');
     const op = { ...(opcoes || {}) };
-    if (!ctx.mestre) { delete op.vantagem; delete op.desvantagem; delete op.danoLivre; }
+    if (!ctx.mestre) { delete op.vantagem; delete op.desvantagem; delete op.danoLivre; delete op.ignorarCoberturaMapa; }
+    delete op.coberturaDoMapa;
+    // Cobertura pelo mapa (ataque a distância, antes de gastar qualquer coisa): parcial = −30%; total = sem linha de tiro.
+    if (!op.multiplo) coberturaDoAtaque(c, a, b, op, sis);
     // Mãos: a hábil ataca sem ônus e a inábil com −20%. Dois ataques no turno, um com cada mão ("Dois ataques" no
     // primeiro): hábil −20% e inábil −40%, e o segundo não gasta outra ação. Ambidestria: sem mão inábil, e nos dois
     // ataques só o segundo tem −20%.

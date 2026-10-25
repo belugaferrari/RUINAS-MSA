@@ -17,6 +17,7 @@ export const ICONES = [
   'ghost', 'hand-heart', 'heart', 'heart-pulse', 'hourglass', 'image', 'info', 'landmark', 'library', 'lock',
   'lock-open', 'log-out', 'map', 'menu', 'minus', 'network', 'notebook-pen', 'pencil', 'play', 'plus', 'refresh-cw', 'save',
   'scale', 'scroll', 'search', 'settings', 'shield', 'shirt', 'ship', 'skip-forward', 'skull', 'smile', 'sparkles', 'store', 'square-x', 'sword', 'swords', 'tag',
+  'brick-wall', 'tree-pine', 'table', 'cylinder', 'armchair', 'mountain', 'paintbrush', 'square',
   'target', 'trash-2', 'trending-up', 'upload', 'user', 'user-plus', 'user-round-x', 'users', 'wand-sparkles', 'wifi-off', 'x', 'zap',
 ];
 

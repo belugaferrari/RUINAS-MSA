@@ -1391,7 +1391,7 @@ span.peao { display: grid; }
 .alvos-varios legend { padding: 0 .3em; color: var(--ouro); }
 
 /* Objetos no mapa: armadilhas, coberturas, objetos, perigos, baús e portas. */
-.objeto-mapa { position: absolute; left: calc((var(--col) + var(--ox)) * var(--cel)); top: calc((var(--lin) + var(--oy)) * var(--cel)); width: var(--cel); height: var(--cel);
+.objeto-mapa { position: absolute; left: calc((var(--col) + var(--ox)) * var(--cel)); top: calc((var(--lin) + var(--oy)) * var(--cel)); width: calc(var(--cel) * var(--l, 1)); height: calc(var(--cel) * var(--a, 1));
   min-width: 0; min-height: 0; padding: 0; border: 2px solid #c9a45c; border-radius: 6px; background: rgba(20, 14, 10, .7); color: #f0c873; display: grid; place-items: center; z-index: 1; }
 .objeto-mapa svg { width: 58%; height: 58%; filter: drop-shadow(0 1px 2px #000); }
 .objeto-mapa.obj-armadilha { border-color: #e06b5d; color: #ff8a7a; }
@@ -1435,3 +1435,16 @@ input.largo { flex: 1 1 20em; min-width: 0; }
 .area-q { position: absolute; left: calc((var(--col) + var(--ox)) * var(--cel)); top: calc((var(--lin) + var(--oy)) * var(--cel)); width: var(--cel); height: var(--cel);
   background: rgba(255, 120, 40, .38); outline: 1px solid rgba(255, 170, 60, .9); outline-offset: -1px; }
 .painel-area { border-color: #e0a526; }
+
+/* Objetos do cenário: a cor diz a regra. Total = sólido escuro; parcial = listrado; terreno difícil = pontilhado. */
+.objeto-mapa.cob-total { background: rgba(40, 32, 26, .78); border-color: #c9a227; color: #e8d39a; }
+.objeto-mapa.cob-parcial { background: repeating-linear-gradient(45deg, rgba(91, 139, 208, .35) 0 6px, rgba(20, 30, 50, .35) 6px 12px); border-color: #5b8bd0; color: #cfe0ff; }
+.objeto-mapa.dificil:not(.cob-parcial):not(.cob-total) { background: radial-gradient(circle, rgba(255, 220, 140, .45) 1.5px, transparent 2px) 0 0 / 8px 8px, rgba(60, 50, 30, .25); border-style: dotted; }
+.objeto-mapa.obj-agua.dificil { background: rgba(60, 130, 200, .35); border-color: #6ab0ff; }
+.objeto-mapa.obj-arbusto.dificil { background: rgba(60, 120, 50, .55); border-color: #7cc36a; }
+.objeto-mapa.obj-arvore { border-radius: 50%; background: rgba(30, 80, 35, .85); border-color: #7cc36a; color: #b9f0a8; }
+.objeto-mapa.obj-parede { border-radius: 0; background: rgba(70, 60, 55, .92); border-color: #8a7a6a; }
+.objeto-mapa.pintando { opacity: .6; pointer-events: none; }
+/* NPC fora da visão dos PJs: nublado (só o mestre vê). */
+.peao.fora-de-visao .rosto { filter: blur(1.5px) grayscale(.6); opacity: .7; }
+.peao.fora-de-visao::after { content: ''; position: absolute; inset: 4%; border-radius: 50%; border: 2px dashed rgba(200, 210, 255, .8); pointer-events: none; }
