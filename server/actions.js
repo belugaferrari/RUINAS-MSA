@@ -3,7 +3,7 @@ import { imagemDeLink } from '../shared/imagens.js';
 import { sistema, idSistema } from './sistema.js';
 import { resolverAtaque, aplicarAtaque, armasDisponiveis, opcoesDefesa, sobrevida, rolarIniciativa, resolverManipulacao, modHumorTestes, humorDe, espectroDe, humorAparente, empatiaNatural, liberdadeDeHumor, modoRolagem, modoHumorTeste, recursoDe, gastarRecurso, racaDe, distanciaPecas, usosRestantes, gastarUso, testeContra, ipContra } from '../shared/combate.js';
 import { sincronizarEfeitos, passarTurnoEfeitos, efeitosAoAgir, cargaNoTurno, descansar } from '../shared/efeitos.js';
-import { fichasDeTeste, relatorioFicha, kitDeTeste } from '../shared/fichasTeste.js';
+import { fichasDeTeste, relatorioFicha, kitDeTeste, periciasDeTeste } from '../shared/fichasTeste.js';
 import { monstroNoEstagio, textoDeslocamentos, textoND, ladoNoMapa } from '../shared/monstros.js';
 import { passarNecessidades, comer, beber, dormir, rolarCaos, climaDoDia, descreverRelogio, fimDoCombate } from '../shared/tempo.js';
 import { podeSeduzir, itemAberto, itemVisivel, xpParaSubir, novaFicha, podeEquipar, rolarDado, rolarAtributosCriacao, testeDMil, gerarEncontro, derivados, problemasFicha, LIMITE_SALA, desgastarItem, repararItem, durabilidadeDe, listaHabilidades, vantagemPorHabilidade, temHabilidade, regraDaHabilidade, tipoCriatura, chaveHabilidade, TIPOS_ACAO, nomeAcao, acoesDaHabilidade, dadosDaHabilidade, ehAtaqueEspecial, acaoDoAtaqueEspecial, perderPv, textoPv, duracaoDaHabilidade, podeRepetir, textoDuracao } from '../shared/regras.js';
@@ -1240,6 +1240,7 @@ export const acoes = {
       const p = { ...f, id: uid(), tipo: 'pj', donoId: null, backups: [], itens: [], dinheiro: sis.regras?.creditosIniciais ?? 0, xp: 0 };
       c.personagens.push(p);
       darKitDeTeste(c, p, sis, ctx);
+      Object.assign(p, periciasDeTeste(sis, p, c));
       const r = relatorioFicha(p, sis, c);
       relatorio.push({ nome: p.nome, avisos: r.avisos, lembretes: r.lembretes.length, comEfeito: r.comEfeito, total: r.total });
     }
@@ -1253,7 +1254,17 @@ export const acoes = {
     const sis = sistema(c.sistema);
     const fichas = c.personagens.filter(p => p.tipo === 'pj' && /^Teste · /.test(p.nome) && (trocar || !(p.itens || []).length));
     if (!fichas.length) throw erro('Nenhuma ficha de teste sem itens.');
-    return { relatorio: fichas.map(p => { if (trocar) p.itens = []; return { nome: p.nome, itens: darKitDeTeste(c, p, sis, ctx) }; }) };
+    // As armas mudam com o kit: as perícias acompanham.
+    return { relatorio: fichas.map(p => { if (trocar) p.itens = []; const itens = darKitDeTeste(c, p, sis, ctx); Object.assign(p, periciasDeTeste(sis, p, c)); return { nome: p.nome, itens }; }) };
+  },
+
+  // Perícias das fichas de teste: as armas que elas têm equipadas, a Esquiva e o tema da classe (dentro do limite e dos pontos).
+  'teste.pericias'(c, d, ctx) {
+    exigirMestre(ctx);
+    const sis = sistema(c.sistema);
+    const fichas = c.personagens.filter(p => p.tipo === 'pj' && /^Teste · /.test(p.nome));
+    if (!fichas.length) throw erro('Nenhuma ficha de teste na campanha.');
+    return { relatorio: fichas.map(p => { Object.assign(p, periciasDeTeste(sis, p, c)); return { nome: p.nome, problemas: problemasFicha(p, sis, c, { apenasPontos: true }) }; }) };
   },
 
   'mapa.definir'(c, { imagemId }, ctx) {

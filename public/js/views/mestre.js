@@ -338,7 +338,14 @@ function fichasTesteView() {
         if (!(await confirmar(`Dar até 3000 créditos em itens (já equipados) às ${n} fichas de teste? Os itens que elas têm hoje serão trocados.`))) return;
         const r = await acao('teste.itens', { trocar: true });
         janela('Itens das fichas de teste', h('ul', { class: 'lista-regras' }, r.relatorio.map(x => h('li', {}, h('strong', {}, x.nome), h('small', {}, ` — ${x.itens.join(', ')}`)))));
-      }, { icone: 'backpack', title: 'Até 3000 créditos em itens para cada ficha de teste, já equipados (troca os itens atuais)' })));
+      }, { icone: 'backpack', title: 'Até 3000 créditos em itens para cada ficha de teste, já equipados (troca os itens atuais)' }),
+      // Perícias das fichas de teste: armas equipadas, Esquiva e o tema da classe.
+      botao('Arrumar perícias das fichas de teste', async () => {
+        if (!(await confirmar('Refazer as perícias das fichas de teste (armas equipadas, Esquiva e as perícias da classe)? As perícias atuais delas serão trocadas.'))) return;
+        const r = await acao('teste.pericias', {});
+        const comProblema = r.relatorio.filter(x => x.problemas.length);
+        aviso(comProblema.length ? `Atenção: ${comProblema.map(x => `${x.nome}: ${x.problemas.join(' ')}`).join(' · ')}` : `Perícias de ${r.relatorio.length} fichas de teste arrumadas.`, comProblema.length ? 'erro' : 'ok');
+      }, { icone: 'graduation-cap' })));
 }
 
 function abaCampanha() {

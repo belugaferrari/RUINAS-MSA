@@ -125,3 +125,37 @@ export function kitDeTeste(sistema, ficha, orcamento = ORCAMENTO_KIT_TESTE) {
   }
   return kit;
 }
+
+// Perícias das fichas de teste (autor, 25/10): as armas equipadas do kit, a Esquiva e as perícias do tema da classe,
+// dentro do limite (5 + 5 × nível) e dos pontos de perícia da ficha. Subperícia custa 1 ponto por ponto e perícia
+// base custa 3 (6 nas de combate), então os pontos vão quase todos nas subperícias.
+const PERICIAS_CLASSE = {
+  cacador: ['armadilhas.armar', 'sobrevivencia.rastreio', 'sentidos.visao', 'espionagem.furtividade', 'armadilhas.encontrar', 'sobrevivencia.esfolamento'],
+  ciborgue: ['computacao.interface-neural', 'sentidos.visao', 'engenharia.mecanica', 'esportes.corrida', 'computacao.operacional', 'briga.ataque-desarmado'],
+  encantado: ['manipulacao.labia', 'manipulacao.empatia', 'manipulacao.lideranca', 'institucional.politica', 'manipulacao.etiqueta', 'sentidos.visao'],
+  inventor: ['engenharia.mecanica', 'engenharia.eletrica', 'computacao.programacao', 'avaliacao-de-objetos.identificacao', 'engenharia.quimica', 'sentidos.visao'],
+  mutante: ['briga.ataque-desarmado', 'sobrevivencia.ambiental', 'esportes.corrida', 'sentidos.olfato', 'manipulacao.intimidacao', 'esportes.escalada'],
+  perito: ['medicina.primeiros-socorros', 'medicina.cirurgica', 'medicina.farmaceutica', 'sentidos.visao', 'medicina.genetica', 'manipulacao.empatia'],
+  soldado: ['manipulacao.lideranca', 'engenharia.militar', 'sentidos.visao', 'esportes.corrida', 'briga.ataque-desarmado', 'medicina.primeiros-socorros'],
+  sortudo: ['jogos.sorte', 'jogos.dados', 'avaliacao-de-objetos.negociacao', 'espionagem.furtar', 'manipulacao.labia', 'sentidos.visao'],
+  transmorfo: ['briga.ataque-desarmado', 'sentidos.olfato', 'esportes.corrida', 'sobrevivencia.rastreio', 'manipulacao.intimidacao', 'esportes.salto'],
+  treinador: ['trato-de-animais.treinamento-adestrar', 'trato-de-animais.doma', 'trato-de-animais.zoologia', 'manipulacao.lideranca', 'trato-de-animais.montaria', 'sentidos.visao'],
+};
+export function periciasDeTeste(sistema, ficha, campanha = null) {
+  const subsValidas = new Set(sistema.pericias.flatMap(p => p.subpericias.map(s => s.id)));
+  const L = limitePericia(ficha.nivel, sistema);
+  let pontos = pontosPericiaTotal(ficha, sistema, campanha);
+  const classe = (sistema.classes || []).find(c => c.id === ficha.classe);
+  const armas = [...new Set((ficha.itens || []).filter(i => i.equipado && i.tipo === 'arma' && i.pericia).map(i => i.pericia))];
+  // [subperícia, parte do limite]: armas e Esquiva no limite; tema da classe: 2 no limite, 2 em 75%, o resto em 50%.
+  const lista = [...armas.map(id => [id, 1]), ['briga.esquiva', 1],
+    ...(PERICIAS_CLASSE[semAc(classe?.nome)] || []).map((id, i) => [id, i < 2 ? 1 : i < 4 ? 0.75 : 0.5]), ['briga.evasao', 0.5], ['sentidos.audicao', 0.5]];
+  const subpericias = {};
+  for (const [id, parte] of lista) {
+    if (!subsValidas.has(id) || id in subpericias || pontos <= 0) continue;
+    const v = Math.min(Math.round(L * parte), pontos);
+    subpericias[id] = v;
+    pontos -= v;
+  }
+  return { pericias: {}, subpericias };
+}
