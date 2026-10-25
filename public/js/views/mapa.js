@@ -2,6 +2,7 @@
 // (cada quadrado = 1,5 m) e os peões dos personagens. O mestre escolhe o mapa e ajusta a grade;
 // mestre e Suporte arrastam os peões; os jogadores só veem.
 import { nomeDeslocamento, ladoNoMapa } from '/shared/monstros.js';
+import { FORMAS_AREA, quadradosDaArea, atingidosPelaArea } from '/shared/area.js';
 import { h, botao, selecao, aviso, icone, titulo, vazio, passador, pedirTexto, janela } from '../ui.js';
 import { estado, render, personagemPorId, meusPersonagens } from '../estado.js';
 import { acao } from '../api.js';
@@ -56,13 +57,22 @@ export function mapaView() {
   // Modos de clique no mapa: mestre põe objeto; jogador arma uma armadilha do inventário.
   const pondo = estado.sel.mapaObjeto;
   const armando = estado.sel.mapaArmar;
-  const clicavel = mover || !!armando;
+  // Ataque em área: só vale com o atacante no mapa (jogador marca no próprio personagem; o mestre, em qualquer um).
+  const area = estado.sel.areaAtaque && mapa.pecas?.[estado.sel.areaAtaque.atacante] ? estado.sel.areaAtaque : null;
+  const clicavel = mover || !!armando || !!area;
   const quadro = mapa.midia ? h('div', {
     class: `mapa-quadro ${g.visivel ? 'com-grade' : ''} ${clicavel ? 'movel' : ''}`,
     style: { '--cols': g.colunas, '--ox': g.ox, '--oy': g.oy, '--aspecto': aspectos.get(`${mapa.midia.tipo}:${mapa.midia.url}`) || 1.5 },
     // Com um peão escolhido, clicar num quadrado leva ele para lá.
     // No modo "marcar" (só o mestre), clicar num quadrado cria uma marcação secreta.
+    // Ataque em área: a área segue o ponteiro (desenhada direto, sem redesenhar a tela) e o clique fixa.
+    onpointermove: area ? e => desenharArea(e.currentTarget, area, pontoDoMapa(e.currentTarget, g, e.clientX, e.clientY), mapa) : null,
     onclick: clicavel ? async e => {
+      if (area) {
+        estado.sel.areaPonto = pontoDoMapa(e.currentTarget, g, e.clientX, e.clientY);
+        render();
+        return;
+      }
       if (e.target.closest('.peao, .marca-mapa, .objeto-mapa')) return;
       const { col, lin } = quadradoDoPonto(e.currentTarget, g, e.clientX, e.clientY);
       if (armando) {
@@ -92,9 +102,12 @@ export function mapaView() {
     h('div', { class: 'mapa-grade', 'aria-hidden': 'true' }),
     mestre ? (mapa.marcas || []).map(marca) : null,
     (mapa.objetos || []).map(o => objetoMapa(o, mestre)),
-    pecas.map(x => peao(x, g, mover, sel))) : vazio(mestre ? 'Escolha o mapa abaixo (envie imagens, GIFs ou vídeos na aba Imagens).' : 'O mestre ainda não escolheu um mapa.', 'map');
+    pecas.map(x => peao(x, g, mover, sel)),
+    area ? h('div', { class: 'area-camada', 'aria-hidden': 'true' }, area && estado.sel.areaPonto ? quadradosAreaEls(area, estado.sel.areaPonto, mapa) : null) : null) : vazio(mestre ? 'Escolha o mapa abaixo (envie imagens, GIFs ou vídeos na aba Imagens).' : 'O mestre ainda não escolheu um mapa.', 'map');
 
   return h('div', { class: 'mapa-tela' },
+    area ? painelArea(area, mapa) : estado.sel.areaAtaque ? h('div', { class: 'bloco aviso-revisar' }, `Para o ataque em área, ${personagemPorId(estado.sel.areaAtaque.atacante)?.nome || 'o atacante'} precisa estar no mapa.`,
+      botao('Cancelar', () => { estado.sel.areaAtaque = null; render(); }, { class: 'pequeno' })) : null,
     mestre ? controlesMestre(mapa) : null,
     h('div', { class: 'mapa-grade-tela' },
       // Girar: na tela inteira (deita o mapa quando o aparelho está em pé) e também na tela normal (autor, 24/10).
@@ -217,6 +230,57 @@ const girarMapa = () => (estado.sel.mapaGirar ?? emPe());
 document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && estado.sel.mapaCheia) sairTelaCheia(); });
 window.addEventListener('resize', () => { if (estado.sel.mapaCheia && estado.sel.mapaGirar == null) render(); });
 
+// ---------- Ataque em área ----------
+const origemArea = (area, mapa) => { const o = mapa.pecas[area.atacante]; return { ...o, lado: ladoNoMapa(personagemPorId(area.atacante)) }; };
+const quadradosDe = (area, ponto, mapa) => quadradosDaArea({ forma: area.forma, metros: area.metros, origem: origemArea(area, mapa), ponto, colunas: mapa.grade.colunas, linhas: 999 });
+function quadradosAreaEls(area, ponto, mapa) {
+  return [...quadradosDe(area, ponto, mapa)].map(k => { const [col, lin] = k.split(':').map(Number); return h('span', { class: 'area-q', style: { '--col': col, '--lin': lin } }); });
+}
+// Enquanto o ponteiro anda (área ainda não fixada), redesenha só a camada da área.
+function desenharArea(quadro, area, ponto, mapa) {
+  if (estado.sel.areaPonto) return;
+  const camada = quadro.querySelector('.area-camada');
+  if (camada) camada.replaceChildren(...quadradosAreaEls(area, ponto, mapa));
+}
+function painelArea(area, mapa) {
+  const c = estado.campanha;
+  const p = personagemPorId(area.atacante);
+  const ponto = estado.sel.areaPonto;
+  const ids = ponto ? atingidosPelaArea(quadradosDe(area, ponto, mapa), mapa.pecas, c.personagens, [area.atacante]).filter(id => c.salas.batalha.participantes.includes(id)) : [];
+  const confirmar = async () => {
+    const r = await acao('combate.atacarArea', { atacante: area.atacante, forma: area.forma, metros: area.metros, ponto, opcoes: area.opcoes });
+    estado.sel.areaAtaque = null; estado.sel.areaPonto = null;
+    if (estado.sel.ataque) Object.assign(estado.sel.ataque, { sacrificio: false, cargaNucleo: false, investida: null, mira: false });
+    const resumo = r.resultados.map(x => `${personagemPorId(x.alvo)?.nome || '?'}: ${x.tipo === 'ataque' ? x.texto : x.tipo === 'barrado' ? 'não atacou (Civilizados)' : 'aguardando a Evasão'}`);
+    aviso(r.resultados.length ? `${p?.nome} — área: ${resumo.join(' · ')}` : 'A área não pegou ninguém.', r.resultados.length ? 'ok' : 'erro');
+    if (r.excesso) aviso(`Atenção: ${r.excesso}.`, 'erro');
+    estado.aba = 'batalha';
+    render();
+  };
+  return h('div', { class: 'bloco painel-area' },
+    h('strong', {}, icone('target'), ` Ataque em área — ${p?.nome || '?'} com ${area.arma}`),
+    h('div', { class: 'barra' },
+      selecao(FORMAS_AREA.map(f => ({ valor: f.id, rotulo: f.nome })), area.forma, v => { area.forma = v; render(); }, { 'aria-label': 'Forma da área' }),
+      h('label', { class: 'linha' }, h('input', { type: 'number', class: 'curto', min: 1.5, step: 1.5, value: area.metros, 'aria-label': 'Tamanho em metros', onchange: e => { area.metros = Math.max(1.5, Number(e.target.value) || 1.5); render(); } }), ' m'),
+      h('small', { class: 'dica' }, area.forma === 'circulo' ? 'Clique no centro da explosão.' : `Sai de ${p?.nome || 'quem ataca'}: clique na direção.`)),
+    ponto ? h('p', {}, icone('crosshair'), ids.length ? ` Atinge: ${ids.map(id => personagemPorId(id)?.nome || '?').join(', ')} (cada um pode fazer Evasão: metade do dano).` : ' Ninguém dentro da área.') : h('p', { class: 'dica' }, 'Passe o mouse (ou o dedo) pelo mapa e clique para fixar a área.'),
+    h('div', { class: 'barra' },
+      ponto ? botao('Confirmar ataque', confirmar, { class: 'primario', icone: 'swords' }) : null,
+      ponto ? botao('Mudar a área', () => { estado.sel.areaPonto = null; render(); }, { class: 'pequeno', icone: 'refresh-cw' }) : null,
+      botao('Cancelar', () => { estado.sel.areaAtaque = null; estado.sel.areaPonto = null; render(); }, { class: 'pequeno perigo', icone: 'x' })));
+}
+
+// Ponto da tela → posição no mapa em quadrados (com fração), para a direção do cone e da linha.
+function pontoDoMapa(quadro, g, x, y) {
+  const r = quadro.getBoundingClientRect();
+  const girado = !!quadro.closest('.girar');
+  const largura = girado ? r.height : r.width;
+  const lx = girado ? y - r.top : x - r.left;
+  const ly = girado ? r.right - x : y - r.top;
+  const cel = largura / g.colunas;
+  return { x: lx / cel - g.ox, y: ly / cel - g.oy };
+}
+
 // Ponto da tela → quadrado. Com o mapa girado 90° (horário), o x da tela vira o y do mapa e vice-versa.
 function quadradoDoPonto(quadro, g, x, y) {
   const r = quadro.getBoundingClientRect();
@@ -245,6 +309,8 @@ function peao(x, g, mover, sel) {
     type: mover ? 'button' : null, role: mover ? null : 'img', class: `peao ${p.tipo} ${sel === p.id ? 'escolhido' : ''} ${semPv ? 'sem-pv' : ''} ${x.oculto ? 'oculto' : ''} ${mov.nivel ? `mov-${mov.nivel}` : ''}`,
     'data-pid': p.id, style: { '--col': x.col, '--lin': x.lin, '--lado': ladoNoMapa(p) }, title: `${p.nome}${x.oculto ? ' (invisível para os jogadores)' : ''}${avisoMov}`, 'aria-label': `${p.nome} (coluna ${x.col + 1}, linha ${x.lin + 1})${avisoMov}`,
     onclick: mover ? e => {
+      // Marcando ataque em área: o clique no peão vale como clique no mapa (centro da explosão em cima dele).
+      if (estado.sel.areaAtaque) return;
       e.stopPropagation();
       if (e.currentTarget.dataset.arrastou) { delete e.currentTarget.dataset.arrastou; return; }
       estado.sel.mapaSel = sel === p.id ? null : p.id;
@@ -261,6 +327,7 @@ function peao(x, g, mover, sel) {
 function arrastavel(el, p, g, lado = 1) {
   let inicio = null;
   el.addEventListener('pointerdown', e => {
+    if (estado.sel.areaAtaque) return;
     inicio = { x: e.clientX, y: e.clientY, moveu: false };
     el.setPointerCapture(e.pointerId);
   });

@@ -6,6 +6,7 @@ import { sincronizarEfeitos, passarTurnoEfeitos, efeitosAoAgir, cargaNoTurno, de
 import { fichasDeTeste, relatorioFicha, kitDeTeste, periciasDeTeste } from '../shared/fichasTeste.js';
 import { monstroNoEstagio, textoDeslocamentos, textoND, ladoNoMapa } from '../shared/monstros.js';
 import { sortearEncontro, cenarioSemIA } from '../shared/encontro.js';
+import { FORMAS_AREA, quadradosDaArea, atingidosPelaArea } from '../shared/area.js';
 import { passarNecessidades, comer, beber, dormir, rolarCaos, climaDoDia, descreverRelogio, fimDoCombate } from '../shared/tempo.js';
 import { podeSeduzir, itemAberto, itemVisivel, xpParaSubir, novaFicha, podeEquipar, rolarDado, rolarAtributosCriacao, testeDMil, gerarEncontro, derivados, problemasFicha, LIMITE_SALA, desgastarItem, repararItem, durabilidadeDe, listaHabilidades, vantagemPorHabilidade, temHabilidade, regraDaHabilidade, tipoCriatura, chaveHabilidade, TIPOS_ACAO, nomeAcao, acoesDaHabilidade, dadosDaHabilidade, ehAtaqueEspecial, acaoDoAtaqueEspecial, perderPv, textoPv, duracaoDaHabilidade, podeRepetir, textoDuracao } from '../shared/regras.js';
 
@@ -1723,6 +1724,33 @@ export const acoes = {
       resultados.push({ alvo, ...r });
     });
     return { tipo: 'varios', resultados, excesso: resultados[0]?.excesso || null };
+  },
+
+  // Ataque em área marcado no mapa (círculo, cone, linha): o servidor recalcula os quadrados e ataca quem está dentro
+  // (aliados também). Um ataque só (uma ação, uma munição); cada um se defende com Evasão (metade do dano).
+  'combate.atacarArea'(c, { atacante, forma, metros, ponto, opcoes }, ctx) {
+    const a = personagem(c, atacante);
+    exigirDonoOuMestre(ctx, a);
+    if (!FORMAS_AREA.some(f => f.id === forma)) throw erro('Escolha a forma da área (círculo, cone ou linha).');
+    const m = Math.max(1.5, Math.min(60, Number(metros) || 0));
+    const origem = c.mapa?.pecas?.[a.id];
+    if (!c.mapa?.imagemId || !origem) throw erro(`${a.nome} precisa estar no mapa para marcar a área.`);
+    const x = Number(ponto?.x), y = Number(ponto?.y);
+    if (!Number.isFinite(x) || !Number.isFinite(y)) throw erro('Marque a área no mapa.');
+    const quadrados = quadradosDaArea({ forma, metros: m, origem: { ...origem, lado: ladoNoMapa(a) }, ponto: { x, y }, colunas: 999, linhas: 999 });
+    const s = c.salas.batalha;
+    const alvos = atingidosPelaArea(quadrados, c.mapa.pecas, c.personagens, [a.id]).filter(id => s.participantes.includes(id));
+    const nomeForma = FORMAS_AREA.find(f => f.id === forma).nome.replace(/\s*\(.*$/, '').toLowerCase();
+    registrar(s.log, { autor: a.nome, rotulo: `Ataque em área (${nomeForma} de ${String(m).replace('.', ',')} m)`,
+      texto: alvos.length ? `pega ${alvos.map(id => personagem(c, id).nome).join(', ')}` : 'não pegou ninguém' });
+    if (!alvos.length) {
+      // Errou todo mundo: gasta a ação (e a munição) mesmo assim.
+      const excesso = gastarAcao(c, a, c.salas.batalha.combate?.ordem[c.salas.batalha.combate.vez]?.id === a.id ? 'principal' : 'reacao');
+      return { tipo: 'area', resultados: [], excesso };
+    }
+    const op = { ...(opcoes || {}), area: true };
+    const resultados = alvos.map((alvo, i) => ({ alvo, ...acoes['combate.atacar'](c, { atacante: a.id, alvo, opcoes: { ...op, ...(i > 0 ? { multiplo: true } : {}) } }, ctx) }));
+    return { tipo: 'area', resultados, excesso: resultados[0]?.excesso || null, quadrados: quadrados.size };
   },
 
   // Oferta de ação extra (Quebra-Hordas, Guerras diplomáticas): quem controla o atacante aceita (com o alvo) ou dispensa.

@@ -8,6 +8,7 @@ import { derivados, listaHabilidades, efeitosHabilidade, modoHabilidade, temHabi
 import { armasDisponiveis, ipDe, opcoesDefesa, defesaDoAlvo, danoDaArma, recursoDe } from '/shared/combate.js';
 import { trilhaCompacta, escolherCondicao, cargaView } from './ficha.js';
 import { painelSlot, naMao, maoHabil } from './boneco.js';
+import { FORMAS_AREA, areaDoTexto } from '/shared/area.js';
 import { efeitosIcones } from './efeitos.js';
 import { prepararTeste } from './dados.js';
 import { distanciaNoMapa } from './mapa.js';
@@ -299,8 +300,21 @@ function quadroAtaques(p, participantes, mestre) {
   const automaticas = auto ? armasDisponiveis(p, sis) : [];
   const testar = ref => prepararTeste(p.id, ref);
   const atacar = async uid => {
-    // Vários alvos (área ou golpe que pega mais de um): um ataque só, resolvido contra cada alvo escolhido.
     const sel = estado.sel.ataque || {};
+    // Ataque em área com mapa: marca a área no mapa (círculo, cone, linha) e o app ataca quem estiver dentro.
+    const c = estado.campanha;
+    if (sel.area && c.mapa?.midia && c.mapa.pecas?.[p.id]) {
+      const it = (p.itens || []).find(i => i.uid === uid);
+      const doTexto = it ? areaDoTexto([it.efeitos, it.efeitosObs, it.observacoes, it.descricao].filter(Boolean).join(' ')) : null;
+      estado.sel.areaAtaque = { atacante: p.id, armaUid: uid, arma: it?.nome || 'Desarmado', forma: sel.areaForma || doTexto?.forma || 'circulo',
+        metros: sel.areaMetros || doTexto?.metros || 3, opcoes: { ...opcoesGerais(p, mestre), armaUid: uid } };
+      estado.sel.areaPonto = null;
+      estado.aba = 'mapa';
+      render();
+      aviso('Marque a área no mapa: passe o mouse (ou o dedo) e clique para fixar.');
+      return;
+    }
+    // Vários alvos (área ou golpe que pega mais de um): um ataque só, resolvido contra cada alvo escolhido.
     const varios = sel.varios ? (sel.alvos || []).filter(id => outros.some(x => x.id === id)) : [];
     if (sel.varios) {
       if (varios.length < 2) throw new Error('Marque pelo menos dois alvos em "Vários alvos" (Opções do ataque).');
@@ -488,7 +502,10 @@ function opcoesAtaque(p, mestre, outros = []) {
       caixa('localizado', 'Localizado (−30%, +1d6)'),
       caixa('surpresa', 'Surpresa'),
       caixa('elevado', 'Terreno elevado'),
-      caixa('area', 'Ataque em área', true),
+      caixa('area', 'Ataque em área (marca no mapa)', true),
+      sel.area ? h('label', { class: 'linha', title: 'Forma e tamanho da área (o texto da arma preenche sozinho quando diz "raio de 3m", "cone de 4,5m"…)' },
+        selecao([{ valor: '', rotulo: 'forma da arma' }, ...FORMAS_AREA.map(f => ({ valor: f.id, rotulo: f.nome }))], sel.areaForma || '', v => { sel.areaForma = v || null; }, { 'aria-label': 'Forma da área' }),
+        h('input', { type: 'number', class: 'curto', min: 1.5, step: 1.5, value: sel.areaMetros || '', placeholder: 'm', 'aria-label': 'Tamanho da área em metros', onchange: e => { sel.areaMetros = Number(e.target.value) || null; } }), h('small', {}, ' m')) : null,
       caixa('varios', 'Vários alvos', true),
       caixa('cobertura', 'Alvo com cobertura parcial (−30% no ataque a distância)'),
       // Mira: gasta a ação de movimento (Instável, com SAN abaixo de 16, não pode mirar).

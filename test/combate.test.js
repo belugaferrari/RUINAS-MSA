@@ -400,3 +400,16 @@ test('cobertura parcial: −30% no ataque a distância; Mira: +30%; Sacrifício 
   fera.itens = a.itens;
   assert.equal(mod(resolverAtaque(fera, b, mss, { armaUid: 'f', sacrificio: true }, 'nenhuma', seq(0.5)), 'Sacrifício'), 0, 'não humano não usa Sacrifício');
 });
+
+test('ataque em área: círculo, cone (7 quadrados no cone de 4,5 m do livro) e linha; área tirada do texto da arma', async () => {
+  const A = await import('../shared/area.js');
+  const cone = A.quadradosDaArea({ forma: 'cone', metros: 4.5, origem: { col: 5, lin: 5, lado: 1 }, ponto: { x: 9.5, y: 5.5 } });
+  assert.equal(cone.size, 7);
+  assert.equal(A.quadradosDaArea({ forma: 'linha', metros: 9, origem: { col: 5, lin: 5, lado: 1 }, ponto: { x: 9.5, y: 5.5 } }).size, 6);
+  assert.equal(A.quadradosDaArea({ forma: 'circulo', metros: 3, ponto: { x: 5.2, y: 5.7 } }).size, 13);
+  // Criatura grande (2×2) é atingida se qualquer quadrado dela estiver na área.
+  const pecas = { g: { col: 8, lin: 3 }, p: { col: 0, lin: 0 } };
+  const pers = [{ id: 'g', tamanho: 'Grande' }, { id: 'p', tamanho: 'Médio' }];
+  assert.deepEqual(A.atingidosPelaArea(cone, pecas, pers), ['g']);
+  assert.deepEqual(A.areaDoTexto('Granada: explode em raio de 3m'), { forma: 'circulo', metros: 3 });
+});

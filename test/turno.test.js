@@ -262,3 +262,24 @@ test('fichas de teste vêm com itens (até 3000 créditos) já equipados; "Dar i
   assert.ok(fichas.every(p => !p.itens.some(i => i.uid === 'x')));
   assert.throws(() => executar(c, 'teste.itens', {}, ctxA));
 });
+
+test('ataque em área no mapa: o servidor recalcula a área, pega quem está dentro (aliados também) e cada um faz Evasão', () => {
+  const c = novaCampanha(mestre, { nome: 'T', maxJogadores: 2, nivel: 1, sistema: 'mss' });
+  const ids = ['Granadeira', 'A', 'B', 'Longe'].map(nome => executar(c, 'personagem.criar', { tipo: 'npc', grupoId: 'encontros', ficha: { nome } }, ctxM).id);
+  for (const id of ids) executar(c, 'sala.adicionar', { sala: 'batalha', id }, ctxM);
+  const gr = c.personagens.find(p => p.id === ids[0]);
+  gr.itens = [{ uid: 'g', nome: 'Granada', tipo: 'arma', dano: '2d6', tipoDano: 'Concussão', equipado: true, alcance: 'distancia', pericia: 'armas-de-fogo.pistolas', capacidade: 3, carregada: 3 }];
+  c.mapa = { imagemId: 'x', grade: { colunas: 20, ox: 0, oy: 0, visivel: true }, pecas: { [ids[0]]: { col: 0, lin: 0 }, [ids[1]]: { col: 6, lin: 6 }, [ids[2]]: { col: 7, lin: 6 }, [ids[3]]: { col: 15, lin: 15 } } };
+  const cb = c.salas.batalha.combate;
+  cb.vez = cb.ordem.findIndex(o => o.id === ids[0]);
+  const r = executar(c, 'combate.atacarArea', { atacante: ids[0], forma: 'circulo', metros: 3, ponto: { x: 6.5, y: 6.5 }, opcoes: { armaUid: 'g' } }, ctxM);
+  assert.deepEqual(r.resultados.map(x => x.alvo).sort(), [ids[1], ids[2]].sort());
+  assert.equal(gr.itens[0].carregada, 2, 'uma munição só');
+  assert.equal(cb.gasto[ids[0]].principal, 1, 'uma ação só');
+  // Defesa de área: Evasão está entre as opções de quem foi pego.
+  const pend = c.salas.batalha.pendentes.find(x => x.alvo === ids[1]);
+  if (pend) assert.ok(pend.area);
+  assert.throws(() => executar(c, 'combate.atacarArea', { atacante: ids[0], forma: 'quadrado', metros: 3, ponto: { x: 1, y: 1 } }, ctxM), /forma/);
+  delete c.mapa.pecas[ids[0]];
+  assert.throws(() => executar(c, 'combate.atacarArea', { atacante: ids[0], forma: 'circulo', metros: 3, ponto: { x: 1, y: 1 } }, ctxM), /precisa estar no mapa/);
+});
