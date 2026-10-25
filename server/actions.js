@@ -66,6 +66,8 @@ const nomeUsuario = id => db.users.find(u => u.id === id)?.name ?? null;
 
 function fichaPublica(p, sis) {
   return { id: p.id, tipo: p.tipo, nome: p.nome, classe: p.classe, especializacao: p.especializacao, profissao: p.profissao, nivel: p.nivel, foto: p.foto, humor: humorAparente(p), criatura: !!p.criatura, donoId: p.donoId, dono: nomeUsuario(p.donoId), genero: p.genero || '', atracao: p.atracao,
+    // Tamanho se vê de fora: o peão no mapa ocupa os quadrados dele (Grande 2×2…), também para jogadores e Suporte.
+    tamanho: p.tamanho || '',
     // Efeitos que se veem de fora (sangrando, caído, aturdido…), com a contagem de turnos.
     semPv: !!p.pv && p.pv.atual <= 0,
     ...efeitosPublicos(p, sis) };
@@ -2326,6 +2328,15 @@ export const acoes = {
     if (novo.foto && novo.foto !== p.foto && m.estagios?.some(e => e.imagem)) p.foto = novo.foto;
     p.itens = [...novo.itens.filter(i => i.natural), ...(p.itens || []).filter(i => !i.natural)];
     p.pv = { max: novo.pv.max, atual: novo.pv.max - dano };
+    // Cresceu (ou diminuiu): se o peão não cabe mais onde está, vai para o primeiro lugar livre do tamanho novo.
+    const peca = c.mapa?.pecas?.[p.id];
+    if (peca) {
+      const l = ladoNoMapa(p);
+      const ocupa = (x, lx) => { const q = new Set(); for (let i = 0; i < lx; i++) for (let j = 0; j < lx; j++) q.add(`${x.col + i}:${x.lin + j}`); return q; };
+      const meu = ocupa(peca, l);
+      const bate = Object.entries(c.mapa.pecas).some(([id, x]) => id !== p.id && [...ocupa(x, ladoNoMapa(c.personagens.find(o => o.id === id)))].some(k => meu.has(k)));
+      if (bate) c.mapa.pecas[p.id] = { ...peca, ...lugarLivre(c, l, p.id) };
+    }
     registrar(c.salas.batalha.log, { autor: p.nome, rotulo: `${p.nome} muda de estágio`, texto: `${p.monstro.nomeEstagio || 'estágio base'} · PV ${p.pv.atual}/${p.pv.max}` });
   },
 
@@ -2351,7 +2362,8 @@ export const acoes = {
       if (e.origem === 'npc') {
         p = { ...structuredClone(e.p), id: uid(), grupoId: GRUPO_ENCONTROS, backups: [] };
       } else {
-        p = npcDeMonstro(c, e.m);
+        // Monstro com estágios entra no 1º estágio (como no Livro e no "Adicionar monstro").
+        p = npcDeMonstro(c, e.m, e.m.estagios?.[0]?.numero ?? null);
       }
       c.personagens.push(p);
       s.participantes.push(p.id);

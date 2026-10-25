@@ -220,3 +220,23 @@ test('monstro no Campo de Batalha vai sozinho para o mapa, com o tamanho do livr
     assert.deepEqual(c.mapa.pecas[semMapa], { col: 5, lin: 1 });
   } finally { voltarMonstrosPadrao(); }
 });
+
+test('tamanho do estágio no mapa: jogadores também veem; ao crescer sem espaço, o peão muda de lugar', async () => {
+  const { visaoPara } = await import('../server/actions.js');
+  const cresce = { nome: 'Broto', tamanho: 'Médio', pv: 10, estagios: [{ numero: 1, tamanho: 'Pequeno' }, { numero: 2, tamanho: 'Colossal' }] };
+  salvarCatalogoMonstros([cresce, { nome: 'Rato', tamanho: 'Miúdo', pv: 3 }], 'teste.xlsx');
+  try {
+    const c = novaCampanha({ id: 'm', name: 'M' }, { nome: 'T', maxJogadores: 2, nivel: 1, sistema: 'mss' });
+    const ctxM = { user: { id: 'm' }, mestre: true };
+    c.mapa = { imagemId: 'x', grade: { colunas: 6, ox: 0, oy: 0, visivel: true }, pecas: {} };
+    const [b] = executar(c, 'monstro.adicionar', { nome: 'Broto', estagio: 2 }, ctxM).ids;
+    assert.equal(ladoNoMapa(c.personagens.find(p => p.id === b)), 3);
+    const v = visaoPara(c, { id: 'j' }, 'jogador');
+    assert.equal(v.personagens.find(p => p.id === b).tamanho, 'Colossal', 'jogador recebe o tamanho');
+    executar(c, 'monstro.estagio', { id: b, estagio: 1 }, ctxM);
+    const [r] = executar(c, 'monstro.adicionar', { nome: 'Rato' }, ctxM).ids;
+    assert.deepEqual(c.mapa.pecas[r], { col: 1, lin: 0 }, 'pequeno libera os quadrados');
+    executar(c, 'monstro.estagio', { id: b, estagio: 2 }, ctxM);
+    assert.notDeepEqual(c.mapa.pecas[b], { col: 0, lin: 0 }, 'colossal não cabe mais ao lado do rato: muda de lugar');
+  } finally { voltarMonstrosPadrao(); }
+});
