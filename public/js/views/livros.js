@@ -159,18 +159,40 @@ export function monstrosView() {
   const mestre = estado.campanha.papel === 'mestre';
   const sis = estado.sistema;
   const termo = estado.sel['busca:monstros'] || '';
-  const lista = buscarMonstros(sis.monstros, termo);
+  const [filtro, lista] = filtroTipos('livro', buscarMonstros(sis.monstros, termo));
   return h('div', {},
     h('div', { class: 'barra' }, titulo('Livro dos Monstros', 'skull', 'h2'), h('span', { class: 'espaco' }), h('label', { class: 'busca' }, icone('search'), filtroBusca('monstros', 'Buscar criatura (nome, raça, afinidade, lugar)…'))),
     mestre ? planilhaMonstrosMestre() : null,
+    filtro,
     h('p', { class: 'dica' }, `${lista.length} de ${sis.monstros.length} criatura${sis.monstros.length === 1 ? '' : 's'}${termo.trim() ? ` para “${termo.trim()}”` : ''}. Clique numa linha para abrir a ficha.`),
     lista.length ? h('ul', { class: 'lista-monstros' }, lista.map(m => linhaMonstro(m, mestre))) : vazio('Nenhuma criatura encontrada. Tente uma palavra mais curta.', 'search'));
 }
 
-export const urlImagemMonstro = (m, estagio = null) => (estagio != null ? imagemDeLink(estagio.imagem) : null) || estado.campanha.imagensMonstros?.[m.nome] || imagemDeLink(m.imagem);
+// Filtro por tipo de criatura (Monstros, Animais, Bestas…): botões com a contagem de cada tipo; devolve [botões, lista filtrada].
+export function filtroTipos(chave, lista) {
+  const sis = estado.sistema;
+  const tipoDe = m => m.tipoCriatura || 'monstro';
+  const contagem = new Map();
+  for (const m of lista) contagem.set(tipoDe(m), (contagem.get(tipoDe(m)) || 0) + 1);
+  const ordem = (sis.tiposCriatura || []).map(t => t.id);
+  const tipos = [...contagem.keys()].sort((a, b) => (ordem.indexOf(a) + 1 || 99) - (ordem.indexOf(b) + 1 || 99));
+  const nome = id => (sis.tiposCriatura || []).find(t => t.id === id)?.nome || id;
+  const sel = estado.sel[`tipoCriatura:${chave}`] || '';
+  const filtrada = sel ? lista.filter(m => tipoDe(m) === sel) : lista;
+  const chip = (id, rotulo, n) => botao(`${rotulo} (${n})`, () => { estado.sel[`tipoCriatura:${chave}`] = id; render(); },
+    { class: `pequeno ${sel === id ? 'primario' : ''}`, 'aria-pressed': sel === id });
+  return [tipos.length > 1 || sel ? h('div', { class: 'barra filtro-tipos', role: 'group', 'aria-label': 'Tipo de criatura' },
+    chip('', 'Todos', lista.length), tipos.map(t => chip(t, nome(t), contagem.get(t)))) : null, filtrada];
+}
+
+// Estágio mostrado de início: o 1º (a planilha do autor descreve cada estágio por inteiro); "Base" continua na lista.
+export const estagioInicial = m => m.estagios?.[0]?.numero ?? null;
+export const urlImagemMonstro = (m, estagio = null) => (estagio != null ? imagemDeLink(estagio.imagem) : null) || estado.campanha.imagensMonstros?.[m.nome] || imagemDeLink(m.imagem)
+  || imagemDeLink(m.estagios?.find(e => e.imagem)?.imagem) || null;
 export function miniaturaMonstro(m, estagio = null) {
   const url = urlImagemMonstro(m, estagio);
-  return h('span', { class: 'mini-monstro', 'aria-hidden': 'true' }, url ? h('img', { src: url, alt: '', loading: 'lazy', referrerpolicy: 'no-referrer' }) : icone('skull'));
+  // Imagem que não abre (link do Drive sem "Qualquer pessoa com o link"): fica o ícone.
+  return h('span', { class: 'mini-monstro', 'aria-hidden': 'true' }, url ? h('img', { src: url, alt: '', loading: 'lazy', referrerpolicy: 'no-referrer', onerror: e => e.target.replaceWith(icone('skull')) }) : icone('skull'));
 }
 export const resumoAfinidades = m => (m.afinidades || []).map((a, i) => h('span', { class: `etiqueta afinidade ${i ? '' : 'principal'}`, title: i ? 'Afinidade elementar' : 'Afinidade principal: recebe metade do dano desse elemento' }, a));
 
@@ -179,7 +201,7 @@ function linhaMonstro(m, mestre) {
   const aberto = !!estado.sel[chave];
   return h('li', { class: `monstro-linha ${aberto ? 'aberta' : ''}` },
     h('button', { type: 'button', class: 'monstro-resumo', 'aria-expanded': aberto, onclick: () => { estado.sel[chave] = !aberto; render(); } },
-      miniaturaMonstro(m),
+      miniaturaMonstro(m, m.estagios?.[0] || null),
       h('span', { class: 'monstro-nome' }, h('strong', {}, m.nome), m.raca && m.raca !== m.nome ? h('small', {}, ` ${m.raca}`) : null),
       h('span', { class: 'selo', title: 'Nível de dificuldade (encontros)' }, `ND ${m.dificuldade ?? '—'}`),
       h('span', { class: 'selo', title: 'Pontos de vida' }, icone('heart'), ` ${m.pv ?? 'calc.'}`),
@@ -192,7 +214,7 @@ function linhaMonstro(m, mestre) {
 function fichaMonstro(base, mestre) {
   const sis = estado.sistema;
   const chaveEst = `monstroEstagio:${base.nome}`;
-  const numEst = estado.sel[chaveEst] ?? null;
+  const numEst = chaveEst in estado.sel ? estado.sel[chaveEst] : estagioInicial(base);
   const m = monstroNoEstagio(base, numEst);
   const est = (base.estagios || []).find(e => e.numero === numEst) || null;
   const tipoNome = id => (sis.tiposCriatura || []).find(t => t.id === id)?.nome || null;
@@ -307,7 +329,8 @@ function imagemMonstro(m, mestre, estagio = null) {
     await acao('monstro.imagem', { nome: m.nome, link });
   };
   return [
-    url ? h('img', { class: 'monstro-imagem', src: url, alt: m.nome, loading: 'lazy', referrerpolicy: 'no-referrer' }) : null,
+    url ? h('img', { class: 'monstro-imagem', src: url, alt: m.nome, loading: 'lazy', referrerpolicy: 'no-referrer',
+      onerror: e => e.target.replaceWith(h('p', { class: 'dica' }, icone('image'), ' A imagem não abriu. No Google Drive, compartilhe o arquivo como "Qualquer pessoa com o link".')) }) : null,
     mestre ? h('div', { class: 'barra' }, arquivo,
       botao(url ? 'Trocar imagem' : 'Enviar imagem', () => arquivo.click(), { class: 'pequeno', icone: 'camera' }),
       botao('Colar link', colar, { class: 'pequeno', icone: 'link' }),

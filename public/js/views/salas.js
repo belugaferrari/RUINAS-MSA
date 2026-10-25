@@ -10,7 +10,7 @@ import { painelBatalha, ordemLateral } from './batalha.js';
 import { painelSocial } from './social.js';
 import { prepararTeste } from './dados.js';
 import { buscarMonstros } from '/shared/monstros.js';
-import { miniaturaMonstro, resumoAfinidades } from './livros.js';
+import { miniaturaMonstro, resumoAfinidades, filtroTipos, estagioInicial } from './livros.js';
 
 const TITULOS = { social: 'Sala Social', batalha: 'Campo de Batalha' };
 const ICONES_SALA = { social: 'drama', batalha: 'swords' };
@@ -174,19 +174,19 @@ function adicionarMonstro() {
   const sis = estado.sistema;
   const termo = estado.sel['busca:addMonstro'] || '';
   const todos = !!estado.sel.addMonstroTodos;
-  const lista = termo.trim() || todos ? buscarMonstros(sis.monstros, termo) : [];
+  const [filtro, lista] = termo.trim() || todos ? filtroTipos('campo', buscarMonstros(sis.monstros, termo)) : [null, []];
   const mostra = lista.slice(0, todos && !termo.trim() ? 200 : 12);
   const linha = m => {
     const chaveEst = `addMonstroEst:${m.nome}`, chaveQtd = `addMonstroQtd:${m.nome}`;
     return h('li', {},
-      miniaturaMonstro(m),
+      miniaturaMonstro(m, m.estagios?.[0] || null),
       h('span', { class: 'monstro-nome' }, h('strong', {}, m.nome), h('small', {}, ` ND ${m.dificuldade ?? '—'} · PV ${m.pv ?? 'calc.'} `), h('span', { class: 'afinidades' }, resumoAfinidades(m))),
       m.estagios?.length ? selecao([{ valor: '', rotulo: 'Base' }, ...m.estagios.map(e => ({ valor: String(e.numero), rotulo: `Estágio ${e.numero}${e.nome ? ` · ${e.nome}` : ''}` }))],
-        estado.sel[chaveEst] ?? '', v => { estado.sel[chaveEst] = v; }, { 'aria-label': `Estágio de ${m.nome}` }) : null,
+        estado.sel[chaveEst] ?? String(estagioInicial(m) ?? ''), v => { estado.sel[chaveEst] = v; }, { 'aria-label': `Estágio de ${m.nome}` }) : null,
       h('input', { type: 'number', min: 1, max: 20, class: 'curto', value: estado.sel[chaveQtd] || 1, 'aria-label': `Quantos ${m.nome}`, title: 'Quantos',
         onchange: e => { estado.sel[chaveQtd] = Math.max(1, parseInt(e.target.value, 10) || 1); } }),
       botao('Pôr no campo', async () => {
-        const r = await acao('monstro.adicionar', { nome: m.nome, estagio: estado.sel[chaveEst] || null, quantidade: estado.sel[chaveQtd] || 1 });
+        const r = await acao('monstro.adicionar', { nome: m.nome, estagio: (estado.sel[chaveEst] ?? String(estagioInicial(m) ?? '')) || null, quantidade: estado.sel[chaveQtd] || 1 });
         aviso(`${r.ids.length > 1 ? `${r.ids.length}× ` : ''}${m.nome} no Campo de Batalha.`);
       }, { class: 'pequeno primario', icone: 'swords' }));
   };
@@ -196,6 +196,7 @@ function adicionarMonstro() {
       h('label', { class: 'busca' }, icone('search'), h('input', { type: 'search', placeholder: 'Nome aproximado, raça, afinidade, lugar…', 'data-key': 'busca:addMonstro', value: termo,
         'aria-label': 'Buscar monstro', oninput: e => { estado.sel['busca:addMonstro'] = e.target.value; render(); } })),
       botao(todos ? 'Esconder a lista' : `Ver a lista (${sis.monstros.length})`, () => { estado.sel.addMonstroTodos = !todos; render(); }, { class: 'pequeno', icone: 'list-ordered' })),
+    filtro,
     termo.trim() && !lista.length ? h('p', { class: 'dica' }, 'Nenhum monstro parecido. Tente outra palavra.') : null,
     mostra.length ? h('ul', { class: 'add-monstro-resultados' }, mostra.map(linha)) : null,
     lista.length > mostra.length ? h('p', { class: 'dica' }, `Mostrando ${mostra.length} de ${lista.length}. Digite mais para filtrar.`) : null);
