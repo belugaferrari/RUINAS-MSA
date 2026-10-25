@@ -86,7 +86,7 @@ function quadroPersonagem(p, meus, chave, mestre, participantes) {
   const defesa = (rot, valor, titulo, idDefesa = null) => {
     const op = pend && idDefesa ? opcoes.find(o => (idDefesa === 'armada' ? o.id.startsWith('armada:') : o.id === idDefesa)) : null;
     if (op) {
-      const total = defesaDoAlvo(p, armaPend, sis, { escolha: op.id, cobertura: pend.opcoes.cobertura, area: pend.area }).total;
+      const total = defesaDoAlvo(p, armaPend, sis, { escolha: op.id, area: pend.area }).total;
       return h('button', { type: 'button', class: 'defesa escolher', title: op.nota || `Defender com ${op.nome}`, onclick: () => defender(op.id) },
         h('small', {}, rot), h('strong', {}, total));
     }
@@ -305,7 +305,7 @@ function quadroAtaques(p, participantes, mestre) {
     if (sel.varios) {
       if (varios.length < 2) throw new Error('Marque pelo menos dois alvos em "Vários alvos" (Opções do ataque).');
       const rv = await acao('combate.atacarVarios', { atacante: p.id, alvos: varios, opcoes: { ...opcoesGerais(p, mestre), armaUid: uid } });
-      if (estado.sel.ataque) Object.assign(estado.sel.ataque, { sacrificio: false, cargaNucleo: false, investida: null, doisAtaques: false });
+      if (estado.sel.ataque) Object.assign(estado.sel.ataque, { sacrificio: false, cargaNucleo: false, investida: null, doisAtaques: false, mira: false });
       const resumo = rv.resultados.map(x => `${personagemPorId(x.alvo)?.nome || '?'}: ${x.tipo === 'ataque' ? x.texto : x.tipo === 'barrado' ? 'não atacou (Civilizados)' : 'aguardando a defesa'}`);
       aviso(`${p.nome} ataca ${varios.length} alvos — ${resumo.join(' · ')}`);
       if (rv.excesso) aviso(`Atenção: ${rv.excesso}.`, 'erro');
@@ -314,7 +314,7 @@ function quadroAtaques(p, participantes, mestre) {
     if (!alvo) throw new Error('Escolha o alvo (clique no cartão dele no campo).');
     const doisAtaques = !!estado.sel.ataque?.doisAtaques;
     const r = await acao('combate.atacar', { atacante: p.id, alvo, opcoes: { ...opcoesGerais(p, mestre), armaUid: uid } });
-    if (estado.sel.ataque) Object.assign(estado.sel.ataque, { sacrificio: false, cargaNucleo: false, investida: null, doisAtaques: false });
+    if (estado.sel.ataque) Object.assign(estado.sel.ataque, { sacrificio: false, cargaNucleo: false, investida: null, doisAtaques: false, mira: false });
     if (doisAtaques) aviso('Agora ataque com a arma da outra mão (não gasta outra ação).');
     if (r.excesso) aviso(`Atenção: ${r.excesso}.`, 'erro');
     if (r.tipo === 'barrado') aviso(r.texto, 'erro');
@@ -490,8 +490,11 @@ function opcoesAtaque(p, mestre, outros = []) {
       caixa('elevado', 'Terreno elevado'),
       caixa('area', 'Ataque em área', true),
       caixa('varios', 'Vários alvos', true),
-      caixa('cobertura', 'Alvo em cobertura (+30, tiro)'),
-      p.tipo === 'pj' ? caixa('sacrificio', 'Sacrifício (+10%, D6 de vida)') : null,
+      caixa('cobertura', 'Alvo com cobertura parcial (−30% no ataque a distância)'),
+      // Mira: gasta a ação de movimento (Instável, com SAN abaixo de 16, não pode mirar).
+      p.sanidade && p.sanidade.atual < 16 ? null : caixa('mira', 'Mira (+30%, gasta a ação de movimento)'),
+      // Sacrifício: só humanos (autor, 25/10).
+      tipoCriatura(p) === 'humanoide' ? caixa('sacrificio', 'Sacrifício (+10%, D6 de vida)') : null,
       // Uma arma em cada mão: dois ataques no turno (o segundo, com a outra mão, não gasta outra ação).
       (p.itens || []).filter(i => i.equipado && i.slot === 'maos' && i.tipo === 'arma' && (i.ocupa ?? 1) < 2).length >= 2
         ? h('span', { title: temHabilidade(p, estado.sistema, 'Ambidestria') ? 'Ambidestria: o primeiro sem ônus, o segundo −20%' : 'Mão hábil −20%, mão inábil −40%' },

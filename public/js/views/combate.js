@@ -3,7 +3,7 @@
 import { h, botao, selecao, aviso, icone, titulo, confirmar, pedirTexto, numeroPv } from '../ui.js';
 import { estado, personagemPorId, render } from '../estado.js';
 import { acao } from '../api.js';
-import { derivados } from '/shared/regras.js';
+import { derivados, tipoCriatura } from '/shared/regras.js';
 import { armasDisponiveis, opcoesDefesa, defesaDoAlvo, ipDe, resistenciaManipulacao, liberdadeDeHumor } from '/shared/combate.js';
 import { prepararTeste } from './dados.js';
 import { controladoNaSala } from './batalha.js';
@@ -97,7 +97,7 @@ export function pendentesView(mestre, participantes = []) {
       if (escolhe) {
         const arma = { uid: pd.opcoes.armaUid || 'desarmado', alcance: pd.alcance };
         botoes = opcoesDefesa(b, arma, sis, { area: pd.area }).map(o => {
-          const total = defesaDoAlvo(b, arma, sis, { escolha: o.id, cobertura: pd.opcoes.cobertura, area: pd.area }).total;
+          const total = defesaDoAlvo(b, arma, sis, { escolha: o.id, area: pd.area }).total;
           return botao(`${o.nome} (${total})`, () => acao('combate.defender', { id: pd.id, defesa: o.id }).then(r => aviso(`${r.autor} ${r.rotulo}: ${r.texto}`, r.sucesso ? 'erro' : 'ok')),
             { class: o.id === 'nenhuma' ? 'pequeno' : 'pequeno primario', icone: o.id === 'nenhuma' ? 'x' : 'shield', title: o.nota || `Defender com ${o.nome}` });
         });
@@ -329,8 +329,8 @@ export function alvoDe(p, sala, participantes) {
 // Opções do formulário "Opções do ataque" (surpresa, localizado…) valem para os botões dos cartões.
 export function opcoesGerais(p, mestre) {
   const sel = estado.sel.ataque || {};
-  const op = { localizado: sel.localizado, surpresa: sel.surpresa, elevado: sel.elevado, cobertura: sel.cobertura, area: sel.area, doisAtaques: sel.doisAtaques || null };
-  if (p.tipo === 'pj') op.sacrificio = sel.sacrificio;
+  const op = { localizado: sel.localizado, surpresa: sel.surpresa, elevado: sel.elevado, cobertura: sel.cobertura, mira: sel.mira, area: sel.area, doisAtaques: sel.doisAtaques || null };
+  if (tipoCriatura(p) === 'humanoide') op.sacrificio = sel.sacrificio;
   if (sel.cargaNucleo) op.cargaNucleo = true;
   if (sel.investida != null) op.investida = sel.investida;
   if (mestre) Object.assign(op, { vantagem: sel.vantagem, desvantagem: sel.desvantagem, mod: sel.mod, danoLivre: sel.danoLivre || null });
@@ -356,7 +356,7 @@ export function acoesCartaoBatalha(p, participantes, mestre) {
     }), estado.sel[chaveArma], v => { estado.sel[chaveArma] = v; render(); }, { 'aria-label': `Arma de ${p.nome}` }),
     botao('Atacar', async () => {
       const r = await acao('combate.atacar', { atacante: p.id, alvo, opcoes: { ...opcoesGerais(p, mestre), armaUid: estado.sel[chaveArma] } });
-      if (estado.sel.ataque) estado.sel.ataque.sacrificio = false;
+      if (estado.sel.ataque) Object.assign(estado.sel.ataque, { sacrificio: false, mira: false });
       if (r.tipo === 'barrado') aviso(r.texto, 'erro');
       if (r.excesso) aviso(`Atenção: ${r.excesso}.`, 'erro');
     else if (r.tipo === 'ataque') aviso(`${r.autor} ${r.rotulo}: ${r.texto}`, r.sucesso ? 'ok' : 'erro');

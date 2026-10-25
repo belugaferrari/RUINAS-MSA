@@ -1,5 +1,6 @@
 // Combate e regras sociais automatizadas (Livro MSS). Só valem quando o sistema da campanha liga
 // "modulos.combate" / "modulos.social". Escolhas provisórias estão em conteudo/sistemas/PENDENCIAS.md.
+import { ladoNoMapa } from './monstros.js';
 import { rolarDado, derivados, ipContraDano, listaHabilidades, vantagemPorHabilidade, tipoCriatura, subirPassos, temHabilidade, regraDaHabilidade, danoDasHabilidades, efeitosHabilidade, modoHabilidade, perderPv, chaveHabilidade } from './regras.js';
 
 const d100 = rng => 1 + Math.floor(rng() * 100);
@@ -123,7 +124,7 @@ export function opcoesDefesa(alvo, arma, sistema, { area = false } = {}) {
 // Contra tiro (a distância, fora de área) a dificuldade é 50 + 5 × nível do alvo. Cobertura parcial +30 só contra ataques a distância.
 // Defesa surpresa (alvo pego de surpresa, não escolhe defesa): só a base da Esquiva (50) contra ataque físico,
 // e só nível × 5 contra ataque a distância.
-export function defesaDoAlvo(alvo, arma, sistema, { escolha = 'nenhuma', cobertura = false, area = false, surpresa = false, atacante = null } = {}) {
+export function defesaDoAlvo(alvo, arma, sistema, { escolha = 'nenhuma', area = false, surpresa = false, atacante = null } = {}) {
   const cfg = sistema.combate;
   const opcoes = opcoesDefesa(alvo, arma, sistema, { area });
   const esc = surpresa ? { id: 'nenhuma', nome: 'Surpresa' } : opcoes.find(o => o.id === escolha);
@@ -136,7 +137,8 @@ export function defesaDoAlvo(alvo, arma, sistema, { escolha = 'nenhuma', cobertu
       ? [{ nome: 'base', valor: cfg.distancia.base }, nivel]
       : [{ nome: esc.nome, valor: esc.valor }, { nome: 'base', valor: cfg.defesaPassiva }];
   const caidoDistancia = arma.alcance === 'distancia' && tem(alvo, 'Caído');
-  if (arma.alcance === 'distancia' && (cobertura || caidoDistancia)) partes.push({ nome: 'cobertura parcial', valor: cfg.coberturaParcial });
+  // Caído conta como cobertura parcial contra tiro. A cobertura parcial marcada no ataque entra como −30% no acerto.
+  if (caidoDistancia) partes.push({ nome: 'caído (cobertura parcial)', valor: cfg.coberturaParcial });
   const humor = sistema.modulos?.social ? humorDe(alvo, sistema) : null;
   if (humor?.defesa) partes.push({ nome: humor.nome, valor: humor.defesa });
   // Habilidades do alvo que somam defesa (algumas só contra certos tipos de criatura, ex.: Mente cibernética contra drones).
@@ -163,7 +165,7 @@ export function d6Atual(pv) {
 }
 
 // Resolve um ataque completo: acerto × defesa, dano − IP, efeito pelo DS. Não altera nada: devolve o que aplicar.
-// op: { armaUid, danoLivre, localizado, maos: { nome, valor } (posto pelo servidor), sacrificio, surpresa, elevado, cobertura, area, vantagem, desvantagem, mod }
+// op: { armaUid, danoLivre, localizado, maos: { nome, valor } (posto pelo servidor), sacrificio, surpresa, elevado, cobertura, mira, area, vantagem, desvantagem, mod }
 // defesa: id escolhido pelo defensor (ver opcoesDefesa).
 export function resolverAtaque(atacante, alvo, sistema, op = {}, defesaId = 'nenhuma', rng = Math.random) {
   const cfg = sistema.combate;
@@ -183,7 +185,12 @@ export function resolverAtaque(atacante, alvo, sistema, op = {}, defesaId = 'nen
   const add = (nome, valor) => valor && mods.push({ nome, valor });
   add('localizado', op.localizado ? cfg.localizado.mod : 0);
   if (op.maos) add(op.maos.nome, op.maos.valor || 0);
+  // Sacrifício: só humanos (autor, 25/10).
+  if (tipoCriatura(atacante) !== 'humanoide') delete op.sacrificio;
   add('Sacrifício', op.sacrificio ? cfg.sacrificio.mod : 0);
+  // Alvo com cobertura parcial: −30% no ataque a distância (livro). Mira (gasta a ação de movimento): +30%.
+  add('cobertura parcial do alvo', op.cobertura && arma.alcance === 'distancia' ? -(cfg.coberturaParcial ?? 30) : 0);
+  add('Mira', op.mira ? cfg.mira ?? 30 : 0);
   add('humor', modHumorTestes(atacante, sistema));
   add('modificador', Math.max(-100, Math.min(100, parseInt(op.mod, 10) || 0)));
   // Ataque especial usado agora (habilidade que não está ligada): o % de acerto dela entra só neste ataque.
@@ -211,7 +218,7 @@ export function resolverAtaque(atacante, alvo, sistema, op = {}, defesaId = 'nen
   if (hA?.desvantagemAtaque) motivosD.push(hA.nome);
   const modo = modoRolagem(motivosV.length > 0, motivosD.length > 0);
 
-  const defesa = defesaDoAlvo(alvo, arma, sistema, { escolha: defesaId, cobertura: !!op.cobertura, area: !!op.area, surpresa: !!op.surpresa, atacante });
+  const defesa = defesaDoAlvo(alvo, arma, sistema, { escolha: defesaId, area: !!op.area, surpresa: !!op.surpresa, atacante });
   const teste = testeContra(acao, defesa.total, sistema, { modo, rng });
   const r = {
     arma: arma.nome, pericia, acao, mods, defesa, ...teste, motivosVantagem: motivosV, motivosDesvantagem: motivosD,
@@ -312,11 +319,15 @@ export function gastarRecurso(p, sistema, id, qtd = 1) {
 
 // "Raça" para habilidades como Quebra-Hordas: o campo Raça da ficha (autor, 21/10). Sem raça preenchida, não combina com ninguém.
 export const racaDe = p => String(p?.raca || '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase() || null;
-// Distância no mapa em metros (diagonal conta 1 quadrado de 1,5 m); null se algum não tem peão.
+// Distância no mapa em metros (diagonal conta 1 quadrado de 1,5 m); null se algum não tem peão. Criatura grande ocupa
+// vários quadrados (2×2, 3×3): conta do quadrado dela mais perto do outro.
 export function distanciaPecas(c, idA, idB) {
   const a = c.mapa?.pecas?.[idA], b = c.mapa?.pecas?.[idB];
   if (!a || !b) return null;
-  return Math.max(Math.abs(a.col - b.col), Math.abs(a.lin - b.lin)) * 1.5;
+  const pa = (c.personagens || []).find(x => x.id === idA), pb = (c.personagens || []).find(x => x.id === idB);
+  const la = ladoNoMapa(pa), lb = ladoNoMapa(pb);
+  const vao = (x, lx, y, ly) => Math.max(0, y - (x + lx - 1), x - (y + ly - 1));
+  return Math.max(vao(a.col, la, b.col, lb), vao(a.lin, la, b.lin, lb)) * 1.5;
 }
 
 // Aplica o resultado no alvo: PV, desmaio, morte e marcador do efeito de dano.

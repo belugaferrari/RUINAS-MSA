@@ -4,7 +4,7 @@ import { sistema, idSistema } from './sistema.js';
 import { resolverAtaque, aplicarAtaque, armasDisponiveis, opcoesDefesa, sobrevida, rolarIniciativa, resolverManipulacao, modHumorTestes, humorDe, espectroDe, humorAparente, empatiaNatural, liberdadeDeHumor, modoRolagem, modoHumorTeste, recursoDe, gastarRecurso, racaDe, distanciaPecas, usosRestantes, gastarUso, testeContra, ipContra } from '../shared/combate.js';
 import { sincronizarEfeitos, passarTurnoEfeitos, efeitosAoAgir, cargaNoTurno, descansar } from '../shared/efeitos.js';
 import { fichasDeTeste, relatorioFicha, kitDeTeste } from '../shared/fichasTeste.js';
-import { monstroNoEstagio, textoDeslocamentos, textoND } from '../shared/monstros.js';
+import { monstroNoEstagio, textoDeslocamentos, textoND, ladoNoMapa } from '../shared/monstros.js';
 import { passarNecessidades, comer, beber, dormir, rolarCaos, climaDoDia, descreverRelogio, fimDoCombate } from '../shared/tempo.js';
 import { podeSeduzir, itemAberto, itemVisivel, xpParaSubir, novaFicha, podeEquipar, rolarDado, rolarAtributosCriacao, testeDMil, gerarEncontro, derivados, problemasFicha, LIMITE_SALA, desgastarItem, repararItem, durabilidadeDe, listaHabilidades, vantagemPorHabilidade, temHabilidade, regraDaHabilidade, tipoCriatura, chaveHabilidade, TIPOS_ACAO, nomeAcao, acoesDaHabilidade, dadosDaHabilidade, ehAtaqueEspecial, acaoDoAtaqueEspecial, perderPv, textoPv, duracaoDaHabilidade, podeRepetir, textoDuracao } from '../shared/regras.js';
 
@@ -145,6 +145,30 @@ export function entrarNaCampanha(c, user, area) {
 // grade.colunas = quantos quadrados cabem na largura do mapa (o mestre aumenta/diminui); ox/oy deslocam a grade (fração de quadrado).
 function novoMapa() {
   return { imagemId: null, grade: { colunas: 20, ox: 0, oy: 0, visivel: true }, pecas: {} };
+}
+
+// Primeiro lugar livre no mapa para um peão de lado×lado quadrados (criatura grande ocupa 2×2 ou 3×3), linha a linha.
+function lugarLivre(c, lado = 1, ignorar = null) {
+  const ocupado = new Set();
+  for (const [id, x] of Object.entries(c.mapa?.pecas || {})) {
+    if (id === ignorar) continue;
+    const l = ladoNoMapa(c.personagens.find(p => p.id === id));
+    for (let i = 0; i < l; i++) for (let j = 0; j < l; j++) ocupado.add(`${x.col + i}:${x.lin + j}`);
+  }
+  const colunas = Math.max(lado, c.mapa?.grade?.colunas || 20);
+  for (let lin = 0; lin < 999; lin++) {
+    for (let col = 0; col + lado <= colunas; col++) {
+      let cabe = true;
+      for (let i = 0; i < lado && cabe; i++) for (let j = 0; j < lado && cabe; j++) if (ocupado.has(`${col + i}:${lin + j}`)) cabe = false;
+      if (cabe) return { col, lin };
+    }
+  }
+  return { col: 0, lin: 0 };
+}
+// Quem entra no Campo de Batalha vai sozinho para o mapa (se o mestre já escolheu um mapa), no primeiro lugar livre.
+function porNoMapa(c, p) {
+  if (!c.mapa?.imagemId || c.mapa.pecas?.[p.id]) return;
+  c.mapa.pecas[p.id] = lugarLivre(c, ladoNoMapa(p));
 }
 
 // Só o mestre vê as marcações secretas (armadilhas…) e os peões ocultos (NPC fantasma); jogadores e Suporte não recebem nada deles.
@@ -1260,6 +1284,16 @@ export const acoes = {
     c.mapa.pecas[id] = { ...antes, col: Math.max(0, Math.min(999, parseInt(col, 10) || 0)), lin: Math.max(0, Math.min(999, parseInt(lin, 10) || 0)) };
   },
 
+  // Mestre: põe no mapa, no primeiro lugar livre que caiba o tamanho de cada um ("Pôr no mapa", "Pôr os do Campo").
+  'mapa.por'(c, { ids }, ctx) {
+    exigirMestre(ctx);
+    c.mapa ||= novoMapa();
+    for (const id of [].concat(ids || []).slice(0, LIMITE_SALA * 3)) {
+      const p = personagem(c, id);
+      if (!c.mapa.pecas[id]) c.mapa.pecas[id] = lugarLivre(c, ladoNoMapa(p));
+    }
+  },
+
   // NPC fantasma: o peão some para jogadores e Suporte (o mestre continua vendo, meio transparente).
   'mapa.ocultar'(c, { id, oculto }, ctx) {
     exigirMestre(ctx);
@@ -1411,7 +1445,7 @@ export const acoes = {
     if (s.participantes.length >= LIMITE_SALA) throw erro(`A sala já tem ${LIMITE_SALA} integrantes.`);
     s.participantes.push(id);
     if (nome === 'social' && s.testaram) s.testaram = s.testaram.filter(x => x !== id);
-    if (nome === 'batalha') garantirCombate(c);
+    if (nome === 'batalha') { porNoMapa(c, p); garantirCombate(c); }
   },
 
   'sala.remover'(c, { sala: nome, id }, ctx) {
@@ -1622,7 +1656,13 @@ export const acoes = {
     }
     const foraDoTurno = cbA && cbA.ordem[cbA.vez]?.id !== a.id;
     const tipoAcao = especial ? (foraDoTurno ? 'reacao' : acaoDoAtaqueEspecial(a, sis, especial)) : foraDoTurno ? 'reacao' : 'principal';
-    const excesso = op.extra || op.multiplo || segundaMao ? null : gastarAcao(c, a, tipoAcao);
+    // Mira: +30% neste ataque, gastando a ação de movimento. Instável (SAN abaixo de 16) não pode mirar (livro).
+    if (op.mira && a.sanidade && a.sanidade.atual < 16) throw erro(`${a.nome} está Instável (SAN abaixo de 16): não pode mirar.`);
+    let excesso = op.extra || op.multiplo || segundaMao ? null : gastarAcao(c, a, tipoAcao);
+    if (op.mira && !op.multiplo) {
+      const m = gastarAcao(c, a, 'movimento');
+      if (m) excesso = [excesso, m].filter(Boolean).join('; ');
+    }
     agressaoSubita(c, a, b, sis);
     const notasAgir = efeitosAoAgir(a, sis);
     if (notasAgir.length) registrar(s.log, { autor: a.nome, rotulo: 'Efeitos', texto: notasAgir.join(' · ') });
@@ -2250,6 +2290,7 @@ export const acoes = {
       if (n > 1) p.nome = `${p.nome} ${i + 1}`;
       c.personagens.push(p);
       s.participantes.push(p.id);
+      porNoMapa(c, p);
       ids.push(p.id);
     }
     garantirCombate(c);
@@ -2302,6 +2343,7 @@ export const acoes = {
       }
       c.personagens.push(p);
       s.participantes.push(p.id);
+      porNoMapa(c, p);
       nomes.push(p.nome);
     }
     registrar(s.log, { autor: 'Mestre', rotulo: `Encontro aleatório (dificuldade ${textoND(soma)}/${textoND(limite)})`, texto: nomes.join(', ') });

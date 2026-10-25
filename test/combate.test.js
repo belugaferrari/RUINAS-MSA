@@ -54,10 +54,11 @@ test('defesa escolhida pelo defensor: o que vale contra cada ataque', () => {
   assert.deepEqual(ids(tiro, { area: true }), ['evasao', 'nenhuma']);
   const esquiva = 10 + 2 * (10 - 5); // pontos + bônus pericial de AGI 10
   assert.equal(defesaDoAlvo(alvo, faca, mss, { escolha: 'esquiva' }).total, esquiva + 50);
-  assert.equal(defesaDoAlvo(alvo, faca, mss, { escolha: 'esquiva', cobertura: true }).total, esquiva + 50, 'cobertura só contra distância');
   alvo.nivel = 3;
   assert.equal(defesaDoAlvo(alvo, tiro, mss).total, 50 + 5 * 3, 'tiro: 50 + 5 × nível do alvo');
-  assert.equal(defesaDoAlvo(alvo, tiro, mss, { cobertura: true }).total, 50 + 15 + 30);
+  alvo.marcadores = ['Caído'];
+  assert.equal(defesaDoAlvo(alvo, tiro, mss).total, 50 + 15 + 30, 'caído: cobertura parcial contra tiro');
+  alvo.marcadores = [];
   assert.throws(() => defesaDoAlvo(alvo, tiro, mss, { escolha: 'esquiva' }), /não vale/);
 });
 
@@ -382,4 +383,20 @@ test('defesa surpresa: só a base da Esquiva no corpo a corpo; só nível × 5 c
   const tiro = resolverAtaque(a, b, mss, { armaUid: 'p', surpresa: true }, 'nenhuma');
   assert.equal(tiro.nd, 15);
   assert.equal(defesaDoAlvo(b, { uid: 'p', alcance: 'distancia' }, mss).total, 50 + 15);
+});
+
+test('cobertura parcial: −30% no ataque a distância; Mira: +30%; Sacrifício só para humanos', () => {
+  const a = lutador('Atirador');
+  a.itens = [{ uid: 'p', nome: 'Pistola', tipo: 'arma', equipado: true, dano: '1d6', pericia: 'armas-de-fogo.pistolas', tipoDano: 'Perfuração', alcance: 'distancia' },
+    { uid: 'f', nome: 'Faca', tipo: 'arma', equipado: true, dano: '1d4', pericia: 'arma-branca.laminas-curtas', tipoDano: 'Corte', alcance: 'corpo' }];
+  const b = lutador('Alvo');
+  const mod = (r, nome) => r.mods.find(m => m.nome === nome)?.valor ?? 0;
+  const tiro = resolverAtaque(a, b, mss, { armaUid: 'p', cobertura: true, mira: true }, 'nenhuma', seq(0.5));
+  assert.equal(mod(tiro, 'cobertura parcial do alvo'), -30);
+  assert.equal(mod(tiro, 'Mira'), 30);
+  assert.equal(mod(resolverAtaque(a, b, mss, { armaUid: 'f', cobertura: true }, 'nenhuma', seq(0.5)), 'cobertura parcial do alvo'), 0, 'cobertura só contra tiro');
+  assert.equal(mod(resolverAtaque(a, b, mss, { armaUid: 'f', sacrificio: true }, 'nenhuma', seq(0.5)), 'Sacrifício'), 10);
+  const fera = lutador('Fera', { criatura: true, tipoCriatura: 'besta' });
+  fera.itens = a.itens;
+  assert.equal(mod(resolverAtaque(fera, b, mss, { armaUid: 'f', sacrificio: true }, 'nenhuma', seq(0.5)), 'Sacrifício'), 0, 'não humano não usa Sacrifício');
 });

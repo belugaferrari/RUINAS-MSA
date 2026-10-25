@@ -1,7 +1,7 @@
 // Aba Mapa: a imagem, GIF ou vídeo escolhido pelo mestre, centralizado, com a grade de RPG por cima
 // (cada quadrado = 1,5 m) e os peões dos personagens. O mestre escolhe o mapa e ajusta a grade;
 // mestre e Suporte arrastam os peões; os jogadores só veem.
-import { nomeDeslocamento } from '/shared/monstros.js';
+import { nomeDeslocamento, ladoNoMapa } from '/shared/monstros.js';
 import { h, botao, selecao, aviso, icone, titulo, vazio, passador, pedirTexto, janela } from '../ui.js';
 import { estado, render, personagemPorId, meusPersonagens } from '../estado.js';
 import { acao } from '../api.js';
@@ -243,7 +243,7 @@ function peao(x, g, mover, sel) {
   // Quem só vê (jogadores) recebe uma figura, não um botão.
   const el = h(mover ? 'button' : 'span', {
     type: mover ? 'button' : null, role: mover ? null : 'img', class: `peao ${p.tipo} ${sel === p.id ? 'escolhido' : ''} ${semPv ? 'sem-pv' : ''} ${x.oculto ? 'oculto' : ''} ${mov.nivel ? `mov-${mov.nivel}` : ''}`,
-    'data-pid': p.id, style: { '--col': x.col, '--lin': x.lin }, title: `${p.nome}${x.oculto ? ' (invisível para os jogadores)' : ''}${avisoMov}`, 'aria-label': `${p.nome} (coluna ${x.col + 1}, linha ${x.lin + 1})${avisoMov}`,
+    'data-pid': p.id, style: { '--col': x.col, '--lin': x.lin, '--lado': ladoNoMapa(p) }, title: `${p.nome}${x.oculto ? ' (invisível para os jogadores)' : ''}${avisoMov}`, 'aria-label': `${p.nome} (coluna ${x.col + 1}, linha ${x.lin + 1})${avisoMov}`,
     onclick: mover ? e => {
       e.stopPropagation();
       if (e.currentTarget.dataset.arrastou) { delete e.currentTarget.dataset.arrastou; return; }
@@ -253,12 +253,12 @@ function peao(x, g, mover, sel) {
   }, mov.nivel ? h('span', { class: 'peao-restricao', 'aria-hidden': 'true' }, h('span', { class: 'cadeado' }, icone(mov.nivel === 'preso' ? 'lock' : 'footprints'))) : null,
     h('span', { class: 'rosto' }, p.foto ? h('img', { src: p.foto, alt: '', draggable: 'false' }) : p.nome.slice(0, 1)),
     h('small', { class: 'peao-nome' }, p.nome));
-  if (mover) arrastavel(el, p, g);
+  if (mover) arrastavel(el, p, g, ladoNoMapa(p));
   return el;
 }
 
 // Arrastar com o dedo ou o mouse: o peão segue o ponteiro e, ao soltar, vai para o quadrado embaixo dele.
-function arrastavel(el, p, g) {
+function arrastavel(el, p, g, lado = 1) {
   let inicio = null;
   el.addEventListener('pointerdown', e => {
     inicio = { x: e.clientX, y: e.clientY, moveu: false };
@@ -282,7 +282,10 @@ function arrastavel(el, p, g) {
     if (!moveu) return;
     el.style.transform = '';
     const quadro = el.closest('.mapa-quadro');
-    const { col, lin } = quadradoDoPonto(quadro, g, e.clientX, e.clientY);
+    // Criatura grande: o ponteiro fica no meio dela; o canto (col, lin) é o quadrado de cima à esquerda.
+    const q = quadradoDoPonto(quadro, g, e.clientX, e.clientY);
+    const meio = Math.floor((lado - 1) / 2);
+    const col = Math.max(0, q.col - meio), lin = Math.max(0, q.lin - meio);
     el.dataset.arrastou = '1';
     acao('mapa.mover', { id: p.id, col, lin }).catch(err => aviso(err.message, 'erro'));
   };
@@ -317,16 +320,11 @@ function controlesMestre(mapa) {
 function colocarNoMapa(mapa) {
   const c = estado.campanha;
   const fora = c.personagens.filter(p => !mapa.pecas?.[p.id]);
-  const ocupado = new Set(Object.values(mapa.pecas || {}).map(x => `${x.col}:${x.lin}`));
-  const livre = () => {
-    for (let lin = 0; ; lin++) for (let col = 0; col < mapa.grade.colunas; col++) {
-      if (!ocupado.has(`${col}:${lin}`)) { ocupado.add(`${col}:${lin}`); return { col, lin }; }
-    }
-  };
-  const por = id => acao('mapa.mover', { id, ...livre() });
+  // O servidor acha o lugar livre que caiba o tamanho (criatura grande ocupa 2×2 ou 3×3).
+  const por = ids => acao('mapa.por', { ids });
   const doCampo = c.salas.batalha.participantes.filter(id => !mapa.pecas?.[id]);
   return h('div', { class: 'mapa-colocar' },
     fora.length ? selecao([{ valor: '', rotulo: '+ pôr no mapa…' }, ...fora.map(p => ({ valor: p.id, rotulo: `${p.nome}${p.tipo === 'npc' ? ' (NPC)' : ''}` }))], '',
       v => v && por(v).catch(e => aviso(e.message, 'erro')), { 'aria-label': 'Pôr personagem no mapa' }) : null,
-    doCampo.length ? botao(`Pôr os ${doCampo.length} do Campo de Batalha`, async () => { for (const id of doCampo) await por(id); }, { class: 'pequeno', icone: 'swords' }) : null);
+    doCampo.length ? botao(`Pôr os ${doCampo.length} do Campo de Batalha`, () => por(doCampo), { class: 'pequeno', icone: 'swords' }) : null);
 }

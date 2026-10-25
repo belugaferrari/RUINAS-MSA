@@ -25,6 +25,7 @@
   "_aviso": "Automação do Campo de Batalha a partir do Livro MSS. A defesa é escolhida pelo defensor. Escolhas provisórias em PENDENCIAS.md.",
   "defesaPassiva": 50,
   "coberturaParcial": 30,
+  "mira": 30,
   "localizado": {
    "mod": -30,
    "dano": "1d6"

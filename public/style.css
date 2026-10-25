@@ -919,9 +919,9 @@ button.afinidade { padding: .15em .4em; min-height: 0; justify-content: center; 
   background-image: linear-gradient(to right, rgba(255, 255, 255, .38) 1px, transparent 1px), linear-gradient(to bottom, rgba(255, 255, 255, .38) 1px, transparent 1px);
   background-size: var(--cel) var(--cel); background-position: calc(var(--ox) * var(--cel)) calc(var(--oy) * var(--cel)); }
 .mapa-quadro.movel { cursor: crosshair; }
-.peao { position: absolute; left: calc((var(--col) + var(--ox)) * var(--cel)); top: calc((var(--lin) + var(--oy)) * var(--cel)); width: var(--cel); height: var(--cel);
+.peao { position: absolute; left: calc((var(--col) + var(--ox)) * var(--cel)); top: calc((var(--lin) + var(--oy)) * var(--cel)); width: calc(var(--cel) * var(--lado, 1)); height: calc(var(--cel) * var(--lado, 1));
   min-width: 0; min-height: 0; padding: 0; border: 0; background: none; display: grid; place-items: center; transition: left .25s, top .25s; touch-action: none; z-index: 2; }
-.peao .rosto { width: 86%; height: 86%; border-radius: 50%; overflow: hidden; display: grid; place-items: center; font-weight: 800; font-size: calc(var(--cel) * .38);
+.peao .rosto { width: 86%; height: 86%; border-radius: 50%; overflow: hidden; display: grid; place-items: center; font-weight: 800; font-size: calc(var(--cel) * var(--lado, 1) * .38);
   background: #1c1610; color: #fff; border: 2px solid #5b8bd0; box-shadow: 0 2px 6px #000c; }
 .peao.npc .rosto { border-color: #c0392b; }
 .peao .rosto img { width: 100%; height: 100%; object-fit: cover; pointer-events: none; }

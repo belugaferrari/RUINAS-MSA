@@ -96,7 +96,8 @@ test('afinidade principal reduz à metade os tipos ligados a ela; afinidade sem 
   assert.ok(!r2.resistencia);
 });
 
-const { monstroNoEstagio, buscarMonstros, deslocamentosDoTexto, deslocamentosDe } = await import('../shared/monstros.js');
+const { monstroNoEstagio, buscarMonstros, deslocamentosDoTexto, deslocamentosDe, ladoNoMapa } = await import('../shared/monstros.js');
+const C = await import('../shared/combate.js');
 const lula = {
   nome: 'Lula Abissal', raca: 'Lula Abissal', tipoCriatura: 'monstro', tamanho: 'Pequeno', dificuldade: 2, pv: 20, deslocamento: 3,
   deslocamentos: { andar: 3, nadar: 12 }, atributos: { FOR: 10, CONS: 10, AGI: 14, DES: 10, INT: 4, PER: 12, CAR: 4, WILL: 8 },
@@ -193,4 +194,29 @@ test('ND menor que 1: planilha aceita 0,5 e 1/4; o app mostra como fração', as
   const { monstros } = await lerPlanilhaMonstros(Buffer.from(await planilhaMonstros(sis, [{ ...lula, dificuldade: 0.5 }])), sis);
   assert.equal(monstros[0].dificuldade, 0.5);
   assert.equal(textoND(0.5), '1/2'); assert.equal(textoND(0.25), '1/4'); assert.equal(textoND(1.5), '1,5'); assert.equal(textoND(null), '—');
+});
+
+test('monstro no Campo de Batalha vai sozinho para o mapa, com o tamanho do livro (Grande 2×2, Colossal 3×3; menores = 1)', () => {
+  const { distanciaPecas } = C;
+  salvarCatalogoMonstros([{ ...lula, tamanho: 'Grande', estagios: undefined }, { nome: 'Rato', tamanho: 'Miúdo', pv: 3 }, { nome: 'Titã', tamanho: 'Colossal', pv: 300 }], 'teste.xlsx');
+  try {
+    const c = novaCampanha({ id: 'm', name: 'M' }, { nome: 'T', maxJogadores: 2, nivel: 1, sistema: 'mss' });
+    const ctxM = { user: { id: 'm' }, mestre: true };
+    // Sem mapa escolhido, não põe; com mapa, põe no primeiro lugar livre que caiba.
+    const [semMapa] = executar(c, 'monstro.adicionar', { nome: 'Rato' }, ctxM).ids;
+    assert.ok(!c.mapa?.pecas?.[semMapa]);
+    c.mapa = { imagemId: 'x', grade: { colunas: 6, ox: 0, oy: 0, visivel: true }, pecas: {} };
+    const [lula1] = executar(c, 'monstro.adicionar', { nome: lula.nome }, ctxM).ids;
+    const [tita] = executar(c, 'monstro.adicionar', { nome: 'Titã' }, ctxM).ids;
+    const [rato] = executar(c, 'monstro.adicionar', { nome: 'Rato' }, ctxM).ids;
+    assert.deepEqual(c.mapa.pecas[lula1], { col: 0, lin: 0 });
+    assert.deepEqual(c.mapa.pecas[tita], { col: 2, lin: 0 }, 'o 3×3 cabe ao lado do 2×2');
+    assert.deepEqual(c.mapa.pecas[rato], { col: 5, lin: 0 });
+    assert.equal(ladoNoMapa(c.personagens.find(p => p.id === rato)), 1);
+    assert.equal(ladoNoMapa(c.personagens.find(p => p.id === tita)), 3);
+    // Distância conta do quadrado mais perto: o 2×2 (colunas 0–1) e o 3×3 (colunas 2–4) estão colados.
+    assert.equal(distanciaPecas(c, lula1, tita), 1.5);
+    executar(c, 'mapa.por', { ids: [semMapa] }, ctxM);
+    assert.deepEqual(c.mapa.pecas[semMapa], { col: 5, lin: 1 });
+  } finally { voltarMonstrosPadrao(); }
 });

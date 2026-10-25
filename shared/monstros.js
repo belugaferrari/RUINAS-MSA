@@ -157,3 +157,10 @@ export function periciasAcimaDoLimite(m, sistema) {
 // ND pode ser menor que 1 (0,5 = 1/2; 0,25 = 1/4…): mostra como fração quando for uma das comuns.
 const FRACOES = { 0.5: '1/2', 0.25: '1/4', 0.125: '1/8', 0.75: '3/4' };
 export const textoND = nd => (nd == null || nd === '' ? '—' : FRACOES[nd] || String(nd).replace('.', ','));
+
+// Quadrados que a criatura ocupa no mapa (livro, Categorias de Tamanho): Grande e Enorme 2×2; Imenso e Colossal 3×3.
+// Médio e menores ficam com 1 quadrado (os menores aparecem como médios para não ficarem minúsculos — autor, 25/10).
+export function ladoNoMapa(p) {
+  const t = sem(p?.tamanho);
+  return t === 'grande' || t === 'enorme' ? 2 : t === 'imenso' || t === 'colossal' ? 3 : 1;
+}
