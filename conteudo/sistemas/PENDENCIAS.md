@@ -262,7 +262,9 @@ Regras em `conteudo/sistemas/habilidades-regras.json` (automática / ligar / ati
 - Ficha "Base" = a linha da aba Monstros. Ataque/habilidade com a coluna Estágios preenchida só aparece nesses estágios.
 
 ## 25/10 — LEMBRETES DO AUTOR (Livro dos Monstros)
-- [ ] **Rever as perícias de todos os seres** (monstros e animais). O valor da planilha é o investido (como na ficha);
+- [x] (25/10) Perícias de todos os seres refeitas pelo Claude: base + subperícia ≤ 5 + 5 × nível, por estágio; principais no limite,
+      secundárias ~75%, menores ~50% (ataques, defesa pela AGI, deslocamentos, sentidos, caça/furtividade, e as escolhas do autor).
+- [ ] **Conferir as perícias refeitas** (o autor revisa se faz sentido para cada ser) (monstros e animais). O valor da planilha é o investido (como na ficha);
       o limite é base + subperícia ≤ 5 + 5 × nível da criatura (ou do estágio). O app marca "revisar" no Livro
       (só o mestre vê) e avisa ao puxar a planilha. Hoje passam do limite: Abutre, Morcego, Coelho, Coruja, Bode,
       Macaco, Pomba, Sapo Venenoso, Aranha Venenosa, Corvo, Escorpião, Rato, Raposa, Gato, Piranha (todos nível 1).
