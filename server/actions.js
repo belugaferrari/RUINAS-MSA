@@ -519,7 +519,7 @@ function usarHabilidade(c, p, sis, hab, acao = null) {
   return { texto, excesso, ativa: !!dur };
 }
 
-// Kit da ficha de teste (até 1500 créditos do catálogo): entra na mochila e o que tem slot já vai equipado.
+// Kit da ficha de teste (até 3000 créditos do catálogo): entra na mochila e o que tem slot já vai equipado.
 function darKitDeTeste(c, p, sis, ctx) {
   const nomes = [];
   for (const modelo of kitDeTeste(sis, p)) {
@@ -1246,13 +1246,14 @@ export const acoes = {
     return { relatorio };
   },
 
-  // Itens para as fichas de teste que já existem e estão sem nada (até 1500 créditos cada, já equipados).
-  'teste.itens'(c, d, ctx) {
+  // Itens das fichas de teste (até 3000 créditos cada, já equipados). Sem "trocar", só as que estão sem itens;
+  // com "trocar", todas as fichas de teste recebem o kit novo no lugar dos itens que tinham.
+  'teste.itens'(c, { trocar = false } = {}, ctx) {
     exigirMestre(ctx);
     const sis = sistema(c.sistema);
-    const fichas = c.personagens.filter(p => p.tipo === 'pj' && /^Teste · /.test(p.nome) && !(p.itens || []).length);
+    const fichas = c.personagens.filter(p => p.tipo === 'pj' && /^Teste · /.test(p.nome) && (trocar || !(p.itens || []).length));
     if (!fichas.length) throw erro('Nenhuma ficha de teste sem itens.');
-    return { relatorio: fichas.map(p => ({ nome: p.nome, itens: darKitDeTeste(c, p, sis, ctx) })) };
+    return { relatorio: fichas.map(p => { if (trocar) p.itens = []; return { nome: p.nome, itens: darKitDeTeste(c, p, sis, ctx) }; }) };
   },
 
   'mapa.definir'(c, { imagemId }, ctx) {

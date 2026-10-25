@@ -324,7 +324,7 @@ function fichasTesteView() {
   const nivel = h('input', { type: 'number', min: 3, max: 20, value: 6, class: 'curto', 'aria-label': 'Nível das fichas de teste' });
   return h('section', { class: 'bloco' },
     titulo('Fichas de teste', 'flask-conical'),
-    h('p', { class: 'dica' }, 'Cria um personagem-jogador livre de cada classe (com especialização, vantagens, perícias e até 1500 créditos em itens já equipados) para testar as habilidades. Eles aparecem em Jogadores e podem ser apagados depois.'),
+    h('p', { class: 'dica' }, 'Cria um personagem-jogador livre de cada classe (com especialização, vantagens, perícias e até 3000 créditos em itens já equipados) para testar as habilidades. Eles aparecem em Jogadores e podem ser apagados depois.'),
     h('div', { class: 'barra' }, h('label', { class: 'linha' }, 'Nível', nivel),
       botao('Criar fichas de teste', async () => {
         const r = await acao('teste.fichas', { nivel: nivel.value });
@@ -332,11 +332,13 @@ function fichasTesteView() {
           h('strong', {}, x.nome), h('small', {}, ` — ${x.total} habilidades/vantagens, ${x.comEfeito} com bônus que o app soma, ${x.lembretes} só lembrete`),
           x.avisos.length ? h('ul', {}, x.avisos.map(a => h('li', { class: 'perigo' }, a))) : h('small', { class: 'bloco-texto' }, 'Sem problemas encontrados.')))));
       }, { class: 'primario', icone: 'users' }),
-      // Fichas de teste criadas antes, sem itens: até 1500 créditos cada, já equipados.
+      // Fichas de teste criadas antes: até 3000 créditos cada, já equipados (troca os itens que elas tinham).
       botao('Dar itens às fichas de teste', async () => {
-        const r = await acao('teste.itens', {});
+        const n = estado.campanha.personagens.filter(p => p.tipo === 'pj' && /^Teste · /.test(p.nome)).length;
+        if (!(await confirmar(`Dar até 3000 créditos em itens (já equipados) às ${n} fichas de teste? Os itens que elas têm hoje serão trocados.`))) return;
+        const r = await acao('teste.itens', { trocar: true });
         janela('Itens das fichas de teste', h('ul', { class: 'lista-regras' }, r.relatorio.map(x => h('li', {}, h('strong', {}, x.nome), h('small', {}, ` — ${x.itens.join(', ')}`)))));
-      }, { icone: 'backpack', title: 'Até 1500 créditos em itens para cada ficha de teste sem itens, já equipados' })));
+      }, { icone: 'backpack', title: 'Até 3000 créditos em itens para cada ficha de teste, já equipados (troca os itens atuais)' })));
 }
 
 function abaCampanha() {

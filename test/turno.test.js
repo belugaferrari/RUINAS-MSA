@@ -241,14 +241,14 @@ test('PV temporários saem por último: o dano tira dos normais até 0, depois d
   assert.ok(!p.pvTemp);
 });
 
-test('fichas de teste vêm com itens (até 1500 créditos) já equipados; "Dar itens" serve as antigas sem itens', () => {
+test('fichas de teste vêm com itens (até 3000 créditos) já equipados; "Dar itens" serve as antigas sem itens', () => {
   const c = novaCampanha(mestre, { nome: 'T', maxJogadores: 2, nivel: 1, sistema: 'mss' });
   executar(c, 'teste.fichas', { nivel: 6 }, ctxM);
   const fichas = c.personagens.filter(p => /^Teste · /.test(p.nome));
   assert.ok(fichas.length >= 5);
   for (const p of fichas) {
     const total = p.itens.reduce((s, i) => s + (i.preco || 0), 0);
-    assert.ok(total <= 1500, `${p.nome}: ${total}`);
+    assert.ok(total <= 3000, `${p.nome}: ${total}`);
     if (p.itens.some(i => i.tipo === 'arma')) assert.ok(p.itens.some(i => i.tipo === 'arma' && i.equipado), `${p.nome} sem arma equipada: ${JSON.stringify(p.itens.map(i => [i.nome, i.slot, i.ocupa, i.equipado]))}`);
   }
   // Só as que estão sem itens recebem (no catálogo de exemplo, o kit pode sair vazio).
@@ -256,5 +256,9 @@ test('fichas de teste vêm com itens (até 1500 créditos) já equipados; "Dar i
   fichas[0].itens = [];
   const r = executar(c, 'teste.itens', {}, ctxM);
   assert.deepEqual(r.relatorio.map(x => x.nome), [fichas[0].nome]);
+  // "Trocar": todas recebem o kit novo no lugar do que tinham.
+  const r2 = executar(c, 'teste.itens', { trocar: true }, ctxM);
+  assert.equal(r2.relatorio.length, fichas.length);
+  assert.ok(fichas.every(p => !p.itens.some(i => i.uid === 'x')));
   assert.throws(() => executar(c, 'teste.itens', {}, ctxA));
 });

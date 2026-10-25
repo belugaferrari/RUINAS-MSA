@@ -76,7 +76,7 @@ export function fichasDeTeste(sistema, nivel = 6, campanha = null) {
   return (sistema.classes || []).flatMap(c => (c.especializacoes?.length ? [c.especializacoes[0]] : [null]).map(e => fichaDeTeste(sistema, c, e, nivel, campanha)));
 }
 
-// Kit das fichas de teste (autor, 24/10): até 1500 créditos em itens do catálogo, já para equipar: duas armas com a cara
+// Kit das fichas de teste (autor, 24/10; 3000 créditos desde 25/10): até 3000 créditos em itens do catálogo, já para equipar: duas armas com a cara
 // da classe (a principal e uma do outro tipo), armadura, capacete e consumíveis. Só itens comuns que a ficha pode usar
 // (requisitos de nível e atributo).
 const media = dano => { const m = /^(\d*)d(\d+)([+-]\d+)?/i.exec(String(dano || '').replace(/\s+/g, '')); return m ? (Number(m[1] || 1) * (Number(m[2]) + 1)) / 2 + Number(m[3] || 0) : 0; };
@@ -89,11 +89,14 @@ const TEMAS = {
   transmorfo: ['arma-branca.laminas-curtas', 'armas-de-fogo.projeteis'], treinador: ['arma-branca.chicote', 'armas-de-fogo.projeteis'],
 };
 const semAc = t => String(t || '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-export function kitDeTeste(sistema, ficha, orcamento = 1500) {
+export const ORCAMENTO_KIT_TESTE = 3000;
+export function kitDeTeste(sistema, ficha, orcamento = ORCAMENTO_KIT_TESTE) {
   const d = derivados(ficha, sistema);
   const atende = i => [...String(i.requisitos || '').matchAll(/([A-ZÇ]{2,5}|N[íi]vel)\s*(\d+)/gi)].every(([, k, v]) =>
     /n[íi]vel/i.test(k) ? (ficha.nivel || 1) >= Number(v) : (d.atributos?.[k.toUpperCase()] ?? 99) >= Number(v));
-  const itens = (sistema.itens || []).filter(i => COMUNS.includes(i.raridade) && i.preco > 0 && atende(i));
+  // Com orçamento maior (3000), armas e proteção podem ser raras; o resto continua comum.
+  const raridades = orcamento >= 2500 ? [...COMUNS, 'Raro'] : COMUNS;
+  const itens = (sistema.itens || []).filter(i => i.preco > 0 && atende(i) && (COMUNS.includes(i.raridade) || (raridades.includes(i.raridade) && ['arma', 'defesa', 'vestimenta'].includes(i.tipo))));
   let resto = orcamento;
   const kit = [];
   const pegar = i => { if (i && i.preco <= resto) { kit.push(i); resto -= i.preco; return i; } return null; };
@@ -103,16 +106,22 @@ export function kitDeTeste(sistema, ficha, orcamento = 1500) {
   const armas = itens.filter(i => i.tipo === 'arma' && i.slot === 'maos' && i.dano && /^(arma-branca|armas-de-fogo)\./.test(i.pericia || ''));
   const daPericia = (per, max, ocupa = 2) => melhor(armas.filter(i => i.pericia === per && i.preco <= max && (i.ocupa ?? 1) <= ocupa), i => media(i.dano))
     || melhor(armas.filter(i => i.pericia?.split('.')[0] === per.split('.')[0] && i.preco <= max && (i.ocupa ?? 1) <= ocupa), i => media(i.dano));
-  const principal = pegar(daPericia(tema[0], 650, 1) || daPericia(tema[0], 650));
-  if ((principal?.ocupa ?? 1) < 2) pegar(daPericia(tema[1], Math.min(400, resto - 400), 1));
+  // Proporções do orçamento: arma principal até ~40%, a segunda até ~25%, a proteção com o que sobrar.
+  const principal = pegar(daPericia(tema[0], orcamento * 0.4, 1) || daPericia(tema[0], orcamento * 0.4));
+  if ((principal?.ocupa ?? 1) < 2) pegar(daPericia(tema[1], Math.min(orcamento * 0.25, resto - orcamento * 0.3), 1));
   // Armadura e capacete: o maior IP que couber.
   const ip = i => { const r = ipDoItem(i); return r.geral + Object.values(r.tipos).reduce((s, v) => s + v, 0) / 2; };
   const protecao = slot => itens.filter(i => i.slot === slot && ['defesa', 'vestimenta'].includes(i.tipo) && /\bIP\b/.test(i.efeitos || ''));
   pegar(melhor(protecao('corpo').filter(i => i.preco <= resto - 150), ip));
-  pegar(melhor(protecao('cabeca').filter(i => i.preco <= Math.min(300, resto - 100)), ip));
+  pegar(melhor(protecao('cabeca').filter(i => i.preco <= Math.min(orcamento * 0.2, resto - 100)), ip));
   // Consumíveis: curativos, kit médico e comida, enquanto houver dinheiro.
   for (const re of [/bandagem|atadura/i, /kit de primeiros socorros|kit m[ée]dico/i, /^ra[çc][ãa]o (?!canina)|enlatad|carne seca/i, /bandagem|atadura/i]) {
     pegar(itens.filter(i => re.test(i.nome) && ['boticario', 'alimento', 'ferramenta'].includes(i.tipo) && i.preco <= resto).sort((a, b) => b.preco - a.preco)[0]);
+  }
+  // Equipamento de exploração com o que sobrar (um de cada): luz, corda, mochila, cantil, faca utilitária…
+  const ruim = /suj[ao]|[úu]mid[ao]|quebrad|sem corda|vencid|enferruj|podre|furad/i;
+  for (const re of [/^lanterna|^tocha|^lampi/i, /^corda/i, /^mochila/i, /^cantil|filtro de [áa]gua/i, /^canivete|multiferramenta|^kit de ferramentas/i, /^isqueiro|^f[óo]sforo|pederneira/i, /^saco de dormir|^barraca/i, /^b[úu]ssola/i]) {
+    pegar(itens.filter(i => re.test(i.nome) && !ruim.test(i.nome) && !kit.includes(i) && !['arma', 'municao'].includes(i.tipo) && i.preco <= resto).sort((a, b) => b.preco - a.preco)[0]);
   }
   return kit;
 }
