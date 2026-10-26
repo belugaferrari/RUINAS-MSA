@@ -1356,6 +1356,22 @@ export const acoes = {
       ...(tam(l) && tam(l) !== (t.l || 1) ? { l: tam(l) } : t.l ? { l: t.l } : {}), ...(tam(a) && tam(a) !== (t.a || 1) ? { a: tam(a) } : t.a ? { a: t.a } : {}) });
   },
 
+  // Objetos propostos pela IA (ou vários de uma vez) que o mestre revisou e aceitou.
+  'mapa.objetosAceitar'(c, { objetos }, ctx) {
+    exigirMestre(ctx);
+    c.mapa ||= novoMapa();
+    const n = v => Math.max(0, Math.min(999, parseInt(v, 10) || 0));
+    const tam = v => Math.max(1, Math.min(20, parseInt(v, 10) || 1));
+    let criados = 0;
+    for (const o of [].concat(objetos || []).slice(0, 300)) {
+      if (!TIPOS_OBJETO_MAPA.includes(o?.tipo)) continue;
+      const t = tipoObjeto(o.tipo);
+      (c.mapa.objetos ||= []).push({ id: uid(), tipo: t.id, nome: nomeStr(o.nome).slice(0, 80) || t.nome, col: n(o.col), lin: n(o.lin), l: tam(o.l), a: tam(o.a), oculto: false });
+      criados++;
+    }
+    return { criados };
+  },
+
   // Pintar (parede, mato, água, entulho): um objeto de 1 quadrado em cada quadrado arrastado (sem repetir).
   'mapa.pintar'(c, { tipo, quadrados }, ctx) {
     exigirMestre(ctx);

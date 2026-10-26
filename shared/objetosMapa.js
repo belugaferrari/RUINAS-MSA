@@ -95,3 +95,42 @@ export function bloqueadoPorObjeto(objetos, col, lin, lado = 1) {
   }
   return null;
 }
+
+// ---------- Leitura do mapa por IA (parte B) ----------
+// A IA olha a imagem e devolve caixas (y0, x0, y1, x1) de 0 a 1000 sobre a imagem; o app converte para a grade
+// (colunas, deslocamento ox/oy e a proporção altura/largura da imagem). O mestre revisa antes de aceitar.
+export const TIPOS_IA = TIPOS_OBJETO.filter(t => t.grupo === 'Cenário' || t.id === 'porta').map(t => t.id);
+export function objetosDaIA(lista, grade, aspecto) {
+  const cols = Math.max(1, Number(grade?.colunas) || 20), ox = Number(grade?.ox) || 0, oy = Number(grade?.oy) || 0;
+  const linhasPorMil = (cols * (Number(aspecto) || 1)) / 1000, colunasPorMil = cols / 1000;
+  const fora = [];
+  for (const o of Array.isArray(lista) ? lista.slice(0, 200) : []) {
+    const t = TIPOS_IA.includes(o?.tipo) ? tipoObjeto(o.tipo) : null;
+    const cx = Array.isArray(o?.caixa) ? o.caixa.map(Number) : null;
+    if (!t || !cx || cx.length !== 4 || cx.some(v => !Number.isFinite(v))) continue;
+    const [y0, x0, y1, x1] = [Math.min(cx[0], cx[2]), Math.min(cx[1], cx[3]), Math.max(cx[0], cx[2]), Math.max(cx[1], cx[3])].map(v => Math.max(0, Math.min(1000, v)));
+    const col = Math.max(0, Math.floor(x0 * colunasPorMil - ox + 1e-6));
+    const lin = Math.max(0, Math.floor(y0 * linhasPorMil - oy + 1e-6));
+    const col1 = Math.max(col, Math.ceil(x1 * colunasPorMil - ox - 1e-6) - 1);
+    const lin1 = Math.max(lin, Math.ceil(y1 * linhasPorMil - oy - 1e-6) - 1);
+    let l = col1 - col + 1, a = lin1 - lin + 1;
+    const nome = String(o.nome || t.nome).slice(0, 80);
+    // Parede comprida: em pedaços de até 20 quadrados.
+    for (let dc = 0; dc < l; dc += 20) for (let dl = 0; dl < a; dl += 20) {
+      fora.push({ tipo: t.id, nome, col: col + dc, lin: lin + dl, l: Math.min(20, l - dc), a: Math.min(20, a - dl) });
+    }
+  }
+  return fora.slice(0, 300);
+}
+export const PEDIDO_MAPA_IA = [
+  'Esta é a imagem de um mapa de RPG visto de cima. Encontre os objetos que importam para o combate e devolva cada um com o tipo e a caixa que ele ocupa.',
+  'Tipos: parede (trechos de parede ou muro; uma caixa fina por trecho reto, não o prédio inteiro), pilar, arvore, veiculo, mesa, caixote, barril, cadeira, arbusto (mato alto, moitas), agua (água rasa, poças, lama), entulho (escombros), porta.',
+  'A caixa é [y0, x0, y1, x1], com números de 0 a 1000 sobre a imagem inteira (0,0 = canto de cima à esquerda; 1000,1000 = canto de baixo à direita).',
+  'Ignore a grade desenhada, o chão liso, texto, sombras e decoração pequena. Na dúvida, deixe de fora. No máximo 150 objetos.',
+  'Responda só com JSON: {"objetos": [{"tipo": "...", "nome": "nome curto em português", "caixa": [y0, x0, y1, x1]}]}',
+].join('\n');
+export const ESQUEMA_MAPA_IA = {
+  type: 'object', additionalProperties: false, required: ['objetos'],
+  properties: { objetos: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['tipo', 'nome', 'caixa'],
+    properties: { tipo: { type: 'string', enum: TIPOS_IA }, nome: { type: 'string' }, caixa: { type: 'array', items: { type: 'number' } } } } } },
+};

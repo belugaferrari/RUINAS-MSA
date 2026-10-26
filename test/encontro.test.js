@@ -116,3 +116,35 @@ test('IA Claude: pedido pelo SDK oficial com fallbacks e esforço baixo; recusa 
     await assert.rejects(gerarTexto('s', 'p'), /recusou/);
   } finally { globalThis.fetch = original; salvarConfigIA({ provedor: 'nenhum' }); }
 });
+
+test('ler o mapa com IA: caixas da IA viram objetos na grade; resposta da IA lida em JSON; o mestre aceita', async () => {
+  const O = await import('../shared/objetosMapa.js');
+  const { lerImagemJson } = await import('../server/ia.js');
+  // Mapa 20 colunas, proporção 3:4 (altura/largura = 0,75 → 15 linhas).
+  const objs = O.objetosDaIA([{ tipo: 'parede', nome: 'Muro', caixa: [100, 250, 110, 750] }, { tipo: 'arvore', nome: 'Árvore', caixa: [500, 500, 560, 550] }, { tipo: 'disco-voador', nome: 'x', caixa: [1, 1, 2, 2] }], { colunas: 20, ox: 0, oy: 0 }, 0.75);
+  assert.deepEqual(objs, [{ tipo: 'parede', nome: 'Muro', col: 5, lin: 1, l: 10, a: 1 }, { tipo: 'arvore', nome: 'Árvore', col: 10, lin: 7, l: 1, a: 2 }]);
+  assert.equal(O.objetosDaIA([{ tipo: 'parede', nome: 'Muro', caixa: [0, 0, 20, 1000] }], { colunas: 50 }, 1).length, 3, 'parede de 50 quadrados vira pedaços de até 20');
+  const img = { data: 'iVBORw0KGgo=', mime: 'image/png' };
+  const original = globalThis.fetch;
+  try {
+    salvarConfigIA({ provedor: 'gemini', gemini: { chave: 'AIza-x' } });
+    let corpo;
+    globalThis.fetch = async (u, op) => { corpo = JSON.parse(op.body); return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: '```json\n{"objetos":[{"tipo":"mesa","nome":"Mesa","caixa":[1,2,3,4]}]}\n```' }] } }] }), { status: 200 }); };
+    const r = await lerImagemJson('s', 'p', img, O.ESQUEMA_MAPA_IA);
+    assert.equal(r.dados.objetos[0].tipo, 'mesa');
+    assert.equal(corpo.contents[0].parts[0].inline_data.mime_type, 'image/png');
+    salvarConfigIA({ provedor: 'claude', claude: { chave: 'sk-ant-x' } });
+    globalThis.fetch = async (u, op) => { corpo = JSON.parse(op.body); return new Response(JSON.stringify({ id: 'm', type: 'message', role: 'assistant', model: 'claude-opus-5-5', stop_reason: 'end_turn', stop_sequence: null,
+      content: [{ type: 'text', text: '{"objetos":[{"tipo":"arvore","nome":"Carvalho","caixa":[10,10,50,50]}]}' }], usage: { input_tokens: 1, output_tokens: 1 } }), { status: 200, headers: { 'content-type': 'application/json' } }); };
+    const r2 = await lerImagemJson('s', 'p', img, O.ESQUEMA_MAPA_IA);
+    assert.equal(r2.dados.objetos[0].nome, 'Carvalho');
+    assert.equal(corpo.output_config.format.type, 'json_schema');
+    assert.equal(corpo.messages[0].content[0].type, 'image');
+    await assert.rejects(lerImagemJson('s', 'p', { data: 'x', mime: 'video/mp4' }, {}), /inválida/);
+  } finally { globalThis.fetch = original; salvarConfigIA({ provedor: 'nenhum' }); }
+  const c = novaCampanha({ id: 'm', name: 'M' }, { nome: 'T', maxJogadores: 2, nivel: 1, sistema: 'mss' });
+  const r = executar(c, 'mapa.objetosAceitar', { objetos: [...objs, { tipo: 'nada', col: 1, lin: 1 }] }, ctxM);
+  assert.equal(r.criados, 2);
+  assert.deepEqual(c.mapa.objetos.map(o => [o.tipo, o.col, o.lin, o.l, o.a]), [['parede', 5, 1, 10, 1], ['arvore', 10, 7, 1, 2]]);
+  assert.throws(() => executar(c, 'mapa.objetosAceitar', { objetos: objs }, { user: { id: 'j' }, mestre: false }));
+});

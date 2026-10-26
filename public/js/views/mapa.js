@@ -6,7 +6,7 @@ import { FORMAS_AREA, quadradosDaArea, atingidosPelaArea } from '/shared/area.js
 import { TIPOS_OBJETO, tipoObjeto, regrasObjeto, tamanhoObjeto, foraDaVisaoDosPJs } from '/shared/objetosMapa.js';
 import { h, botao, selecao, aviso, icone, titulo, vazio, passador, pedirTexto, janela } from '../ui.js';
 import { estado, render, personagemPorId, meusPersonagens } from '../estado.js';
-import { acao } from '../api.js';
+import { acao, get, post } from '../api.js';
 import { derivados } from '/shared/regras.js';
 import { restricaoMovimento } from '/shared/efeitos.js';
 import { categoriaDaImagem } from '/shared/imagens.js';
@@ -111,6 +111,8 @@ export function mapaView() {
     mestre ? (mapa.marcas || []).map(marca) : null,
     (mapa.objetos || []).map(o => objetoMapa(o, mestre)),
     pecas.map(x => peao(x, g, mover, sel, foraDaVisao.has(x.p.id))),
+    // Proposta da IA (só o mestre): contornos tracejados dos objetos marcados, ainda não aceitos.
+    mestre && estado.sel.propostaIA ? estado.sel.propostaIA.objetos.filter(o => o.marcado).map(o => h('span', { class: `objeto-mapa proposta obj-${o.tipo}`, style: { '--col': o.col, '--lin': o.lin, '--l': o.l, '--a': o.a }, title: `${o.nome} (proposta da IA)` }, icone(tipoObjeto(o.tipo).icone || 'box'))) : null,
     area ? h('div', { class: 'area-camada', 'aria-hidden': 'true' }, area && estado.sel.areaPonto ? quadradosAreaEls(area, estado.sel.areaPonto, mapa) : null) : null) : vazio(mestre ? 'Escolha o mapa abaixo (envie imagens, GIFs ou vídeos na aba Imagens).' : 'O mestre ainda não escolheu um mapa.', 'map');
 
   return h('div', { class: 'mapa-tela' },
@@ -133,6 +135,7 @@ export function mapaView() {
             { class: `pequeno ${estado.sel.mapaMarcar ? 'primario' : ''}`, icone: 'eye-off', 'aria-pressed': !!estado.sel.mapaMarcar, title: 'Marcações (armadilhas, gatilhos…) que só você vê' }),
           (mapa.marcas || []).length ? h('small', { class: 'dica' }, `${mapa.marcas.length} marcação(ões) secreta(s) — os jogadores e o Suporte não veem.`) : null) : null,
         mestre && mapa.midia ? porObjeto() : null,
+        mestre && mapa.midia ? lerMapaIA(mapa) : null,
         // Modo fantasma: esconde dos jogadores os NPCs fora da visão de todos os PJs (os nublados), ou mostra todos.
         mestre && mapa.midia ? h('div', { class: 'barra' },
           botao(`Modo fantasma${foraDaVisao.size ? ` (${foraDaVisao.size} fora da visão)` : ''}`, () => acao('mapa.fantasmas', { ocultar: true }).then(r => aviso(r.ids.length ? `${r.ids.length} NPC(s) invisíveis para os jogadores.` : 'Nenhum NPC fora da visão dos PJs.')),
@@ -268,6 +271,69 @@ const girarMapa = () => (estado.sel.mapaGirar ?? emPe());
 // Saiu da tela cheia do navegador (Esc, voltar do celular): sai do modo do mapa também; girou o aparelho: redesenha.
 document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && estado.sel.mapaCheia) sairTelaCheia(); });
 window.addEventListener('resize', () => { if (estado.sel.mapaCheia && estado.sel.mapaGirar == null) render(); });
+
+// ---------- Ler o mapa com IA (parte B) ----------
+// A tela reduz a imagem do mapa (até 1600 px, JPEG) e manda para a IA configurada na aba Campanha; a IA devolve os
+// objetos (paredes, árvores, mesas…) já na grade. O mestre revisa, desmarca o que errou e aceita.
+function imagemDoMapaParaIA(mapa) {
+  const el = midias.get(`${mapa.midia.tipo}:${mapa.midia.url}`);
+  const w = el?.naturalWidth || el?.videoWidth, hh = el?.naturalHeight || el?.videoHeight;
+  if (!w || !hh) throw new Error('O mapa ainda está carregando. Tente de novo em um instante.');
+  for (const max of [1600, 1100, 800]) {
+    const k = Math.min(1, max / Math.max(w, hh));
+    const tela = document.createElement('canvas');
+    tela.width = Math.round(w * k); tela.height = Math.round(hh * k);
+    tela.getContext('2d').drawImage(el, 0, 0, tela.width, tela.height);
+    let url;
+    try { url = tela.toDataURL('image/jpeg', 0.85); } catch { throw new Error('Não deu para ler esta imagem (ela vem de um link de fora). Envie o arquivo do mapa na aba Imagens e tente de novo.'); }
+    const data = url.slice(url.indexOf(',') + 1);
+    if (data.length < 2_600_000) return { imagem: { data, mime: 'image/jpeg' }, aspecto: hh / w };
+  }
+  throw new Error('Imagem do mapa grande demais para a IA.');
+}
+function lerMapaIA(mapa) {
+  const cfg = estado.sel.iaConfig;
+  if (cfg === undefined && !estado.sel.iaPedido) {
+    estado.sel.iaPedido = true;
+    get('/api/ia').then(r => { estado.sel.iaConfig = r; render(); }).catch(() => { estado.sel.iaConfig = null; });
+  }
+  const temIA = cfg && cfg.provedor !== 'nenhum';
+  const proposta = estado.sel.propostaIA;
+  const lendo = !!estado.sel.lendoMapa;
+  const ler = async () => {
+    const dados = imagemDoMapaParaIA(mapa);
+    estado.sel.lendoMapa = true; render();
+    try {
+      const r = await post(`/api/campanhas/${estado.campanha.id}/mapa/ler`, dados);
+      estado.sel.propostaIA = { objetos: r.objetos.map((o, i) => ({ ...o, k: i, marcado: true })), fonte: r.fonte };
+      if (!r.objetos.length) aviso('A IA não achou objetos neste mapa.', 'erro');
+    } finally { estado.sel.lendoMapa = false; render(); }
+  };
+  if (!proposta) {
+    return h('div', { class: 'barra' },
+      botao(lendo ? 'Lendo o mapa…' : 'Ler o mapa com IA', ler, { class: 'pequeno', icone: 'sparkles', disabled: !temIA || lendo,
+        title: temIA ? 'A IA olha a imagem e propõe paredes, árvores, mesas… Você revisa antes de entrar no mapa.' : 'Configure uma IA na aba Campanha (Gemini é grátis).' }),
+      !temIA ? h('small', { class: 'dica' }, 'Configure uma IA na aba Campanha para ler o mapa.') : null);
+  }
+  const marcados = proposta.objetos.filter(o => o.marcado);
+  const marcar = v => { for (const o of proposta.objetos) o.marcado = v; render(); };
+  return h('div', { class: 'bloco proposta-ia' },
+    h('strong', {}, icone('sparkles'), ` A IA (${proposta.fonte}) achou ${proposta.objetos.length} objeto(s) — revise antes de aceitar`),
+    h('p', { class: 'dica' }, 'Os contornos tracejados no mapa são a proposta. Desmarque o que estiver errado; depois de aceitar, dá para mover, mudar o tamanho ou apagar cada objeto.'),
+    h('ul', { class: 'lista-proposta' }, proposta.objetos.map(o => h('li', {},
+      h('label', { class: 'linha' }, h('input', { type: 'checkbox', checked: o.marcado, onchange: e => { o.marcado = e.target.checked; render(); } }),
+        icone(tipoObjeto(o.tipo).icone || 'box'), ` ${o.nome}`, h('small', { class: 'dica' }, ` ${tipoObjeto(o.tipo).nome} · coluna ${o.col + 1}, linha ${o.lin + 1}${o.l > 1 || o.a > 1 ? ` · ${o.l}×${o.a}` : ''}`))))),
+    h('div', { class: 'barra' },
+      botao(`Aceitar ${marcados.length}`, async () => {
+        const r = await acao('mapa.objetosAceitar', { objetos: marcados.map(({ tipo, nome, col, lin, l, a }) => ({ tipo, nome, col, lin, l, a })) });
+        estado.sel.propostaIA = null;
+        aviso(`${r.criados} objeto(s) no mapa.`);
+      }, { class: 'primario', icone: 'check', disabled: !marcados.length }),
+      botao('Marcar todos', () => marcar(true), { class: 'pequeno' }),
+      botao('Desmarcar todos', () => marcar(false), { class: 'pequeno' }),
+      botao('Ler de novo', ler, { class: 'pequeno', icone: 'refresh-cw', disabled: lendo }),
+      botao('Descartar', () => { estado.sel.propostaIA = null; render(); }, { class: 'pequeno perigo', icone: 'x' })));
+}
 
 // ---------- Pintar objetos arrastando (parede, mato, água, entulho) ----------
 let pintura = null;

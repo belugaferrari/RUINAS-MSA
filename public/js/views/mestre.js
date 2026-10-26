@@ -338,7 +338,7 @@ function iaView() {
   const p = f.provedor;
   return h('section', { class: 'bloco' },
     titulo('Inteligência artificial', 'sparkles'),
-    h('p', { class: 'dica' }, 'Escreve o cenário do "Encontro por ND" (Campo de Batalha). Sem IA, o app monta o cenário com o comportamento e o habitat da planilha. A IA recebe só o que o livro diz da criatura e o momento da campanha.'),
+    h('p', { class: 'dica' }, 'Escreve o cenário do "Encontro por ND" (Campo de Batalha) e lê a imagem do mapa para propor objetos (Mapa > "Ler o mapa com IA"). Sem IA, o cenário sai da planilha e os objetos são postos à mão. A IA recebe só o que o livro diz da criatura, o momento da campanha e, ao ler o mapa, a imagem dele.'),
     h('label', { class: 'linha' }, 'Usar',
       selecao([{ valor: 'nenhum', rotulo: 'Sem IA' }, { valor: 'gemini', rotulo: 'Gemini (Google) — grátis com cota diária' }, { valor: 'ollama', rotulo: 'Ollama — IA no próprio PC, grátis' }, { valor: 'claude', rotulo: 'Claude (Anthropic) — pago por uso' }],
         p, v => { f.provedor = v; render(); }, { 'aria-label': 'Provedor de IA' })),
@@ -355,7 +355,8 @@ function iaView() {
         h('li', {}, `No terminal, baixe um modelo: ollama pull ${f.ollama.modelo || 'llama3.1'} (precisa de 8 GB de memória ou mais).`),
         h('li', {}, 'Deixe o Ollama aberto enquanto joga.')),
       h('label', { class: 'linha' }, 'Endereço', entrada(f.ollama, 'url')),
-      h('label', { class: 'linha' }, 'Modelo', entrada(f.ollama, 'modelo'))) : null,
+      h('label', { class: 'linha' }, 'Modelo', entrada(f.ollama, 'modelo')),
+      h('label', { class: 'linha', title: 'Para "Ler o mapa com IA" (precisa de um modelo que enxerga imagens)' }, 'Modelo de imagem', entrada(f.ollama, 'modeloVisao'))) : null,
     p === 'claude' ? h('div', { class: 'form' },
       h('p', { class: 'dica' }, 'Crie uma chave em console.anthropic.com (precisa de créditos). Cada cenário custa cerca de 1 centavo de dólar com o modelo padrão.'),
       h('label', { class: 'linha' }, `Chave${cfg.claude.temChave ? ' (já salva — deixe em branco para manter)' : ''}`, entrada(f.claude, 'chave', { type: 'password', autocomplete: 'off', placeholder: 'sk-ant-…' })),

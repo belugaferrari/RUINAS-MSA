@@ -284,4 +284,4 @@ Regras em `conteudo/sistemas/habilidades-regras.json` (automática / ligar / ati
 - Habilidades que mudam a cobertura já ligadas: Tiro preciso (ignora parcial com armas de fogo), Combate de Trincheira
   (parcial vira total contra atiradores a mais de 9 m). Outras: avisar quais.
 - Ainda não: a área (cone/linha) parar no obstáculo; terreno difícil custar o dobro no deslocamento (hoje só aparece no mapa);
-  a parte B (IA lendo a imagem do mapa e criando os objetos).
+  (parte B feita em 26/10: Mapa > "Ler o mapa com IA", com revisão do mestre.)

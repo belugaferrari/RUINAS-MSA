@@ -14,7 +14,8 @@ import { novaCampanha, resumoCampanha, visaoPara, entrarNaCampanha, executar, ac
 migrarCampanhas();
 import { modeloNpcs, lerNpcs } from './excel.js';
 import { lerPlanilhaMonstros, planilhaMonstros, catalogoMonstros, salvarCatalogoMonstros, voltarMonstrosPadrao } from './monstros.js';
-import { configPublica, salvarConfigIA, gerarTexto } from './ia.js';
+import { configPublica, salvarConfigIA, gerarTexto, lerImagemJson } from './ia.js';
+import { objetosDaIA, PEDIDO_MAPA_IA, ESQUEMA_MAPA_IA } from '../shared/objetosMapa.js';
 import { SISTEMA_IA, pedidoIA } from '../shared/encontro.js';
 import { catalogoItens, origemCatalogo, lerPlanilhaItens, planilhaDoCatalogo, salvarCatalogoMestre, voltarCatalogoPadrao } from './itens.js';
 import { montarSprite } from './icones.js';
@@ -121,6 +122,20 @@ app.post('/api/campanhas/:id/encontro/cenario', rota(async req => {
   save();
   transmitir(c);
   return g.cenario;
+}));
+
+// Ler o mapa com IA: a tela manda a imagem do mapa (reduzida) e a proporção; a IA devolve caixas, o app converte para
+// a grade e devolve a proposta. Nada entra no mapa até o mestre revisar e aceitar (ação mapa.objetosAceitar).
+app.post('/api/campanhas/:id/mapa/ler', rota(async req => {
+  const c = campanhaDoMestre(req);
+  if (!c.mapa?.imagemId) throw new Error('Escolha o mapa primeiro.');
+  const { imagem, aspecto } = req.body || {};
+  const asp = Number(aspecto);
+  if (!(asp > 0.05 && asp < 20)) throw new Error('Não deu para medir o mapa. Recarregue a página e tente de novo.');
+  if (!imagem?.data || String(imagem.data).length > 2_700_000) throw new Error('Imagem do mapa grande demais para a IA.');
+  const { dados, fonte } = await lerImagemJson('Você identifica objetos em mapas de RPG vistos de cima e responde só com JSON.', PEDIDO_MAPA_IA, { data: String(imagem.data), mime: String(imagem.mime) }, ESQUEMA_MAPA_IA);
+  const objetos = objetosDaIA(dados?.objetos, c.mapa.grade, asp);
+  return { objetos, fonte, lidos: Array.isArray(dados?.objetos) ? dados.objetos.length : 0 };
 }));
 
 // Imagem de um monstro do Livro dos Monstros (só o mestre). A alternativa é colar um link (ação monstro.imagem).

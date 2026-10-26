@@ -1448,3 +1448,8 @@ input.largo { flex: 1 1 20em; min-width: 0; }
 /* NPC fora da visão dos PJs: nublado (só o mestre vê). */
 .peao.fora-de-visao .rosto { filter: blur(1.5px) grayscale(.6); opacity: .7; }
 .peao.fora-de-visao::after { content: ''; position: absolute; inset: 4%; border-radius: 50%; border: 2px dashed rgba(200, 210, 255, .8); pointer-events: none; }
+
+/* Proposta da IA no mapa: contorno tracejado, não pega clique. */
+.objeto-mapa.proposta { pointer-events: none; background: rgba(224, 165, 38, .18) !important; border: 2px dashed #e0a526 !important; color: #ffd97a; z-index: 4; }
+.lista-proposta { list-style: none; margin: .4em 0; padding: 0; max-height: 260px; overflow-y: auto; columns: 2 240px; }
+.proposta-ia { border-color: #e0a526; }
