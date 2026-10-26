@@ -79,7 +79,7 @@ function quadroPersonagem(p, meus, chave, mestre, participantes) {
   };
   // Ataque esperando a defesa deste personagem: as defesas viram botões — clicar numa delas é defender.
   const pend = sis.modulos?.combate ? (estado.campanha.salas.batalha.pendentes || []).find(x => x.alvo === p.id) : null;
-  const armaPend = pend ? { uid: pend.opcoes.armaUid || 'desarmado', alcance: pend.alcance } : null;
+  const armaPend = pend ? { uid: pend.opcoes.armaUid || 'desarmado', alcance: pend.alcance, natural: !!pend.natural } : null;
   const opcoes = pend ? opcoesDefesa(p, armaPend, sis, { area: pend.area }) : [];
   const defender = async id => {
     const r = await acao('combate.defender', { id: pend.id, defesa: id });

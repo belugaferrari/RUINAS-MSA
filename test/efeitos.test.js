@@ -46,15 +46,15 @@ test('Sangramento: 1 PV a cada 1D4 turnos, até 6 PV; novo Corte reinicia', () =
   assert.deepEqual(p.marcadores, []);
 });
 
-test('Ferida aberta tira 1 PV ao agir; sem duração não tem contador', () => {
+test('Ferida aberta tira 1 PV ao agir e dura 4 turnos (autor, 26/10)', () => {
   const p = pj(['Ferida aberta']);
   sincronizarEfeitos(p, sis);
-  assert.equal(p.efeitos, undefined);
+  assert.equal(p.efeitos['ferida-aberta'].turnos, 4);
   efeitosAoAgir(p, sis);
   assert.equal(p.pv.atual, 19);
   const v = efeitosVisiveis(p, sis);
   assert.equal(v[0].icone, 'bandage');
-  assert.equal(v[0].turnos, null);
+  assert.equal(v[0].turnos, 4);
 });
 
 test('contador manual vale para efeito sem duração e tirar o marcador apaga o contador', () => {

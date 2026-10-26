@@ -66,7 +66,7 @@ export function armasDisponiveis(p, sistema) {
   const cfg = sistema.combate || {};
   // Arma quebrada (durabilidade 0) não ataca até ser reparada.
   const armas = (p.itens || []).filter(i => i.equipado && i.tipo === 'arma' && i.dano && !(i.durabilidade != null && (i.durabilidadeAtual ?? i.durabilidade) <= 0)).map(i => ({
-    uid: i.uid, nome: i.nome, dano: danoDaArma(i, p), acerto: i.acerto ?? null, pericia: i.pericia || null, tipoDano: i.tipoDano || 'Físico',
+    uid: i.uid, nome: i.nome, dano: danoDaArma(i, p), acerto: i.acerto ?? null, pericia: i.pericia || null, tipoDano: i.tipoDano || 'Físico', natural: !!i.natural,
     efeitoDano: i.efeitoDano ?? cfg.chancePorTipo?.[i.tipoDano] ?? cfg.efeitoPadrao, penetracao: i.penetracao || 0, alcance: i.alcance || (i.pericia?.startsWith('armas-de-fogo') ? 'distancia' : 'corpo'),
     // Cadência: quantos disparos (balas e danos) por ataque — da arma ou da subperícia (ex.: Rifle de Assalto 2).
     cadencia: Math.max(1, i.cadencia ?? cfg.cadencia?.[i.pericia] ?? 1),
@@ -109,7 +109,8 @@ export function opcoesDefesa(alvo, arma, sistema, { area = false } = {}) {
   } else if (arma.alcance === 'corpo') {
     opcoes.push({ id: 'esquiva', nome: 'Esquiva', valor: sub('briga.esquiva'),
       nota: arma.uid === 'desarmado' ? 'se não for acertado, pode se deslocar até 1,5 m' : 'se não for acertado, pode se deslocar até 1,5 m; se for acertado, +2 de dano' });
-    if (arma.uid === 'desarmado') opcoes.push({ id: 'defesa-desarmada', nome: 'Defesa desarmada', valor: sub('briga.defesa-desarmada') });
+    // Defesa desarmada: contra ataque desarmado e contra arma natural (garras, presas, chifres… — autor, 26/10).
+    if (arma.uid === 'desarmado' || arma.natural) opcoes.push({ id: 'defesa-desarmada', nome: 'Defesa desarmada', valor: sub('briga.defesa-desarmada') });
     for (const a of armasDisponiveis(alvo, sistema)) {
       if (a.uid === 'desarmado' || !a.pericia?.startsWith('arma-branca.') || cfg.semDefesaArmada.includes(a.pericia)) continue;
       opcoes.push({ id: `armada:${a.uid}`, nome: `Defesa armada (${a.nome})`, valor: sub(a.pericia) });

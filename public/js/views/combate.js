@@ -95,7 +95,7 @@ export function pendentesView(mestre, participantes = []) {
       const podeCancelar = mestre || a?.donoId === estado.usuario.id;
       let botoes = [];
       if (escolhe) {
-        const arma = { uid: pd.opcoes.armaUid || 'desarmado', alcance: pd.alcance };
+        const arma = { uid: pd.opcoes.armaUid || 'desarmado', alcance: pd.alcance, natural: !!pd.natural };
         botoes = opcoesDefesa(b, arma, sis, { area: pd.area }).map(o => {
           const total = defesaDoAlvo(b, arma, sis, { escolha: o.id, area: pd.area }).total;
           return botao(`${o.nome} (${total})`, () => acao('combate.defender', { id: pd.id, defesa: o.id }).then(r => aviso(`${r.autor} ${r.rotulo}: ${r.texto}`, r.sucesso ? 'erro' : 'ok')),

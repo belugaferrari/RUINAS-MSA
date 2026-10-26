@@ -229,7 +229,7 @@ function encontroPorND() {
   };
   const sis = estado.sistema;
   return h('details', { class: 'bloco encontro-nd', open: estado.sel.encontroNDAberto ?? true, ontoggle: e => { estado.sel.encontroNDAberto = e.target.open; } },
-    h('summary', {}, icone('dices'), ' Encontro por ND'),
+    h('summary', {}, icone('dices'), ' Gerador de encontro aleatório (por ND)'),
     h('div', { class: 'barra' },
       num('ndMin', 'ND de'), num('ndMax', 'até'), num('quantidade', 'Quantos', { max: 12 }),
       h('label', { class: 'linha' }, h('input', { type: 'checkbox', checked: !!f.mesma, onchange: e => { f.mesma = e.target.checked; } }), 'mesma criatura')),
@@ -266,7 +266,7 @@ function encontroAleatorio() {
   const monstros = h('input', { type: 'checkbox', checked: true });
   const grupos = c.grupos.filter(g => g.id !== 'encontros').map(g => ({ g, cb: h('input', { type: 'checkbox' }) }));
   return h('details', { class: 'bloco', open: !!estado.sel.encontroAberto, ontoggle: e => { estado.sel.encontroAberto = e.target.open; } },
-    h('summary', {}, icone('skull'), 'Encontro aleatório (soma de dificuldade)'),
+    h('summary', {}, icone('skull'), 'Encontro por soma de dificuldade'),
     h('p', { class: 'dica' }, 'Soma a "dificuldade" das criaturas sorteadas sem passar do limite. NPCs usam o campo Dificuldade (ou o nível). Regras definitivas virão depois.'),
     h('div', { class: 'barra' },
       h('label', { class: 'linha' }, 'Dificuldade máxima', limite),

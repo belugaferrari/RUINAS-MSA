@@ -1198,9 +1198,10 @@
    "id": "ferida-aberta",
    "nome": "Ferida aberta",
    "grupo": "Dano",
-   "efeitos": "Perde 1 PV sempre que fizer uma Ação principal (no app: a cada ataque).",
+   "efeitos": "Perde 1 PV sempre que fizer uma Ação principal (no app: a cada ataque). Dura 4 turnos; um novo acerto que causa Ferida aberta renova os 4 turnos.",
    "icone": "bandage",
    "pvPorAcao": 1,
+   "duracao": 4,
    "cor": "#b3463a"
   },
   {

@@ -163,6 +163,9 @@ export function monstrosView() {
   return h('div', {},
     h('div', { class: 'barra' }, titulo('Livro dos Monstros', 'skull', 'h2'), h('span', { class: 'espaco' }), h('label', { class: 'busca' }, icone('search'), filtroBusca('monstros', 'Buscar criatura (nome, raça, afinidade, lugar)…'))),
     mestre ? planilhaMonstrosMestre() : null,
+    // Atalho: o gerador fica no Campo de Batalha (o encontro entra direto lá e no mapa).
+    mestre ? h('div', { class: 'barra' }, botao('Gerador de encontro aleatório', () => { estado.aba = 'batalha'; estado.sel.encontroNDAberto = true; render(); },
+      { class: 'pequeno primario', icone: 'dices', title: 'Abre o gerador no Campo de Batalha: faixa de ND, variação de 10%, PV de 50% a 100% e cenário' })) : null,
     mestre ? lembretesLivro(sis) : null,
     filtro,
     h('p', { class: 'dica' }, `${lista.length} de ${sis.monstros.length} criatura${sis.monstros.length === 1 ? '' : 's'}${termo.trim() ? ` para “${termo.trim()}”` : ''}. Clique numa linha para abrir a ficha.`),

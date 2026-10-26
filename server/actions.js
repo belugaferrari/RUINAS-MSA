@@ -1786,7 +1786,7 @@ export const acoes = {
       registrar(s.log, { autor: a.nome, rotulo: 'Carga do Núcleo', texto: `+2d6 elétrico no ataque${cargaNoCoracao(a)}` });
     }
     const pend = { id: uid(), atacante: a.id, alvo: b.id, opcoes: op, arma: arma.nome, alcance: arma.alcance, area: !!op.area, em: Date.now(), municao: itemArma?.capacidade ? itemArma.uid : null,
-      armaTipo: tipoDaArma(arma), tipoDano: arma.tipoDano || null };
+      armaTipo: tipoDaArma(arma), tipoDano: arma.tipoDano || null, natural: !!arma.natural };
     // Contra tiro, ou com o alvo pego de surpresa, não há defesa a escolher: resolve na hora.
     if (op.surpresa || opcoesDefesa(b, arma, sis, { area: pend.area }).length === 1) return { ...resolverPendente(c, s, pend, 'nenhuma', sis), excesso };
     (s.pendentes ||= []).push(pend);

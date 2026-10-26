@@ -413,3 +413,20 @@ test('ataque em área: círculo, cone (7 quadrados no cone de 4,5 m do livro) e 
   assert.deepEqual(A.atingidosPelaArea(cone, pecas, pers), ['g']);
   assert.deepEqual(A.areaDoTexto('Granada: explode em raio de 3m'), { forma: 'circulo', metros: 3 });
 });
+
+test('defesa desarmada vale contra arma natural; Ferida aberta dura 4 turnos e um novo acerto renova', async () => {
+  const b = lutador('Alvo');
+  const garra = { uid: 'g', alcance: 'corpo', natural: true };
+  assert.ok(opcoesDefesa(b, garra, mss).some(o => o.id === 'defesa-desarmada'));
+  assert.ok(!opcoesDefesa(b, { uid: 'f', alcance: 'corpo' }, mss).some(o => o.id === 'defesa-desarmada'), 'arma comum continua sem defesa desarmada');
+  const { sincronizarEfeitos, passarTurnoEfeitos } = await import('../shared/efeitos.js');
+  b.marcadores = ['Ferida aberta'];
+  sincronizarEfeitos(b, mss);
+  assert.equal(b.efeitos['ferida-aberta'].turnos, 4);
+  passarTurnoEfeitos(b, mss); passarTurnoEfeitos(b, mss);
+  assert.equal(b.efeitos['ferida-aberta'].turnos, 2);
+  sincronizarEfeitos(b, mss, { reiniciar: ['ferida-aberta'] });
+  assert.equal(b.efeitos['ferida-aberta'].turnos, 4, 'novo acerto renova');
+  for (let i = 0; i < 4; i++) passarTurnoEfeitos(b, mss);
+  assert.ok(!(b.marcadores || []).includes('Ferida aberta'), 'acaba depois de 4 turnos');
+});
