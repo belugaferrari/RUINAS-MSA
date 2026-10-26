@@ -762,8 +762,10 @@ export function duracaoDaHabilidade(hab) {
   if (hab?.regra?.duracao) return hab.regra.duracao;
   const t = hab?.descricao || '';
   if (/até o próximo descanso|até descansar/i.test(t)) return 'descanso';
-  const m = t.match(/por (\d+) (turnos|rodadas)/i);
-  if (m) return { turnos: Number(m[1]) };
+  // "por 3 turnos", "dura 1 turno", "durante 3 rodadas", "por até 10 turnos"; minutos viram turnos (1 rodada = 6 s).
+  const num = x => ({ um: 1, uma: 1, dois: 2, duas: 2, tres: 3, três: 3 })[x.toLowerCase()] ?? Number(x);
+  const m = t.match(/\b(?:por|durante|dura[m]?(?: por)?) (?:até )?(\d+|um|uma|dois|duas|tr[eê]s) (turnos?|rodadas?|minutos?)\b/i);
+  if (m) return { turnos: num(m[1]) * (/^min/i.test(m[2]) ? 10 : 1) };
   if (/\b(dura|durante|enquanto|concede os seguintes|assume uma forma|se transforma)\b/i.test(t)) return 'combate';
   return null;
 }

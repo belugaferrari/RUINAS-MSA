@@ -88,8 +88,14 @@ export function monstroNoEstagio(m, n) {
   v.ataques = (m.ataques || []).filter(a => valeNoEstagio(a, num));
   v.habilidades = (m.habilidades || []).filter(h => valeNoEstagio(h, num));
   if (v.deslocamentos.andar != null) v.deslocamento = v.deslocamentos.andar;
+  // IP perfurante de base (autor, 26/10): 5 + ½ ND, somado ao "IP por tipo" da planilha.
+  v.ipPerfuranteBase = ipPerfuranteBase(v.dificuldade);
+  v.ipTipos = { ...(v.ipTipos || {}), Perfuração: (Number(v.ipTipos?.Perfuração) || 0) + v.ipPerfuranteBase };
   return v;
 }
+
+// Provisório: meio ND arredondado para baixo (ND 1 → 5; ND 4 → 7; ND 7 → 8); sem ND, conta como 1.
+export const ipPerfuranteBase = nd => 5 + Math.floor((Number(nd) || 1) / 2);
 
 // Distância de edição (para achar "lobisomen" → "Lobisomem", "moloto" → "Moolotos").
 function distancia(a, b) {
@@ -163,4 +169,9 @@ export const textoND = nd => (nd == null || nd === '' ? '—' : FRACOES[nd] || S
 export function ladoNoMapa(p) {
   const t = sem(p?.tamanho);
   return t === 'grande' || t === 'enorme' ? 2 : t === 'imenso' || t === 'colossal' ? 3 : 1;
+}
+// Área de ameaça e passo (livro, Categorias de Tamanho), em quadrados: Enorme e Imenso 2; Colossal 3; os outros 1.
+export function ameacaNoMapa(p) {
+  const t = sem(p?.tamanho);
+  return t === 'enorme' || t === 'imenso' ? 2 : t === 'colossal' ? 3 : 1;
 }

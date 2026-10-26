@@ -189,9 +189,9 @@ export function resolverAtaque(atacante, alvo, sistema, op = {}, defesaId = 'nen
   // Sacrifício: só humanos (autor, 25/10).
   if (tipoCriatura(atacante) !== 'humanoide') delete op.sacrificio;
   add('Sacrifício', op.sacrificio ? cfg.sacrificio.mod : 0);
-  // Alvo com cobertura parcial: −30% no ataque a distância (livro). Mira (gasta a ação de movimento): +30%.
+  // Alvo com cobertura parcial: −30% e Mira (gasta a ação de movimento): +30% — os dois só no ataque a distância (autor, 26/10).
   add(`cobertura parcial do alvo${op.coberturaDoMapa ? ` (${op.coberturaDoMapa})` : ''}`, op.cobertura && arma.alcance === 'distancia' ? -(cfg.coberturaParcial ?? 30) : 0);
-  add('Mira', op.mira ? cfg.mira ?? 30 : 0);
+  add('Mira', op.mira && arma.alcance === 'distancia' ? cfg.mira ?? 30 : 0);
   add('humor', modHumorTestes(atacante, sistema));
   add('modificador', Math.max(-100, Math.min(100, parseInt(op.mod, 10) || 0)));
   // Ataque especial usado agora (habilidade que não está ligada): o % de acerto dela entra só neste ataque.

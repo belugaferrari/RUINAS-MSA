@@ -251,9 +251,9 @@ Regras em `conteudo/sistemas/habilidades-regras.json` (automática / ligar / ati
 - **Afinidades elementais (autor, 22/10):** todas as da planilha valem (Água, Ar, Areia, Caos, Elétrico, Fogo, Frio, Gelo, Metal, Místico, Neutro, Ordem, Pedra, Planta, Psíquico, Submundo, Terra, Tóxico, Vampiro; mais Calor, Energia, Radiação). Relação com os tipos de dano (base.json "afinidadesElementais"): Fogo/Calor → Calor; Frio/Gelo → Frio; Elétrico → Elétrico; Tóxico → Venenoso; Psíquico → Psíquico; Energia → Energia; Radiação → Radiação. **Aguardando o autor:** Água, Ar, Areia, Caos, Metal, Místico, Neutro, Ordem, Pedra, Planta, Submundo, Terra, Vampiro (por enquanto não reduzem dano).
 
 ## 24/10 — a confirmar com o autor
-- Duas armas: no "Dois ataques (um com cada mão)" o segundo ataque não gasta outra ação (os dois cabem na Ação principal). Confirmar.
-- Despertar: o livro não diz quanto dura — o app deixa até o fim do combate (o mestre pode encerrar antes no ícone).
-- Arma natural: Ataque Desarmado Treinado também soma nela (usa a perícia do desarmado). Confirmar.
+- Duas armas: o segundo ataque (outra mão) gasta a ação bônus (autor, 26/10).
+- Duração das habilidades: depende da descrição (autor, 26/10). O app lê "por/durante/dura N turnos/rodadas/minutos" (1 minuto = 10 turnos); sem duração no texto (ex.: Despertar), fica até o fim do combate (o mestre pode encerrar antes no ícone).
+- Arma natural: Ataque Desarmado Treinado (ADT) também soma nela (usa a perícia do desarmado). Confirmar.
 - Garras/presas: dano de perfuração para as duas (autor, 24/10).
 
 ## 24/10 — Monstros: estágios e deslocamentos
@@ -285,3 +285,19 @@ Regras em `conteudo/sistemas/habilidades-regras.json` (automática / ligar / ati
   (parcial vira total contra atiradores a mais de 9 m). Outras: avisar quais.
 - Ainda não: a área (cone/linha) parar no obstáculo; terreno difícil custar o dobro no deslocamento (hoje só aparece no mapa);
   (parte B feita em 26/10: Mapa > "Ler o mapa com IA", com revisão do mestre.)
+
+## 26/10 — respostas do autor
+- **IP perfurante dos monstros:** base 5 + ½ ND (do estágio, se houver), somado ao "IP por tipo" de Perfuração da planilha.
+  Provisório: meio ND arredondado para baixo; vale para todas as criaturas do Livro (monstros e animais).
+- **Afinidades → tipo de dano** (metade do dano): Água → Calor; Ar → Concussão e Queda; Areia → Corte; Caos → Psíquico;
+  Metal → Corte; Místico → Energia; Neutro → Concussão; Ordem → Frio; Pedra → Concussão; Planta → Venenoso;
+  Submundo → Radiação; Terra → Psíquico; Vampiro → Radiação. "Queda" entrou na lista de tipos de dano.
+- **Mira e cobertura** só no ataque a distância. **Evasão** gasta a ação bônus de quem se defende (livro), marcada sozinha.
+- **Área de ameaça e passo** (livro, Categorias de Tamanho): Enorme e Imenso 2 quadrados; Colossal 3. O ataque corpo a corpo
+  fora da área de ameaça (ou do alcance da arma) só avisa. O passo ainda não é usado (o app não tem passo de 1 quadrado).
+- **Marcador de vulnerabilidade:** o livro só traz o teste de quem já está Doente (CONS% ND 70 + 10 × marcadores no descanso
+  longo). Para quem não está doente o livro não diz → **aguardando o autor** (hoje: ND 40 + 10 × marcadores, provisório).
+- **IP por tipo com nome de afinidade** na planilha (ex.: "Água 2", "Pedra 1"): hoje não casa com nenhum dano. **Perguntar ao autor**
+  se vale contra os danos da afinidade (Água 2 = IP 2 contra Calor).
+- **Imagens:** links do Drive (estágios) funcionam (compartilhados "qualquer pessoa com o link"). Links de página
+  (ArtStation, Pinterest, Vecteezy…) não mostram imagem: precisa do link do arquivo da imagem ou subir no Drive.

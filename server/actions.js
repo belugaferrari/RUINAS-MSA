@@ -4,7 +4,7 @@ import { sistema, idSistema } from './sistema.js';
 import { resolverAtaque, aplicarAtaque, armasDisponiveis, opcoesDefesa, sobrevida, rolarIniciativa, resolverManipulacao, modHumorTestes, humorDe, espectroDe, humorAparente, empatiaNatural, liberdadeDeHumor, modoRolagem, modoHumorTeste, recursoDe, gastarRecurso, racaDe, distanciaPecas, usosRestantes, gastarUso, testeContra, ipContra } from '../shared/combate.js';
 import { sincronizarEfeitos, passarTurnoEfeitos, efeitosAoAgir, cargaNoTurno, descansar } from '../shared/efeitos.js';
 import { fichasDeTeste, relatorioFicha, kitDeTeste, periciasDeTeste } from '../shared/fichasTeste.js';
-import { monstroNoEstagio, textoDeslocamentos, textoND, ladoNoMapa } from '../shared/monstros.js';
+import { monstroNoEstagio, textoDeslocamentos, textoND, ladoNoMapa, ameacaNoMapa } from '../shared/monstros.js';
 import { sortearEncontro, cenarioSemIA } from '../shared/encontro.js';
 import { FORMAS_AREA, quadradosDaArea, atingidosPelaArea } from '../shared/area.js';
 import { TIPOS_OBJETO, tipoObjeto, coberturaPeloMapa, foraDaVisaoDosPJs, bloqueadoPorObjeto } from '../shared/objetosMapa.js';
@@ -613,6 +613,8 @@ function resolverPendente(c, s, pend, defesa, sis) {
   }
   s.pendentes = (s.pendentes || []).filter(x => x.id !== pend.id);
   const notas = aplicarAtaque(a, b, r, sis);
+  // Evasão é ação bônus (livro): gasta a de quem se defende.
+  if (defesa === 'evasao') { const ex = gastarAcao(c, b, 'bonus'); notas.push(ex || `${b.nome} gastou a ação bônus (Evasão)`); }
   criarOfertas(c, s, a, b, r, pend, sis);
   // Ataque que falhou: a arma usada pode perder durabilidade (DS maior que a durabilidade atual).
   if (!r.sucesso) {
@@ -1737,8 +1739,8 @@ export const acoes = {
     // Cobertura pelo mapa (ataque a distância, antes de gastar qualquer coisa): parcial = −30%; total = sem linha de tiro.
     if (!op.multiplo) coberturaDoAtaque(c, a, b, op, sis);
     // Mãos: a hábil ataca sem ônus e a inábil com −20%. Dois ataques no turno, um com cada mão ("Dois ataques" no
-    // primeiro): hábil −20% e inábil −40%, e o segundo não gasta outra ação. Ambidestria: sem mão inábil, e nos dois
-    // ataques só o segundo tem −20%.
+    // primeiro): hábil −20% e inábil −40%, e o segundo gasta a ação bônus (autor, 26/10). Ambidestria: sem mão inábil,
+    // e nos dois ataques só o segundo tem −20%.
     const segundaMao = maosDoAtaque(c, a, op, sis);
     // Civilizados (Encantado): quem ele não atacou precisa passar em WILL% Difícil para atacá-lo.
     const barrado = civilizados(c, a, b, sis);
@@ -1755,8 +1757,10 @@ export const acoes = {
     const foraDoTurno = cbA && cbA.ordem[cbA.vez]?.id !== a.id;
     const tipoAcao = especial ? (foraDoTurno ? 'reacao' : acaoDoAtaqueEspecial(a, sis, especial)) : foraDoTurno ? 'reacao' : 'principal';
     // Mira: +30% neste ataque, gastando a ação de movimento. Instável (SAN abaixo de 16) não pode mirar (livro).
+    // Mira só no ataque a distância (autor, 26/10).
+    if (op.mira && armasDisponiveis(a, sis).find(x => x.uid === (op.armaUid || 'desarmado'))?.alcance !== 'distancia') delete op.mira;
     if (op.mira && a.sanidade && a.sanidade.atual < 16) throw erro(`${a.nome} está Instável (SAN abaixo de 16): não pode mirar.`);
-    let excesso = op.extra || op.multiplo || segundaMao ? null : gastarAcao(c, a, tipoAcao);
+    let excesso = op.extra || op.multiplo ? null : gastarAcao(c, a, segundaMao ? 'bonus' : tipoAcao);
     if (op.mira && !op.multiplo) {
       const m = gastarAcao(c, a, 'movimento');
       if (m) excesso = [excesso, m].filter(Boolean).join('; ');
@@ -1766,6 +1770,10 @@ export const acoes = {
     if (notasAgir.length) registrar(s.log, { autor: a.nome, rotulo: 'Efeitos', texto: notasAgir.join(' · ') });
     const arma = armasDisponiveis(a, sis).find(x => x.uid === (op.armaUid || 'desarmado'));
     if (!arma) throw erro('Arma não equipada.');
+    // Corpo a corpo: o alvo precisa estar na área de ameaça (1 quadrado; Enorme/Imenso 2; Colossal 3). Só avisa.
+    const dist = arma.alcance !== 'distancia' && !op.area ? distanciaPecas(c, a.id, b.id) : null;
+    const alcanceCorpo = Math.max(ameacaNoMapa(a) * 1.5, Number(arma.alcanceM) || 0);
+    if (dist != null && dist > alcanceCorpo) excesso = [excesso, `${b.nome} está a ${String(dist).replace('.', ',')} m, fora da área de ameaça de ${a.nome} (${String(alcanceCorpo).replace('.', ',')} m)`].filter(Boolean).join('; ');
     // Munição: cada ataque com arma de fogo gasta 1 (cadência natural).
     const itemArma = (a.itens || []).find(i => i.uid === arma.uid);
     // Cadência: a arma dispara "cadência" balas por ataque (com menos balas, dispara as que tiver).

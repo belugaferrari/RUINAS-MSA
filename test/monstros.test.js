@@ -84,7 +84,7 @@ test('monstro do livro vira NPC completo: atributos, defesa como a do personagem
   }
 });
 
-test('afinidade principal reduz à metade os tipos ligados a ela; afinidade sem relação ainda não reduz', () => {
+test('afinidade principal reduz à metade os tipos ligados a ela (Água → Calor; Metal → Corte, não Calor)', () => {
   const sis = sistema('mss');
   const alvo = (af) => ({ id: 'm', nome: 'M', pv: { max: 50, atual: 50 }, atributos: { FOR: 10, CONS: 10, AGI: 10, DES: 10, INT: 10, PER: 10, CAR: 10, WILL: 10 }, afinidades: [af] });
   const fogo = { id: 'a', nome: 'A', pv: { max: 10, atual: 10 }, atributos: { FOR: 10, CONS: 10, AGI: 10, DES: 10, INT: 10, PER: 10, CAR: 10, WILL: 10 },
@@ -93,7 +93,25 @@ test('afinidade principal reduz à metade os tipos ligados a ela; afinidade sem 
   assert.equal(r1.resistencia, 'Calor');
   assert.equal(r1.porAfinidade, 'Fogo');
   const r2 = resolverAtaque(fogo, alvo('Água'), sis, { armaUid: 'f' }, 'nenhuma', () => 0.99);
-  assert.ok(!r2.resistencia);
+  assert.equal(r2.porAfinidade, 'Água');
+  const r3 = resolverAtaque(fogo, alvo('Metal'), sis, { armaUid: 'f' }, 'nenhuma', () => 0.99);
+  assert.ok(!r3.resistencia);
+});
+
+test('monstro: IP perfurante de base 5 + ½ ND (somado à planilha); área de ameaça pelo tamanho', async () => {
+  const M = await import('../shared/monstros.js');
+  assert.equal(M.monstroNoEstagio({ nome: 'X', dificuldade: 4 }).ipTipos.Perfuração, 7);
+  assert.equal(M.monstroNoEstagio({ nome: 'X', dificuldade: 7, ipTipos: { Perfuração: 2 } }).ipTipos.Perfuração, 10);
+  assert.equal(M.monstroNoEstagio({ nome: 'X', dificuldade: 1, estagios: [{ numero: 2, dificuldade: 6 }] }, 2).ipTipos.Perfuração, 8);
+  assert.deepEqual(['Médio', 'Grande', 'Enorme', 'Imenso', 'Colossal'].map(t => M.ameacaNoMapa({ tamanho: t })), [1, 1, 2, 2, 3]);
+});
+
+test('duração lida do texto da habilidade (turnos, rodadas, minutos)', async () => {
+  const { duracaoDaHabilidade } = await import('../shared/regras.js');
+  assert.deepEqual(duracaoDaHabilidade({ descricao: 'Dura 1 turno.' }), { turnos: 1 });
+  assert.deepEqual(duracaoDaHabilidade({ descricao: 'por até 10 turnos' }), { turnos: 10 });
+  assert.deepEqual(duracaoDaHabilidade({ descricao: 'durante 3 rodadas' }), { turnos: 3 });
+  assert.deepEqual(duracaoDaHabilidade({ descricao: 'por 2 minutos' }), { turnos: 20 });
 });
 
 const { monstroNoEstagio, buscarMonstros, deslocamentosDoTexto, deslocamentosDe, ladoNoMapa } = await import('../shared/monstros.js');

@@ -261,6 +261,7 @@ function fichaMonstro(base, mestre) {
       h('span', { title: 'Nível de dificuldade' }, icone('flame'), `ND ${textoND(m.dificuldade)}`),
       h('span', { title: 'Pontos de vida' }, icone('heart'), `PV ${m.pv ?? 'calc.'}`),
       h('span', { title: 'IP geral' }, icone('shield'), `IP ${m.ipGeral ?? m.defesa ?? 0}`),
+      h('span', { title: `IP contra perfuração (base 5 + ½ ND = ${m.ipPerfuranteBase}${m.ipTipos.Perfuração > m.ipPerfuranteBase ? `, +${m.ipTipos.Perfuração - m.ipPerfuranteBase} da planilha` : ''})` }, icone('shield'), `Perfuração +${m.ipTipos.Perfuração}`),
       m.xp ? h('span', { title: 'XP' }, icone('sparkles'), `${m.xp} XP`) : null),
     h('p', { class: 'meta', title: 'Sem outro tipo descrito, só anda em terreno padrão' }, icone('footprints'), ` ${textoDeslocamentos(m.deslocamentos) || 'Andar —'}`,
       m.outrosDeslocamentos ? h('small', {}, ` (${m.outrosDeslocamentos})`) : null),

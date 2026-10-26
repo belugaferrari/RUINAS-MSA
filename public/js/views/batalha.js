@@ -330,7 +330,7 @@ function quadroAtaques(p, participantes, mestre) {
     const doisAtaques = !!estado.sel.ataque?.doisAtaques;
     const r = await acao('combate.atacar', { atacante: p.id, alvo, opcoes: { ...opcoesGerais(p, mestre), armaUid: uid } });
     if (estado.sel.ataque) Object.assign(estado.sel.ataque, { sacrificio: false, cargaNucleo: false, investida: null, doisAtaques: false, mira: false });
-    if (doisAtaques) aviso('Agora ataque com a arma da outra mão (não gasta outra ação).');
+    if (doisAtaques) aviso('Agora ataque com a arma da outra mão (gasta a ação bônus).');
     if (r.excesso) aviso(`Atenção: ${r.excesso}.`, 'erro');
     if (r.tipo === 'barrado') aviso(r.texto, 'erro');
     else if (r.tipo === 'ataque') aviso(`${r.autor} ${r.rotulo}: ${r.texto}`, r.sucesso ? 'ok' : 'erro');
@@ -521,10 +521,10 @@ function opcoesAtaque(p, mestre, outros = []) {
       caixa('varios', 'Vários alvos', true),
       caixa('cobertura', 'Alvo com cobertura parcial (−30% no ataque a distância)'),
       // Mira: gasta a ação de movimento (Instável, com SAN abaixo de 16, não pode mirar).
-      p.sanidade && p.sanidade.atual < 16 ? null : caixa('mira', 'Mira (+30%, gasta a ação de movimento)'),
+      p.sanidade && p.sanidade.atual < 16 ? null : caixa('mira', 'Mira (+30% no ataque a distância, gasta a ação de movimento)'),
       // Sacrifício: só humanos (autor, 25/10).
       tipoCriatura(p) === 'humanoide' ? caixa('sacrificio', 'Sacrifício (+10%, D6 de vida)') : null,
-      // Uma arma em cada mão: dois ataques no turno (o segundo, com a outra mão, não gasta outra ação).
+      // Uma arma em cada mão: dois ataques no turno (o segundo, com a outra mão, gasta a ação bônus).
       (p.itens || []).filter(i => i.equipado && i.slot === 'maos' && i.tipo === 'arma' && (i.ocupa ?? 1) < 2).length >= 2
         ? h('span', { title: temHabilidade(p, estado.sistema, 'Ambidestria') ? 'Ambidestria: o primeiro sem ônus, o segundo −20%' : 'Mão hábil −20%, mão inábil −40%' },
           caixa('doisAtaques', 'Dois ataques (um com cada mão)')) : null,
