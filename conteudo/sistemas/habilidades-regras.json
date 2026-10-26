@@ -1,5 +1,5 @@
 {
-  "_aviso": "Regras próprias de habilidades e vantagens (valem no MSA e no MSS). A chave é o nome sem acento, em minúsculas. modo: sempre (aplicada sozinha) | ligar (botão liga/desliga) | ativar (botão com custo, usos ou duração). efeitos: mesmo formato do lápis do mestre. contra: tipos de criatura do oponente (tiposCriatura no base.json). Decisões do autor na planilha de 20/10.",
+  "_aviso": "Regras próprias de habilidades e vantagens (valem no MSA e no MSS). A chave é o nome sem acento, em minúsculas. modo: sempre (aplicada sozinha) | ligar (botão liga/desliga) | ativar (botão com custo, usos ou duração). efeitos: mesmo formato do lápis do mestre. contra: tipos de criatura do oponente (tiposCriatura no base.json). Decisões do autor nas planilhas de 20/10 e 26/10. especial: efeito próprio (ver server/actions.js, ESPECIAIS); escolhas: o que o jogador escolhe ao ativar (alvo, aliado, humor, sub, pericia, tipoIp, item, itemDoAlvo, efeito).",
   "comunicacao selvagem": {
     "modo": "ligar",
     "efeitos": "+10% em Trato de Animais",
@@ -182,5 +182,270 @@
     "humor": "corajoso",
     "duracao": "combate",
     "texto": "1d6 PV temporários e Arma natural +1 (os dois +1 por Corpo monstruoso), imune a medo, humor Corajoso, até o fim do combate; atacado ou ameaçado, pode despertar como ação livre"
+  },
+  "titereiro": {
+    "modo": "ativar",
+    "acao": "bonus",
+    "especial": "humorForcado",
+    "subs": [
+      "manipulacao.labia",
+      "manipulacao.intimidacao",
+      "manipulacao.seducao"
+    ],
+    "resiste": "WILL",
+    "humores": "todos",
+    "turnosAlvo": "1d4",
+    "escolhas": [
+      "alvo",
+      "sub",
+      "humor"
+    ],
+    "texto": "Lábia, Intimidação ou Sedução contra o WILL% do alvo: passou, o humor dele vira o que você escolher e fica preso por 1d4 turnos; se você lhe causar dano no mesmo turno, pode tentar deixá-lo Amedrontado (o mestre aplica)"
+  },
+  "foco de atencao": {
+    "modo": "ativar",
+    "acao": "bonus",
+    "especial": "humorForcado",
+    "subs": [
+      "manipulacao.seducao",
+      "manipulacao.impressionar"
+    ],
+    "resiste": "RMNP",
+    "humores": [
+      "atraido",
+      "enojado"
+    ],
+    "turnosAlvo": "1d4+1",
+    "foco": true,
+    "escolhas": [
+      "alvo",
+      "sub",
+      "humor"
+    ],
+    "texto": "Sedução ou Impressionar contra o R.MNP do alvo: ele fica Atraído ou Enojado por 1d4+1 turnos; no combate, WILL% Muito Difícil ou só ataca você; você soma o seu CAR na defesa contra ele"
+  },
+  "terror psicologico": {
+    "modo": "ativar",
+    "acao": "principal",
+    "especial": "humorForcado",
+    "subs": [
+      "manipulacao.tortura"
+    ],
+    "resiste": "RMNP",
+    "humores": [
+      "amedrontado"
+    ],
+    "turnosAlvo": "1d4",
+    "trauma": true,
+    "escolhas": [
+      "alvo"
+    ],
+    "texto": "Tortura contra o R.MNP do alvo: Amedrontado, Trauma Momentâneo (−30% no ataque por 1d4 turnos) e 1d6 de dano psicológico (Sanidade)"
+  },
+  "arte que cura": {
+    "modo": "ativar",
+    "acao": "completa",
+    "especial": "pvTempAliados",
+    "usos": {
+      "max": 1,
+      "recarga": "descanso-longo"
+    },
+    "escolhas": [
+      "subArte"
+    ],
+    "texto": "Arte NORMAL: os aliados no campo recebem (MOD CAR)d6 de PV temporários até o fim do combate; 1 vez por descanso longo"
+  },
+  "imunidade diplomatica": {
+    "modo": "ligar",
+    "vantagem": [
+      "testes"
+    ],
+    "defesaAtributo": "CAR",
+    "desvantagemContraMim": true,
+    "texto": "ligue quando for atacado dentro de uma cidade: seus testes com vantagem, os ataques contra você com desvantagem e o seu CAR soma nas defesas. (+20% em diplomacia: falta saber qual perícia)"
+  },
+  "inspiracao motivacional": {
+    "modo": "ativar",
+    "acao": "completa",
+    "especial": "inspirarPericia",
+    "usos": {
+      "max": 1,
+      "recarga": "descanso"
+    },
+    "escolhas": [
+      "pericia"
+    ],
+    "texto": "Liderança NORMAL: você e os aliados fazem a perícia escolhida com vantagem por 2d4 turnos; 1 vez por descanso (curto ou longo)"
+  },
+  "ataque inesperado": {
+    "modo": "sempre",
+    "texto": "no ataque surpresa, o dano da arma sobe 1 passo para cada ponto de MOD CAR (automático)"
+  },
+  "inspiracao": {
+    "modo": "ativar",
+    "acao": "bonus",
+    "especial": "inspiracao",
+    "recurso": {
+      "id": "inspiracao",
+      "nome": "Inspirações",
+      "max": "1+MOD CAR",
+      "min": 1,
+      "recarga": "descanso-longo"
+    },
+    "custo": {
+      "recurso": "inspiracao",
+      "qtd": 1
+    },
+    "escolhas": [
+      "aliado"
+    ],
+    "texto": "+1d20 no próximo teste (seu ou de um aliado; não vale em testes de combate); MOD CAR + 1 vezes por descanso longo (mínimo 1)"
+  },
+  "mestre das imitacoes": {
+    "modo": "sempre",
+    "vantagem": [
+      "espionagem.maquiagem"
+    ],
+    "texto": "vantagem em Maquiagem para imitar alguém que conhece; 15 min observando + Investigação: +20% (o mestre aplica)"
+  },
+  "olhar penetrante": {
+    "modo": "ativar",
+    "especial": "marcaAlvo",
+    "bonus": 10,
+    "usos": {
+      "max": 1,
+      "recarga": "descanso-longo"
+    },
+    "escolhas": [
+      "alvo"
+    ],
+    "texto": "depois de usar Interrogatório no alvo: +10% nos testes contra ele (inclusive combate) até o fim da cena; 1 vez por descanso longo"
+  },
+  "conhecimento acumulado": {
+    "modo": "sempre",
+    "mod": {
+      "INT": 1
+    },
+    "texto": "+1 no MOD INT a cada vez que recebeu (3º nível e a cada 4)"
+  },
+  "manuseio profissional": {
+    "modo": "sempre",
+    "texto": "item na mão: +10% no ataque e nunca perde durabilidade (automático); aprimorado +1 e maestria 2 com uma mão: o mestre aplica (aprimoramentos ainda não estão no app)"
+  },
+  "afericao perfeita": {
+    "modo": "sempre",
+    "vantagem": [
+      "engenharia",
+      "computacao",
+      "armadilhas"
+    ],
+    "requerItem": "kit|ferrament",
+    "texto": "com kit ou ferramentas no inventário: vantagem em Engenharia, Computação e Armadilhas (automático)"
+  },
+  "restaurador": {
+    "modo": "sempre",
+    "texto": "+10% no teste de reparo e o reparo recupera até 2 de durabilidade (automático)"
+  },
+  "reparo improvisado": {
+    "modo": "sempre",
+    "texto": "repara com sucata no lugar do kit (1 h por item); o reparo nunca estraga o item de vez, nem com erro crítico (automático)"
+  },
+  "padrao de ataque": {
+    "modo": "sempre",
+    "texto": "depois do 3º turno de um inimigo, +10% nas defesas contra ele (automático)"
+  },
+  "armadura improvisada": {
+    "modo": "ativar",
+    "acao": "bonus",
+    "especial": "ipTemp",
+    "repetir": true,
+    "escolhas": [
+      "aliado",
+      "tipoIp"
+    ],
+    "texto": "+1 de IP por uso (em você ou num aliado a 1 passo): até +2 geral OU até +4 de um tipo; até o fim do combate"
+  },
+  "gambiarras profissionais": {
+    "modo": "ativar",
+    "especial": "itemGambiarra",
+    "sucata": true,
+    "turnos": "2d4",
+    "usos": {
+      "max": 1,
+      "recarga": "descanso"
+    },
+    "escolhas": [
+      "itemQuebrado"
+    ],
+    "texto": "um item quebrado volta a funcionar (durabilidade 1) por 2d4 turnos e depois quebra de novo; consome sucata; 1 vez por descanso (curto ou longo)"
+  },
+  "gambiarra rapida": {
+    "modo": "ativar",
+    "acao": "completa",
+    "especial": "itemGambiarra",
+    "teste": "Difícil",
+    "turnos": "10",
+    "escolhas": [
+      "itemQuebrado"
+    ],
+    "texto": "reparo DIFÍCIL: o item quebrado funciona por 10 turnos (não serve para consumíveis)"
+  },
+  "reparo de roda": {
+    "modo": "ativar",
+    "acao": "principal",
+    "especial": "reparoRoda",
+    "repetir": true,
+    "escolhas": [
+      "item"
+    ],
+    "texto": "+1d4 de durabilidade num drone ou veículo até o fim do combate (se fosse quebrar ao perder, fica com 1); vantagem em Engenharia › Mecânica para reparar drones e veículos (o mestre aplica)"
+  },
+  "engenharia reversa": {
+    "modo": "ativar",
+    "acao": "principal",
+    "especial": "engenhariaReversa",
+    "escolhas": [
+      "alvo",
+      "itemDoAlvo"
+    ],
+    "texto": "Engenharia DIFÍCIL mirando um item: passou, o ataque localizado nesse item tira 1 de durabilidade por acerto"
+  },
+  "destruidor de itens": {
+    "modo": "sempre",
+    "texto": "+1d6 de dano no ataque localizado num item (automático)"
+  },
+  "bugigangas de bolso": {
+    "modo": "ativar",
+    "acao": "bonus",
+    "especial": "bugiganga",
+    "usos": {
+      "max": 2,
+      "recarga": "descanso-longo"
+    },
+    "escolhas": [
+      "efeito"
+    ],
+    "texto": "fumaça (raio 3 m) ou ruído (raio 15 m): todos na área fazem CONS% Normal ou ficam Aturdidos, e −15% até o fim do turno; 2 por descanso longo"
+  },
+  "gerador eletrico portatil": {
+    "modo": "ativar",
+    "acao": "livre",
+    "usos": {
+      "max": 1,
+      "recarga": "descanso"
+    },
+    "texto": "liga equipamentos e recarrega baterias de aliados a 1,5 m; até 1 hora por descanso; taser de 1d4 elétrico (o item entra com as invenções)"
+  },
+  "invencao protetora": {
+    "modo": "sempre",
+    "acao": "reacao",
+    "especial": "reduzirDano",
+    "texto": "ao tomar dano: reação, gasta uma sucata e reduz o dano em 1d6 (o app oferece)"
+  },
+  "invencao excl protetora": {
+    "modo": "sempre",
+    "acao": "reacao",
+    "especial": "absorverDano",
+    "texto": "se o ataque o deixar com 0 PV ou menos: reação, a Invenção! entra no caminho, absorve 100% do dano e é destruída (o app oferece)"
   }
 }

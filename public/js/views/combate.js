@@ -333,6 +333,8 @@ export function opcoesGerais(p, mestre) {
   if (tipoCriatura(p) === 'humanoide') op.sacrificio = sel.sacrificio;
   if (sel.cargaNucleo) op.cargaNucleo = true;
   if (sel.investida != null) op.investida = sel.investida;
+  // Ataque localizado: onde mira (parte do corpo ou "item:<uid>" de um item equipado do alvo).
+  if (sel.localizado && sel.local) op.local = sel.local;
   if (mestre) Object.assign(op, { vantagem: sel.vantagem, desvantagem: sel.desvantagem, mod: sel.mod, danoLivre: sel.danoLivre || null, ignorarCoberturaMapa: !!sel.ignorarCoberturaMapa });
   return op;
 }

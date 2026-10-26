@@ -1,9 +1,15 @@
 // Combate e regras sociais automatizadas (Livro MSS). Só valem quando o sistema da campanha liga
 // "modulos.combate" / "modulos.social". Escolhas provisórias estão em conteudo/sistemas/PENDENCIAS.md.
 import { ladoNoMapa } from './monstros.js';
-import { rolarDado, derivados, ipContraDano, listaHabilidades, vantagemPorHabilidade, tipoCriatura, subirPassos, temHabilidade, regraDaHabilidade, danoDasHabilidades, efeitosHabilidade, modoHabilidade, perderPv, chaveHabilidade } from './regras.js';
+import { rolarDado, derivados, ipContraDano, listaHabilidades, vantagemPorHabilidade, tipoCriatura, subirPassos, temHabilidade, regraDaHabilidade, danoDasHabilidades, efeitosHabilidade, modoHabilidade, perderPv, chaveHabilidade, habilidadeValendo } from './regras.js';
 
 const d100 = rng => 1 + Math.floor(rng() * 100);
+
+// Ataque localizado (autor, 26/10): o atacante escolhe onde mira — uma parte do corpo ou um item equipado do alvo.
+export const LOCAIS_ATAQUE = [
+  { id: 'cabeca', nome: 'Cabeça' }, { id: 'braco-esquerdo', nome: 'Braço esquerdo' }, { id: 'braco-direito', nome: 'Braço direito' },
+  { id: 'tronco', nome: 'Tronco' }, { id: 'perna-esquerda', nome: 'Perna esquerda' }, { id: 'perna-direita', nome: 'Perna direita' },
+];
 
 // Vantagem e desvantagem se anulam. Com vantagem rola 2d100 e fica com o maior; com desvantagem, o menor.
 export function modoRolagem(vantagem, desvantagem) {
@@ -125,7 +131,7 @@ export function opcoesDefesa(alvo, arma, sistema, { area = false } = {}) {
 // Contra tiro (a distância, fora de área) a dificuldade é 50 + 5 × nível do alvo. Cobertura parcial +30 só contra ataques a distância.
 // Defesa surpresa (alvo pego de surpresa, não escolhe defesa): só a base da Esquiva (50) contra ataque físico,
 // e só nível × 5 contra ataque a distância.
-export function defesaDoAlvo(alvo, arma, sistema, { escolha = 'nenhuma', area = false, surpresa = false, atacante = null } = {}) {
+export function defesaDoAlvo(alvo, arma, sistema, { escolha = 'nenhuma', area = false, surpresa = false, atacante = null, defesaExtra = [] } = {}) {
   const cfg = sistema.combate;
   const opcoes = opcoesDefesa(alvo, arma, sistema, { area });
   const esc = surpresa ? { id: 'nenhuma', nome: 'Surpresa' } : opcoes.find(o => o.id === escolha);
@@ -146,6 +152,15 @@ export function defesaDoAlvo(alvo, arma, sistema, { escolha = 'nenhuma', area = 
   const tipoAtacante = atacante ? tipoCriatura(atacante) : null;
   const extra = derivados(alvo, sistema).habilidades.defesas.filter(d => !d.contra || (tipoAtacante && d.contra.includes(tipoAtacante))).reduce((t, d) => t + d.valor, 0);
   if (extra) partes.push({ nome: 'habilidades', valor: extra });
+  // Habilidade ligada que soma um atributo às defesas (Imunidade Diplomática, em cidade: + CAR).
+  for (const x of listaHabilidades(alvo, sistema)) {
+    const atr = x.regra?.defesaAtributo;
+    if (atr && habilidadeValendo(alvo, sistema, x.nome)) partes.push({ nome: `${x.nome} (${atr})`, valor: derivados(alvo, sistema).atributos[atr] ?? 0 });
+  }
+  // Marcas temporárias do alvo (Foco de Atenção: + CAR contra quem está focado nele).
+  for (const m of alvo.marcas || []) if (m.defesa && (!m.contra || m.contra === atacante?.id)) partes.push({ nome: m.nome, valor: m.defesa });
+  // Defesa calculada no servidor (Padrão de ataque: +10% depois do 3º turno do inimigo).
+  for (const d of defesaExtra) partes.push(d);
   return { id: esc.id, nome: esc.nome, nota: esc.nota || null, total: partes.reduce((s, x) => s + x.valor, 0), partes };
 }
 
@@ -181,6 +196,8 @@ export function resolverAtaque(atacante, alvo, sistema, op = {}, defesaId = 'nen
     ? Math.max(0, parseInt(op.investida, 10) || 0) : null;
   if (investida != null) arma = { ...arma, dano: subirPassos(arma.dano, 1) };
   const da = derivados(atacante, sistema);
+  // Ataque inesperado: no ataque surpresa, o dano sobe 1 passo para cada ponto de MOD CAR.
+  if (op.surpresa && (da.mod.CAR || 0) > 0 && habilidadeValendo(atacante, sistema, 'Ataque inesperado')) arma = { ...arma, dano: subirPassos(arma.dano, da.mod.CAR), inesperado: da.mod.CAR };
   const pericia = arma.pericia || 'briga.ataque-desarmado';
   const mods = [];
   const add = (nome, valor) => valor && mods.push({ nome, valor });
@@ -193,6 +210,10 @@ export function resolverAtaque(atacante, alvo, sistema, op = {}, defesaId = 'nen
   add(`cobertura parcial do alvo${op.coberturaDoMapa ? ` (${op.coberturaDoMapa})` : ''}`, op.cobertura && arma.alcance === 'distancia' ? -(cfg.coberturaParcial ?? 30) : 0);
   add('Mira', op.mira && arma.alcance === 'distancia' ? cfg.mira ?? 30 : 0);
   add('humor', modHumorTestes(atacante, sistema));
+  // Manuseio profissional: item na mão (arma que não é desarmado nem natural) +10%.
+  if (arma.uid !== 'desarmado' && !arma.natural && habilidadeValendo(atacante, sistema, 'Manuseio profissional')) add('Manuseio profissional', 10);
+  // Marcas temporárias do atacante: Olhar Penetrante (+10% contra o alvo), Trauma momentâneo (−30% no combate ofensivo).
+  for (const m of atacante.marcas || []) if (m.acerto && (!m.contra || m.contra === alvo.id)) add(m.nome, m.acerto);
   add('modificador', Math.max(-100, Math.min(100, parseInt(op.mod, 10) || 0)));
   // Ataque especial usado agora (habilidade que não está ligada): o % de acerto dela entra só neste ataque.
   const especial = op.especial ? listaHabilidades(atacante, sistema).find(x => x.id === op.especial) : null;
@@ -217,9 +238,11 @@ export function resolverAtaque(atacante, alvo, sistema, op = {}, defesaId = 'nen
   if (tem(atacante, 'Caído')) motivosD.push('atacante caído');
   if (tem(atacante, 'Aturdido')) motivosD.push('atacante aturdido');
   if (hA?.desvantagemAtaque) motivosD.push(hA.nome);
+  // Alvo com habilidade que põe quem o ataca em desvantagem (Imunidade Diplomática, em cidade).
+  for (const x of listaHabilidades(alvo, sistema)) if (x.regra?.desvantagemContraMim && habilidadeValendo(alvo, sistema, x.nome)) motivosD.push(`${x.nome} de ${alvo.nome}`);
   const modo = modoRolagem(motivosV.length > 0, motivosD.length > 0);
 
-  const defesa = defesaDoAlvo(alvo, arma, sistema, { escolha: defesaId, area: !!op.area, surpresa: !!op.surpresa, atacante });
+  const defesa = defesaDoAlvo(alvo, arma, sistema, { escolha: defesaId, area: !!op.area, surpresa: !!op.surpresa, atacante, defesaExtra: op.defesaExtra || [] });
   const teste = testeContra(acao, defesa.total, sistema, { modo, rng });
   const r = {
     arma: arma.nome, pericia, acao, mods, defesa, ...teste, motivosVantagem: motivosV, motivosDesvantagem: motivosD,
@@ -304,7 +327,7 @@ export function recursoDe(p, sistema, id) {
   if (!hab) return null;
   const r = hab.regra.recurso;
   const d = derivados(p, sistema);
-  const max = Math.max(0, String(r.max).split('+').reduce((s, parte) => {
+  const max = Math.max(r.min || 0, String(r.max).split('+').reduce((s, parte) => {
     const m = /MOD\s*(\w+)/i.exec(parte);
     return s + (m ? d.mod[m[1].toUpperCase()] || 0 : parseInt(parte, 10) || 0);
   }, 0));
@@ -513,6 +536,7 @@ export function empatiaNatural(participantes, sistema, { relacoes = {}, rng = Ma
     let novo = atual;
     let motivo = 'resistiu';
     if (meuEsp === 'apatico') motivo = 'apático: desligado da empatia';
+    else if (r.humorForcado) motivo = `humor preso (${r.humorForcado.nome})`;
     else {
       const ok = testes.filter(t => t.sucesso);
       const pos = ok.filter(t => t.espectro === 'positivo');

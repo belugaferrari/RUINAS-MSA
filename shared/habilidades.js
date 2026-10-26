@@ -12,7 +12,7 @@ const COMBATE = ['briga', 'arma-branca', 'armas-de-fogo'];
 // e mudança na Humanidade máxima.
 // danoCond: dano que só vale num tipo de ataque ({ fixo | dados, cond: 'desarmado' | 'branca' | 'distancia' | 'corpo' }).
 const vazio = () => ({ atributos: {}, testes: 0, pericias: {}, subpericias: {}, pv: 0, ip: { geral: 0, tipos: {} }, danoFixo: 0, danoDados: [], danoCond: [], notas: [],
-  rmnp: 0, imune: [], vantagens: [], defesas: [], humanidadeMax: 0, margemEfeito: [] });
+  rmnp: 0, imune: [], vantagens: [], defesas: [], humanidadeMax: 0, margemEfeito: [], mod: {} });
 
 // Condição do bônus de dano pela frase onde ele aparece ("Ataques desarmados causam +1 Dano" → só desarmado).
 const COND_NOME = { desarmado: 'ataques desarmados', branca: 'armas brancas', distancia: 'ataques a distância', corpo: 'corpo a corpo' };
@@ -162,8 +162,10 @@ export function efeitosDoTexto(texto, sistema, { tipoIp = () => null } = {}) {
 }
 
 // Junta os campos das regras próprias (habilidades-regras.json) ao que veio do texto.
-export function efeitosDaRegra(regra, base, sistema, rotulos = {}) {
+export function efeitosDaRegra(regra, base, sistema, rotulos = {}, vezes = 1) {
   const r = base;
+  // MOD de atributo a mais (Conhecimento acumulado: +1 no MOD INT a cada vez que recebeu a habilidade).
+  for (const [k, v] of Object.entries(regra.mod || {})) { r.mod[k] = (r.mod[k] || 0) + v * vezes; r.notas.push(`MOD ${k} +${v * vezes}`); }
   const contra = regra.contra?.length ? regra.contra : null;
   const nomeContra = contra ? ` contra ${contra.map(id => rotulos.tipos?.[id] || id).join(' e ')}` : '';
   if (regra.rmnp) { r.rmnp += regra.rmnp; r.notas.push(`R.MNP ${regra.rmnp > 0 ? '+' : ''}${regra.rmnp}`); }
@@ -189,6 +191,7 @@ export function somarEfeitos(lista) {
     r.testes += x.testes; r.pv += x.pv; r.ip.geral += x.ip.geral; r.danoFixo += x.danoFixo;
     r.danoDados.push(...x.danoDados); r.notas.push(...x.notas); r.danoCond.push(...(x.danoCond || [])); r.margemEfeito.push(...(x.margemEfeito || []));
     r.rmnp += x.rmnp || 0; r.humanidadeMax += x.humanidadeMax || 0;
+    for (const [k, v] of Object.entries(x.mod || {})) r.mod[k] = (r.mod[k] || 0) + v;
     r.imune.push(...(x.imune || [])); r.vantagens.push(...(x.vantagens || [])); r.defesas.push(...(x.defesas || []));
   }
   return r;

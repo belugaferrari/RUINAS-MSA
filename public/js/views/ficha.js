@@ -8,7 +8,7 @@ import { painelPericias } from './pericias.js';
 import { bonecoView } from './boneco.js';
 import { escolherAvatar } from './avatares.js';
 import { abrirDescanso } from './descanso.js';
-import { botaoExpandir, inventarioExpandido } from './inventarioExpandido.js';
+import { botaoExpandir, inventarioExpandido, botaoDar } from './inventarioExpandido.js';
 import { prepararTeste } from './dados.js';
 
 export const ICONE_TIPO = {
@@ -569,6 +569,7 @@ export function equipamento(p, mestre, filtro = null) {
           (mestre || estado.campanha.lojaAberta) ? botao('Vender', async () => {
             if (await confirmar(`Vender ${i.nome} por ${i.venda ?? 0}?`)) await acao('item.vender', { id: p.id, uid: i.uid });
           }, { class: 'pequeno', icone: 'coins' }) : null,
+          botaoDar(p, i),
           botao('', async () => {
             if (await confirmar(`Descartar ${i.nome}?`)) await acao('item.remover', { id: p.id, uid: i.uid });
           }, { class: 'pequeno perigo', icone: 'trash-2', title: `Descartar ${i.nome}` }),

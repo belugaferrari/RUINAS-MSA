@@ -5,7 +5,7 @@ import { h, botao, selecao, aviso, icone, titulo, vazio, pedirTexto, confirmar }
 import { estado, render, personagemPorId } from '../estado.js';
 import { acao } from '../api.js';
 import { derivados, listaHabilidades, efeitosHabilidade, modoHabilidade, temHabilidade, tipoCriatura, chaveHabilidade, GRUPOS_IP, acoesDaHabilidade, nomeAcao, dadosDaHabilidade, ehAtaqueEspecial, TIPOS_ACAO, acaoDoAtaqueEspecial, podeRepetir, duracaoDaHabilidade, textoDuracao } from '/shared/regras.js';
-import { armasDisponiveis, ipDe, opcoesDefesa, defesaDoAlvo, danoDaArma, recursoDe } from '/shared/combate.js';
+import { armasDisponiveis, ipDe, opcoesDefesa, defesaDoAlvo, danoDaArma, recursoDe, LOCAIS_ATAQUE } from '/shared/combate.js';
 import { trilhaCompacta, escolherCondicao, cargaView } from './ficha.js';
 import { painelSlot, naMao, maoHabil } from './boneco.js';
 import { FORMAS_AREA, areaDoTexto } from '/shared/area.js';
@@ -192,7 +192,7 @@ function quadroHabilidades(p, mestre) {
   return [
     recursos.length || p.pvTemp || p.essencia ? h('div', { class: 'hab-recursos barra' },
       recursos.map(r => h('span', { class: 'recurso' }, icone('zap'), h('strong', {}, ` ${r.nome}: ${r.restantes}/${r.max}`),
-        botao('Usar como bateria', () => acao('habilidade.recurso', { id: p.id, recurso: r.id }).then(x => aviso(x.texto)), { class: 'pequeno', disabled: !r.restantes }),
+        r.id === 'nucleo' ? botao('Usar como bateria', () => acao('habilidade.recurso', { id: p.id, recurso: r.id }).then(x => aviso(x.texto)), { class: 'pequeno', disabled: !r.restantes }) : null,
         // Núcleo: com coração humano, cada carga causa 1d6 de dano. O mestre marca quando o coração for artificial.
         r.id === 'nucleo' ? h('label', { class: 'linha', title: 'Com coração humano, cada carga usada causa 1d6 de dano' },
           h('input', { type: 'checkbox', checked: !!p.coracaoArtificial, disabled: !mestre, onchange: e => acao('personagem.atualizar', { id: p.id, patch: { coracaoArtificial: e.target.checked } }) }), 'coração artificial') : null)),
@@ -243,10 +243,10 @@ function botaoAtivar(p, x, lapis) {
   const mestre = estado.campanha.papel === 'mestre';
   const usados = p.usos?.[chaveHabilidade(x.nome)] || 0;
   const info = [
-    r.acao ? `ação ${r.acao}` : null,
+    r.acao ? nomeAcao(r.acao).toLowerCase() : null,
     r.custo?.recurso ? `${r.custo.qtd || 1} carga(s)` : null,
     r.custo?.hum ? `−${r.custo.hum} HUM` : null,
-    r.usos ? `${Math.max(0, r.usos.max - usados)}/${r.usos.max} por descanso longo` : null,
+    r.usos ? `${Math.max(0, r.usos.max - usados)}/${r.usos.max} por descanso${r.usos.recarga === 'descanso-longo' ? ' longo' : ' (curto ou longo)'}` : null,
     textoDuracao(r.duracao) || null,
     r.requerItem ? `precisa de ${r.requerItem.replace('|', ' ou ')}` : null,
   ].filter(Boolean).join(' · ');
@@ -259,6 +259,10 @@ function botaoAtivar(p, x, lapis) {
     escolha = abatidos.length ? selecao(abatidos.map(m => ({ valor: m.id, rotulo: m.nome })), estado.sel[chave], v => { estado.sel[chave] = v; }, { 'aria-label': 'Monstro abatido' })
       : h('small', { class: 'dica' }, 'Nenhum monstro abatido no campo.');
   }
+  // Escolhas da habilidade (alvo, aliado, humor, perícia, tipo de IP, item…), lembradas por personagem e habilidade.
+  const esc = estado.sel[`esc:${p.id}:${x.id}`] ||= {};
+  const campos = (r.escolhas || []).map(k => campoEscolha(p, x, k, esc)).filter(Boolean);
+  if (campos.length && !ativa) escolha = h('div', { class: 'barra escolhas-hab' }, campos);
   const ef = efeitosHabilidade(p, sis, x).notas.join(' · ');
   return h('li', { class: ativa ? 'ativa' : '' },
     h('div', { class: 'hab-texto' },
@@ -270,12 +274,45 @@ function botaoAtivar(p, x, lapis) {
       // Ativa: não ativa de novo enquanto durar (salvo se o texto permite); o mestre pode encerrar antes.
       botao(ativa && !repete ? (mestre ? 'Encerrar' : 'Ativa') : 'Ativar', async () => {
         if (!ativa && info && !(await confirmar(`Ativar ${x.nome}? ${info}.`))) return;
-        const res = await acao('habilidade.ativar', { id: p.id, hab: x.id, alvo: estado.sel[`essencia:${p.id}`] || null });
-        aviso(res.desativou ? `${x.nome} encerrada.` : `${x.nome}: ${res.texto}`);
+        const res = await acao('habilidade.ativar', { id: p.id, hab: x.id, alvo: estado.sel[`essencia:${p.id}`] || null, escolhas: esc });
+        aviso(res.desativou ? `${x.nome} encerrada.` : `${x.nome}: ${res.texto}`, res.sucesso === false ? 'erro' : 'ok');
         if (res.excesso) aviso(`Atenção: ${res.excesso}.`, 'erro');
       }, { class: `pequeno ${ativa ? '' : 'primario'}`, icone: 'flame', title: ativa && !repete && !mestre ? `${x.nome} já está ativa: só acaba no fim ou se o mestre encerrar` : null,
         disabled: (ativa && !repete && !mestre) || (!ativa && ((r.usos && usados >= r.usos.max) || (r.especial === 'essencia' && !estado.sel[`essencia:${p.id}`]))) }),
       lapis(x)));
+}
+
+// Um campo de escolha da habilidade. Alvo/aliado: quem está no Campo de Batalha; item: do próprio personagem (ou do alvo).
+function campoEscolha(p, x, k, esc) {
+  const sis = estado.sistema;
+  const r = x.regra;
+  const campo = (rotulo, opcoes, chave) => {
+    if (!opcoes.length) return h('small', { class: 'dica' }, `${rotulo}: nada para escolher.`);
+    if (!opcoes.some(o => o.valor === esc[chave])) esc[chave] = opcoes[0].valor;
+    return h('label', { class: 'linha' }, rotulo, selecao(opcoes, esc[chave], v => { esc[chave] = v; render(); }, { 'aria-label': `${x.nome}: ${rotulo}` }));
+  };
+  const campoBatalha = (estado.campanha.salas.batalha.participantes || []).map(personagemPorId).filter(Boolean);
+  const nomeSub = id => sis.pericias.flatMap(q => q.subpericias.map(s => [s.id, s.nome])).find(y => y[0] === id)?.[1] || id;
+  if (k === 'alvo') return campo('Alvo', campoBatalha.filter(q => q.id !== p.id).map(q => ({ valor: q.id, rotulo: q.nome })), 'alvo');
+  if (k === 'aliado') return campo('Em quem', [{ valor: p.id, rotulo: `${p.nome} (você)` }, ...campoBatalha.filter(q => q.id !== p.id).map(q => ({ valor: q.id, rotulo: q.nome }))], 'alvo');
+  if (k === 'sub') return campo('Perícia', r.subs.map(id => ({ valor: id, rotulo: nomeSub(id) })), 'sub');
+  if (k === 'subArte') return campo('Arte', sis.pericias.find(q => q.id === 'arte').subpericias.map(s => ({ valor: s.id, rotulo: s.nome })), 'sub');
+  if (k === 'humor') {
+    const ids = r.humores === 'todos' ? (sis.social?.humores || []).map(hh => hh.id) : r.humores;
+    return campo('Humor', ids.map(id => ({ valor: id, rotulo: sis.social?.humores?.find(hh => hh.id === id)?.nome || id })), 'humor');
+  }
+  if (k === 'pericia') return campo('Perícia', sis.pericias.map(q => ({ valor: q.id, rotulo: q.nome })), 'pericia');
+  if (k === 'tipoIp') return campo('IP', [{ valor: 'geral', rotulo: 'Geral (até +2)' }, ...['Corte', 'Perfuração', 'Concussão', 'Elétrico', 'Calor', 'Frio'].map(t => ({ valor: t, rotulo: `${t} (até +4)` }))], 'tipoIp');
+  if (k === 'efeito') return campo('Engenhoca', [{ valor: 'fumaca', rotulo: 'Fumaça (raio 3 m)' }, { valor: 'ruido', rotulo: 'Ruído (raio 15 m)' }], 'efeito');
+  if (k === 'item' || k === 'itemQuebrado') {
+    const itens = (p.itens || []).filter(i => i.durabilidade != null && !i.consumivel && (k === 'item' || (i.durabilidadeAtual ?? i.durabilidade) <= 0));
+    return campo(k === 'item' ? 'Item' : 'Item quebrado', itens.map(i => ({ valor: i.uid, rotulo: `${i.nome} (${i.durabilidadeAtual ?? i.durabilidade}/${i.durabilidade})` })), 'item');
+  }
+  if (k === 'itemDoAlvo') {
+    const b = personagemPorId(esc.alvo);
+    return campo('Item do alvo', (b?.itens || []).filter(i => i.equipado && !i.natural).map(i => ({ valor: i.uid, rotulo: i.nome })), 'item');
+  }
+  return null;
 }
 
 // Começo da descrição, para lembrar do que se trata sem abrir o texto todo.
@@ -435,6 +472,9 @@ function ataquesEspeciais(p, alvo, b) {
   // Bônus passivos ("ataques desarmados causam +1") não entram aqui: valem sozinhos no ataque do tipo certo.
   const lista = listaHabilidades(p, sis).map(x => ({ x, ataque: ehAtaqueEspecial(x), acoes: ehAtaqueEspecial(x) ? [acaoDoAtaqueEspecial(p, sis, x)] : acoesDaHabilidade(p, sis, x) }))
     .filter(({ ataque, acoes }) => ataque || acoes.length)
+    // Com regra própria: as de escolher alvo/aliado/item se ativam no quadro de Habilidades; as passivas e as reações que o
+    // app oferece sozinho (Ataque inesperado, Invenção protetora) não são ataques a fazer.
+    .filter(({ x }) => !x.regra?.escolhas && !['reduzirDano', 'absorverDano'].includes(x.regra?.especial) && !(x.regra?.modo === 'sempre' && !x.regra.especial && !x.regra.acao))
     .sort((a, b2) => Number(b2.ataque) - Number(a.ataque));
   const armas = armasDisponiveis(p, sis);
   const chaveArma = `especialArma:${p.id}`;
@@ -511,7 +551,16 @@ function opcoesAtaque(p, mestre, outros = []) {
   return h('details', { class: 'opcoes-ataque', open: !!estado.sel.ataqueAberto, ontoggle: e => { estado.sel.ataqueAberto = e.target.open; } },
     h('summary', {}, icone('settings'), ' Opções do ataque'),
     h('div', { class: 'grade-opcoes' },
-      caixa('localizado', 'Localizado (−30%, +1d6)'),
+      caixa('localizado', 'Localizado (−30%, +1d6)', true),
+      // Onde mira (autor, 26/10): uma parte do corpo ou um item equipado do alvo (o golpe vai no item).
+      sel.localizado ? (() => {
+        const alvoL = personagemPorId(alvoDe(p, 'batalha', [p, ...outros]));
+        const itens = (alvoL?.itens || []).filter(i => i.equipado && !i.natural);
+        const opcoes = [{ valor: '', rotulo: 'onde? (escolha)' }, ...LOCAIS_ATAQUE.map(l => ({ valor: l.id, rotulo: l.nome })),
+          ...itens.map(i => ({ valor: `item:${i.uid}`, rotulo: `Item: ${i.nome}` }))];
+        if (!opcoes.some(o => o.valor === (sel.local || ''))) sel.local = '';
+        return h('label', { class: 'linha' }, 'Onde', selecao(opcoes, sel.local || '', v => { sel.local = v || null; }, { 'aria-label': 'Local do ataque localizado' }));
+      })() : null,
       caixa('surpresa', 'Surpresa'),
       caixa('elevado', 'Terreno elevado'),
       caixa('area', 'Ataque em área (marca no mapa)', true),

@@ -1,7 +1,7 @@
 // Inventário expandido: tela cheia com um cartão por item mostrando tudo o que importa —
 // durabilidade, peso, preço e venda, maestria, slot, dano/defesa, alcance, munição, efeitos, bônus, requisitos,
 // produção… Filtra (todos, equipados, guardados), ordena e busca. Abre por cima da ficha e acompanha as mudanças.
-import { h, botao, icone, confirmar, aviso, pedirTexto } from '../ui.js';
+import { h, botao, icone, confirmar, aviso, pedirTexto, janela } from '../ui.js';
 import { estado, render } from '../estado.js';
 import { acao } from '../api.js';
 import { derivados, slotsOcupados, durabilidadeDe } from '/shared/regras.js';
@@ -123,9 +123,26 @@ export function cartaoItem(p, i, mestre) {
       (mestre || estado.campanha.lojaAberta) ? botao('Vender', async () => {
         if (await confirmar(`Vender ${i.nome} por ${i.venda ?? 0}?`)) await acao('item.vender', { id: p.id, uid: i.uid });
       }, { class: 'pequeno', icone: 'coins' }) : null,
+      botaoDar(p, i),
       botao('Descartar', async () => {
         if (await confirmar(`Descartar ${i.nome}?`)) { await acao('item.remover', { id: p.id, uid: i.uid }); aviso(`${i.nome} descartado.`); }
       }, { class: 'pequeno perigo', icone: 'trash-2' })));
+}
+
+// Passar o item para outro personagem (autor, 26/10): escolhe quem recebe (e quantos, se tiver quantidade).
+export function botaoDar(p, i, rotulo = 'Dar') {
+  if (i.natural) return null;
+  return botao(rotulo, () => {
+    const outros = (estado.campanha.personagens || []).filter(x => x.id !== p.id);
+    if (!outros.length) { aviso('Não há outro personagem para receber.', 'erro'); return; }
+    const sel = h('select', { 'aria-label': 'Quem recebe' }, outros.map(x => h('option', { value: x.id }, `${x.nome}${x.tipo === 'pj' ? '' : ' (NPC)'}`)));
+    const qtd = i.quantidade > 1 ? h('input', { type: 'number', class: 'curto', min: 1, max: i.quantidade, value: i.quantidade, 'aria-label': 'Quantos' }) : null;
+    janela(`Dar ${i.nome}`, h('div', {}, h('label', { class: 'linha' }, 'Para', sel), qtd ? h('label', { class: 'linha' }, 'Quantos', qtd) : null),
+      [['Cancelar', () => true], ['Dar', async () => {
+        const r = await acao('item.dar', { id: p.id, uid: i.uid, para: sel.value, quantidade: qtd ? qtd.value : null });
+        aviso(`${r.nome} entregue a ${outros.find(x => x.id === sel.value)?.nome}.`);
+      }, 'primario']]);
+  }, { class: 'pequeno', icone: 'hand', title: `Passar ${i.nome} para outro personagem` });
 }
 
 // Durabilidade (livro, cap. 5): barra, quebrado em 0, reparo (+1, nunca dois seguidos) e "falhou usando" (compara o DS).

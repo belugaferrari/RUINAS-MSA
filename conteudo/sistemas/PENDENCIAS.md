@@ -301,3 +301,49 @@ Regras em `conteudo/sistemas/habilidades-regras.json` (automática / ligar / ati
   se vale contra os danos da afinidade (Água 2 = IP 2 contra Calor).
 - **Imagens:** links do Drive (estágios) funcionam (compartilhados "qualquer pessoa com o link"). Links de página
   (ArtStation, Pinterest, Vecteezy…) não mostram imagem: precisa do link do arquivo da imagem ou subir no Drive.
+
+## 26/10 — Relatório de habilidades (2ª parte: Encantado e Inventor, 42 respostas)
+Feito (regras em `habilidades-regras.json`; efeitos próprios em `server/actions.js`, ESPECIAIS):
+- **Ataques especiais sociais** (quadro Habilidades > Ativar, com alvo, perícia e humor): Titereiro (contra WILL%), Foco de Atenção e
+  Terror Psicológico (contra R.MNP). Passou: o humor do alvo muda e fica preso (1d4 / 1d4+1 turnos; só o mestre muda). Foco: WILL%
+  Muito Difícil ou o alvo só ataca o Galante; o Galante soma o CAR na defesa contra ele. Terror: Amedrontado, −30% no ataque (1d4 turnos)
+  e 1d6 de Sanidade temporária.
+- Arte que Cura (aliados: (MOD CAR)d6 PV temporários; 1×/descanso longo), Inspiração motivacional (vantagem na perícia escolhida
+  por 2d4 turnos; 1×/descanso curto ou longo), Inspiração (+1d20 no próximo teste fora do combate; MOD CAR + 1 por descanso longo),
+  Olhar Penetrante (+10% contra o alvo até o fim da cena), Imunidade Diplomática (ligar "em cidade": vantagem, CAR nas defesas,
+  atacantes em desvantagem), Ataque inesperado, Mestre das imitações, Conhecimento acumulado (+1 MOD INT por vez).
+- Inventor: Armadura improvisada (+1 IP por uso, até +2 geral ou +4 de um tipo), Gambiarras profissionais / Gambiarra rápida (item quebrado
+  funciona 2d4 / 10 turnos), Reparo de Roda (+1d4 de durabilidade até o fim do combate), Engenharia Reversa, Destruidor de itens,
+  Bugigangas de Bolso (CONS% Normal ou Aturdido na área; −15%), Invenção protetora e Invenção! Protetora (reações oferecidas
+  sozinhas), Manuseio profissional (+10% e sem desgaste), Aferição Perfeita (vantagem com kit), Restaurador (+10%, repara 2),
+  Reparo improvisado, Padrão de ataque (+10% de defesa depois do 3º turno do inimigo), Gerador Elétrico Portátil (contador).
+- **Ataque localizado com local**: cabeça, braços, tronco, pernas ou um item equipado do alvo (o golpe vai no item).
+- **Trocar itens** entre personagens (botão "Dar" no inventário).
+- Marcas temporárias aparecem como ícones no personagem (o mestre tira clicando).
+- Corrigido: o nível 6 do Diplomata ("Inspiração" na tabela) é Inspiração motivacional.
+
+**Provisório — conferir**
+- Foco de Atenção e Terror Psicológico: o livro não diz contra o quê testar → R.MNP do alvo (como a manipulação). Titereiro: WILL% (livro).
+- Arte que Cura: "um total D6 igual ao MOD CAR" → rola (MOD CAR)d6 uma vez e cada aliado recebe esse total (não inclui quem cantou).
+- Inspiração (+1d20): soma no resultado do d100 do próximo teste do inspirado (não vale em ataques).
+- Bugigangas: a área sai de quem joga (sem escolher o ponto); quem joga não é afetado.
+- Olhar Penetrante: "até o fim da cena" = até o próximo descanso (ou o mestre tira).
+- Teste que falha (Arte que Cura, Inspiração motivacional…) gasta o uso do descanso.
+
+**Perguntas ao autor**
+- Imunidade Diplomática: "+20% em diplomacia" — o app não tem perícia Diplomacia. Qual é (Manipulação › Etiqueta? Institucional › Política?)
+- Insultar: o −10% em Manipulação do alvo dura quanto e como se usa (ação? teste?)
+- Lavagem cerebral: SAN e HUM "persistentes" do alvo e −5 HUM permanente de quem usa — automatizar?
+- Não há item "Sucata" no catálogo: as habilidades que consomem sucata aceitam item com nome "Sucata…" ou item que virou sucata.
+
+**LEMBRETES (fase 2, depende de regras do autor)**
+- Aprimoramentos de itens (lista e regras): Mestre da Forja (+4 nas armas forjadas), Modificação momentânea (só os de combate, 10 turnos),
+  Ciência excêntrica (tipo de dano + arma personalizada −10% para outros), Segredo (−25% para outros), Manuseio profissional (aprimorado +1),
+  Caça Tesouros (item achado aprimorado).
+- Criação de armas/itens (Mestre da Forja) e regra de **encontro de itens** (Caça Tesouros).
+- **Dano focado em itens** (livro: "Desenvolver"): hoje o golpe no item só é anotado (o mestre aplica); Engenharia Reversa tira 1 de durabilidade.
+- **Invenção!** (tabela de criação, 2 pontos por nível; Invenção móvel / mortal / faz-tudo +2 pontos em características específicas):
+  item E companheiro. Piloto Neural (controle simultâneo, 300 m), Zangões de metal (5 drones no controle), Sobrecarga de Servomotor
+  (+3 m e vantagem por 1+2d4 turnos, depois perde 1 de durabilidade e trava), Gerador Elétrico Portátil como item (taser 1d4).
+- Geringonça elemental: acoplar à arma branca (+1d4 do elemento, −10%, dois efeitos de dano; explodir 2d6+1 1×/descanso longo).
+- **Gambiarra rápida e Gambiarras profissionais são quase iguais: o autor vai mudar uma das duas.**

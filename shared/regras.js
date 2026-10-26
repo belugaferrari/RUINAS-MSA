@@ -295,7 +295,8 @@ export function ehAtaqueEspecial(hab) {
 export const acaoDoAtaqueEspecial = (ficha, sistema, hab) => acoesDaHabilidade(ficha, sistema, hab)[0] || 'principal';
 
 // Regra própria da habilidade, pelo nome (sem acento, maiúsculas nem o que vem entre parênteses).
-export const chaveHabilidade = nome => semAcento(nome).replace(/\s*[([].*$/, '').replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
+// "!" vira "excl" para separar "Invenção! Protetora" de "Invenção protetora".
+export const chaveHabilidade = nome => semAcento(nome).replace(/\s*[([].*$/, '').replace(/!/g, ' excl ').replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
 export function regraDaHabilidade(nome, sistema) {
   return sistema.habilidadesRegras?.[chaveHabilidade(nome)] || null;
 }
@@ -316,7 +317,7 @@ export function efeitosHabilidade(ficha, sistema, hab) {
   const regra = hab.regra === undefined ? regraDaHabilidade(hab.nome, sistema) : hab.regra;
   const texto = ficha.ajustesHabilidades?.[hab.id] ?? (regra ? regra.efeitos || '' : hab.descricao);
   const r = efeitosDoTexto(texto, sistema, { tipoIp });
-  return regra ? efeitosDaRegra(regra, r, sistema, rotulosEfeitos(sistema)) : r;
+  return regra ? efeitosDaRegra(regra, r, sistema, rotulosEfeitos(sistema), hab.vezes || 1) : r;
 }
 
 // Como a habilidade funciona no app: "sempre" (aplicada sozinha), "ligar" (botão liga/desliga), "ativar" (botão com custo/duração)
@@ -364,14 +365,24 @@ export function danoDasHabilidades(ficha, sistema, arma, especialId = null) {
 
 export function bonusHabilidades(ficha, sistema) {
   const ativas = new Set(ficha.ativas || []);
-  const lista = listaHabilidades(ficha, sistema).filter(x => ativas.has(x.id) || x.regra?.modo === 'sempre');
+  // Automática que exige item (Aferição Perfeita: com kit de ferramentas) só vale com o item no inventário.
+  const lista = listaHabilidades(ficha, sistema).filter(x => ativas.has(x.id) || (x.regra?.modo === 'sempre' && (!x.regra.requerItem || temItem(ficha, x.regra.requerItem))));
   return somarEfeitos(lista.map(x => efeitosHabilidade(ficha, sistema, x)));
+}
+// Tem um item cujo nome casa com o padrão ("kit|ferrament")? Equipado, ou na mochila quando não se equipa.
+export const temItem = (ficha, padrao) => (ficha.itens || []).some(i => new RegExp(padrao, 'i').test(i.nome) && !i.sucata && (i.equipado || !i.slot));
+// Habilidade valendo agora: automática, ligada ou ativada.
+export function habilidadeValendo(ficha, sistema, nome) {
+  const h = temHabilidade(ficha, sistema, nome);
+  return h && ((ficha.ativas || []).includes(h.id) || modoHabilidade(ficha, sistema, h) === 'sempre') ? h : null;
 }
 
 // Vantagem por habilidade: alvo = 'ataque' | 'iniciativa' | 'testes' | id de perícia/subperícia. "contra" = tipos de criatura do oponente.
 export function vantagemPorHabilidade(ficha, sistema, alvos, oponentes = null) {
   const lista = Array.isArray(alvos) ? alvos : [alvos];
   const tipos = oponentes ? oponentes.map(tipoCriatura) : null;
+  // Marcas temporárias (Inspiração motivacional: vantagem numa perícia por 2d4 turnos).
+  if ((ficha.marcas || []).some(m => m.vantagem && lista.includes(m.vantagem))) return true;
   return bonusHabilidades(ficha, sistema).vantagens.some(v => (lista.includes(v.alvo) || v.alvo === 'testes')
     && (!v.contra || (tipos && v.contra.some(t => tipos.includes(t)))));
 }
@@ -422,7 +433,7 @@ export function derivados(ficha, sistema) {
     atributos[a.sigla] = v;
     percentual[a.sigla] = 4 * v + condTestes + hab.testes + (condTesteAtr[a.sigla] || 0) + onusCivilizado;
     bonusPericial[a.sigla] = Math.max(0, 2 * (v - 5));
-    mod[a.sigla] = Math.floor((v - 10) / 2) + (racial[a.sigla] || 0);
+    mod[a.sigla] = Math.floor((v - 10) / 2) + (racial[a.sigla] || 0) + (hab.mod[a.sigla] || 0);
   }
   const profissao = sistema.profissoes?.find(p => p.id === ficha.profissao);
   const bonusProfissao = Object.fromEntries((profissao?.subpericias || []).map(id => [id, profissao.bonus ?? 5]));
@@ -531,9 +542,14 @@ export function ganhosDeClasse(ficha, sistema) {
     }
     return melhor?.desc || '';
   };
-  return (ref?.progressao || []).filter(l => l.nivel <= limite).flatMap(l => l.ganhos.map(nome => ({
-    nivel: l.nivel, nome, descricao: descricoes.get(chave(nome)) || dentroDeOutro(nome) || parecido(nome),
-  })));
+  // A tabela às vezes abrevia o nome ("Inspiração" no nível 6 do Diplomata = "Inspiração motivacional"): vale a habilidade
+  // da especialização no mesmo nível cujo nome começa igual.
+  const completo = (nome, nivel) => (ref?.habilidades || []).find(h => h.nivel === nivel && chave(h.nome).startsWith(`${chave(nome)} `));
+  return (ref?.progressao || []).filter(l => l.nivel <= limite).flatMap(l => l.ganhos.map(nome => {
+    const h = completo(nome, l.nivel);
+    if (h) return { nivel: l.nivel, nome: h.nome, descricao: h.descricao };
+    return { nivel: l.nivel, nome, descricao: descricoes.get(chave(nome)) || dentroDeOutro(nome) || parecido(nome) };
+  }));
 }
 
 // Distância de edição (quantas letras trocar, pôr ou tirar para uma palavra virar a outra).
@@ -653,6 +669,9 @@ function ipPorTipo(ficha, equipados, bonus, hab) {
   // IP natural por tipo de dano (monstros da planilha: "Corte 2; Frio 1").
   for (const [t, v] of Object.entries(ficha.ipTipos || {})) { const k = tipoIp(t) || t; tipos[k] = (tipos[k] || 0) + (parseInt(v, 10) || 0); }
   let geral = (bonus.Defesa || 0) + (parseInt(ficha.ipExtra, 10) || 0) + hab.ip.geral;
+  // IP improvisado até o fim do combate (Armadura improvisada): { geral, tipos }.
+  geral += ficha.ipTemp?.geral || 0;
+  for (const [t, v] of Object.entries(ficha.ipTemp?.tipos || {})) tipos[t] = (tipos[t] || 0) + v;
   for (const i of equipados) {
     const x = ipDoItem(i);
     geral += x.geral;

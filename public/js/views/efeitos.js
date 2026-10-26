@@ -36,10 +36,45 @@ export function observarEfeitos(c) {
 export function efeitosIcones(p, { mestre = false, grande = false } = {}) {
   const lista = estado.sistema?.condicoes ? efeitosVisiveis(p, estado.sistema) : [];
   const habs = Object.entries(p.habAtivas || {});
-  if (!lista.length && !habs.length) return null;
+  const marcas = marcasDe(p);
+  if (!lista.length && !habs.length && !marcas.length) return null;
   return h('div', { class: `efeitos-icones ${grande ? 'grande' : ''}`, 'aria-label': `Efeitos em ${p.nome}` },
     habs.map(([id, a]) => iconeHabilidade(p, id, a)),
+    marcas.map(m => iconeMarca(p, m)),
     lista.map(e => iconeEfeito(p, e, mestre)));
+}
+
+// Marcas de habilidades de outros (Inspiração, Foco de Atenção, Trauma momentâneo…), o humor preso e o IP improvisado.
+function marcasDe(p) {
+  const nomeDe = id => (estado.campanha?.personagens || []).find(x => x.id === id)?.nome;
+  const lista = (p.marcas || []).map(m => ({
+    id: m.id, nome: m.nome, turnos: m.turnos || null, icone: m.d20 ? 'sparkles' : m.acerto < 0 || m.soAtaca ? 'skull' : m.defesa ? 'shield' : 'stars',
+    texto: [m.acerto ? `${m.acerto > 0 ? '+' : ''}${m.acerto}% no ataque${m.contra ? ` contra ${nomeDe(m.contra) || '?'}` : ''}` : null,
+      m.testes && !m.acerto ? `${m.testes > 0 ? '+' : ''}${m.testes}% nos testes` : null,
+      m.defesa ? `+${m.defesa} de defesa${m.contra ? ` contra ${nomeDe(m.contra) || '?'}` : ''}` : null,
+      m.vantagem ? `vantagem em ${estado.sistema?.pericias?.find(x => x.id === m.vantagem)?.nome || m.vantagem}` : null,
+      m.d20 ? '+1d20 no próximo teste (fora do combate)' : null, m.soAtaca ? `só pode atacar ${nomeDe(m.soAtaca) || '?'}` : null,
+      m.item ? 'ataque localizado nesse item tira 1 de durabilidade' : null, m.cena ? 'até o fim da cena' : null].filter(Boolean).join(' · '),
+  }));
+  if (p.humorForcado) lista.push({ id: 'humorForcado', nome: `Humor preso (${p.humorForcado.nome})`, turnos: p.humorForcado.turnos, icone: 'lock', texto: 'o humor não muda enquanto durar' });
+  if (p.ipTemp && (p.ipTemp.geral || Object.keys(p.ipTemp.tipos || {}).length)) {
+    lista.push({ id: 'ipTemp', nome: 'IP improvisado', icone: 'shield', texto: [p.ipTemp.geral ? `+${p.ipTemp.geral} geral` : null, ...Object.entries(p.ipTemp.tipos || {}).map(([t, v]) => `+${v} contra ${t}`)].filter(Boolean).join(' · ') + ' até o fim do combate' });
+  }
+  return lista;
+}
+
+function iconeMarca(p, m) {
+  const titulo = `${m.nome} — ${m.texto}${m.turnos ? ` (faltam ${m.turnos} turno(s))` : ''}`;
+  return h('button', {
+    type: 'button', class: 'efeito-icone hab-ativa marca', title: titulo, 'aria-label': `${titulo}. Clique para ler`,
+    onclick: ev => {
+      ev.stopPropagation();
+      const mestre = estado.campanha?.papel === 'mestre';
+      janela(`${m.nome} — ${p.nome}`, h('p', {}, icone(m.icone), ` ${m.texto}${m.turnos ? ` · faltam ${m.turnos} turno(s)` : ''}.`),
+        mestre ? [['Tirar agora', () => acao('marca.remover', { id: p.id, marca: m.id }).then(() => aviso(`${m.nome} tirada.`)), 'perigo'], ['Fechar', () => true]] : [['Fechar', () => true]]);
+    },
+  }, h('span', { class: 'efeito-desenho', 'aria-hidden': 'true' }, icone(m.icone)),
+  m.turnos ? h('span', { class: 'efeito-turnos', 'aria-hidden': 'true' }, String(m.turnos)) : null);
 }
 
 // Habilidade ativa (Despertar, Aceleração sináptica…): chama dourada com os turnos que faltam. O mestre pode encerrar.
