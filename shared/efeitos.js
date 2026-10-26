@@ -1,7 +1,15 @@
 // Efeitos com tempo (Sangramento, Dor, Aturdido…): os marcadores dizem QUAIS efeitos o personagem tem;
 // p.efeitos guarda os contadores de turno de cada um, por id da condição.
 // A contagem anda no fim do turno de quem sofre o efeito (controle de turno do Campo de Batalha).
-import { rolarDado, condicoesAtivas, testeDMil, perderPv, textoPv } from './regras.js';
+import { rolarDado, condicoesAtivas, testeDMil, perderPv, textoPv, mutacaoDaTabela } from './regras.js';
+
+// Sorteia uma mutação da tabela (d100) e põe no personagem. Devolve a mutação (ou null sem tabela).
+export function sortearMutacao(p, sistema, tipo = 'temporaria', rng = Math.random, n = null) {
+  const m = mutacaoDaTabela(sistema, n ?? 1 + Math.floor(rng() * 100));
+  if (!m) return null;
+  (p.mutacoes ||= []).push({ id: `${Date.now().toString(36)}${Math.floor(rng() * 1e6).toString(36)}`, n: m.n, tipo });
+  return m;
+}
 import { regrasNecessidades, testeVantagem } from './tempo.js';
 
 const semAcento = s => String(s || '').normalize('NFKD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
@@ -221,7 +229,15 @@ export function descansar(p, sistema, tipo, pvMax, cond = {}, percentualCONS = 0
   }
   if (gen) {
     const t = teste(50 + 5 * gen);
-    notas.push(`${gen} marcador(es) genético(s): ${t.txt} — ${t.sucesso ? 'resistiu' : 'sofre uma MUTAÇÃO TEMPORÁRIA (o mestre escolhe)'}`);
+    let txt = 'resistiu';
+    if (!t.sucesso) {
+      // Falhou: sorteia a mutação temporária na tabela (d100). Marcas do Destino: 5 mutações temporárias selam o Mutante.
+      const mut = sortearMutacao(p, sistema, 'temporaria', rng);
+      p.mutacoesSofridas = (p.mutacoesSofridas || 0) + 1;
+      txt = mut ? `sofre uma MUTAÇÃO TEMPORÁRIA: ${mut.n}. ${mut.nome}` : 'sofre uma MUTAÇÃO TEMPORÁRIA (o mestre escolhe)';
+      if (p.mutacoesSofridas === 5) txt += ' — 5ª mutação temporária: Marcas do Destino (pode se tornar Mutante)';
+    }
+    notas.push(`${gen} marcador(es) genético(s): ${t.txt} — ${txt}`);
   }
   for (const id of ['vulnerabilidade', 'genetico']) {
     const c = (sistema.condicoes || []).find(x => x.id === id);

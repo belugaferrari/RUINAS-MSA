@@ -1,0 +1,564 @@
+{
+ "_aviso": "Tabela de mutações (planilha do autor mutacao_mss.xlsx, 26/10): d100, vale no MSA e no MSS. \"beneficio\" e \"onus\": o que o app aplica sozinho (formato do lápis do mestre); o resto do texto é lembrete. Controlada: só o benefício; descontrolada e temporária: benefício e ônus. A separação benefício/ônus foi feita pelo Claude (provisório até o autor revisar).",
+ "mutacoes": [
+  {
+   "n": 1,
+   "nome": "Antena de Peixe-Lanterna",
+   "efeito": "Você tem uma antena com uma luz linda e cintilante na cabeça, que lhe fornece manipulação +10%. Quando as pessoas são atraidas por voce (você faz testes bem sucedidos de manipulação), voce sente vontade de morde-las (WILL% teste Dificil).",
+   "beneficio": "Manipulação +10%"
+  },
+  {
+   "n": 2,
+   "nome": "Antenas de Mariposa",
+   "efeito": "Ganha antenas na cabeça capazes de detectar movimentos (9m raio), cheiros (30m raio) e outras mariposas. Você fica atraido pela luz (Teste WILL% ND Difícil para não pasmar por 1 turno quando vê um novo foco de luz)."
+  },
+  {
+   "n": 3,
+   "nome": "Asas Rasgadas",
+   "efeito": "Pode planar por curtas distâncias. Planar mais de 9 m rasga mais as asas (1d4 de dano). Elas não recolhem (personagem passa a ser considerado grande para questões de acertos recebidos e espaço usado)"
+  },
+  {
+   "n": 4,
+   "nome": "Barbatana de Tubarão",
+   "efeito": "Uma barbatana enorme surge nas costas, com bordas serrilhadas. Deslocamento de natação 6m. Você não pode usar armadura."
+  },
+  {
+   "n": 5,
+   "nome": "Barriga inflável",
+   "efeito": "Sua barriga infla muito, permitindo que voce funcione como uma boia (não afunda até 3x o seu peso) e você recebe IP cinético +2. Seu deslocamento cai 3m e sua DES e AGI -3.",
+   "beneficio": "+2 IP Concussão",
+   "onus": "DES -3; AGI -3"
+  },
+  {
+   "n": 6,
+   "nome": "Boca no Estômago",
+   "efeito": "Pode engolir itens ou atacar com mordida. Sente efeito \"Fome\" constantemente."
+  },
+  {
+   "n": 7,
+   "nome": "Braço de Borracha",
+   "efeito": "Estica até 3 m; só aguenta 1/3 do peso normal."
+  },
+  {
+   "n": 8,
+   "nome": "Braço de Polvo",
+   "efeito": "Pode agarrar objetos a até 1,5 m de distância e considere testes para segurar/agarrar com FOR+4. Não pode utilizar itens."
+  },
+  {
+   "n": 9,
+   "nome": "Braço extra",
+   "efeito": "Ganha um braço adicional no seu dorso. Esse braço adicional funciona como mão inábil e ela tem 20% de chances (resultado 1 e 2 no DS) de te atrapalhar durante seus testes."
+  },
+  {
+   "n": 10,
+   "nome": "Braços de Argila",
+   "efeito": "Você pode molhar seus braços e depois molda-los da forma que desejar (10 min de processo). Danos deperfuração econcussão causam +1d4 como arma natural e voce pode se defender como se estivesse armado. Enquanto seus braços estiverem molhados (por qualquer motivo) eles ficam inuteis.",
+   "beneficio": "+1d4 de dano em ataques desarmados"
+  },
+  {
+   "n": 11,
+   "nome": "Bulbo de teia de aranha",
+   "efeito": "Você ganha um orgão na garganta que lhe permite criar teias pela bocas. A teia é capaz de aguentar seu peso e é muito aderente. Pode ser usada como corda que você pode criar até 30m por dia e ela dura 1d10 dias. Sua boca ganha um aspecto aracnedio causando -15% em qualquer teste relacionado a carisma e pericias relacionadas.",
+   "onus": "Manipulação -15%"
+  },
+  {
+   "n": 12,
+   "nome": "Cabeça de Animal",
+   "efeito": "Ganha sentidos do animal, mas perde a fala. Sorteie o animal*"
+  },
+  {
+   "n": 13,
+   "nome": "Cabeça de mosca",
+   "efeito": "Receba PER+2, iniciativa +10% e esquiva +10%. INT -2, CAR-2 e não pode se concentrar. Você reage muito bem, mas está sempre com a cabeça avoada. Seu olhar fica distante.",
+   "beneficio": "PER +2; Esquiva +10%",
+   "onus": "INT -2; CAR -2"
+  },
+  {
+   "n": 14,
+   "nome": "Cabeça divergente",
+   "efeito": "Uma pequena e irritante cabeça aparece ao lado da sua cabeça original e expressa suas incertezas, discordando de você. Também é capaz de controlar metade do seu corpo. Todos os testes ficam 20% mais dificeis. Voce regenera +1SAN por dia e tem 30% nos testes de de percepção e não recebe ataques de oportunidade.",
+   "beneficio": "Sentidos +30%",
+   "onus": "-20% em todos os testes"
+  },
+  {
+   "n": 15,
+   "nome": "Cabeça inteligente",
+   "efeito": "Uma segunda cabeça com inteligencia 20 aparece em você. Ela tem o habito de discordar das suas ações e te insultar e não costuma ser muito obediente. -20% em testes de Percepção (e pericias relacionadas) e você não consegue se concentrar.",
+   "onus": "Sentidos -20%"
+  },
+  {
+   "n": 16,
+   "nome": "Cabeça Invertida",
+   "efeito": "A cabeça vira para trás. Não toma dano de impacto ou quebra ossos, mas todos os testes físicos recebem -25%."
+  },
+  {
+   "n": 17,
+   "nome": "Cabelo de Fumaça",
+   "efeito": "Seu cabelo queima com um cheiro horrivel e gerando uma fumaça de 6m area. Depois de terminar de queimar (2d6 turnos) sua cabeça fica careca, soltando uma fumaça constante que deixa um rastro por 5 minutos e causa uma leve neblina que impede receber dano focado e concebe +10% contra ataques a distância. a cada descanso seu cabelo cresce novamente."
+  },
+  {
+   "n": 18,
+   "nome": "Cabelo Vivo",
+   "efeito": "Cabelo se movimenta, pode crescer, diminuir ou até mudar de cor. Cabelo vivo também come, bebe e se sente atraido por outros cabelos (companheiro)"
+  },
+  {
+   "n": 19,
+   "nome": "Arborio",
+   "efeito": "Sua pele se transforma em um tronco e você passa a ter capacidades de árvores. Você dorme de pé enraizado no chão. Se quiser se enraizar durante o dia, pode ficar 2h parado para se alimentar. Camuflagem +15%. Deslocamento base 6m",
+   "beneficio": "Camuflagem +15%"
+  },
+  {
+   "n": 20,
+   "nome": "Cauda de Macaco",
+   "efeito": "Uma cauda de macaco articulada que pode segurar objetos e até atacar. A cauda não fica parada, o que não permite esconde-la. Segurar coisas com a cauda requer concentração e deixa seu personagem com -10% nos demais testes."
+  },
+  {
+   "n": 21,
+   "nome": "Cauda Musculosa",
+   "efeito": "Receba uma cauda de canguru que adiciona 3m ao seu salto (tanto vertical, quanto horizontal. A cauda não permite voce correr/disparar."
+  },
+  {
+   "n": 22,
+   "nome": "Cerebro Instável",
+   "efeito": "Você tem uma grande cabeça com um grande cerebro dentro. Conforme você recebe dano seu cerebro vai esquentando e começa a brilhar, quando você recebe 10PVs de dano ou mais no mesmo combate deu cerebro explode, causando 1d4PVs para cada 5INT que seu personagem tenha, afetando 6m de raio. Após a explosão todos seus testes recebem -10% até o fim do combate e seu personagem fica com -6 de inteligencia até o proximo descanso longo, quando seu cerebro cresce novamente."
+  },
+  {
+   "n": 23,
+   "nome": "Cheiro de Flores",
+   "efeito": "Você exala um cheiro natural de plantas e flores, deixando-o quase desapercebido para maioria dos animais (exceto dos que se alimentando de plantas e flores). Receba +-30% em espionagem contra animais, bestas e monstros."
+  },
+  {
+   "n": 24,
+   "nome": "Chifre Luminoso",
+   "efeito": "Ganha 1 chifre e brilha iluminando 9m de raio e até 15m com penumbra. Uma vez ao dia você pode faze-lo brilhar causando cegueira por um turno em que estiver vendo a ate 30m (Teste PER% difícil). O chifre sempre brilha, impedindo que voce se camufle."
+  },
+  {
+   "n": 25,
+   "nome": "Coluna Serpentina",
+   "efeito": "Seus ossos viram uma especie de cartilagem que permite que você se contorça em várias posições estranhas, diminuindo danos de impacto em 2. Sua capacidade de carregar peso cai pela metade.",
+   "beneficio": "+2 IP Impacto"
+  },
+  {
+   "n": 26,
+   "nome": "Coração Visível",
+   "efeito": "Abre um buraco no peito e deixa seu coração exposto. Você fica imune a dor, sono e doença. Dano recebido é sempre +1, porque seu coração sangra para fora do corpo.",
+   "beneficio": "imune: Dor, Sono, Doença"
+  },
+  {
+   "n": 27,
+   "nome": "Corpo Segmentado",
+   "efeito": "Você pode separar e repor os membros do seu corpo. Manter-se unido exige concentração em caso de falhas em testes ou dano recebido."
+  },
+  {
+   "n": 28,
+   "nome": "Corpo squize",
+   "efeito": "Seu corpo se moldela como uma massa quando muito pressionado. Você fica imune a dano por esmagamento e ossos quebrados (ainda pode ficar preso e soterrado) CONS-1.",
+   "onus": "CONS -1"
+  },
+  {
+   "n": 29,
+   "nome": "Costelas Externas",
+   "efeito": "Algumas costelas crescem para fora do corpo como uma armadura natural. IP3. Impede o uso de roupas (como coletes entre outros)",
+   "beneficio": "+3 IP geral"
+  },
+  {
+   "n": 30,
+   "nome": "Dentes de Cristal",
+   "efeito": "Dano de mordida +1 e penetração 2. Você tem dificuldade de falar e sua boca vive sangrando, recebendo -10% manipulação e um ponto de dano quanto tenta fazer um teste de manipulação.",
+   "onus": "Manipulação -10%"
+  },
+  {
+   "n": 31,
+   "nome": "Domo Craniano de Dinossauro",
+   "efeito": "Um domo ósseo cresce na cabeça, como um paquicefalossauro e faz parecer que voce está usando um capacete de cranio. Sua cabeçada passa a ser 1d6 concussão. Você ganha IP3 na cabeça e fica imune a dano crítico na região. Esse cranio não sai da sua cabeça e atrapalha seus sentidos em -15%.",
+   "onus": "Sentidos -15%"
+  },
+  {
+   "n": 32,
+   "nome": "Estomago ácido",
+   "efeito": "Seu estomago passa a produzir uma enorme quantidade de ácido, que impede que você coma (você está sempre com \"fome\"). Se você não cuspir esse ácido ele começa a escorrer da sua boca, verde brilhante. Você pode 1 vez por hora lançar um cuspe ácido num cone de 6m que causa 1d6+2 de dano."
+  },
+  {
+   "n": 33,
+   "nome": "Garras Retráteis de Urso-Cinzento",
+   "efeito": "Você tem uma larga mão que escondem garras que causam 1d6 corte e concedem escalar +10%. -10% para usar qualquer item.",
+   "beneficio": "Escalada +10%"
+  },
+  {
+   "n": 34,
+   "nome": "Guelras no Pescoço",
+   "efeito": "Cria guelras no seu pescoço que lhe permite respirar em baixo da agua, mas atrapalha a respiração fora da agua. Sempre que usar uma ação bônus ou 'disparada' faça um teste de CONS% difícil para não receber um nível de cansaço."
+  },
+  {
+   "n": 35,
+   "nome": "Língua de sapo",
+   "efeito": "Sua lingua se estende e volta (em uma ação bonus) até 3m de distancia e pode agarrar itens miudos. Você passa a instintivamente comer insetos também. (WILL% difícil). Cada inseto ingerido lhe dá um marcador de vulnerabilidade."
+  },
+  {
+   "n": 36,
+   "nome": "Mandibula de cobra",
+   "efeito": "Você não tem a pele da bochecha e sua boca é maior que o normal. Seu maxilar se desloca até o peito, permitindo que você morda e engula objetos com até 40cm de diametro. Você também pode usar a manobra \"agarrar\" quando acerta uma mordida. CAR-2.",
+   "onus": "CAR -2"
+  },
+  {
+   "n": 37,
+   "nome": "Mandíbulas de Formiga-Soldado",
+   "efeito": "Mandíbulas externas, enormes e articuladas, que se abrem na lateral do rosto. Você pode morder 1d6 com DOR5. quando um aliado é atacado, seu instinto de formigueiro te força a avançar fisicamente contra o atacante (WILL% muito dificil)"
+  },
+  {
+   "n": 38,
+   "nome": "Mão de Ferrão",
+   "efeito": "Você tem na palma da mão um ferrão venenoso que causa 1d4 perfurante +1d4Veneno. Ao utiliza-lo ele prende na vitima e rasga sua pele, causando 1d4 de dano em você."
+  },
+  {
+   "n": 39,
+   "nome": "Mãos com Olhos",
+   "efeito": "Seus olhos se deslocam para sua mão. Você perde a visão quando está usando algum item."
+  },
+  {
+   "n": 40,
+   "nome": "Corpo borracha",
+   "efeito": "Seus membros viram para todos os lados, seu corpo e ossos parecem borracha. IP concussão 3. FOR -3.",
+   "beneficio": "+3 IP Concussão",
+   "onus": "FOR -3"
+  },
+  {
+   "n": 41,
+   "nome": "Mölo psionico",
+   "efeito": "Mölo é um ser dismorfo que sai da sua barriga. Mölo possui poderes psionicos e você é capaz de entende-lo. Ele concede a ambos IP psiquico 5 e é capaz de dar 1d6 dano mental (ataque especial 30+1D100 vs. INT%+50). Mas sempre que você sofre dano Mölo tenta assumir o controle do seu corpo (normalmente para fugir) - teste normal WILL%.",
+   "beneficio": "+5 IP Psíquico"
+  },
+  {
+   "n": 42,
+   "nome": "Músculos Infláveis",
+   "efeito": "Aumenta o seu tamanho, ganhando +10% de intimidação e +2FOR. Danos fisicos causam +1d4 em você, que fica com a pele sensível.",
+   "beneficio": "Intimidação +10%; FOR +2"
+  },
+  {
+   "n": 43,
+   "nome": "Olhos Assimétricos",
+   "efeito": "Seus olhos se deslocam para a lateral da cabeça, permitindo que você veja tudo ao seu redor, mas isso atrapalha seu cerebro a interpretar as imagens. Você pode ver 360° ao seu redor. Testes de Visão -20%.",
+   "onus": "Visão -20%"
+  },
+  {
+   "n": 44,
+   "nome": "Olhos de Gato",
+   "efeito": "Você é capaz de enxergar no escuro até 36m. Ataques surpresas fazem você se deslocar aleatóriamente 1,5m em um pulo e você precisa passar em um teste de CAR% dificil para dormir a noite (voce pode repetir esse teste uma vez por hora)"
+  },
+  {
+   "n": 45,
+   "nome": "Olhos de Mosca",
+   "efeito": "Visão panorâmica (270°) , mas você não consegue ver detalhes."
+  },
+  {
+   "n": 46,
+   "nome": "Olhos de lesma",
+   "efeito": "Seus olhos podem sair das órbitas e se mover até 3m de distancia de você com seu fortes e rigidos nervos óticos. Enquanto separados, qualquer teste é -20%. Ataques supresas fazem eles sairem sozinhos."
+  },
+  {
+   "n": 47,
+   "nome": "Olhos Negros Totais",
+   "efeito": "Seus olhos são totalmente negros. Você fica imune a flashs e recebe +10 R.MNP. Você também não consegue se expressar bem, recebendo -20% em Manipulação.",
+   "beneficio": "R.MNP +10",
+   "onus": "Manipulação -20%"
+  },
+  {
+   "n": 48,
+   "nome": "Orelhas de Morcego",
+   "efeito": "Audição +10% e você passa a ouvir sinais de baixa frequencia (radio) . Ataques sonoros causam o dobro do dano.",
+   "beneficio": "Audição +10%"
+  },
+  {
+   "n": 49,
+   "nome": "Orelhas de rastreio",
+   "efeito": "Você tem longas orelhas que lhe concedem +20% perseguição contra um alvo que você interagiu depois do ultimo descanso longo. Suas orelhas reconhecem sons caracteristicos do ser. Você não consegue se concentrar por conta dos vários barulhos"
+  },
+  {
+   "n": 50,
+   "nome": "Patas de aranha",
+   "efeito": "Suas mãos e pés ganham pequenos ganchos que lhe permitem andar nas paredes e tetos (as mãos e pés devem estar livres para isso - sem testes ou objetos) - você deve usar os 4 membros para se deslocar nas paredes. Você cria a estranha mania de dormir paredes, de preferencia nos cantos delas."
+  },
+  {
+   "n": 51,
+   "nome": "Patas de Louva-a-Deus",
+   "efeito": "A posição do seus braços ficam naturalmente dobradas (e meio tortas). Seu ataque com os braços ganha +1d4 de dano e se acertar você pode imediatamente começar a manobra \"agarrar\". Seu testes de agarrar tem +10% de acerto. Testes com armas recebem -15%.",
+   "beneficio": "+1d4 de dano em ataques desarmados; Agarrar/Imobilizar +10%",
+   "onus": "Arma Branca -15%; Armas de Fogo -15%"
+  },
+  {
+   "n": 52,
+   "nome": "Pelagem Metálica do Lobo alfa",
+   "efeito": "Pelos longos e rígidos que brilham como metal azulado, lhe fornecendo calor e carisma. Ganhe +10% trato com animais. Caso você não esteja com seu bando (aliados), receba -10% em testes de combate.",
+   "beneficio": "Trato de Animais +10%"
+  },
+  {
+   "n": 53,
+   "nome": "Pele Camaleônica",
+   "efeito": "Pode mudar de cor se ficar parado, dando camuflagem +20%. Voltar a se mover exige uma ação completa (você não pode executar ações camuflado)",
+   "beneficio": "Camuflagem +20%"
+  },
+  {
+   "n": 54,
+   "nome": "Pele Pedregosa",
+   "efeito": "Placas de pedra se acumulam (e crescem) pelo seu corpo, deixando-o com um aspecto de uma estátua rustica. Você recebe +15% de camuflagem e IP1 geral. Em contrapartida você está sempre carregando 10kgs a mais e seu deslocamento cai em 1,5m.",
+   "beneficio": "Camuflagem +15%; +1 IP geral"
+  },
+  {
+   "n": 55,
+   "nome": "Pele de Salamandra-Gigante",
+   "efeito": "Sua pele é feia, branca, umida e gelatinosa. Receba IP geral 2, +15% para resistir a manobras.Seus testes relacionados a destreza recebem -10%.",
+   "beneficio": "+2 IP geral"
+  },
+  {
+   "n": 56,
+   "nome": "Pele de Vidro",
+   "efeito": "Danos trincam seu corpo, recebendo +1d4 de dano adicional, mas você fica imune a dor e não morre e nem desmaia até ficar com -15 PVs. Se alguem te tocar onde estiver trincado (ataque desarmado), o ser recebe 1d4 de dano.",
+   "beneficio": "imune: Dor"
+  },
+  {
+   "n": 57,
+   "nome": "Pele Esponjosa",
+   "efeito": "Seu corpo absorve liquidos como uma esponja. Caso você esteja seco, receba +1d4 sempre que receber um dano, caso esteja molhado receba IP geral 4 (1 IP para cada 5 litros). Voce precisa de 20 litros para ficar cheio (o que soma 20kg ao seu peso/carregamento) e voce deixa um rastro conforme anda perdendo 5 litros por hora. ataques recebidos escorrem 1 litro por ataque."
+  },
+  {
+   "n": 58,
+   "nome": "Carne Transparente",
+   "efeito": "Permite ver suas veias e ossos por trás de uma pele gelatinosa. Testes de medicina recebem +20% para te ajudar. Voce recebe CAR-4.",
+   "onus": "CAR -4"
+  },
+  {
+   "n": 59,
+   "nome": "Pés de Cabra",
+   "efeito": "Permite se deslocar em terrenos naturais irregulares sem penalidade de movimento. WILL -2.",
+   "onus": "WILL -2"
+  },
+  {
+   "n": 60,
+   "nome": "Porco espinho",
+   "efeito": "Voce possui uma longa extensão de espinhos removiveis nas suas costas. Se alguem lhe atacar pelas costas, recebe 1d4 perfurante, além disso, você tem IP3 contra ataques pelas costas. A malha de espinhos não lhe permite usar armaduras, sentar em cadeiras com encosto ou deixar de barriga para cima."
+  },
+  {
+   "n": 61,
+   "nome": "Presas de morcego",
+   "efeito": "Você é capaz de se alimentar com sangue quente de outros seres. Precisa tomar sangue uma vez por dia ou fica com o efeito \"mal-estar\"."
+  },
+  {
+   "n": 62,
+   "nome": "Pulmões de baleia",
+   "efeito": "Você pode ficar até 20 minutos sem respirar. Seu nariz é substituido por um respiro na sua nuca."
+  },
+  {
+   "n": 63,
+   "nome": "Rabo de serpente noturna",
+   "efeito": "Voce tem um rabo que é uma serpente. Ela dorme de manha e acorda quando voce vai dormir. A noite fica caçando bichos e qualquer coisa que chegar perto de você (pode te acordar por coisas bestas)"
+  },
+  {
+   "n": 64,
+   "nome": "Rosto Deslizante",
+   "efeito": "A pele do seu rosto não está aderida e é moldavel, ganhando +25% em disfarce. Manter o rosto firme requer concentração. Se perder a concentração, seu rosto derrete.",
+   "beneficio": "Disfarce +25%"
+  },
+  {
+   "n": 65,
+   "nome": "Sangue Azul",
+   "efeito": "Seu sangue é de um azul vibrante e possui um cheiro que você é capaz de farejar até 50m. Seu corpo é coberto de veias azuis."
+  },
+  {
+   "n": 66,
+   "nome": "Sangue Fumegante",
+   "efeito": "Seu sangue libera vapor ao entrar em contato com ar. Caso sofra \"sangramento\" o atacante (quando proximo) pode receber 1d4 dano queimadura. Você fica imune a danos e efeitos por altas temperaturas (não inclui queimadura) e cada turno de sangramento gera uma névoa que cobre 1 quadrado e dura 1d4 turnos. Seu corpo está sempre mais quente que o normal (60°C) e Você perde 1 PV persistente por dia por desidratação se não tomar 10 litros de agua por dia."
+  },
+  {
+   "n": 67,
+   "nome": "Sem Boca",
+   "efeito": "Não fala nem come; comunica-se telepaticamente a até 21 metros. Passa a se alimentar de leituras e conversas."
+  },
+  {
+   "n": 68,
+   "nome": "Tentaculos de agua-viva",
+   "efeito": "Da sua pele saem tentaculos que te envolvem como uma espécie de cabelo transparente ou um chapéu com penduricários. Toca-los causa 1 dano eletrico. Você escolher atissa-los, de modo que se alguem se mova a 1 passo de voce (1,5m), a pessoa precise de um teste de esquiva ou evasão para evitar o dano (teste comum). Tentaculos deixam sua pele \"Sensivel\" (o dano Mínimo quando você é acertado sobe+1)"
+  },
+  {
+   "n": 69,
+   "nome": "Terceiro Olho",
+   "efeito": "Permite enxergar energia e a aura de algumas pessoas (calor). Pode gerar alucinações."
+  },
+  {
+   "n": 70,
+   "nome": "Veias Luminescentes",
+   "efeito": "Seu sangue é de um azul brilhante que ilumina 3m de área e possui um cheiro que você é capaz de farejar até 50m. Seu Corpo fica tomado de veias azuis que dão Camuflagem -20%.",
+   "onus": "Camuflagem -20%"
+  },
+  {
+   "n": 71,
+   "nome": "Pele exposta",
+   "efeito": "Sua pele é rasgada em carne viva, expondo seus musculos e nervos. Ataques fisicos causam +1d4 contra voce. Você é imune a dor e sangramento, e pode se alimentar (1kg) quantas vezes quiser por dia, recuperando 1d4 Pvs por refeição.",
+   "beneficio": "imune: Dor, Sangramento"
+  },
+  {
+   "n": 72,
+   "nome": "Cabeça monstruosa",
+   "efeito": "Você possui a cabeça de um animal (a sua escolha) do mesmo tamanho da sua. Ela lhe concede +10% intimidação, mordida 1d6+1. Você passa a ter \"fome\" de presas vivas: a fome volta uma hora depois de você se alimentar.Uma vez por hora, ao se alimentar de uma presa viva (matar uma presa), recupere 1PV. O personagem com fome tem dificuldade de concentração e a fome pode faze-lo atacar seus aliados.",
+   "beneficio": "Intimidação +10%"
+  },
+  {
+   "n": 73,
+   "nome": "Pele de Jardim",
+   "efeito": "Seu corpo passa a ser alimento de plantas, e nele crescem flores, grama, ervas entre outras coisas. Camuflagem em floresta +20%. As plantas se alimentam de voce e lhe dão proteção. IP2 fisico. -4PVs persistentes.",
+   "obs": "Essa habilidade é base para plantas de sangue.",
+   "beneficio": "+2 IP Físico"
+  },
+  {
+   "n": 74,
+   "nome": "Bolhas na pele",
+   "efeito": "em sua pele crescem bolhas. A receber dano elas explodem, causando 1d4 de dano ácido a quem estiver proximo(1,5m) . Danos de fogo causam 1d4 a mais de dano em você e criam mais bolhas ácidas. IP ácido 2.",
+   "beneficio": "+2 IP Ácido"
+  },
+  {
+   "n": 75,
+   "nome": "Suor radioativo",
+   "efeito": "Ao entrar em combates corpo a corpo, seu corpo esquenta e seu suor se torna radioativo forçando marcadores em seres a até 1,5m de você. Você pode gastar uma ação para esquentar seu corpo com a propria radiação, causando 2d6 de dano de queimadura aos seres a 1,5m de voce uma vez por decanso. Ao fazer isso ganhe um nível de cansaço e -2 CONS até o proximo descanso longo."
+  },
+  {
+   "n": 76,
+   "nome": "Insectoide",
+   "efeito": "Seu personagem passa a adquirir caracteristicas insetoides. CAR-2, IP2 e FOR+1.",
+   "beneficio": "+2 IP geral; FOR +1",
+   "onus": "CAR -2"
+  },
+  {
+   "n": 77,
+   "nome": "Manto auricular",
+   "efeito": "Suas orelhas crescem ate virarem do tamanho de uma capa, capaz de cobrir toda suas costas. Ela da +10% camuflagem e furtividade funcionam como uma vestimenta - voce é capaz de controlalas. Receba audição -10% e Agi-2",
+   "beneficio": "Camuflagem +10%; Furtividade +10%",
+   "onus": "Audição -10%; AGI -2"
+  },
+  {
+   "n": 78,
+   "nome": "Pelos tentaculares",
+   "efeito": "Seus pelos faciais sao substituidos por tentaculos (barba, cabelo e sonbrancelhas). Vc tem o poder de fazer esses tentaculos crescerem ou gerar 2 tentaculos q saem da sua pele, permitindo segurar coisas (equivalante a 2 maos adicionais). Os tentaculos tem personalidade propria (não tem controle) e atrapalham sua concentracao (-20%) e camuflagem (-20%) entre outras ações",
+   "onus": "Camuflagem -20%"
+  },
+  {
+   "n": 79,
+   "nome": "Tromba",
+   "efeito": "Ao inves de um nariz humano, seu personagem tem uma tromba com cerca de 60cm. Se sua tromba estiver emersa, você pode ficar totalmente submerso. Você pode segurar pequenos objetos (diminuto) e armazenar até 1Litro de agua (1 dia de agua). A tromba atrapalha sua comunicação e alimentação, causando -5% em manipulação e suas refeições demoram 30 minutos a mais.",
+   "onus": "Manipulação -5%"
+  },
+  {
+   "n": 80,
+   "nome": "Olhos nascentes",
+   "efeito": "Olhos nascem (e somem) por todo seu corpo. Visão +10%, você não pode receber um ataque surpresa (exceto de armadilhas). Quando voce recebe dano Considere o efeito DOR+3.",
+   "beneficio": "Visão +10%"
+  },
+  {
+   "n": 81,
+   "nome": "Grande banha",
+   "efeito": "Seu peso é 3x maior do que o normal para um ser humano (de 15 a 21 vezes a sua FOR). Você tem IP geral 3, deslocamento base 6m.",
+   "beneficio": "+3 IP geral"
+  },
+  {
+   "n": 82,
+   "nome": "Odor fétido",
+   "efeito": "Você possui escamas, escarras, penugem, pelagem ou algo semelhante que produz um odor forte. Você pode até 2 vezes por dia expelir no ar um aroma que atingi um raio de 3m ao seu redor e causa nausea (vertigem) em quem estiver nessa área (CONS% dificil). O odor dura 3 turnos mas pode ser dissimado pelo vento. Por conta do seu odor, ninguem se aproxima muito de voce. Receba -5 SAN persistente."
+  },
+  {
+   "n": 83,
+   "nome": "Serpenteado",
+   "efeito": "Você tem uma longa cauda de serpente ao inves das habituais pernas humanas. Seu deslocamento cai para 6m, você ganha escalada +20% , natação +10%, corrida -15%. Você pode iniciar a manobra agarrar com seu rabo considerando FOR+2 com uma ação bonus desde que não tenha se movimentado no mesmo tudo.",
+   "beneficio": "Escalada +20%; Natação +10%",
+   "onus": "Corrida -15%"
+  },
+  {
+   "n": 84,
+   "nome": "Boca de fogo",
+   "efeito": "Sua boca e seu estomago criam um muco incandecente que te faz ter a cabeça com um brilho vermelho vindo de dentro para fora. Uma vez a cada 3 turnos Você pode com uma ação bonus lançar o muco incandecente a 1,5m de você, ele cada 1d4 dano de fogo.Você precisa tomar 6l de agua por dia ou recebe -4PVs persistentes causados pelo próprio muco."
+  },
+  {
+   "n": 85,
+   "nome": "Lingua viva",
+   "efeito": "Sua lingua estica até 1,5m para fora da sua boca. Ela tem seus próprios dentes e ataca com uma mordida que causa 1 de dano ácido (o ataque da lingua é um movimento extra). Enquanto sua lingua estiver fora da sua boca você não pode falar. A lingua por vezes fala sozinha, mas normalmente são coisas que não fazem sentido."
+  },
+  {
+   "n": 86,
+   "nome": "Pescoço de tartaruga",
+   "efeito": "Você pode recolher metade da cabeça para dentro do tronco (ficando imune a dano focado) ou esticar seu pescoço até 50cm. Sua mordida tem DOR2. Quando você está com medo ou intimidado você recolhe automaticamente a cabeça. Enquanto sua cabeça estiver encolhida sua PER-4."
+  },
+  {
+   "n": 87,
+   "nome": "braços explosivos",
+   "efeito": "Seus braços vulcanicos acumulam calor que podem ser solto pelos cotovelos, dando iniciativa +10% e dano +2. Mas seus braços são instaveis, caso você cause um dano máximo seu braço explode causando 1d6+2 de dano em você e em quem estiver em volta. Ele se regenera após o próximo descanço longo. Quando você entra numa briga eles começam a esquentar, assobiar e soltar uma leve fumaça, que lhe dá -10% camuflagem e furtividade até 10 min após o termino do combate.",
+   "beneficio": "dano +2"
+  },
+  {
+   "n": 88,
+   "nome": "Aura de fada",
+   "efeito": "Sua língua abre como pétalas para atrair insetos para voce comer. Como uma ação livre voce solta polen no ar que atrai varios tipos de inseto."
+  },
+  {
+   "n": 89,
+   "nome": "Pé de casco",
+   "efeito": "Seu pé se torna um casco (como de cavalos ou bodes). Você não sofre qualquer dano ou desvantagem por estar descalço ou em terreno acidentado. Seu caminhar é barulhento (furtividade -10%)",
+   "onus": "Furtividade -10%"
+  },
+  {
+   "n": 90,
+   "nome": "Sorriso coringa",
+   "efeito": "Você tem um sorriso sinistro e enigmatico, incompreensivel para quem vê, além disso sua boca é bem maior que uma boca humana comum. manipulação +10%. Empatia -20%",
+   "beneficio": "Manipulação +10%",
+   "onus": "Empatia -20%"
+  },
+  {
+   "n": 91,
+   "nome": "Desnarizado",
+   "efeito": "Você não tem nariz e é imune a cheiros."
+  },
+  {
+   "n": 92,
+   "nome": "Casca (exoesqueleto)",
+   "efeito": "Seu corpo é revestido por um casco que absorve até 20 PVs. Após quebrado o casco, todo o dano que você recebe é dobrado."
+  },
+  {
+   "n": 93,
+   "nome": "Roedor (ossos regenerativos)",
+   "efeito": "Seus ossos se regeneram de qualquer dano e seus dentes nunca param de crescer. Mordidas tem dano+1 e penetração1. Você não consegue fechar a boca direito e a fala é prejudicada. Além disso, caso você passe um ou mais dias sem comer, seus dentes ficam tão grandes que você não consegue fechar a boca. (pode ser como coelhos e ratos, ou como orcs ou dentes de sabre). Voce precisa roer coisas."
+  },
+  {
+   "n": 94,
+   "nome": "Umicoide (fluidos constantes)",
+   "efeito": "Você expele constantemente um fluido que deixe sua pele sempre molhada, com um estética de gelatina. Receba vantagem contra testes de agarrar e IP 1 contra concussão. Você precisa se idatrar com um fluido qualquer até 2 litros adicionais por dia. O fluido pode influenciar nos seus bonus",
+   "beneficio": "+1 IP Concussão"
+  },
+  {
+   "n": 95,
+   "nome": "Bolsão de ar",
+   "efeito": "seu corpo tem 4 bolsões de ar que podem ser acionados para evitar danos de impacto (Cada bolsão absorve até 10PVs no turno que eles inflarem ou 5PVs nos turnos subsequentes até que seja esvaziado - o dano esvaia os bolsões ou você pode esvaziar por conta), também pode ser usado para boiar. Enquanto estiver ativo, sua mobilidade cai para 4,5m e sua AGI-3."
+  },
+  {
+   "n": 96,
+   "nome": "Garras ejetáveis",
+   "efeito": "Sua mão é capaz de expelir suas próprias unhas, permitindo que você faça um(1) ataque a distância até 6m como uma ação bonus que causa 1 de dano perfurante. Você pode soltar 1 unha por turno, com o limite diário igual sua quantidade de unhas nas mãos. . Após o descanso longo suas unhas crescem novamente. Após expelir uma ou mais garras a chance de sangramento contra voce sobe 1."
+  },
+  {
+   "n": 97,
+   "nome": "Pele gelatinosa fagocitosa",
+   "efeito": "IP de impacto 3. Fraqueza elemental -3. Você também pode esconder objetos dentro de você e após agarrar ou ser agarrado os testes para soltar ficam 5% mais dificeis por turno até o limite de 15%.",
+   "beneficio": "+3 IP Impacto"
+  },
+  {
+   "n": 98,
+   "nome": "Asas de galinha",
+   "efeito": "Asas proporcionamente pequenas aparecem em você, melhorando seu impulso e diminuindo sua velocidade de queda. Nas corridas, se desloque 1,5m a mais. No salto frontal adicione 3m e o salto em altura adicione 1,5m. Você também tem queda suave até 6m. Suas asas reagem as suas emoções, te dando -20% de empatia para tentar mentir ou esconder seus sentimentos."
+  },
+  {
+   "n": 99,
+   "nome": "Articulação de quadrupede",
+   "efeito": "Seus membros tem articulações diferentes que fazem você se locomover com um quadrupede. Seu deslocamento base passa para 12m. Mordidas tem +10% de acerto, socos e chutes tem -1 de dano."
+  },
+  {
+   "n": 100,
+   "nome": "Tentáculos ocultos",
+   "efeito": "quando seu personagem recebe 6 PVs ou mais de um único dano, sorteie uma parte do corpo para tomar o golpe. Essa parte explode causando um cone de 1,5m um dano de 1d4 e de dentro de voce saem 4 tentaculos. As vantagens e desvantagens variam de acordo com o local que explodiu."
+  }
+ ]
+}

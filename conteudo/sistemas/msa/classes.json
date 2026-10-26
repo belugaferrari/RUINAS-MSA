@@ -1596,8 +1596,18 @@
     },
     {
      "nome": "Ataque inesperado",
-     "descricao": "quando realiza um ataque surpresa, o dano principal do ataque progride 1 passo para cada ponto de MOD CAR. Encanto fatal. Faça um teste de empatia contra um alvo. Caso passe, você pode lhe fazer um ataque surpresa, mesmo estando de frente com ele (exceto quando ele já esteja empunhando uma arma). Lavagem Cerebral (nível 18). Você destrói o que resta de humanidade no alvo. Usando Manipulação[Tortura] contra uma alvo submisso (amarrado e indefeso) você pode criar um gatilho ao qual esse personagem não tem controle. Quando gatilho ocorrer, esse personagem vai executar uma ordem previamente criada por você. O alvo passa a ter o status TRAUMA PROFUNDO e perde 10pontos de SAN e HUM persistentes. O alvo não se lembrará da ordem até que o gatilho aconteça. Ele poderá se livrar dessa habilidade vencendo o trauma profundo ou durante a ordem passando em 3 testes de WILL% Muito Difícil. Toda vez que você executar essa habilidade, perca 5HUM permanente.",
+     "descricao": "Quando realiza um ataque surpresa, o dano principal do ataque progride 1 passo para cada ponto de MOD CAR.",
      "id": "ataque-inesperado"
+    },
+    {
+     "nome": "Encanto fatal",
+     "descricao": "Faça um teste de empatia contra um alvo. Caso passe, você pode lhe fazer um ataque surpresa, mesmo estando de frente com ele (exceto quando ele já esteja empunhando uma arma).",
+     "id": "encanto-fatal"
+    },
+    {
+     "nome": "Lavagem cerebral",
+     "descricao": "(Nível 18) Você destrói o que resta de humanidade no alvo. Usando Manipulação[Tortura] contra uma alvo submisso (amarrado e indefeso) você pode criar um gatilho ao qual esse personagem não tem controle. Quando gatilho ocorrer, esse personagem vai executar uma ordem previamente criada por você. O alvo passa a ter o status TRAUMA PROFUNDO e perde 10pontos de SAN e HUM persistentes. O alvo não se lembrará da ordem até que o gatilho aconteça. Ele poderá se livrar dessa habilidade vencendo o trauma profundo ou durante a ordem passando em 3 testes de WILL% Muito Difícil. Toda vez que você executar essa habilidade, perca 5HUM permanente.",
+     "id": "lavagem-cerebral"
     },
     {
      "nome": "Empata",
@@ -1611,8 +1621,13 @@
     },
     {
      "nome": "Investigador Nato",
-     "descricao": "Faça testes de Espionagem[Investigação] e Espionagem[Pesquisa] com vantagem para analisar cenários. Testes de intuição relacionados a investigação tem o mesmo ND do teste normal. Impressionante [Escolha uma subpericia com 40% ou maior, exceto Combate e Manipulação]: Após fazer um teste bem sucedido da subperícia escolhida, você recebe +5% em todos os testes resistidos (inclusive combate) contra os personagens que presenciaram (incluindo aliados).",
+     "descricao": "Faça testes de Espionagem[Investigação] e Espionagem[Pesquisa] com vantagem para analisar cenários. Testes de intuição relacionados a investigação tem o mesmo ND do teste normal.",
      "id": "investigador-nato"
+    },
+    {
+     "nome": "Impressionante",
+     "descricao": "[Escolha uma subpericia com 40% ou maior, exceto Combate e Manipulação]: Após fazer um teste bem sucedido da subperícia escolhida, você recebe +5% em todos os testes resistidos (inclusive combate) contra os personagens que presenciaram (incluindo aliados).",
+     "id": "impressionante"
     },
     {
      "nome": "Inspiração",

@@ -36,7 +36,7 @@ function mesclar(base, extra) {
 function arquivos(id) {
   return [path.join(SISTEMAS, 'base.json'), path.join(SISTEMAS, `${id}.json`),
     ...['pericias', 'profissoes', 'classes', 'vantagens'].map(n => path.join(SISTEMAS, id, `${n}.json`)),
-    path.join(SISTEMAS, 'habilidades-regras.json')];
+    path.join(SISTEMAS, 'habilidades-regras.json'), path.join(SISTEMAS, 'mutacoes.json')];
 }
 
 export const idSistema = id => (IDS_SISTEMAS.includes(id) ? id : SISTEMA_PADRAO);
@@ -52,7 +52,7 @@ export function sistema(id = SISTEMA_PADRAO) {
   const assinatura = [...lista, ...(arqItens ? [arqItens] : []), ...(arqMonstros ? [arqMonstros] : [])].map(a => `${a}:${fs.statSync(a).mtimeMs}`).join('|');
   const atual = cache.get(id);
   if (atual && atual.assinatura === assinatura) return atual.dados;
-  const [base, proprio, pericias, profissoes, classes, vantagens, habRegras] = lista.map(ler);
+  const [base, proprio, pericias, profissoes, classes, vantagens, habRegras, mutacoes] = lista.map(ler);
   const v = vantagens.dados;
   const { _aviso, ...habilidadesRegras } = habRegras;
   // Subperícias que só existem para quem tem certa habilidade (ex.: Sentidos › Ondas, do Receptor Neural).
@@ -72,6 +72,8 @@ export function sistema(id = SISTEMA_PADRAO) {
     vantagens: v.gerais,
     defeitos: [...v.defeitosLeves, ...v.defeitosNormais],
     capacidades: v.capacidades,
+    // Tabela de mutações (d100), igual no MSA e no MSS.
+    mutacoes: mutacoes.mutacoes,
   };
   // As colunas originais da planilha ("planilha") só servem para exportar de volta: não vão para o navegador.
   if (arqItens) dados.itens = ler(arqItens).itens.map(({ planilha, ...it }) => it);

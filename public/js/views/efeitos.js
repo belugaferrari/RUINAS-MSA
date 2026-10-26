@@ -54,7 +54,7 @@ function marcasDe(p) {
       m.defesa ? `+${m.defesa} de defesa${m.contra ? ` contra ${nomeDe(m.contra) || '?'}` : ''}` : null,
       m.vantagem ? `vantagem em ${estado.sistema?.pericias?.find(x => x.id === m.vantagem)?.nome || m.vantagem}` : null,
       m.d20 ? '+1d20 no próximo teste (fora do combate)' : null, m.soAtaca ? `só pode atacar ${nomeDe(m.soAtaca) || '?'}` : null,
-      m.item ? 'ataque localizado nesse item tira 1 de durabilidade' : null, m.cena ? 'até o fim da cena' : null].filter(Boolean).join(' · '),
+      m.item ? 'ataque localizado nesse item tira 1 de durabilidade' : null, m.desvantagem ? 'desvantagem em todos os testes' : null, m.cena ? 'até o fim da cena' : null].filter(Boolean).join(' · '),
   }));
   if (p.humorForcado) lista.push({ id: 'humorForcado', nome: `Humor preso (${p.humorForcado.nome})`, turnos: p.humorForcado.turnos, icone: 'lock', texto: 'o humor não muda enquanto durar' });
   if (p.ipTemp && (p.ipTemp.geral || Object.keys(p.ipTemp.tipos || {}).length)) {

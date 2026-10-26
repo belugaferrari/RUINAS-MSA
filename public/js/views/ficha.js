@@ -10,6 +10,7 @@ import { escolherAvatar } from './avatares.js';
 import { abrirDescanso } from './descanso.js';
 import { botaoExpandir, inventarioExpandido, botaoDar } from './inventarioExpandido.js';
 import { prepararTeste } from './dados.js';
+import { mutacoesView } from './mutacoes.js';
 
 export const ICONE_TIPO = {
   arma: 'sword', defesa: 'shield', vestimenta: 'shirt', joia: 'gem', armadilha: 'crosshair', geral: 'backpack', municao: 'target', cibernetico: 'cpu',
@@ -19,6 +20,12 @@ export const ICONE_TIPO = {
 const atualizar = (p, patch) => acao('personagem.atualizar', { id: p.id, patch });
 
 export const nomeProfissao = p => estado.sistema.profissoes.find(x => x.id === p.profissao)?.nome || '';
+// Mutações: só aparece com mutação, para o mestre ou para o Mutante que ainda escolhe as dele.
+function secaoMutacoes(p, mestre) {
+  const v = mutacoesView(p, mestre);
+  return v ? h('section', { class: 'bloco' }, titulo('Mutações', 'dna'), v) : null;
+}
+
 export function nomeClasse(p) {
   const c = estado.sistema.classes.find(x => x.id === p.classe);
   if (!c) return p.nivel >= (estado.sistema.regras?.nivelClasse ?? 3) ? 'Classe não escolhida' : 'Sem classe (nível < 3)';
@@ -43,6 +50,7 @@ export function fichaView(p, { mestre = false } = {}) {
         painelPericias(p, { d, rolar, chave: `ficha:${p.id}`, editar: mestre ? editorMestre(p) : null })),
       h('section', { class: 'bloco' }, titulo('Profissão e classe', 'shield'), profissaoClasse(p, mestre)),
       h('section', { class: 'bloco' }, titulo('Vantagens, defeitos e capacidades', 'sparkles'), vantagensView(p, d, mestre)),
+      secaoMutacoes(p, mestre),
       h('section', { class: 'bloco' }, titulo('Equipado no corpo', 'shirt'), bonecoView(p, { mestre })),
       h('section', { class: 'bloco largo', id: 'equipamento' }, titulo(`Equipamento · Defesa ${d.defesa} · Carga ${d.carga.toFixed(1)} kg`, 'backpack'), equipamento(p, mestre)),
       h('section', { class: 'bloco largo' }, titulo('Anotações', 'notebook-pen'),
@@ -70,6 +78,7 @@ function fichaJogador(p) {
       h('section', { class: 'bloco largo' }, titulo(`Perícias · limite ${d.limitePericia}`, 'target'), periciasCompactas(p, d, testar)),
       h('section', { class: 'bloco largo', id: 'equipamento' }, titulo(`Equipamento · IP ${d.defesa} · Carga ${d.carga.toFixed(1)} kg`, 'backpack'), equipamento(p, false)),
       h('section', { class: 'bloco' }, titulo('Vantagens, defeitos e capacidades', 'sparkles'), vantagensView(p, d, false)),
+      secaoMutacoes(p, false),
       h('section', { class: 'bloco' }, titulo('Profissão e classe', 'shield'), profissaoClasse(p, false)),
       h('section', { class: 'bloco largo' }, titulo('Anotações', 'notebook-pen'),
         campo(`${p.id}:anotacoes`, p.anotacoes, v => atualizar(p, { anotacoes: v }), { multilinha: true, rows: 5, placeholder: 'Suas anotações…' })),

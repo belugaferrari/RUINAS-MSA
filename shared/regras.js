@@ -252,10 +252,30 @@ export function listaHabilidades(ficha, sistema) {
     ...ganhos.values(),
     // Monstros não têm a habilidade da raça humana; têm as próprias (planilha do Livro dos Monstros).
     sistema.raca?.habilidadeUnica && !ficha.criatura ? { id: 'raca', nome: sistema.raca.habilidadeUnica.nome, descricao: sistema.raca.habilidadeUnica.descricao, tipo: sistema.raca.nome, vezes: 1 } : null,
-  ].filter(Boolean).map(x => ({ ...x, regra: regraDaHabilidade(x.nome, sistema) })).concat(
+  ].filter(Boolean).map(x => ({ ...x, regra: regraDaHabilidade(x.nome, sistema) })).concat(mutacoesComoHabilidades(ficha, sistema)).concat(
     (ficha.habilidadesProprias || []).map((x, i) => ({ id: `m:${i}:${x.nome}`, nome: x.nome, descricao: x.descricao || x.efeitos || '', tipo: x.unica ? 'Habilidade única' : 'Monstro', unica: !!x.unica, vezes: 1,
       regra: x.modo === 'lembrete' && !x.efeitos ? null : { modo: x.modo || 'sempre', efeitos: x.efeitos || '' } })));
 }
+
+// Mutações do personagem (tabela d100 do autor): controlada (só o benefício), descontrolada e temporária (benefício e ônus).
+// Viram habilidades automáticas: o app aplica o "beneficio"/"onus" da tabela; o resto do texto é lembrete.
+export const TIPOS_MUTACAO = [
+  { id: 'controlada', nome: 'Mutação controlada', texto: 'só os benefícios' },
+  { id: 'descontrolada', nome: 'Mutação descontrolada', texto: 'benefícios e ônus; Disfarce muito difícil; DS 10 em qualquer teste → próximo turno com desvantagem' },
+  { id: 'temporaria', nome: 'Mutação temporária', texto: 'benefícios e ônus, até o mestre tirar' },
+];
+export const mutacaoDaTabela = (sistema, n) => (sistema.mutacoes || []).find(m => m.n === Number(n)) || null;
+function mutacoesComoHabilidades(ficha, sistema) {
+  return (ficha.mutacoes || []).map((x, i) => {
+    const m = mutacaoDaTabela(sistema, x.n);
+    if (!m) return null;
+    const tipo = TIPOS_MUTACAO.find(t => t.id === x.tipo) || TIPOS_MUTACAO[2];
+    const efeitos = [m.beneficio, tipo.id === 'controlada' ? null : m.onus].filter(Boolean).join('; ');
+    return { id: `mut:${x.id || `${i}:${m.n}`}`, nome: m.nome, descricao: m.efeito, tipo: `${tipo.nome} (${m.n})`, vezes: 1, mutacao: { n: m.n, tipo: tipo.id },
+      regra: efeitos ? { modo: 'sempre', efeitos } : { modo: 'lembrete' } };
+  }).filter(Boolean);
+}
+export const temMutacaoDescontrolada = ficha => (ficha.mutacoes || []).some(x => x.tipo === 'descontrolada');
 
 // Economia do turno (livro, "A Economia do Turno"): em cada turno, 1 ação principal, 1 de movimento, 1 bônus (só com
 // habilidade ou item que permita) e ações livres; a ação completa gasta a principal e a de movimento; a reação é fora do

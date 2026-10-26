@@ -151,7 +151,7 @@ Regra combinada: **o livro é mais atual**; das planilhas só entra o que o livr
 
 **Provisório — conferir**
 - **Marcador de vulnerabilidade sem estar doente**: CONS% ND 40 + 10 × marcadores (o autor vai confirmar a regra); falha → Doente. Já doente: ND 70 + 10 × marcadores (livro).
-- **Mutação temporária** (falha nos marcadores genéticos): o app só avisa. **LEMBRAR O AUTOR: mandar a TABELA DE MUTAÇÕES (100 mutações)** para o app sortear.
+- **Mutação temporária** (falha nos marcadores genéticos): sorteada na tabela de mutações (d100) — ver 26/10.
 
 ## Durabilidade (livro, cap. 5) — 19/10
 - Falha usando o item: se o DS for maior que a durabilidade atual, perde 1; sem os pré-requisitos, qualquer falha desgasta; em 0 quebra (arma quebrada não ataca). No combate MSS a arma do ataque que falhou desgasta sozinha; fora dele, o botão "falhou usando" pede o DS.
@@ -347,3 +347,26 @@ Feito (regras em `habilidades-regras.json`; efeitos próprios em `server/actions
   (+3 m e vantagem por 1+2d4 turnos, depois perde 1 de durabilidade e trava), Gerador Elétrico Portátil como item (taser 1d4).
 - Geringonça elemental: acoplar à arma branca (+1d4 do elemento, −10%, dois efeitos de dano; explodir 2d6+1 1×/descanso longo).
 - **Gambiarra rápida e Gambiarras profissionais são quase iguais: o autor vai mudar uma das duas.**
+
+## 26/10 — Tabela de mutações (planilha do autor mutacao_mss.xlsx)
+- As 100 mutações estão em `conteudo/sistemas/mutacoes.json` e valem no MSA e no MSS.
+- Ficha > **Mutações**: o mestre põe uma mutação (escolhida ou sorteada no d100), troca o tipo e tira. O **Mutante** (nível 3+)
+  escolhe as dele: 1 controlada e 1 descontrolada (Genes mutantes); para trocar, pede ao mestre.
+- Falhou no teste dos marcadores genéticos (descanso longo): o app **sorteia a mutação temporária** e conta as mutações temporárias
+  sofridas (na 5ª avisa das Marcas do Destino).
+- Mutação descontrolada: DS 10 em qualquer teste (ou ataque) → o próximo turno tem desvantagem em tudo (fora do combate, o próximo teste).
+- As mutações entram como habilidades automáticas: o app aplica os números de cada uma; o resto do texto é lembrete.
+
+**Provisório — conferir**
+- A planilha não separa benefício e ônus: o Claude separou à mão o que o app aplica ("beneficio" / "onus" no mutacoes.json).
+  Controlada = só o benefício; descontrolada e temporária = os dois. 43 mutações têm números; as outras são só lembrete
+  (deslocamento, arma natural, dano recebido a mais, testes condicionais…).
+- Mutação temporária dura até o mestre tirar (o livro não diz quanto dura).
+- "IP cinético" (Barriga inflável) = IP contra Concussão.
+
+**Aguardando o autor**
+- Abas "Mutação animal" (Foco Animal, para o Aberrante — Evolução Animal) e "Regras mutação" vieram vazias.
+- Cabeça de Animal (12): "sorteie o animal" — falta a tabela de animais.
+- Aprimoramentos da Mutação evolutiva (nível 7 e a cada 4) e Mutação aprimorada.
+- Corrigido no livro do app: as vantagens "Encanto fatal" e "Lavagem cerebral" estavam coladas no texto de "Ataque inesperado",
+  e "Impressionante" no de "Investigador Nato" (Encantado). Agora são vantagens separadas.

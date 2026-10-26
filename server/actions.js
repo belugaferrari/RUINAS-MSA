@@ -2,14 +2,14 @@ import { db, save, uid } from './db.js';
 import { imagemDeLink } from '../shared/imagens.js';
 import { sistema, idSistema } from './sistema.js';
 import { LOCAIS_ATAQUE, resolverAtaque, aplicarAtaque, armasDisponiveis, opcoesDefesa, sobrevida, rolarIniciativa, resolverManipulacao, modHumorTestes, humorDe, espectroDe, humorAparente, empatiaNatural, liberdadeDeHumor, modoRolagem, modoHumorTeste, recursoDe, gastarRecurso, racaDe, distanciaPecas, usosRestantes, gastarUso, testeContra, ipContra, resistenciaManipulacao } from '../shared/combate.js';
-import { sincronizarEfeitos, passarTurnoEfeitos, efeitosAoAgir, cargaNoTurno, descansar } from '../shared/efeitos.js';
+import { sincronizarEfeitos, passarTurnoEfeitos, efeitosAoAgir, cargaNoTurno, descansar, sortearMutacao } from '../shared/efeitos.js';
 import { fichasDeTeste, relatorioFicha, kitDeTeste, periciasDeTeste } from '../shared/fichasTeste.js';
 import { monstroNoEstagio, textoDeslocamentos, textoND, ladoNoMapa, ameacaNoMapa } from '../shared/monstros.js';
 import { sortearEncontro, cenarioSemIA } from '../shared/encontro.js';
 import { FORMAS_AREA, quadradosDaArea, atingidosPelaArea } from '../shared/area.js';
 import { TIPOS_OBJETO, tipoObjeto, coberturaPeloMapa, foraDaVisaoDosPJs, bloqueadoPorObjeto } from '../shared/objetosMapa.js';
 import { passarNecessidades, comer, beber, dormir, rolarCaos, climaDoDia, descreverRelogio, fimDoCombate } from '../shared/tempo.js';
-import { podeSeduzir, itemAberto, itemVisivel, xpParaSubir, novaFicha, podeEquipar, rolarDado, rolarAtributosCriacao, testeDMil, gerarEncontro, derivados, problemasFicha, LIMITE_SALA, desgastarItem, repararItem, durabilidadeDe, listaHabilidades, vantagemPorHabilidade, temHabilidade, regraDaHabilidade, tipoCriatura, chaveHabilidade, TIPOS_ACAO, nomeAcao, acoesDaHabilidade, dadosDaHabilidade, ehAtaqueEspecial, acaoDoAtaqueEspecial, perderPv, textoPv, duracaoDaHabilidade, podeRepetir, textoDuracao, habilidadeValendo, temItem } from '../shared/regras.js';
+import { podeSeduzir, itemAberto, itemVisivel, xpParaSubir, novaFicha, podeEquipar, rolarDado, rolarAtributosCriacao, testeDMil, gerarEncontro, derivados, problemasFicha, LIMITE_SALA, desgastarItem, repararItem, durabilidadeDe, listaHabilidades, vantagemPorHabilidade, temHabilidade, regraDaHabilidade, tipoCriatura, chaveHabilidade, TIPOS_ACAO, nomeAcao, acoesDaHabilidade, dadosDaHabilidade, ehAtaqueEspecial, acaoDoAtaqueEspecial, perderPv, textoPv, duracaoDaHabilidade, podeRepetir, textoDuracao, habilidadeValendo, temItem, TIPOS_MUTACAO, mutacaoDaTabela, temMutacaoDescontrolada } from '../shared/regras.js';
 
 const GRUPO_ENCONTROS = 'encontros';
 const MAX_LOG = 100;
@@ -889,6 +889,8 @@ function resolverPendente(c, s, pend, defesa, sis) {
     r.dano = 0; r.danoPartes = []; r.efeito = null;
   }
   const notas = [...notasItem, ...aplicarAtaque(a, b, r, sis)];
+  const notaMut = mutacaoSeMexe(c, a, r.ds);
+  if (notaMut) notas.push(notaMut);
   // Evasão é ação bônus (livro): gasta a de quem se defende.
   if (defesa === 'evasao') { const ex = gastarAcao(c, b, 'bonus'); notas.push(ex || `${b.nome} gastou a ação bônus (Evasão)`); }
   criarOfertas(c, s, a, b, r, pend, sis);
@@ -1144,6 +1146,15 @@ function agressaoSubita(c, a, b, sis) {
 }
 
 const fmtMod = v => (v > 0 ? `+${v}` : `${v}`);
+// Mutação descontrolada (livro, Mutante): com DS 10 em qualquer teste ela age sozinha — o próximo turno tem desvantagem
+// em tudo. Se acontece no próprio turno, a marca dura até o fim do turno seguinte.
+function mutacaoSeMexe(c, p, ds) {
+  if (ds !== 10 || !p || !temMutacaoDescontrolada(p) || (p.marcas || []).some(m => m.desvantagem)) return null;
+  const cb = c.salas.batalha.combate;
+  const noTurno = cb && cb.ordem[cb.vez]?.id === p.id;
+  (p.marcas ||= []).push({ id: uid(), nome: 'Mutação descontrolada', desvantagem: true, turnos: noTurno ? 2 : 1 });
+  return `DS 10: a mutação descontrolada de ${p.nome} se mexe sozinha — próximo turno com desvantagem em tudo`;
+}
 const nomeLocal = id => LOCAIS_ATAQUE.find(x => x.id === id)?.nome || id;
 
 // ---------- ações ----------
@@ -1948,7 +1959,8 @@ export const acoes = {
       const pedido = ['vantagem', 'desvantagem'].includes(modo) ? modo : null;
       // O humor também entra sozinho (ex.: Atraído → Percepção em desvantagem).
       const pelHumor = p ? modoHumorTeste(p, sis, acaoRef) : { vantagem: false, desvantagem: false };
-      const modoFinal = modoRolagem(pedido === 'vantagem' || porHabilidade || pelHumor.vantagem, pedido === 'desvantagem' || pelHumor.desvantagem);
+      const porMarca = p && (p.marcas || []).some(m => m.desvantagem);
+      const modoFinal = modoRolagem(pedido === 'vantagem' || porHabilidade || pelHumor.vantagem, pedido === 'desvantagem' || pelHumor.desvantagem || porMarca);
       const motivo = [porHabilidade && modoFinal === 'vantagem' ? 'habilidade' : null, (pelHumor.vantagem || pelHumor.desvantagem) && modoFinal ? `humor ${pelHumor.humor}` : null].filter(Boolean).join(', ');
       // Marcas: −15% das Bugigangas (até o fim do turno) e a Inspiração (+1d20 no resultado; gasta-se neste teste).
       let extraMarcas = p ? (p.marcas || []).filter(m => m.testes && !m.contra).reduce((s, m) => s + m.testes, 0) : 0;
@@ -1956,7 +1968,10 @@ export const acoes = {
       const insp = p && (p.marcas || []).find(m => m.d20);
       if (insp) { inspirado = rolarDado('1d20').total; extraMarcas += inspirado; p.marcas = p.marcas.filter(m => m !== insp); }
       const r = testeDMil(a.valor + modificador + extraMarcas, ndNum, sis, { metade: !!metade, modo: modoFinal });
-      entrada = { ...base, tipo: 'dmil', rotulo: `${String(rotulo || a.nome).slice(0, 80)}${modoFinal ? ` (${modoFinal}${motivo ? ` — ${motivo}` : ''})` : ''}${inspirado ? ` (Inspiração +${inspirado})` : ''}`, acaoNome: a.nome, mod: modificador + extraMarcas, metade: !!metade, ...r };
+      // Fora do combate, a desvantagem da mutação vale só para o próximo teste.
+      if (porMarca && !c.salas.batalha.combate) p.marcas = p.marcas.filter(m => !m.desvantagem);
+      const notaMut = p ? mutacaoSeMexe(c, p, r.ds) : null;
+      entrada = { ...base, tipo: 'dmil', rotulo: `${String(rotulo || a.nome).slice(0, 80)}${modoFinal ? ` (${modoFinal}${motivo || porMarca ? ` — ${[motivo, porMarca ? 'mutação descontrolada' : ''].filter(Boolean).join(', ')}` : ''})` : ''}${inspirado ? ` (Inspiração +${inspirado})` : ''}`, acaoNome: a.nome, mod: modificador + extraMarcas, metade: !!metade, ...r, ...(notaMut ? { texto: notaMut } : {}) };
     }
     if (nome && c.salas[nome]) registrar(c.salas[nome].log, entrada);
     else registrar(c.log, entrada);
@@ -2253,6 +2268,39 @@ export const acoes = {
     if (!hab) throw erro(`${p.nome} não tem essa habilidade.`);
     if (hab.regra?.modo === 'ativar') return ativarHabilidade(c, p, sis, hab, { ctx });
     return usarHabilidade(c, p, sis, hab);
+  },
+
+  // ---------- Mutações (tabela d100 do autor) ----------
+  // O mestre põe (escolhida ou sorteada) qualquer mutação em qualquer personagem. O jogador Mutante (nível 3+) escolhe as
+  // dele: 1 controlada e 1 descontrolada (Genes mutantes); outras vêm do mestre ou do sorteio dos marcadores genéticos.
+  'mutacao.adicionar'(c, { id, n, tipo = 'temporaria' }, ctx) {
+    const p = personagem(c, id);
+    exigirDonoOuMestre(ctx, p);
+    const sis = sistema(c.sistema);
+    if (!TIPOS_MUTACAO.some(t => t.id === tipo)) throw erro('Tipo de mutação desconhecido.');
+    if (!ctx.mestre) {
+      const cl = sis.classes.find(x => x.id === p.classe);
+      if (!/mutante/i.test(cl?.nome || '') || (p.nivel || 1) < 3) throw erro('Só o Mutante (nível 3+) escolhe as próprias mutações; as outras vêm do mestre.');
+      if (tipo === 'temporaria') throw erro('Mutação temporária vem do sorteio ou do mestre.');
+      if ((p.mutacoes || []).some(x => x.tipo === tipo)) throw erro(`${p.nome} já tem a mutação ${tipo}. Peça ao mestre para trocar.`);
+    }
+    if (n != null && n !== '' && !mutacaoDaTabela(sis, n)) throw erro('Mutação não encontrada na tabela.');
+    const m = sortearMutacao(p, sis, tipo, Math.random, n != null && n !== '' ? Number(n) : null);
+    const nomeTipo = TIPOS_MUTACAO.find(t => t.id === tipo).nome;
+    registrar(c.log, { autor: ctx.mestre ? 'Mestre' : p.nome, rotulo: `${nomeTipo}: ${p.nome}`, texto: `${m.n}. ${m.nome}${n == null || n === '' ? ' (sorteada no d100)' : ''}` });
+    return { n: m.n, nome: m.nome };
+  },
+  'mutacao.remover'(c, { id, mutacao }, ctx) {
+    exigirMestre(ctx);
+    const p = personagem(c, id);
+    p.mutacoes = (p.mutacoes || []).filter(x => x.id !== mutacao);
+  },
+  'mutacao.tipo'(c, { id, mutacao, tipo }, ctx) {
+    exigirMestre(ctx);
+    const p = personagem(c, id);
+    const x = (p.mutacoes || []).find(y => y.id === mutacao);
+    if (!x || !TIPOS_MUTACAO.some(t => t.id === tipo)) throw erro('Mutação ou tipo inválido.');
+    x.tipo = tipo;
   },
 
   // O mestre tira uma marca temporária (Inspiração, Foco, Trauma momentâneo…) ou solta o humor forçado.

@@ -238,6 +238,7 @@ export function resolverAtaque(atacante, alvo, sistema, op = {}, defesaId = 'nen
   if (tem(atacante, 'Caído')) motivosD.push('atacante caído');
   if (tem(atacante, 'Aturdido')) motivosD.push('atacante aturdido');
   if (hA?.desvantagemAtaque) motivosD.push(hA.nome);
+  if ((atacante.marcas || []).some(m => m.desvantagem)) motivosD.push('mutação descontrolada');
   // Alvo com habilidade que põe quem o ataca em desvantagem (Imunidade Diplomática, em cidade).
   for (const x of listaHabilidades(alvo, sistema)) if (x.regra?.desvantagemContraMim && habilidadeValendo(alvo, sistema, x.nome)) motivosD.push(`${x.nome} de ${alvo.nome}`);
   const modo = modoRolagem(motivosV.length > 0, motivosD.length > 0);
