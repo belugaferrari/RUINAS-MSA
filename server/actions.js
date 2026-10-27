@@ -258,6 +258,16 @@ export function migrarCampanhas() {
       c.migracoes.push('pv-for-cons');
       mudou = true;
     }
+    // Fichas de teste que ficaram sem itens (autor, 27/10): recebem o kit (até 3000 créditos) já equipado.
+    if (!c.migracoes.includes('kit-fichas-teste-2')) {
+      const sis = sistema(c.sistema);
+      for (const p of c.personagens.filter(x => ehFichaTeste(x) && !temArmaEquipada(x))) {
+        darKitDeTeste(c, p, sis, { user: { id: 'sistema' }, mestre: true });
+        Object.assign(p, periciasDeTeste(sis, p, c));
+      }
+      c.migracoes.push('kit-fichas-teste-2');
+      mudou = true;
+    }
     // Durabilidade "C" (consumível) e "AC" (autoconsumível) tinham virado 1 nos itens dos personagens.
     if (!c.migracoes.includes('durabilidade-consumiveis')) {
       for (const p of c.personagens) for (const i of p.itens || []) {
@@ -784,6 +794,9 @@ function usarHabilidade(c, p, sis, hab, acao = null) {
   return { texto, excesso, ativa: !!dur };
 }
 
+// Ficha de teste: criada pelo botão (marca fichaTeste) ou com o nome "Teste · …" (as antigas).
+const ehFichaTeste = p => !!p.fichaTeste || (p.tipo === 'pj' && /^teste\b/i.test(String(p.nome || '').trim()));
+const temArmaEquipada = p => (p.itens || []).some(i => i.tipo === 'arma' && i.equipado && !i.natural);
 // Kit da ficha de teste (até 3000 créditos do catálogo): entra na mochila e o que tem slot já vai equipado.
 function darKitDeTeste(c, p, sis, ctx) {
   const nomes = [];
@@ -791,7 +804,7 @@ function darKitDeTeste(c, p, sis, ctx) {
     const it = itemDoCatalogo(modelo.id, sis);
     (p.itens ||= []).push(it);
     nomes.push(it.nome);
-    if (it.slot) try { acoes['item.equipar'](c, { id: p.id, uid: it.uid, equipar: true }, ctx); } catch { /* sem espaço: fica na mochila */ }
+    if (it.slot) try { acoes['item.equipar'](c, { id: p.id, uid: it.uid, equipar: true }, { ...ctx, mestre: true }); } catch { /* sem espaço: fica na mochila */ }
   }
   return nomes;
 }
@@ -1596,7 +1609,7 @@ export const acoes = {
     const n = Math.max(3, Math.min(20, parseInt(nivel, 10) || 6));
     const relatorio = [];
     for (const f of fichasDeTeste(sis, n, c)) {
-      const p = { ...f, id: uid(), tipo: 'pj', donoId: null, backups: [], itens: [], dinheiro: sis.regras?.creditosIniciais ?? 0, xp: 0 };
+      const p = { ...f, id: uid(), tipo: 'pj', fichaTeste: true, donoId: null, backups: [], itens: [], dinheiro: sis.regras?.creditosIniciais ?? 0, xp: 0 };
       c.personagens.push(p);
       darKitDeTeste(c, p, sis, ctx);
       Object.assign(p, periciasDeTeste(sis, p, c));
@@ -1611,8 +1624,8 @@ export const acoes = {
   'teste.itens'(c, { trocar = false } = {}, ctx) {
     exigirMestre(ctx);
     const sis = sistema(c.sistema);
-    const fichas = c.personagens.filter(p => p.tipo === 'pj' && /^Teste · /.test(p.nome) && (trocar || !(p.itens || []).length));
-    if (!fichas.length) throw erro('Nenhuma ficha de teste sem itens.');
+    const fichas = c.personagens.filter(p => ehFichaTeste(p) && (trocar || !temArmaEquipada(p)));
+    if (!fichas.length) throw erro('Todas as fichas de teste já têm arma equipada. Use "Trocar os itens" para dar um kit novo.');
     // As armas mudam com o kit: as perícias acompanham.
     return { relatorio: fichas.map(p => { if (trocar) p.itens = []; const itens = darKitDeTeste(c, p, sis, ctx); Object.assign(p, periciasDeTeste(sis, p, c)); return { nome: p.nome, itens }; }) };
   },
@@ -1621,7 +1634,7 @@ export const acoes = {
   'teste.pericias'(c, d, ctx) {
     exigirMestre(ctx);
     const sis = sistema(c.sistema);
-    const fichas = c.personagens.filter(p => p.tipo === 'pj' && /^Teste · /.test(p.nome));
+    const fichas = c.personagens.filter(ehFichaTeste);
     if (!fichas.length) throw erro('Nenhuma ficha de teste na campanha.');
     return { relatorio: fichas.map(p => { Object.assign(p, periciasDeTeste(sis, p, c)); return { nome: p.nome, problemas: problemasFicha(p, sis, c, { apenasPontos: true }) }; }) };
   },
@@ -2483,6 +2496,7 @@ export const acoes = {
       }
     }
     const linhas = [];
+    const porPersonagem = [];
     for (const p of alvos) {
       const notas = [];
       // Confortável: dorme sem armadura nem armas (são tiradas antes de dormir).
@@ -2517,10 +2531,14 @@ export const acoes = {
       usos[tipo] += 1;
       p.descansosDoDia = usos;
       linhas.push(`${p.nome}: ${notas.filter(Boolean).join(', ') || 'nada a recuperar'}`);
+      // Uma entrada por personagem, com os dados da recuperação e os testes dos marcadores: o dono vê numa janela.
+      porPersonagem.push({ id: p.id, nome: p.nome, donoId: p.donoId || null, notas: notas.filter(Boolean) });
     }
     const nome = tipo === 'longo' ? (interrompido ? 'Descanso longo interrompido' : 'Descanso longo') : 'Descanso curto';
-    registrar(c.log, { autor: ctx.mestre ? 'Mestre' : alvos[0].nome, rotulo: nome, texto: linhas.join(' · ') });
-    return { linhas };
+    for (const x of porPersonagem) {
+      registrar(c.log, { tipo: 'descanso', autor: x.nome, rotulo: nome, personagemId: x.id, donoId: x.donoId, linhas: x.notas, texto: x.notas.join(' · ') || 'nada a recuperar' });
+    }
+    return { linhas, porPersonagem: porPersonagem.map(x => ({ nome: x.nome, notas: x.notas })) };
   },
 
   // Relógio da campanha: o mestre passa o tempo de 6 em 6 horas. Cada personagem-jogador conta as horas sem comer,

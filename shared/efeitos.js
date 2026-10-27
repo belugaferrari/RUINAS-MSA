@@ -154,11 +154,12 @@ export function cargaNoTurno(p, d) {
 export function descansar(p, sistema, tipo, pvMax, cond = {}, percentualCONS = 0, rng = Math.random) {
   const notas = [];
   const longo = tipo === 'longo';
-  const ganharPv = n => {
+  // "conta": os dados da recuperação, para todos verem (autor, 27/10).
+  const ganharPv = (n, conta = '') => {
     if (!p.pv || n <= 0) return;
     const antes = p.pv.atual;
     p.pv.atual = Math.min(pvMax ?? p.pv.max, p.pv.atual + n);
-    notas.push(p.pv.atual > antes ? `+${p.pv.atual - antes} PV (${textoPv(p)})` : 'PV já no máximo');
+    notas.push(p.pv.atual > antes ? `+${p.pv.atual - antes} PV${conta ? ` — ${conta}` : ''} (${textoPv(p)})` : `PV já no máximo${conta ? ` (${conta})` : ''}`);
   };
   // Vantagens e defeitos: Absorver Nutrientes / Metabolismo Acelerado (curto 2 PV, +1 por dado), Regeneração Lenta (metade),
   // Soldado de Campanha (sem ônus de Conforto/Ergonomia; vantagem contra doença), Insônia e Insônia pós-traumática.
@@ -166,7 +167,7 @@ export function descansar(p, sistema, tipo, pvMax, cond = {}, percentualCONS = 0
   const metade = n => (m.regenMetade ? Math.floor(n / 2) : n);
   const sono = () => { const c = (sistema.condicoes || []).find(x => x.id === 'sono'); if (c) (p.marcadores ||= []).push(c.nome); };
   if (!longo) {
-    ganharPv(metade(m.curtoPv));
+    ganharPv(metade(m.curtoPv), `descanso curto: ${m.curtoPv} PV fixo`);
     if (m.regenMetade) notas.push('Regeneração Lenta: metade');
     return notas;
   }
@@ -197,17 +198,20 @@ export function descansar(p, sistema, tipo, pvMax, cond = {}, percentualCONS = 0
   const dado = cond.interrompido ? 'd2' : 'd4';
   const r = rolarDado(`${dados}${dado}`, rng);
   const pv = Math.floor(metade(Math.max(1, r.total + (m.pvPorDado - faltam.length) * dados)) / reduzir);
-  ganharPv(Math.max(pv, 1));
+  const ajuste = (m.pvPorDado - faltam.length) * dados;
+  ganharPv(Math.max(pv, 1), `${dados}${dado} [${r.dados.join(', ')}] = ${r.total}${ajuste ? ` ${ajuste > 0 ? '+' : '−'} ${Math.abs(ajuste)}` : ''}${m.regenMetade ? ' ÷ 2' : ''}${reduzir > 1 ? ' ÷ 2 (Insônia)' : ''}`);
   if (faltam.length) notas.push(`sem ${faltam.join(', ')}: −${faltam.length * dados} PV (${dados}${dado} = ${r.total})`);
   if (m.pvPorDado) notas.push(`Metabolismo Acelerado: +${m.pvPorDado * dados} PV`);
   if (m.regenMetade) notas.push('Regeneração Lenta: metade');
   if (cond.interrompido) notas.push(`descanso interrompido: ${dados}d2 de PV e 1 de Sanidade`);
   // Sanidade: 1d6 (interrompido: 1).
   if (p.sanidade) {
-    const ganho = cond.interrompido ? 1 : Math.max(reduzir === 2 ? 0 : 1, Math.floor(rolarDado('1d6', rng).total / reduzir));
+    const d6 = cond.interrompido ? null : rolarDado('1d6', rng).total;
+    const ganho = cond.interrompido ? 1 : Math.max(reduzir === 2 ? 0 : 1, Math.floor(d6 / reduzir));
     const antes = p.sanidade.atual;
     p.sanidade.atual = Math.min(p.sanidade.max, p.sanidade.atual + ganho);
-    if (p.sanidade.atual > antes) notas.push(`+${p.sanidade.atual - antes} Sanidade`);
+    const contaSan = cond.interrompido ? 'interrompido: 1 fixo' : `1d6 [${d6}]${reduzir > 1 ? ' ÷ 2' : ''}`;
+    notas.push(p.sanidade.atual > antes ? `+${p.sanidade.atual - antes} Sanidade — ${contaSan} (${p.sanidade.atual}/${p.sanidade.max})` : `Sanidade já no máximo (${contaSan})`);
   }
   // Testes dos marcadores (CONS%) e depois zera os marcadores.
   const ativas = condicoesAtivas(p, sistema);
@@ -216,7 +220,8 @@ export function descansar(p, sistema, tipo, pvMax, cond = {}, percentualCONS = 0
   const gen = qtd('genetico');
   const doente = qtd('doenca') > 0;
   const doenca = (sistema.condicoes || []).find(c => c.id === 'doenca');
-  const teste = (nd, vant = false) => { const t = testeVantagem(percentualCONS, nd, sistema, vant, rng); return { ...t, txt: `CONS% ${t.total} × ND ${nd}${t.vantagem ? ' com vantagem' : ''}` }; };
+  // A conta inteira do teste (d100 + CONS% contra o ND), para o jogador ver.
+  const teste = (nd, vant = false) => { const t = testeVantagem(percentualCONS, nd, sistema, vant, rng); return { ...t, txt: `teste de CONS%: d100 ${t.dp} + ${t.acao} = ${t.total} contra ND ${nd}${t.vantagem ? ' (com vantagem)' : ''}${t.critico ? ` — ${t.critico === 'acerto' ? 'acerto' : 'erro'} crítico` : ''}` }; };
   if (vul) {
     // Já doente: ND 70 + 10 × marcadores (livro, Doença). Saudável: ND 40 + 10 × marcadores (autor, provisório).
     const t = teste((doente ? 70 : 40) + 10 * vul, m.vantagemDoenca);

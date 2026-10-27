@@ -253,7 +253,7 @@ test('fichas de teste vêm com itens (até 3000 créditos) já equipados; "Dar i
     if (p.itens.some(i => i.tipo === 'arma')) assert.ok(p.itens.some(i => i.tipo === 'arma' && i.equipado), `${p.nome} sem arma equipada: ${JSON.stringify(p.itens.map(i => [i.nome, i.slot, i.ocupa, i.equipado]))}`);
   }
   // Só as que estão sem itens recebem (no catálogo de exemplo, o kit pode sair vazio).
-  for (const p of fichas) p.itens = [{ uid: 'x', nome: 'x' }];
+  for (const p of fichas) p.itens = [{ uid: 'x', nome: 'x', tipo: 'arma', equipado: true }];
   fichas[0].itens = [];
   const r = executar(c, 'teste.itens', {}, ctxM);
   assert.deepEqual(r.relatorio.map(x => x.nome), [fichas[0].nome]);

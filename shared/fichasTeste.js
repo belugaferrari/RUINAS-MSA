@@ -95,8 +95,14 @@ export function kitDeTeste(sistema, ficha, orcamento = ORCAMENTO_KIT_TESTE) {
   const atende = i => [...String(i.requisitos || '').matchAll(/([A-ZÇ]{2,5}|N[íi]vel)\s*(\d+)/gi)].every(([, k, v]) =>
     /n[íi]vel/i.test(k) ? (ficha.nivel || 1) >= Number(v) : (d.atributos?.[k.toUpperCase()] ?? 99) >= Number(v));
   // Com orçamento maior (3000), armas e proteção podem ser raras; o resto continua comum.
-  const raridades = orcamento >= 2500 ? [...COMUNS, 'Raro'] : COMUNS;
-  const itens = (sistema.itens || []).filter(i => i.preco > 0 && atende(i) && (COMUNS.includes(i.raridade) || (raridades.includes(i.raridade) && ['arma', 'defesa', 'vestimenta'].includes(i.tipo))));
+  // Raridade sem ligar para acento/maiúscula; item sem preço na planilha conta como 0. Se o catálogo do mestre não tiver
+  // raridade nem preço (ou nada passar no filtro), o kit usa o catálogo todo — melhor que a ficha ficar sem itens (autor, 27/10).
+  const comuns = COMUNS.map(semAc);
+  const raridades = orcamento >= 2500 ? [...comuns, 'raro'] : comuns;
+  const custo = i => Math.max(0, Number(i.preco) || 0);
+  const filtrados = (sistema.itens || []).map(i => ({ ...i, preco: custo(i) })).filter(i => atende(i) && (comuns.includes(semAc(i.raridade)) || (raridades.includes(semAc(i.raridade)) && ['arma', 'defesa', 'vestimenta'].includes(i.tipo))));
+  const temArma = l => l.some(i => i.tipo === 'arma' && i.slot === 'maos' && i.dano);
+  const itens = temArma(filtrados) ? filtrados : (sistema.itens || []).map(i => ({ ...i, preco: custo(i) }));
   let resto = orcamento;
   const kit = [];
   const pegar = i => { if (i && i.preco <= resto) { kit.push(i); resto -= i.preco; return i; } return null; };

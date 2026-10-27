@@ -370,3 +370,10 @@ Feito (regras em `habilidades-regras.json`; efeitos próprios em `server/actions
 - Aprimoramentos da Mutação evolutiva (nível 7 e a cada 4) e Mutação aprimorada.
 - Corrigido no livro do app: as vantagens "Encanto fatal" e "Lavagem cerebral" estavam coladas no texto de "Ataque inesperado",
   e "Impressionante" no de "Investigador Nato" (Encantado). Agora são vantagens separadas.
+
+## 27/10 — Fichas de teste com itens e descanso com os dados
+- Fichas de teste sem arma equipada recebem o kit sozinhas ao atualizar o app (uma vez). O kit agora aceita catálogo com raridade
+  em minúscula/sem acento e itens sem preço (contam como 0); se nada passar no filtro, usa o catálogo todo.
+  Fichas de teste: marcadas na criação (fichaTeste) ou com nome começando por "Teste".
+- Descanso: cada personagem tem a sua entrada no registro com os dados (PV: "3d4 [4, 2, 3] = 9"; Sanidade: "1d6 [5]") e os testes
+  dos marcadores (d100 + CONS% contra o ND). O jogador dono vê o resultado numa janela quando o mestre faz o descanso.

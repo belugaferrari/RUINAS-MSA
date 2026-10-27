@@ -1173,6 +1173,11 @@ span.peao { display: grid; }
 .descanso fieldset { border: 1px solid var(--borda); border-radius: 8px; padding: .4em .7em; display: flex; flex-direction: column; gap: .3em; margin: .5em 0; }
 .descanso legend { color: var(--ouro); padding: 0 .3em; }
 .lista-descanso li { margin-bottom: .35em; }
+.lista-descanso .descanso-personagem + .descanso-personagem { margin-top: .8em; padding-top: .6em; border-top: 1px solid var(--borda); }
+.lista-descanso h4 { margin: 0 0 .3em; }
+.lista-descanso ul { margin: 0; padding-left: 1.2em; }
+.lista-descanso li.perigo { color: var(--perigo); }
+.lista-descanso li.ok { color: var(--ok); }
 .inv-dur { grid-template-columns: auto 1fr auto auto; }
 .inv-dur.quebrado strong { color: #ff6a5a; }
 .inv-dur-nota { grid-column: 1 / -1; color: var(--suave); font-size: .78em; }

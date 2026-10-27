@@ -1,4 +1,5 @@
 import { h, botao, aviso, janela, confirmar, vazio, icone } from '../ui.js';
+import { observarDescanso } from './descanso.js';
 import { estado, mudar, render, sincronizarSistema } from '../estado.js';
 import { emitir, get } from '../api.js';
 import { sairDaConta } from '../app.js';
@@ -25,6 +26,7 @@ export async function abrirCampanha(id) {
   const c = await emitir('campanha:entrar', { id, area: estado.area });
   await sincronizarSistema(c);
   observarRolagens(c);
+  observarDescanso(c);
   mudar({ tela: 'campanha', campanha: c, aba: null, sel: {} });
 }
 
