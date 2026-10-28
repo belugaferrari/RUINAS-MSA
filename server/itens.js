@@ -161,7 +161,8 @@ export function converterLinha(l, sis, { revisao = false } = {}) {
     producao: { pericia: txt(l['Produção - Pericia']), nd: num(l['Produção - ND']), obs: txt(l['Produção - OBSERVAÇÕES']) },
     bonus: app.bonus ? lerBonus(app.bonus, sis) : bonusDeTexto(efeitos),
     revisao: app.revisao ? !['nao', 'não', 'n', '0', 'false'].includes(sem(app.revisao)) : revisao,
-    planilha: Object.fromEntries([...COLUNAS, ...COLUNAS_APP.map(([c]) => c)].filter(c => !vazio(l[c])).map(c => [c, l[c]])),
+    // A linha da planilha guardada como veio (inclusive "A definir" e "-"), para exportar de volta sem perder nada.
+    planilha: Object.fromEntries([...COLUNAS, ...COLUNAS_APP.map(([c]) => c)].filter(c => l[c] != null && String(l[c]).trim() !== '').map(c => [c, l[c]])),
   };
   if (!vazio(l.Dano)) {
     // Guarda o texto original; para rolar, tira palavras como "+FOR" ou "+ven" (MOD FOR já entra no corpo a corpo).
@@ -255,7 +256,9 @@ export async function planilhaDoCatalogo(itens, sis = null) {
   ws.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
   ws.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF5B3A29' } };
   ws.views = [{ state: 'frozen', ySplit: 1, xSplit: 3 }];
-  for (const it of itens) {
+  // Na ordem do "num ctrl" (a ordem da planilha do autor).
+  const ctrl = it => parseFloat(it.planilha?.['num ctrl'] ?? it.id.replace(/^i/, '')) || Infinity;
+  for (const it of [...itens].sort((a, b) => ctrl(a) - ctrl(b))) {
     const p = it.planilha || {};
     ws.addRow({
       ...p,

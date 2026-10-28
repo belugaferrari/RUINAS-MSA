@@ -315,6 +315,32 @@ function campoEscolha(p, x, k, esc) {
   return null;
 }
 
+// Atacar com 2 armas (autor, 28/10): uma arma de uma mão em cada mão; o app faz os dois ataques em seguida — a mão hábil
+// primeiro (−20%) e a inábil depois (−40%, gasta a ação bônus). Com Ambidestria, só o segundo tem −20%.
+function duasArmas(p, alvo, b, mestre) {
+  const nasMaos = (p.itens || []).filter(i => i.equipado && i.slot === 'maos' && i.tipo === 'arma' && (i.ocupa ?? 1) < 2);
+  if (nasMaos.length < 2) return null;
+  const habil = p.maoHabil === 'esquerda' ? 1 : 0;
+  const primeira = nasMaos.find(i => (i.mao ?? 0) === habil) || nasMaos[0];
+  const segunda = nasMaos.find(i => i !== primeira && (i.mao ?? 0) !== (primeira.mao ?? 0)) || nasMaos.find(i => i !== primeira);
+  const ambi = temHabilidade(p, estado.sistema, 'Ambidestria');
+  const onus = ambi ? 'Ambidestria: a primeira sem ônus, a segunda −20%' : 'mão hábil −20% · mão inábil −40%';
+  const atacar = async () => {
+    if (!alvo) throw new Error('Escolha o alvo (clique no cartão dele no campo).');
+    const base = opcoesGerais(p, mestre);
+    const r1 = await acao('combate.atacar', { atacante: p.id, alvo, opcoes: { ...base, armaUid: primeira.uid, doisAtaques: true } });
+    if (r1.tipo === 'barrado') { aviso(r1.texto, 'erro'); return; }
+    const r2 = await acao('combate.atacar', { atacante: p.id, alvo, opcoes: { ...base, armaUid: segunda.uid } });
+    if (estado.sel.ataque) Object.assign(estado.sel.ataque, { sacrificio: false, cargaNucleo: false, investida: null, doisAtaques: false, mira: false });
+    const txt = r => (r.tipo === 'ataque' ? `${r.sucesso ? 'acertou' : 'não acertou'}` : 'aguardando a defesa');
+    aviso(`${p.nome} ataca ${b?.nome || 'o alvo'} com as 2 armas — ${primeira.nome}: ${txt(r1)} · ${segunda.nome}: ${txt(r2)}`);
+    for (const r of [r1, r2]) if (r.excesso) aviso(`Atenção: ${r.excesso}.`, 'erro');
+  };
+  return h('div', { class: 'duas-armas barra' },
+    botao('Atacar com 2 armas', atacar, { class: 'primario', icone: 'swords', disabled: !alvo, title: `${primeira.nome} e depois ${segunda.nome} (${onus}); o segundo ataque gasta a ação bônus` }),
+    h('small', { class: 'dica' }, `${primeira.nome} + ${segunda.nome} · ${onus}; o segundo gasta a ação bônus`));
+}
+
 // Começo da descrição, para lembrar do que se trata sem abrir o texto todo.
 function primeiraFrase(texto) {
   const t = String(texto || '').replace(/\s+/g, ' ').trim();
@@ -419,6 +445,7 @@ function quadroAtaques(p, participantes, mestre) {
       outros.length ? selecao(outros.map(x => ({ valor: x.id, rotulo: x.nome })), alvo, v => marcarAlvo('batalha', v), { 'aria-label': `Alvo de ${p.nome}` }) : h('em', {}, 'ninguém no campo'),
       seloCobertura(p, alvo)),
     auto ? null : h('p', { class: 'dica' }, icone('info'), ` No ${sis.nome} o dado prepara o teste no rolador; o dano e o PV vão à mão.`),
+    auto ? duasArmas(p, alvo, b, mestre) : null,
     h('ul', { class: 'lista-ataques' },
       h('li', { class: 'ataque-grupo' },
         h('div', { class: 'ataque-linha' },

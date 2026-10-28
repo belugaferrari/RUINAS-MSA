@@ -51,7 +51,8 @@ export function palcoCombate() {
   if (!cb) return null;
   const atual = personagemPorId(cb.ordem[cb.vez]?.id);
   const pend = (s.pendentes || []).at(-1);
-  const ultimo = [...(s.log || [])].reverse().find(e => ['ataque', 'dmil'].includes(e.tipo) && !e.secreta);
+  // Ataques antigos (de antes do palco) não dizem quem atacou: ficam de fora.
+  const ultimo = [...(s.log || [])].reverse().find(e => (e.tipo === 'ataque' ? e.atacanteId : e.tipo === 'dmil') && !e.secreta);
   // A ação mostrada: o ataque esperando defesa; senão o último ataque/teste deste turno; senão "aguardando".
   const doTurno = ultimo && (!cb.turnoDesde || ultimo.em >= cb.turnoDesde) ? ultimo : null;
   return h('section', { class: 'palco-combate', 'aria-live': 'polite', 'aria-label': 'O que está acontecendo no combate' },

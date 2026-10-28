@@ -395,3 +395,10 @@ Feito (regras em `habilidades-regras.json`; efeitos próprios em `server/actions
 - Maestria (mãos) na tabela e no cartão do item; o desenho da arma (mão, lista) segue o tipo: lâmina, machado, martelo, fogo, projétil.
 - Planilha de itens: "Baixar planilha atual" sai com as colunas "App: …" preenchidas com o que o app usa e uma aba "Leia-me";
   pode ser ligada ao Google Planilhas (o app puxa ao abrir e a cada 30 minutos), como o Livro dos Monstros.
+- (28/10) Botão "Atacar com 2 armas" (com uma arma de uma mão em cada mão): faz os dois ataques seguidos — mão hábil −20%,
+  inábil −40% (Ambidestria: só o segundo −20%); o segundo gasta a ação bônus.
+- (28/10) Defesa não tem teto no app (Esquiva + 50 pode passar de 100). O que tem limite é o ponto investido por perícia
+  (base + subperícia ≤ 5 + 5 × nível, livro).
+- (28/10) Planilha de itens exportada: todas as colunas originais como vieram (inclusive "A definir"), na ordem do "num ctrl".
+  O catálogo do app foi conferido com as duas planilhas do autor ("itens" e "revisão parcial 1", a revisão vale): 1449 itens,
+  nenhum faltando. Repetidos na planilha original (mesmo "num ctrl"): 10 no "itens" e 15 no "revisão" — fica a última linha.
