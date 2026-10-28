@@ -1,4 +1,5 @@
 import { db, save, uid } from './db.js';
+import { converterLinha } from './itens.js';
 import { imagemDeLink } from '../shared/imagens.js';
 import { sistema, idSistema } from './sistema.js';
 import { LOCAIS_ATAQUE, resolverAtaque, aplicarAtaque, armasDisponiveis, opcoesDefesa, sobrevida, rolarIniciativa, resolverManipulacao, modHumorTestes, humorDe, espectroDe, humorAparente, empatiaNatural, liberdadeDeHumor, modoRolagem, modoHumorTeste, recursoDe, gastarRecurso, racaDe, distanciaPecas, usosRestantes, gastarUso, testeContra, ipContra, resistenciaManipulacao } from '../shared/combate.js';
@@ -9,7 +10,7 @@ import { sortearEncontro, cenarioSemIA } from '../shared/encontro.js';
 import { FORMAS_AREA, quadradosDaArea, atingidosPelaArea } from '../shared/area.js';
 import { TIPOS_OBJETO, tipoObjeto, coberturaPeloMapa, foraDaVisaoDosPJs, bloqueadoPorObjeto } from '../shared/objetosMapa.js';
 import { passarNecessidades, comer, beber, dormir, rolarCaos, climaDoDia, descreverRelogio, fimDoCombate } from '../shared/tempo.js';
-import { podeSeduzir, itemAberto, itemVisivel, xpParaSubir, novaFicha, podeEquipar, rolarDado, rolarAtributosCriacao, testeDMil, gerarEncontro, derivados, problemasFicha, LIMITE_SALA, desgastarItem, repararItem, durabilidadeDe, listaHabilidades, vantagemPorHabilidade, temHabilidade, regraDaHabilidade, tipoCriatura, chaveHabilidade, TIPOS_ACAO, nomeAcao, acoesDaHabilidade, dadosDaHabilidade, ehAtaqueEspecial, acaoDoAtaqueEspecial, perderPv, textoPv, duracaoDaHabilidade, podeRepetir, textoDuracao, habilidadeValendo, temItem, TIPOS_MUTACAO, mutacaoDaTabela, temMutacaoDescontrolada } from '../shared/regras.js';
+import { podeSeduzir, itemAberto, itemVisivel, xpParaSubir, novaFicha, podeEquipar, rolarDado, rolarAtributosCriacao, testeDMil, gerarEncontro, derivados, problemasFicha, LIMITE_SALA, desgastarItem, repararItem, durabilidadeDe, listaHabilidades, vantagemPorHabilidade, temHabilidade, regraDaHabilidade, tipoCriatura, chaveHabilidade, TIPOS_ACAO, nomeAcao, acoesDaHabilidade, dadosDaHabilidade, ehAtaqueEspecial, acaoDoAtaqueEspecial, perderPv, textoPv, duracaoDaHabilidade, podeRepetir, textoDuracao, habilidadeValendo, temItem, tipoDaArma, TIPOS_MUTACAO, mutacaoDaTabela, temMutacaoDescontrolada } from '../shared/regras.js';
 
 const GRUPO_ENCONTROS = 'encontros';
 const MAX_LOG = 100;
@@ -256,6 +257,18 @@ export function migrarCampanhas() {
         p.pv = { ...p.pv, max: novo, atual: p.pv.atual + delta };
       }
       c.migracoes.push('pv-for-cons');
+      mudou = true;
+    }
+    // Bônus de item com "%" passou a ser porcentagem nos testes do atributo (autor, 28/10): os itens que os personagens já têm
+    // são relidos da linha da planilha guardada neles.
+    if (!c.migracoes.includes('bonus-percentual-itens')) {
+      const sis = sistema(c.sistema);
+      for (const p of c.personagens) for (const i of p.itens || []) {
+        if (!i.planilha) continue;
+        const novo = converterLinha(i.planilha, sis, { revisao: i.revisao });
+        if (novo) { i.bonus = novo.bonus; if (novo.ipTipos) i.ipTipos = novo.ipTipos; }
+      }
+      c.migracoes.push('bonus-percentual-itens');
       mudou = true;
     }
     // Fichas de teste refeitas (autor, 28/10): uma por especialização, cada uma diferente, sem "Teste" no nome e com avatar.
@@ -857,16 +870,6 @@ function sairDoCombate(s, id) {
 }
 
 // Tipo de arma, para o desenho que aparece sobre o alvo (punho, lâmina, machado, martelo, arco, arma de fogo).
-function tipoDaArma(arma) {
-  const per = arma.pericia || '';
-  if (arma.uid === 'desarmado' || per.startsWith('briga')) return 'desarmado';
-  if (per === 'armas-de-fogo.projeteis') return 'arco';
-  if (per.startsWith('armas-de-fogo')) return 'fogo';
-  if (/machado/.test(per)) return 'machado';
-  if (/martelo|bastao/.test(per)) return 'martelo';
-  if (per.startsWith('arma-branca')) return 'lamina';
-  return arma.alcance === 'distancia' ? 'fogo' : 'lamina';
-}
 
 // Iniciativa de todos (AGI + 1d10) e a ordem dos turnos, do maior para o menor.
 function iniciarCombate(c) {

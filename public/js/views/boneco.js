@@ -2,7 +2,8 @@
 import { h, botao, aviso, icone, titulo, janela } from '../ui.js';
 import { estado, render, mudar } from '../estado.js';
 import { acao, enviarArquivo } from '../api.js';
-import { podeEquipar, derivados } from '/shared/regras.js';
+import { podeEquipar, derivados, textoIp, textoBonus, tipoDaArma } from '/shared/regras.js';
+import { ICONE_ARMA } from './fx.js';
 import { ICONE_TIPO } from './ficha.js';
 import { cartaoItem } from './inventarioExpandido.js';
 
@@ -38,10 +39,11 @@ function marcarNovos(p, ocupadas) {
 // Número de destaque do item na moldura (como o "+12" do exemplo).
 function destaque(i) {
   if (!i) return null;
-  if (i.defesa) return `IP ${i.defesa}`;
   if (i.dano || i.danoTexto) return i.dano || i.danoTexto;
-  const b = Object.entries(i.bonus || {})[0];
-  if (b) return `${b[0]} ${b[1] > 0 ? '+' : ''}${b[1]}`;
+  const ip = textoIp(i);
+  if (ip) return ip.split(' · ')[0];
+  const b = textoBonus(i).split(' · ')[0];
+  if (b) return b;
   return null;
 }
 
@@ -65,7 +67,8 @@ export function bonecoView(p, { mestre = false, linkGuardados = true, compacto =
     const id = x.mao != null ? `maos:${x.mao}` : x.slot;
     const cor = item ? COR_RARIDADE[item.raridade] || '#c9a45c' : null;
     const duas = item && x.slot === 'maos' && (item.ocupa ?? 1) >= 2;
-    const ic = item ? (x.slot === 'maos' ? { arma: 'sword', escudo: 'shield', item: 'package' }[tipoNaMao(item)] : ICONE_TIPO[item.tipo] || x.icone) : x.icone;
+    // Na mão, o desenho segue o tipo da arma (lâmina, machado, martelo, arma de fogo, projétil, desarmado).
+    const ic = item ? (x.slot === 'maos' ? (tipoNaMao(item) === 'arma' ? ICONE_ARMA[tipoDaArma(item)] || 'sword' : { escudo: 'shield', item: ICONE_TIPO[item.tipo] || 'package' }[tipoNaMao(item)]) : ICONE_TIPO[item.tipo] || x.icone) : x.icone;
     const hab = x.mao != null && maoHabil(p) === x.mao;
     const cls = `equip-slot ${x.alto ? 'alto' : ''} ${pequena ? 'pequena' : ''} ${item ? 'cheio' : 'vazio'} ${novo(x.id) ? 'novo' : ''} ${aberto === id ? 'aberto' : ''} ${extra}`;
     return h('div', { class: cls, style: cor ? { '--rar': cor } : null },

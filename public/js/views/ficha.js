@@ -3,7 +3,7 @@ import { h, campo, botao, selecao, aviso, confirmar, pedirTexto, formatarData, v
 import { efeitosIcones } from './efeitos.js';
 import { estado, render } from '../estado.js';
 import { acao, enviarArquivo } from '../api.js';
-import { GENEROS, ATRACOES, atracaoDe, durabilidadeDe, derivados, slotsOcupados, ganhosDeClasse, pontosGastos, pontosPericiaTotal, vantagensDisponiveis, acharVantagem, xpParaSubir, subpericiasDe } from '/shared/regras.js';
+import { tipoDaArma, textoIp, textoBonus, GENEROS, ATRACOES, atracaoDe, durabilidadeDe, derivados, slotsOcupados, ganhosDeClasse, pontosGastos, pontosPericiaTotal, vantagensDisponiveis, acharVantagem, xpParaSubir, subpericiasDe } from '/shared/regras.js';
 import { painelPericias } from './pericias.js';
 import { bonecoView } from './boneco.js';
 import { escolherAvatar } from './avatares.js';
@@ -11,7 +11,10 @@ import { abrirDescanso } from './descanso.js';
 import { botaoExpandir, inventarioExpandido, botaoDar } from './inventarioExpandido.js';
 import { prepararTeste } from './dados.js';
 import { mutacoesView } from './mutacoes.js';
+import { ICONE_ARMA } from './fx.js';
 
+// Ícone do item: arma pelo tipo (lâmina, machado, martelo, arma de fogo, projétil); o resto pelo tipo do item.
+export const iconeItem = i => (i.tipo === 'arma' ? ICONE_ARMA[tipoDaArma(i)] || 'sword' : ICONE_TIPO[i.tipo] || 'tag');
 export const ICONE_TIPO = {
   arma: 'sword', defesa: 'shield', vestimenta: 'shirt', joia: 'gem', armadilha: 'crosshair', geral: 'backpack', municao: 'target', cibernetico: 'cpu',
   ferramenta: 'wrench', alimento: 'utensils', boticario: 'pill', transporte: 'car', materia: 'box', energia: 'battery-charging',
@@ -20,6 +23,9 @@ export const ICONE_TIPO = {
 const atualizar = (p, patch) => acao('personagem.atualizar', { id: p.id, patch });
 
 export const nomeProfissao = p => estado.sistema.profissoes.find(x => x.id === p.profissao)?.nome || '';
+// Maestria (autor, 28/10): quantas mãos o item precisa.
+export const textoMaos = i => (i.slot === 'maos' || i.tipo === 'arma' ? ` · ${Math.max(1, i.ocupa ?? 1)} mão${(i.ocupa ?? 1) > 1 ? 's' : ''}${i.maestria ? ` (maestria ${i.maestria})` : ''}` : '');
+
 // Mutações: só aparece com mutação, para o mestre ou para o Mutante que ainda escolhe as dele.
 function secaoMutacoes(p, mestre) {
   const v = mutacoesView(p, mestre);
@@ -562,16 +568,16 @@ export function equipamento(p, mestre, filtro = null) {
     filtro ? null : h('div', { class: 'slots' }, sis.slots.map(s => h('span', { class: `selo ${(uso[s.id] || 0) >= s.capacidade ? 'cheio' : ''}` }, `${s.nome} ${uso[s.id] || 0}/${s.capacidade}`)),
       h('span', { class: 'espaco' }), botaoExpandir(p)),
     filtro ? null : inventarioExpandido(p, mestre),
-    itens.length ? tabela(['Item', 'Slot', 'Durab.', 'Dano/Def.', 'Bônus', 'Venda', ''], itens.map(i => ({
+    itens.length ? tabela(['Item', 'Slot · mãos', 'Durab.', 'Dano / IP', 'Bônus', 'Venda', ''], itens.map(i => ({
       class: i.equipado ? 'equipado' : null,
       celulas: [
-        h('span', { class: 'item-nome' }, icone(ICONE_TIPO[i.tipo] || 'tag'), i.nome, i.equipado ? h('span', { class: 'selo ok' }, 'equipado') : null),
-        [sis.slots.find(s => s.id === i.slot)?.nome || '—', i.ocupa > 1 ? ` (${i.ocupa})` : ''],
+        h('span', { class: 'item-nome' }, icone(iconeItem(i)), i.nome, i.equipado ? h('span', { class: 'selo ok' }, 'equipado') : null),
+        [sis.slots.find(s => s.id === i.slot)?.nome || '—', textoMaos(i)],
         mestre && durabilidadeDe(i).tipo === 'normal'
           ? campo(`${p.id}:dur:${i.uid}`, i.durabilidadeAtual ?? i.durabilidade, v => acao('item.durabilidade', { id: p.id, uid: i.uid, valor: v }), { tipo: 'number', class: 'num', 'aria-label': `Durabilidade de ${i.nome}` })
           : durabilidadeDe(i).quebrado ? h('span', { class: 'selo perigo' }, 'quebrado') : durabilidadeDe(i).texto,
-        [[i.dano, i.defesa ? `Def ${i.defesa}` : null].filter(Boolean).join(' · ') || '—', municaoView(p, i, mestre)],
-        Object.entries(i.bonus || {}).map(([k, v]) => `${k} ${v > 0 ? '+' : ''}${v}`).join(', ') || '—',
+        [[i.dano, textoIp(i)].filter(Boolean).join(' · ') || '—', municaoView(p, i, mestre)],
+        textoBonus(i, estado.sistema) || '—',
         h('span', { class: 'moeda' }, icone('coins'), i.venda ?? '—'),
         [
           i.slot ? botao(i.equipado ? 'Desequipar' : 'Equipar', () => acao('item.equipar', { id: p.id, uid: i.uid, equipar: !i.equipado }), { class: i.equipado ? 'pequeno' : 'primario pequeno', icone: i.equipado ? 'x' : 'shirt' }) : null,

@@ -4,8 +4,8 @@
 import { h, botao, icone, confirmar, aviso, pedirTexto, janela } from '../ui.js';
 import { estado, render } from '../estado.js';
 import { acao } from '../api.js';
-import { derivados, slotsOcupados, durabilidadeDe } from '/shared/regras.js';
-import { ICONE_TIPO, cargaView } from './ficha.js';
+import { derivados, slotsOcupados, durabilidadeDe, textoIp, textoBonus } from '/shared/regras.js';
+import { ICONE_TIPO, iconeItem, cargaView } from './ficha.js';
 import { maoDoItem } from './boneco.js';
 
 const COR_RARIDADE = { Mundano: '#9a948a', Comum: '#cfc8bb', Incomum: '#62d16e', Raro: '#4f9dff', 'Raríssimo': '#b06bff', 'Lendário': '#ffb02e', 'Único': '#ff6a3a', Ilegal: '#e0405a' };
@@ -82,12 +82,12 @@ export function cartaoItem(p, i, mestre) {
   const atributo = (rotulo, valor, ic, extra = null) => (valor === undefined || valor === null || valor === '' ? null
     : h('div', { class: 'inv-attr' }, h('small', {}, icone(ic), ` ${rotulo}`), h('strong', {}, valor), extra));
   const texto = (rotulo, valor, ic) => (valor ? h('div', { class: 'inv-texto' }, h('small', {}, icone(ic), ` ${rotulo}`), h('p', {}, valor)) : null);
-  const bonus = Object.entries(i.bonus || {}).map(([k, v]) => `${k} ${v > 0 ? '+' : ''}${v}`).join(', ');
+  const bonus = textoBonus(i, estado.sistema);
   const producao = i.producao && (i.producao.pericia || i.producao.nd || i.producao.obs)
     ? [i.producao.pericia, i.producao.nd ? `ND ${i.producao.nd}` : null, i.producao.obs].filter(Boolean).join(' · ') : null;
   return h('article', { class: `inv-cartao ${i.equipado ? 'equipado' : ''}`, style: { '--rar': cor } },
     h('header', {},
-      h('span', { class: 'inv-icone' }, icone(ICONE_TIPO[i.tipo] || 'tag')),
+      h('span', { class: 'inv-icone' }, icone(iconeItem(i))),
       h('div', { class: 'inv-nome' },
         h('strong', {}, i.nome),
         h('small', {}, [NOME_TIPO[i.tipo] || i.tipo, i.categoria, i.subcategoria].filter(Boolean).join(' · '))),
@@ -100,10 +100,10 @@ export function cartaoItem(p, i, mestre) {
       atributo('Peso', i.peso != null ? `${i.peso} kg` : null, 'weight'),
       atributo('Preço', i.preco, 'tag'),
       atributo('Venda', i.venda, 'coins'),
-      atributo('Maestria', i.maestria != null ? String(i.maestria) : null, 'graduation-cap'),
+      atributo('Maestria · mãos', i.slot === 'maos' || i.tipo === 'arma' ? `${i.maestria ?? 0} · ${Math.max(1, i.ocupa ?? 1)} mão${(i.ocupa ?? 1) > 1 ? 's' : ''}` : i.maestria ? String(i.maestria) : null, 'hand'),
       atributo('Slot', slot ? `${slot.nome}${(i.ocupa ?? 1) > 1 ? ` (${i.ocupa})` : ''}` : null, 'shirt'),
       atributo('Dano', i.dano || i.danoTexto ? `${i.dano || i.danoTexto}${i.tipoDano ? ` ${i.tipoDano}` : ''}` : null, 'swords'),
-      atributo('Defesa', i.defesa ? `IP ${i.defesa}` : null, 'shield'),
+      atributo('IP', textoIp(i) || null, 'shield'),
       atributo('Alcance', i.alcance ? (i.alcance === 'corpo' ? 'Corpo a corpo' : i.alcance) : null, 'ruler'),
       atributo('Penetração', i.penetracao, 'crosshair'),
       i.dureza ? h('div', { class: 'inv-attr', title: `Dureza ${i.dureza}: dano até ${i.dureza} não afeta o item; acima disso, dano integral.` },

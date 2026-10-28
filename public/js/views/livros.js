@@ -1,8 +1,8 @@
 import { h, botao, selecao, aviso, vazio, icone, titulo, tabela, abas, seloRevisao, confirmar, formatarData, pedirTexto } from '../ui.js';
-import { ICONE_TIPO } from './ficha.js';
+import { ICONE_TIPO, iconeItem } from './ficha.js';
 import { estado, render, personagemPorId, meusPersonagens } from '../estado.js';
 import { acao, get, post, enviarArquivo, baixarArquivo } from '../api.js';
-import { itemVisivel, itemAberto } from '/shared/regras.js';
+import { itemVisivel, itemAberto, textoIp, textoBonus } from '/shared/regras.js';
 import { imagemDeLink } from '/shared/imagens.js';
 import { buscarMonstros, monstroNoEstagio, textoDeslocamentos, textoND, periciasAcimaDoLimite } from '/shared/monstros.js';
 import { marked } from '/vendor/marked.js';
@@ -491,11 +491,11 @@ export function lojaView({ titulo: tituloLoja = 'Loja', tipos = null } = {}) {
     h('p', { class: 'dica' }, `${todos.length} ${todos.length === 1 ? 'item' : 'itens'}${todos.length > itens.length ? ` (mostrando ${itens.length})` : ''}.`),
     itens.length ? tabela(['Item', 'Tipo', 'Slot', 'Preço', 'Venda', 'Durab.', 'Peso', 'Dano/IP', 'Bônus', ''], itens.map(i => [
       h('span', { class: 'item-nome', title: [i.descricao, i.aparencia, i.efeitos, i.observacoes, i.requisitos ? `Requisitos: ${i.requisitos}` : ''].filter(Boolean).join(' · ') },
-        icone(ICONE_TIPO[i.tipo] || 'tag'), i.nome, i.raridade ? h('small', { class: 'selo' }, i.raridade) : null, seloRevisao(i.revisao)),
+        icone(iconeItem(i)), i.nome, i.raridade ? h('small', { class: 'selo' }, i.raridade) : null, seloRevisao(i.revisao)),
       TIPOS[i.tipo] || i.tipo, [slotNome(i.slot), i.ocupa > 1 ? ` (${i.ocupa})` : ''],
       h('span', { class: 'moeda' }, icone('coins'), i.preco), i.venda, i.durabilidade, i.peso,
-      [i.dano ? `${i.dano}${i.tipoDano ? ` ${i.tipoDano}` : ''}` : i.danoTexto, i.defesa ? `IP ${i.defesa}` : null].filter(Boolean).join(' · ') || '—',
-      Object.entries(i.bonus || {}).map(([k, v]) => `${k} ${v > 0 ? '+' : ''}${v}`).join(', ') || '—',
+      [i.dano ? `${i.dano}${i.tipoDano ? ` ${i.tipoDano}` : ''}` : i.danoTexto, textoIp(i)].filter(Boolean).join(' · ') || '—',
+      textoBonus(i, estado.sistema) || '—',
       [
         podeComprar ? botao('Comprar', async () => {
           await acao('item.comprar', { id: comprador.id, itemId: i.id });
@@ -524,12 +524,14 @@ function catalogoMestre() {
     h('option', { value: 'atualizar' }, 'Atualizar: troca os itens da planilha e mantém os outros'),
     h('option', { value: 'substituir' }, 'Substituir: o catálogo fica só com os itens da planilha'));
   const atualizarInfo = () => { estado.sel.catalogoInfo = null; estado.sel.catalogoPedido = false; };
+  const googleLink = h('input', { type: 'url', class: 'largo', placeholder: 'Link da planilha de itens no Google (docs.google.com/spreadsheets/…)', value: estado.sel.itensGoogle ?? info?.googleSheets ?? '',
+    'aria-label': 'Link da planilha de itens no Google', oninput: e => { estado.sel.itensGoogle = e.target.value; } });
   return h('details', { class: 'bloco', open: !!estado.sel.catalogoAberto, ontoggle: e => { estado.sel.catalogoAberto = e.target.open; } },
     h('summary', {}, icone('file-spreadsheet'), ' Catálogo de itens (planilha)'),
     h('p', { class: 'dica' }, info
       ? `${info.total} itens · ${info.origem === 'mestre' ? `enviado por você${info.arquivo ? ` (${info.arquivo})` : ''}` : 'catálogo padrão do app (planilhas do autor)'}${info.atualizadoEm ? ` · ${formatarData(info.atualizadoEm)}` : ''}.`
       : 'Carregando…'),
-    h('p', { class: 'dica' }, 'Use a mesma planilha de itens (colunas "num ctrl", "Item", "Preço"…). As colunas "App: …" são opcionais e corrigem o que o app deduz (tipo, slot, IP, capacidade de munição…). Vale para todas as campanhas deste PC; itens que os personagens já têm não mudam.'),
+    h('p', { class: 'dica' }, 'Baixe a planilha: as colunas "App: …" já vêm com o que o app usa hoje (tipo, slot, mãos, IP por tipo, bônus em %…) e a aba "Leia-me" explica cada uma. Corrija nelas e envie de volta, ou ligue a planilha do Google. Vale para todas as campanhas deste PC; itens que os personagens já têm não mudam.'),
     h('div', { class: 'barra' },
       botao('Baixar planilha atual', () => baixarArquivo('/api/itens.xlsx', 'itens-ilhas-das-ruinas.xlsx'), { icone: 'download' }),
       arquivo, modo,
@@ -546,7 +548,18 @@ function catalogoMestre() {
         if (!(await confirmar('Apagar o catálogo enviado e voltar ao catálogo padrão do app?'))) return;
         await enviarArquivo('/api/itens/padrao', new FormData());
         atualizarInfo();
-      }, { class: 'perigo', icone: 'refresh-cw' }) : null));
+      }, { class: 'perigo', icone: 'refresh-cw' }) : null),
+    // Planilha no Google (como o Livro dos Monstros): compartilhada como "Qualquer pessoa com o link" (Leitor).
+    h('div', { class: 'barra' },
+      googleLink,
+      botao('Puxar do Google Planilhas', async () => {
+        const r = await post('/api/itens/google', { link: googleLink.value, modo: modo.value });
+        atualizarInfo();
+        aviso(`${r.recebidos} itens lidos do Google; o catálogo tem ${r.total}.`);
+      }, { class: 'primario', icone: 'refresh-cw', title: 'A planilha precisa estar em Compartilhar > "Qualquer pessoa com o link" (Leitor)' })),
+    h('p', { class: 'dica' }, info?.googleSheets
+      ? 'Ligado à planilha do Google: o app puxa sozinho ao abrir e a cada 30 minutos. "Puxar do Google Planilhas" atualiza na hora. Enviar um arquivo .xlsx desliga a atualização automática.'
+      : 'No Google Planilhas: Arquivo > Importar > a planilha baixada > Substituir planilha. Depois: Compartilhar > Acesso geral > "Qualquer pessoa com o link" (Leitor), cole o link aqui e puxe uma vez — o app passa a atualizar sozinho.'));
 }
 
 // Consulta com sub-abas (Livro de Regras do jogador / Classes do mestre).

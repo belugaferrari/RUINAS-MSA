@@ -383,3 +383,15 @@ Feito (regras em `habilidades-regras.json`; efeitos próprios em `server/actions
   o resultado (ACERTO! / CRÍTICO! / DEFENDEU / ERROU) com o dano bruto e o número subindo sobre o alvo; ou o teste feito no campo.
 - Som de cada tipo de arma (fogo, projétil, lâmina, machado/martelo, desarmado; bloqueio = tinido metálico), gerado no navegador.
   Cada aparelho liga/desliga no botão do alto-falante. Com os dados na tela, o resultado espera os dados pararem (~1,4 s).
+
+## 28/10 — Fichas de teste refeitas e itens
+- Fichas de teste: uma por especialização de cada classe (31: o Perito tem 4), com atributos pelo tema da classe e pelo texto
+  da especialização, perícias citadas na especialização, profissão que combina (variando), vantagens e defeito próprios, armas
+  sorteadas entre as melhores, nome sem "Teste" e o avatar da especialização. Recriar apaga as anteriores; ao atualizar, o app
+  troca as antigas ("Teste · …") pelas novas.
+- Bônus de item com "%" ("Percepção -30%") = porcentagem nos testes do atributo e das perícias dele (antes virava −30 no atributo).
+  Sem "%" ("FOR +2", "Percepção -5") continua sendo ponto de atributo. **Conferir na planilha** (coluna "App: bônus").
+- IP do item por tipo ("App: IP": "geral 2; Físico 4"); a tela mostra "IP 4 Físico" no lugar de "Def".
+- Maestria (mãos) na tabela e no cartão do item; o desenho da arma (mão, lista) segue o tipo: lâmina, machado, martelo, fogo, projétil.
+- Planilha de itens: "Baixar planilha atual" sai com as colunas "App: …" preenchidas com o que o app usa e uma aba "Leia-me";
+  pode ser ligada ao Google Planilhas (o app puxa ao abrir e a cada 30 minutos), como o Livro dos Monstros.

@@ -2,8 +2,8 @@ import { h, botao, aviso, vazio, confirmar, icone, titulo, tabela, passador, sel
 import { TIPOS } from './livros.js';
 import { estado, render, mudar } from '../estado.js';
 import { acao } from '../api.js';
-import { GENEROS, ATRACOES, atracaoDe, itemAberto, novaFicha, pontosDoNivel, pontosGastos, pontosPericiaTotal, pontosVantagemExtra, derivados, problemasFicha, custoPericiaBase, vantagensDisponiveis, acharVantagem } from '/shared/regras.js';
-import { ICONE_TIPO, descInstinto } from './ficha.js';
+import { textoIp, textoBonus, GENEROS, ATRACOES, atracaoDe, itemAberto, novaFicha, pontosDoNivel, pontosGastos, pontosPericiaTotal, pontosVantagemExtra, derivados, problemasFicha, custoPericiaBase, vantagensDisponiveis, acharVantagem } from '/shared/regras.js';
+import { ICONE_TIPO, iconeItem, descInstinto } from './ficha.js';
 import { painelPericias } from './pericias.js';
 import { escolherAvatar } from './avatares.js';
 
@@ -239,10 +239,10 @@ function passoItens() {
       h('label', { class: 'linha' }, h('input', { type: 'checkbox', checked: !!estado.sel.crCabe, onchange: e => { estado.sel.crCabe = e.target.checked; render(); } }), 'Só o que cabe no dinheiro')),
     h('p', { class: 'dica' }, `${lista.length} itens${lista.length > mostrados.length ? ` (mostrando ${mostrados.length})` : ''}.`),
     tabela(['Item', 'Tipo', 'Preço', 'Dano/IP', 'Bônus', ''], mostrados.map(i => [
-      h('span', { class: 'item-nome', title: [i.descricao, i.efeitos].filter(Boolean).join(' · ') }, icone(ICONE_TIPO[i.tipo] || 'tag'), i.nome),
+      h('span', { class: 'item-nome', title: [i.descricao, i.efeitos].filter(Boolean).join(' · ') }, icone(iconeItem(i)), i.nome),
       TIPOS[i.tipo] || i.tipo, h('span', { class: 'moeda' }, icone('coins'), i.preco),
-      [i.dano || i.danoTexto, i.defesa ? `IP ${i.defesa}` : null].filter(Boolean).join(' · ') || '—',
-      Object.entries(i.bonus || {}).map(([k, v]) => `${k} ${v > 0 ? '+' : ''}${v}`).join(', ') || '—',
+      [i.dano || i.danoTexto, textoIp(i)].filter(Boolean).join(' · ') || '—',
+      textoBonus(i, estado.sistema) || '—',
       h('button', {
         type: 'button', class: 'pequeno', disabled: f.dinheiro < i.preco,
         onclick: () => alterar(x => { x.itens.push({ ...structuredClone(i), itemId: i.id, equipado: false, durabilidadeAtual: i.durabilidade }); x.dinheiro -= i.preco; }),

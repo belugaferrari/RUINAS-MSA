@@ -11,13 +11,15 @@ import { registrar, entrar, usuarioDoToken, sair } from './auth.js';
 import { sistema, listaSistemas, CONTEUDO } from './sistema.js';
 import { novaCampanha, resumoCampanha, visaoPara, entrarNaCampanha, executar, acoes, migrarCampanhas, podeSuporte } from './actions.js';
 
+// Catálogo do mestre lido de novo quando a leitura da planilha muda (28/10: bônus com %, IP por tipo).
+try { reconverterCatalogos(sistema('mss')); } catch (e) { console.log(`Catálogo de itens: ${e.message}`); }
 migrarCampanhas();
 import { modeloNpcs, lerNpcs } from './excel.js';
 import { lerPlanilhaMonstros, planilhaMonstros, catalogoMonstros, salvarCatalogoMonstros, voltarMonstrosPadrao } from './monstros.js';
 import { configPublica, salvarConfigIA, gerarTexto, lerImagemJson } from './ia.js';
 import { objetosDaIA, PEDIDO_MAPA_IA, ESQUEMA_MAPA_IA } from '../shared/objetosMapa.js';
 import { SISTEMA_IA, pedidoIA } from '../shared/encontro.js';
-import { catalogoItens, origemCatalogo, lerPlanilhaItens, planilhaDoCatalogo, salvarCatalogoMestre, voltarCatalogoPadrao } from './itens.js';
+import { catalogoItens, origemCatalogo, lerPlanilhaItens, planilhaDoCatalogo, salvarCatalogoMestre, voltarCatalogoPadrao, reconverterCatalogos, linkGoogleItens } from './itens.js';
 import { montarSprite } from './icones.js';
 import { avatarPorId, svgAvatar } from '../shared/avatares.js';
 
@@ -203,29 +205,49 @@ app.get('/api/itens.xlsx', async (req, res) => {
   try {
     exigirAlgumMestre(req);
     res.attachment('itens-ilhas-das-ruinas.xlsx');
-    res.send(Buffer.from(await planilhaDoCatalogo(catalogoItens() || [])));
+    res.send(Buffer.from(await planilhaDoCatalogo(catalogoItens() || [], sistema('mss'))));
   } catch (e) {
     res.status(e.status || 400).send(e.message);
   }
 });
 
 // modo "atualizar": junta com o catálogo atual (mesmo "num ctrl" ou mesmo nome = substitui); "substituir": troca tudo.
-app.post('/api/itens', upload.single('arquivo'), rota(async req => {
-  exigirAlgumMestre(req);
-  if (!req.file) throw new Error('Envie a planilha .xlsx.');
-  const novos = await lerPlanilhaItens(req.file.buffer, sistema('mss'));
+async function importarItens(buffer, modo, arquivo, extra = {}) {
+  const novos = await lerPlanilhaItens(buffer, sistema('mss'));
   if (!novos.length) throw new Error('A planilha não tem itens.');
   let itens = novos;
-  if (req.body.modo !== 'substituir') {
+  if (modo !== 'substituir') {
     const sem = s => String(s).normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '');
     const nomes = new Set(novos.map(i => sem(i.nome)));
     const ids = new Set(novos.map(i => i.id));
     itens = [...(catalogoItens() || []).filter(i => !ids.has(i.id) && !nomes.has(sem(i.nome))), ...novos];
   }
-  salvarCatalogoMestre(itens, req.file.originalname);
+  salvarCatalogoMestre(itens, arquivo, extra);
   io.emit('sistema:atualizado');
   return { recebidos: novos.length, total: itens.length };
+}
+app.post('/api/itens', upload.single('arquivo'), rota(async req => {
+  exigirAlgumMestre(req);
+  if (!req.file) throw new Error('Envie a planilha .xlsx.');
+  // Enviar arquivo troca a origem: a planilha do Google para de atualizar sozinha.
+  return importarItens(req.file.buffer, req.body.modo, req.file.originalname);
 }));
+// Catálogo de itens ligado a uma planilha do Google (como o Livro dos Monstros): o link fica guardado e o app puxa sozinho
+// ao abrir e a cada 30 minutos.
+app.post('/api/itens/google', rota(async req => {
+  exigirAlgumMestre(req);
+  return puxarItensDoGoogle(req.body?.link, req.body?.modo);
+}));
+async function puxarItensDoGoogle(link, modo) {
+  const { id, buffer } = await baixarDoGoogle(link);
+  return importarItens(buffer, modo, 'Google Planilhas', { googleSheets: `https://docs.google.com/spreadsheets/d/${id}/edit`, modo });
+}
+async function atualizarItensDoGoogle() {
+  const g = linkGoogleItens();
+  if (!g) return;
+  try { const r = await puxarItensDoGoogle(g.link, g.modo); console.log(`Catálogo de itens atualizado do Google: ${r.recebidos} itens.`); } catch (e) { console.log(`Catálogo de itens: não deu para puxar do Google (${e.message})`); }
+}
+if (!process.env.ITENS_EXEMPLO) { setTimeout(atualizarItensDoGoogle, 8000); setInterval(atualizarItensDoGoogle, 30 * 60 * 1000).unref(); }
 
 // Livro dos Monstros por planilha (abas Monstros, Ataques, Habilidades). Vale para todas as campanhas deste PC.
 app.get('/api/monstros/origem', rota(req => {
@@ -272,7 +294,8 @@ app.post('/api/monstros/google', rota(async req => {
   exigirAlgumMestre(req);
   return puxarDoGoogle(req.body?.link, req.body?.modo);
 }));
-async function puxarDoGoogle(link, modo) {
+// Baixa a planilha do Google como .xlsx (compartilhada como "Qualquer pessoa com o link pode ver").
+async function baixarDoGoogle(link) {
   link = String(link || '').trim();
   const id = /\/spreadsheets\/d\/([\w-]{20,})/.exec(link)?.[1] || (/^[\w-]{20,}$/.test(link) ? link : null);
   if (!id) throw new Error('Cole o link da planilha do Google (docs.google.com/spreadsheets/d/…).');
@@ -282,7 +305,10 @@ async function puxarDoGoogle(link, modo) {
   if (!r.ok || !/spreadsheetml|octet-stream/.test(tipo)) {
     throw new Error('O Google não liberou a planilha. No Google Planilhas: Compartilhar > Acesso geral > "Qualquer pessoa com o link" (Leitor) e tente de novo.');
   }
-  const buffer = Buffer.from(await r.arrayBuffer());
+  return { id, buffer: Buffer.from(await r.arrayBuffer()) };
+}
+async function puxarDoGoogle(link, modo) {
+  const { id, buffer } = await baixarDoGoogle(link);
   return importarMonstros(buffer, modo, 'Google Planilhas', { googleSheets: `https://docs.google.com/spreadsheets/d/${id}/edit`, modo });
 }
 // Livro ligado a uma planilha do Google: o app puxa sozinho ao abrir e a cada 30 minutos (sem internet, fica o último).

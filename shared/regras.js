@@ -451,7 +451,8 @@ export function derivados(ficha, sistema) {
     if (ficha.essencia?.sigla === a.sigla) v = ficha.essencia.valor;
 
     atributos[a.sigla] = v;
-    percentual[a.sigla] = 4 * v + condTestes + hab.testes + (condTesteAtr[a.sigla] || 0) + onusCivilizado;
+    // Item com bônus percentual de atributo ("Percepção −30%"): vale nos testes do atributo e das perícias dele.
+    percentual[a.sigla] = 4 * v + condTestes + hab.testes + (condTesteAtr[a.sigla] || 0) + onusCivilizado + (bonus[`%${a.sigla}`] || 0);
     bonusPericial[a.sigla] = Math.max(0, 2 * (v - 5));
     mod[a.sigla] = Math.floor((v - 10) / 2) + (racial[a.sigla] || 0) + (hab.mod[a.sigla] || 0);
   }
@@ -462,7 +463,7 @@ export function derivados(ficha, sistema) {
   for (const p of sistema.pericias || []) {
     const base = ficha.pericias?.[p.id] ?? 0;
     const bp = bonusPericial[p.atributo] ?? 0;
-    const cond = condTestes + (condTesteAtr[p.atributo] || 0) + (condPericia[p.id] || 0) + hab.testes + (hab.pericias[p.id] || 0) + onusCivilizado;
+    const cond = condTestes + (condTesteAtr[p.atributo] || 0) + (condPericia[p.id] || 0) + hab.testes + (hab.pericias[p.id] || 0) + onusCivilizado + (bonus[`%${p.atributo}`] || 0);
     pericias[p.id] = base + bp + (bonus[p.id] || 0) + cond;
     for (const s of p.subpericias) {
       subpericias[s.id] = base + (ficha.subpericias?.[s.id] ?? 0) + bp + (bonusProfissao[s.id] || 0) + (bonus[p.id] || 0) + (bonus[s.id] || 0) + cond + (hab.subpericias[s.id] || 0);
@@ -682,6 +683,29 @@ export function ipDoItem(i) {
   }
   if (!achou) r.geral = i.defesa || 0;
   return r;
+}
+
+// IP do item em texto: "IP 2 · IP 4 Físico" (itens dão IP, geral ou de um tipo de dano — autor, 28/10).
+export function textoIp(i) {
+  const r = ipDoItem(i);
+  return [r.geral ? `IP ${r.geral}` : null, ...Object.entries(r.tipos).filter(([, v]) => v).map(([t, v]) => `IP ${v} ${t}`)].filter(Boolean).join(' · ');
+}
+// Bônus do item em texto: "%PER" = porcentagem nos testes de Percepção; sigla = pontos de atributo; perícia = %.
+export function textoBonus(i, sistema = null) {
+  const nomePer = id => sistema?.pericias?.flatMap(p => [[p.id, p.nome], ...p.subpericias.map(s => [s.id, s.nome])]).find(x => x[0] === id)?.[1] || id;
+  const sinal = v => (v > 0 ? `+${v}` : `−${Math.abs(v)}`);
+  return Object.entries(i.bonus || {}).map(([k, v]) => (k.startsWith('%') ? `${k.slice(1)} ${sinal(v)}%` : /^[A-Z]{3,4}$/.test(k) ? `${k} ${sinal(v)}` : k === 'Defesa' ? `IP ${sinal(v)}` : `${nomePer(k)} ${sinal(v)}%`)).join(' · ');
+}
+// Tipo da arma (para o desenho e o som): desarmado, lâmina, machado, martelo, projétil (arco) ou arma de fogo.
+export function tipoDaArma(arma) {
+  const per = arma?.pericia || '';
+  if (arma?.uid === 'desarmado' || per.startsWith('briga')) return 'desarmado';
+  if (per === 'armas-de-fogo.projeteis') return 'arco';
+  if (per.startsWith('armas-de-fogo')) return 'fogo';
+  if (/machado/.test(per)) return 'machado';
+  if (/martelo|bastao/.test(per)) return 'martelo';
+  if (per.startsWith('arma-branca')) return 'lamina';
+  return arma?.alcance === 'distancia' ? 'fogo' : 'lamina';
 }
 
 function ipPorTipo(ficha, equipados, bonus, hab) {
