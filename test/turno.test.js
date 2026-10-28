@@ -245,7 +245,7 @@ test('PV temporários saem por último: o dano tira dos normais até 0, depois d
 test('fichas de teste vêm com itens (até 3000 créditos) já equipados; "Dar itens" serve as antigas sem itens', () => {
   const c = novaCampanha(mestre, { nome: 'T', maxJogadores: 2, nivel: 1, sistema: 'mss' });
   executar(c, 'teste.fichas', { nivel: 6 }, ctxM);
-  const fichas = c.personagens.filter(p => /^Teste · /.test(p.nome));
+  const fichas = c.personagens.filter(p => p.fichaTeste);
   assert.ok(fichas.length >= 5);
   for (const p of fichas) {
     const total = p.itens.reduce((s, i) => s + (i.preco || 0), 0);

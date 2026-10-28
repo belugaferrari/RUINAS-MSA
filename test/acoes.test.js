@@ -266,9 +266,19 @@ test('Sedução só em quem se atrai pelo gênero de quem seduz; fichas de teste
   const m = { id: 'm6', name: 'M6' };
   const c = novaCampanha(m, { nome: 'Teste 6', maxJogadores: 2, nivel: 1, padraoMSA: true });
   const { relatorio } = executar(c, 'teste.fichas', { nivel: 6 }, { user: m, mestre: true });
-  assert.equal(relatorio.length, sis.classes.length);
+  // Uma ficha por especialização (autor, 28/10), cada uma diferente, sem "Teste" no nome e com o avatar da especialização.
+  const totalEsp = sis.classes.reduce((s, cl) => s + (cl.especializacoes?.length || 1), 0);
+  assert.equal(relatorio.length, totalEsp);
   for (const r of relatorio) assert.ok(!r.avisos.some(a => a.startsWith('Pontos')), `${r.nome}: ${r.avisos.join('; ')}`);
-  assert.equal(c.personagens.filter(p => p.nivel === 6 && p.tipo === 'pj' && !p.donoId).length, sis.classes.length);
+  const fichas = c.personagens.filter(p => p.fichaTeste);
+  assert.equal(fichas.length, totalEsp);
+  assert.equal(new Set(fichas.map(p => `${p.classe}/${p.especializacao}`)).size, totalEsp, 'especialização repetida');
+  assert.equal(new Set(fichas.map(p => p.nome)).size, totalEsp, 'nome repetido');
+  assert.ok(fichas.every(p => !/^teste/i.test(p.nome) && p.foto));
+  assert.ok(new Set(fichas.map(p => JSON.stringify(p.atributos))).size > totalEsp * 0.8, 'atributos quase todos iguais');
+  // Criar de novo não duplica.
+  executar(c, 'teste.fichas', { nivel: 6 }, { user: m, mestre: true });
+  assert.equal(c.personagens.filter(p => p.fichaTeste).length, totalEsp);
 });
 
 test('PV persistentes/permanentes baixam o máximo; descanso do grupo; capacidades com usos por descanso longo', () => {

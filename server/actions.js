@@ -258,6 +258,16 @@ export function migrarCampanhas() {
       c.migracoes.push('pv-for-cons');
       mudou = true;
     }
+    // Fichas de teste refeitas (autor, 28/10): uma por especialização, cada uma diferente, sem "Teste" no nome e com avatar.
+    if (!c.migracoes.includes('fichas-teste-v3')) {
+      const antigas = c.personagens.filter(ehFichaTeste);
+      if (antigas.length) {
+        const nivel = Math.max(...antigas.map(p => p.nivel || 6));
+        try { recriarFichasTeste(c, nivel, { user: { id: c.mestreId }, mestre: true }); } catch (e) { console.log(`Fichas de teste de ${c.nome}: ${e.message}`); }
+      }
+      c.migracoes.push('fichas-teste-v3', 'kit-fichas-teste-2');
+      mudou = true;
+    }
     // Fichas de teste que ficaram sem itens (autor, 27/10): recebem o kit (até 3000 créditos) já equipado.
     if (!c.migracoes.includes('kit-fichas-teste-2')) {
       const sis = sistema(c.sistema);
@@ -794,6 +804,21 @@ function usarHabilidade(c, p, sis, hab, acao = null) {
   return { texto, excesso, ativa: !!dur };
 }
 
+function recriarFichasTeste(c, nivel, ctx) {
+  const sis = sistema(c.sistema);
+  const n = Math.max(3, Math.min(20, parseInt(nivel, 10) || 6));
+  for (const p of c.personagens.filter(ehFichaTeste)) acoes['personagem.remover'](c, { id: p.id }, { ...ctx, mestre: true });
+  const relatorio = [];
+  for (const f of fichasDeTeste(sis, n, c)) {
+    const p = { ...f, id: uid(), tipo: 'pj', fichaTeste: true, donoId: null, backups: [], itens: [], dinheiro: sis.regras?.creditosIniciais ?? 0, xp: 0 };
+    c.personagens.push(p);
+    darKitDeTeste(c, p, sis, ctx);
+    Object.assign(p, periciasDeTeste(sis, p, c));
+    const r = relatorioFicha(p, sis, c);
+    relatorio.push({ nome: p.nome, avisos: r.avisos, lembretes: r.lembretes.length, comEfeito: r.comEfeito, total: r.total });
+  }
+  return relatorio;
+}
 // Ficha de teste: criada pelo botão (marca fichaTeste) ou com o nome "Teste · …" (as antigas).
 const ehFichaTeste = p => !!p.fichaTeste || (p.tipo === 'pj' && /^teste\b/i.test(String(p.nome || '').trim()));
 const temArmaEquipada = p => (p.itens || []).some(i => i.tipo === 'arma' && i.equipado && !i.natural);
@@ -1605,20 +1630,11 @@ export const acoes = {
   },
 
   // Fichas de teste: um PJ livre (sem dono) por classe, no nível pedido, para testar as habilidades na mesa.
+  // Fichas de teste (autor, 28/10): uma por especialização de cada classe, com atributos, perícias, profissão, vantagens,
+  // nome e avatar próprios. Criar de novo apaga as fichas de teste anteriores (não duplica).
   'teste.fichas'(c, { nivel = 6 }, ctx) {
     exigirMestre(ctx);
-    const sis = sistema(c.sistema);
-    const n = Math.max(3, Math.min(20, parseInt(nivel, 10) || 6));
-    const relatorio = [];
-    for (const f of fichasDeTeste(sis, n, c)) {
-      const p = { ...f, id: uid(), tipo: 'pj', fichaTeste: true, donoId: null, backups: [], itens: [], dinheiro: sis.regras?.creditosIniciais ?? 0, xp: 0 };
-      c.personagens.push(p);
-      darKitDeTeste(c, p, sis, ctx);
-      Object.assign(p, periciasDeTeste(sis, p, c));
-      const r = relatorioFicha(p, sis, c);
-      relatorio.push({ nome: p.nome, avisos: r.avisos, lembretes: r.lembretes.length, comEfeito: r.comEfeito, total: r.total });
-    }
-    return { relatorio };
+    return { relatorio: recriarFichasTeste(c, nivel, ctx) };
   },
 
   // Itens das fichas de teste (até 3000 créditos cada, já equipados). Sem "trocar", só as que estão sem itens;

@@ -31,7 +31,7 @@ test('ao atualizar, fichas de teste sem arma equipada recebem o kit (já equipad
   executar(c, 'teste.fichas', { nivel: 6 }, ctxM);
   const fichas = c.personagens.filter(p => p.fichaTeste);
   for (const p of fichas) p.itens = [];
-  c.migracoes = (c.migracoes || []).filter(x => x !== 'kit-fichas-teste-2');
+  c.migracoes = ['fichas-teste-v3'];
   db.campaigns.push(c);
   migrarCampanhas();
   for (const p of fichas) assert.ok(p.itens.some(i => i.tipo === 'arma' && i.equipado), `${p.nome} sem arma equipada`);
@@ -54,4 +54,18 @@ test('descanso: os dados da recuperação e os testes dos marcadores, numa entra
   assert.match(tudo, /vulnerabilidade: teste de CONS%: d100 \d+ \+ \d+ = \d+ contra ND \d+/);
   assert.match(tudo, /genético\(s\): teste de CONS%: d100/);
   assert.deepEqual(r.porPersonagem[0].nome, 'Rui');
+});
+
+test('ao atualizar, as fichas de teste antigas ("Teste · …", repetidas) viram uma por especialização, sem duplicar', () => {
+  const c = novaCampanha(mestre, { nome: 'T', maxJogadores: 2, nivel: 1, sistema: 'mss' });
+  const sis = sistema('mss');
+  const antigas = fichasDeTeste(sis, 7).slice(0, 4).map((f, i) => ({ ...f, id: `old${i}`, nome: `Teste · ${i}`, fichaTeste: undefined, tipo: 'pj', itens: [] }));
+  c.personagens.push(...antigas, ...antigas.map(p => ({ ...p, id: `${p.id}b` })));
+  c.migracoes = [];
+  db.campaigns.push(c);
+  migrarCampanhas();
+  const total = sis.classes.reduce((s, cl) => s + (cl.especializacoes?.length || 1), 0);
+  assert.ok(!c.personagens.some(p => /^Teste · /.test(p.nome)));
+  assert.equal(c.personagens.filter(p => p.fichaTeste).length, total);
+  assert.ok(c.personagens.filter(p => p.fichaTeste).every(p => p.nivel === 7));
 });
