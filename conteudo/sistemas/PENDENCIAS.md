@@ -1,5 +1,9 @@
 # Pendências dos livros (MSA rev. 14/10/2026 15:29 · MSS rev. 14/10/2026 20:26)
 
+> **LEMBRETE PARA A FINALIZAÇÃO (autor, 28/10):** quando o app estiver para ser finalizado, lembrar o autor de pedir para
+> **dobrar todos os efeitos de dano e de cura** (não fazer antes: ainda falta entrar muita informação).
+
+
 ## Livro MSA
 
 Pontos em que o app precisou escolher um caminho. Confira e me diga se a escolha está certa para o **MSA**.
