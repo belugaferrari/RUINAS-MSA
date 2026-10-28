@@ -6,7 +6,7 @@
 import { h, icone } from '../ui.js';
 import { estado, render } from '../estado.js';
 
-const ICONE_ARMA = { desarmado: 'hand-fist', lamina: 'sword', machado: 'axe', martelo: 'hammer', arco: 'bow-arrow', fogo: 'crosshair' };
+export const ICONE_ARMA = { desarmado: 'hand-fist', lamina: 'sword', machado: 'axe', martelo: 'hammer', arco: 'bow-arrow', fogo: 'crosshair' };
 const DURACAO = { acerto: 2800, defesa: 1800, critico: 2400, morte: 3600, cura: 2000, golpe: 1400 };
 
 const ativos = []; // { pid, tipo, inicio, dur, dano, arma }

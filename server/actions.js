@@ -852,7 +852,7 @@ function iniciarCombate(c) {
     const r = rolarIniciativa(p, sis, Math.random, vivos.filter(x => x.id !== p.id));
     return { id: p.id, ini: r.total, agi: r.agi, dados: r.dados };
   });
-  s.combate = { rodada: 1, turno: 1, vez: 0, ordem };
+  s.combate = { rodada: 1, turno: 1, vez: 0, ordem, turnoDesde: Date.now() };
   for (const p of vivos) p.emCombate = true;
   ordenarIniciativa(s.combate);
   s.ativo = s.combate.ordem[0].id;
@@ -942,6 +942,8 @@ function resolverPendente(c, s, pend, defesa, sis) {
     tipo: 'ataque', autor: a.nome, rotulo: `ataca ${b.nome}${local ? ` (${itemAlvo ? itemAlvo.nome : nomeLocal(local)})` : ''} com ${r.arma}${r.especial ? ` — ${r.especial}` : ''}`, sucesso: r.sucesso, critico: r.critico, defendeu: !r.sucesso, alvo: b.nome,
     // Para as artes na tela: quem ataca, quem é o alvo, o tipo de arma e se o alvo caiu.
     atacanteId: a.id, alvoId: b.id, armaTipo: pend.armaTipo || 'desarmado', tipoDano: pend.tipoDano || null,
+    // Palco do combate (todos veem): a arma usada e o dano bruto (antes de IP, resistências e Evasão).
+    arma: r.arma, danoBruto: r.danoBruto || 0, local: local ? (itemAlvo ? itemAlvo.nome : nomeLocal(local)) : null,
     morto: (b.marcadores || []).includes('Morto'), desmaiado: (b.marcadores || []).includes('Desmaiado'),
     texto: `${resumo}${r.critico ? ` · crítico de ${r.critico}` : ''}${extras.length ? ` · ${extras.join(' · ')}` : ''}`,
     detalhe: `d100 ${r.dp} + ação ${r.acao}${mods ? ` (${mods})` : ''} = ${r.total} contra defesa ${r.nd} (${def})${modo} · DS ${r.dsDados?.length > 1 ? `[${r.dsDados.join(', ')}] → ${r.ds}` : r.ds}${danoTxt}`,
@@ -1984,7 +1986,7 @@ export const acoes = {
       // Fora do combate, a desvantagem da mutação vale só para o próximo teste.
       if (porMarca && !c.salas.batalha.combate) p.marcas = p.marcas.filter(m => !m.desvantagem);
       const notaMut = p ? mutacaoSeMexe(c, p, r.ds) : null;
-      entrada = { ...base, tipo: 'dmil', rotulo: `${String(rotulo || a.nome).slice(0, 80)}${modoFinal ? ` (${modoFinal}${motivo || porMarca ? ` — ${[motivo, porMarca ? 'mutação descontrolada' : ''].filter(Boolean).join(', ')}` : ''})` : ''}${inspirado ? ` (Inspiração +${inspirado})` : ''}`, acaoNome: a.nome, mod: modificador + extraMarcas, metade: !!metade, ...r, ...(notaMut ? { texto: notaMut } : {}) };
+      entrada = { ...base, personagemId: p?.id || null, tipo: 'dmil', rotulo: `${String(rotulo || a.nome).slice(0, 80)}${modoFinal ? ` (${modoFinal}${motivo || porMarca ? ` — ${[motivo, porMarca ? 'mutação descontrolada' : ''].filter(Boolean).join(', ')}` : ''})` : ''}${inspirado ? ` (Inspiração +${inspirado})` : ''}`, acaoNome: a.nome, mod: modificador + extraMarcas, metade: !!metade, ...r, ...(notaMut ? { texto: notaMut } : {}) };
     }
     if (nome && c.salas[nome]) registrar(c.salas[nome].log, entrada);
     else registrar(c.log, entrada);
@@ -2028,6 +2030,7 @@ export const acoes = {
     s.ofertas = [];
     cb.vez++;
     cb.turno = (cb.turno || 1) + 1;
+    cb.turnoDesde = Date.now();
     if (cb.vez >= cb.ordem.length) {
       cb.vez = 0;
       cb.rodada++;

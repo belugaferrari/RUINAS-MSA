@@ -1,4 +1,5 @@
 import { liberdadeDeHumor } from '/shared/combate.js';
+import { palcoCombate } from './palco.js';
 import { h, botao, selecao, aviso, confirmar, vazio, formatarData, icone, titulo, barraPv, numeroPv } from '../ui.js';
 import { efeitosIcones, marcadoresLivres } from './efeitos.js';
 import { estado, personagemPorId, meusPersonagens, render } from '../estado.js';
@@ -32,7 +33,7 @@ export function salaView(nome) {
     // Turnos numa linha, a faixa de avatares na ordem da iniciativa (fica presa no alto ao rolar), o painel de quem você controla.
     nome === 'batalha' ? controleTurnos(participantes, mestre) : null,
     nome === 'batalha'
-      ? [ordemLateral(participantes, mestre), painelBatalha(participantes, mestre), combateView(participantes, mestre)]
+      ? [ordemLateral(participantes, mestre), palcoCombate(), painelBatalha(participantes, mestre), combateView(participantes, mestre)]
       : painelSocial(participantes, mestre),
     mestre && nome === 'batalha' ? adicionarMonstro() : null,
     mestre && nome === 'batalha' ? encontroPorND() : null,

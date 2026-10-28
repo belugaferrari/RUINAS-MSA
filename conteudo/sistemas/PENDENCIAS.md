@@ -377,3 +377,9 @@ Feito (regras em `habilidades-regras.json`; efeitos próprios em `server/actions
   Fichas de teste: marcadas na criação (fichaTeste) ou com nome começando por "Teste".
 - Descanso: cada personagem tem a sua entrada no registro com os dados (PV: "3d4 [4, 2, 3] = 9"; Sanidade: "1d6 [5]") e os testes
   dos marcadores (d100 + CONS% contra o ND). O jogador dono vê o resultado numa janela quando o mestre faz o descanso.
+
+## 28/10 — Palco do combate
+- Abaixo da faixa de turnos, todos veem: de quem é a vez; o ataque em curso (quem ataca → arma → alvo, "aguardando a defesa");
+  o resultado (ACERTO! / CRÍTICO! / DEFENDEU / ERROU) com o dano bruto e o número subindo sobre o alvo; ou o teste feito no campo.
+- Som de cada tipo de arma (fogo, projétil, lâmina, machado/martelo, desarmado; bloqueio = tinido metálico), gerado no navegador.
+  Cada aparelho liga/desliga no botão do alto-falante. Com os dados na tela, o resultado espera os dados pararem (~1,4 s).

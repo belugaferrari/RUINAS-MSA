@@ -4,6 +4,7 @@ import { observarRolagens } from './views/animacao.js';
 import { telaSuporte } from './views/suporte.js';
 import { observarEfeitos } from './views/efeitos.js';
 import { observarDescanso } from './views/descanso.js';
+import { observarPalco } from './views/palco.js';
 import { observarFx, aplicarFx } from './views/fx.js';
 import { sessao, get, conectar, emitir } from './api.js';
 import { telaLogin } from './views/login.js';
@@ -71,6 +72,7 @@ export function iniciarSessao(s) {
           await sincronizarSistema(estado.campanha);
           observarEfeitos(estado.campanha);
           observarDescanso(estado.campanha);
+          observarPalco(estado.campanha);
           observarFx(estado.campanha);
         } catch (e) {
           aviso(e.message, 'erro');
@@ -92,6 +94,7 @@ export function iniciarSessao(s) {
       const vezAntes = vezDe(estado.campanha);
       observarEfeitos(c);
       observarDescanso(c);
+      observarPalco(c);
       observarFx(c);
       if (estado.campanha?.id === c.id) mudar({ campanha: c });
       observarRolagens(c);

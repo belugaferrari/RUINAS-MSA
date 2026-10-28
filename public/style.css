@@ -1458,3 +1458,52 @@ input.largo { flex: 1 1 20em; min-width: 0; }
 .objeto-mapa.proposta { pointer-events: none; background: rgba(224, 165, 38, .18) !important; border: 2px dashed #e0a526 !important; color: #ffd97a; z-index: 4; }
 .lista-proposta { list-style: none; margin: .4em 0; padding: 0; max-height: 260px; overflow-y: auto; columns: 2 240px; }
 .proposta-ia { border-color: #e0a526; }
+
+/* Palco do combate (todos veem): vez, ação atual e resultado com o dano subindo. */
+.palco-combate { position: relative; max-width: 100%; box-sizing: border-box; display: flex; align-items: center; gap: 1em; flex-wrap: wrap; margin: 0 0 1em; padding: .8em 1em;
+  background: radial-gradient(ellipse at center, #3a2414 0%, var(--painel) 70%); border: 1px solid var(--ouro-esc); border-radius: 10px; box-shadow: 0 0 18px #0008 inset; }
+.palco-vez { display: flex; align-items: center; gap: .6em; padding-right: 1em; border-right: 1px solid var(--borda); }
+.palco-vez small { display: block; color: var(--suave); font-size: .75em; }
+.palco-vez strong { font-size: 1.15em; color: var(--ouro); }
+.palco-rosto { position: relative; width: 52px; height: 52px; border-radius: 50%; overflow: visible; display: inline-grid; place-items: center; background: var(--painel2); border: 2px solid var(--borda); flex: none; }
+.palco-rosto img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+.palco-rosto.grande { width: 60px; height: 60px; border-color: var(--ouro); box-shadow: 0 0 10px var(--ouro-esc); }
+.palco-acao { flex: 1; min-width: 260px; }
+.palco-espera { margin: 0; color: var(--suave); }
+.palco-cena { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: .5em .8em; }
+.palco-lado { position: relative; display: flex; flex-direction: column; align-items: center; gap: .2em; text-align: center; }
+.palco-lado strong { font-size: .9em; }
+.palco-arma { display: flex; flex-direction: column; align-items: center; color: var(--ouro); gap: .1em; }
+.palco-arma-icone svg { width: 34px; height: 34px; }
+.palco-cena.espera .palco-arma-icone { animation: palco-balanca 1s ease-in-out infinite; }
+.palco-arma small { color: var(--texto); max-width: 14em; text-align: center; }
+.palco-resultado { grid-column: 1 / -1; min-width: 0; display: flex; justify-content: center; align-items: baseline; gap: .6em; flex-wrap: wrap; animation: palco-entra .5s cubic-bezier(.2, 1.6, .4, 1) both; }
+.palco-cena.espera .palco-resultado { animation: none; color: var(--suave); }
+.palco-rotulo { font-family: var(--titulo, inherit); font-weight: 800; letter-spacing: .06em; font-size: 1.5em; }
+.palco-cena.acerto .palco-rotulo { color: #ff5a4a; text-shadow: 0 0 12px #ff2a1a88; }
+.palco-cena.critico .palco-rotulo { color: #ffd34a; text-shadow: 0 0 16px #ffb000; }
+.palco-cena.defesa .palco-rotulo { color: #7fb8ff; }
+.palco-cena.teste.acerto .palco-rotulo { color: var(--ok); text-shadow: none; }
+.palco-dano strong { font-size: 2em; color: #fff; text-shadow: 0 2px 0 #900, 0 0 10px #f008; }
+.palco-dano small { color: var(--suave); }
+.palco-tomou { color: var(--texto); }
+/* O "hit point": o número sai do alvo, cresce e sobe sumindo. */
+.palco-hit { position: absolute; top: -.2em; left: 50%; font-weight: 900; font-size: 2.2em; color: #ff3b2b; pointer-events: none; white-space: nowrap;
+  text-shadow: 0 2px 0 #4a0000, 0 0 8px #000; animation: palco-sobe 1.8s ease-out both; }
+.palco-cena.critico .palco-hit { color: #ffd34a; font-size: 2.8em; }
+.palco-som { position: absolute; top: .4em; right: .4em; }
+@keyframes palco-sobe { 0% { opacity: 0; transform: translate(-50%, 20px) scale(.4); } 15% { opacity: 1; transform: translate(-50%, 0) scale(1.35); }
+  35% { transform: translate(-50%, -12px) scale(1); } 100% { opacity: 0; transform: translate(-50%, -70px) scale(1); } }
+@keyframes palco-entra { 0% { opacity: 0; transform: scale(.3); } 100% { opacity: 1; transform: scale(1); } }
+@keyframes palco-balanca { 0%, 100% { transform: rotate(-12deg); } 50% { transform: rotate(12deg); } }
+@media (max-width: 600px) {
+  .palco-vez { border-right: 0; padding-right: 0; }
+  .palco-acao { min-width: 0; width: 100%; }
+  .palco-rotulo { font-size: 1.2em; }
+  .palco-combate { gap: .5em; padding: .7em .6em; flex-direction: column; align-items: stretch; }
+  .palco-vez { padding-bottom: .4em; border-bottom: 1px solid var(--borda); }
+  .palco-rosto.grande { width: 44px; height: 44px; }
+  .palco-arma small { max-width: 8em; }
+  .palco-lado strong { overflow-wrap: anywhere; }
+}
+@media (prefers-reduced-motion: reduce) { .palco-hit, .palco-resultado, .palco-arma-icone { animation: none !important; } .palco-hit { display: none; } }
