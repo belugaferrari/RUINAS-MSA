@@ -196,8 +196,10 @@ export function ipDe(p, sistema) {
 }
 
 // IP do alvo contra este dano (tipo e alcance da arma).
-export function ipContra(p, sistema, tipoDano, distancia = false) {
-  return ipContraDano(derivados(p, sistema).ip, tipoDano, distancia);
+// O capacete (slot Cabeça) só entra contra golpe localizado na cabeça.
+export function ipContra(p, sistema, tipoDano, distancia = false, local = null) {
+  const d = derivados(p, sistema);
+  return ipContraDano(d.ip, tipoDano, distancia) + (local === 'cabeca' ? ipContraDano(d.ipCabeca, tipoDano, distancia) : 0);
 }
 
 // Valor do D6 de vida atual (os 5 primeiros PV ficam à parte; dali para cima conta-se em D6).
@@ -281,7 +283,7 @@ export function resolverAtaque(atacante, alvo, sistema, op = {}, defesaId = 'nen
   if (!teste.sucesso && !(op.area && defesa.id === 'evasao')) return r;
 
   // Penetração ignora até N pontos de IP do alvo.
-  r.ip = cfg.ignoramIP.includes(arma.tipoDano) || arma.ignoraIp ? 0 : Math.max(0, ipContra(alvo, sistema, arma.tipoDano, arma.alcance === 'distancia') - (arma.penetracao || 0));
+  r.ip = cfg.ignoramIP.includes(arma.tipoDano) || arma.ignoraIp ? 0 : Math.max(0, ipContra(alvo, sistema, arma.tipoDano, arma.alcance === 'distancia', op.localizado ? op.local : null) - (arma.penetracao || 0));
   // Cada disparo (cadência) é um dano separado, cada um descontando o IP. Crítico, localizado e bônus entram no primeiro.
   const disparos = Math.max(1, Math.min(arma.cadencia || 1, op.disparos || arma.cadencia || 1));
   const partes = [];

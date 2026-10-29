@@ -532,8 +532,10 @@ export function derivados(ficha, sistema) {
     pvMax, pvBase, pvPersistente, pvPermanente, sanidadeMax, estadoSanidade, humanidadeMax, humanidadeLimite, humanidadeMinInicial, estagioHumanidade,
     iniciativa: atributos.AGI ?? 0,
     linguasExtras: Math.max(0, mod.INT ?? 0),
-    defesa: equipados.reduce((s, i) => s + ipDoItem(i).geral, 0) + (bonus.Defesa || 0),
-    ip: ipPorTipo(ficha, equipados, bonus, hab),
+    // Capacete (slot Cabeça) protege só contra golpe localizado na cabeça (autor, 29/10): fica fora do IP comum.
+    defesa: equipados.filter(i => !protegeSoCabeca(i)).reduce((s, i) => s + ipDoItem(i).geral, 0) + (bonus.Defesa || 0),
+    ip: ipPorTipo(ficha, equipados.filter(i => !protegeSoCabeca(i)), bonus, hab),
+    ipCabeca: ipPorTipo({}, equipados.filter(protegeSoCabeca), {}, { ip: { geral: 0, tipos: {} } }),
     habilidades: hab,
     carga: (ficha.itens || []).reduce((s, i) => s + (i.peso || 0), 0),
     ...carga,
@@ -753,6 +755,7 @@ export function tipoDaArma(arma) {
   return arma?.alcance === 'distancia' ? 'fogo' : 'lamina';
 }
 
+export const protegeSoCabeca = i => i.slot === 'cabeca';
 function ipPorTipo(ficha, equipados, bonus, hab) {
   const tipos = { ...hab.ip.tipos };
   // IP natural por tipo de dano (monstros da planilha: "Corte 2; Frio 1").

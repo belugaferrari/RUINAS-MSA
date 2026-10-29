@@ -534,7 +534,8 @@ function ativarHabilidade(c, p, sis, hab, { ctx, alvo = null, acao = null, escol
   const regra = hab.regra;
   escolhas = { ...(escolhas || {}) };
   if (alvo && !escolhas.alvo) escolhas.alvo = alvo;
-  const acaoUsada = acao || regra.acao || acoesDaHabilidade(p, sis, hab)[0] || null;
+  // Sem a ação escrita no livro, gasta a ação principal (autor, 29/10).
+  const acaoUsada = acao || regra.acao || acoesDaHabilidade(p, sis, hab)[0] || 'principal';
 
   // Já ativa: não ativa de novo enquanto durar (a não ser que o texto permita); o mestre pode encerrar antes.
   if ((p.habAtivas || {})[hab.id] && !podeRepetir(hab)) {
@@ -554,7 +555,7 @@ function ativarHabilidade(c, p, sis, hab, { ctx, alvo = null, acao = null, escol
     }
     const res = ESPECIAIS[regra.especial](c, p, sis, hab, escolhas, ctx);
     if (regra.usos) gastarUso(p, chave);
-    const acaoUsada2 = acao || regra.acao || acoesDaHabilidade(p, sis, hab)[0] || null;
+    const acaoUsada2 = acaoUsada;
     const excesso = c.salas.batalha.combate ? gastarAcao(c, p, acaoUsada2) : null;
     const texto = [acaoUsada2 ? nomeAcao(acaoUsada2) : '', ...res.notas].filter(Boolean).join(' · ');
     registrar(c.salas.batalha.log, { autor: p.nome, rotulo: res.rotulo || hab.nome, texto: `${texto}${excesso ? ` · atenção: ${excesso}` : ''}`, ...(res.sucesso != null ? { sucesso: res.sucesso } : {}) });
@@ -1027,9 +1028,12 @@ Object.assign(ESPECIAIS, {
     exigirAlcance(c, p, b, 4.5);
     if (!qtdCondicao(b, sis, 'genetico')) throw erro(`${b.nome} não tem marcadores genéticos.`);
     const turnos = rolarDado('2d4').total;
+    // Os marcadores genéticos estouram em bolhas de muco e somem (autor, 29/10).
+    const estouraram = qtdCondicao(b, sis, 'genetico');
+    tirarMarcadores(b, sis, 'genetico');
     b.marcas = (b.marcas || []).filter(m => !m.pragas);
     marcar(b, { nome: 'Pragas', pragas: true, danoFisicoRecebido: 1, desvantagemAtributo: 'PER', semConcentracao: true, danoPorTurno: 1, turnos: turnos + 1, de: p.id });
-    return { rotulo: `${hab.nome} em ${b.nome}`, notas: [`do próximo turno em diante, por ${turnos} turnos: +1 em todo dano físico, desvantagem em testes de Percepção, sem concentração e 1 de dano por turno`] };
+    return { rotulo: `${hab.nome} em ${b.nome}`, notas: [`${estouraram} marcador(es) genético(s) estouraram`, `do próximo turno em diante, por ${turnos} turnos: +1 em todo dano físico, desvantagem em testes de Percepção, sem concentração e 1 de dano por turno`] };
   },
 
   // Toque contagioso (oferecido depois de acertar um toque/ataque de Briga): CONS% Difícil ou o alvo desenvolve a mutação
@@ -1318,7 +1322,7 @@ function usarHabilidade(c, p, sis, hab, acao = null) {
   const dur = duracaoDaHabilidade(hab);
   if (dur && p.habAtivas?.[hab.id] && !podeRepetir(hab)) throw erro(`${hab.nome} já está ativa (${textoDuracao(dur)}): não dá para usar de novo enquanto durar.`);
   if (dur) (p.habAtivas ||= {})[hab.id] = marcaDeDuracao(hab.nome, dur);
-  const tipo = acao || acoesDaHabilidade(p, sis, hab)[0] || 'livre';
+  const tipo = acao || acoesDaHabilidade(p, sis, hab)[0] || 'principal';
   const excesso = c.salas.batalha.combate ? gastarAcao(c, p, tipo) : null;
   const texto = [nomeAcao(tipo), textoDuracao(dur)].filter(Boolean).join(' · ');
   registrar(c.salas.batalha.log, { autor: p.nome, rotulo: `${p.nome} usa ${hab.nome}`, texto: `${texto}${excesso ? ` · atenção: ${excesso}` : ''}` });

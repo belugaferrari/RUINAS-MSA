@@ -26,10 +26,11 @@ export function controladoNaSala(nome, participantes, mestre) {
   const vezAgora = cb ? `${cb.rodada}:${cb.vez}` : null;
   if (daVez && estado.sel[`${chave}:vez`] !== vezAgora) estado.sel[chave] = daVez.id;
   estado.sel[`${chave}:vez`] = vezAgora;
-  // Ataque novo esperando a defesa de um dos seus: o painel vai para ele.
+  // Ataque novo esperando a defesa de um dos seus: o painel vai para ele. O mestre controla os dois lados: se foi ele que
+  // atacou com o personagem que está na tela, o painel fica nesse personagem (a defesa se escolhe no quadro "aguardando").
   if (nome === 'batalha') {
     const pend = (estado.campanha.salas.batalha.pendentes || []).find(x => meus.some(p => p.id === x.alvo));
-    if (pend && estado.sel[`${chave}:pend`] !== pend.id) estado.sel[chave] = pend.alvo;
+    if (pend && estado.sel[`${chave}:pend`] !== pend.id && !(mestre && estado.sel[chave] === pend.atacante)) estado.sel[chave] = pend.alvo;
     estado.sel[`${chave}:pend`] = pend?.id || null;
   }
   if (!meus.some(p => p.id === estado.sel[chave])) estado.sel[chave] = (daVez || meus.find(p => p.tipo === 'pj') || meus[0])?.id || null;
@@ -127,12 +128,39 @@ function quadroPersonagem(p, meus, chave, mestre, participantes) {
         h('small', {}, opcoes.length === 1 ? 'Tiro' : 'Sem defesa'), h('strong', {}, icone('x'))) : null),
     resumoAcao(p, maos, participantes),
     h('h4', {}, icone('shield-alert'), ' IP (proteção)'),
-    ipView(d.ip),
+    ipView(d.ip, d.ipCabeca),
     cargaView(d),
+    itensCombate(p),
     h('h4', {}, icone('activity'), ' Efeitos'),
     h('div', { class: 'barra' }, efeitosIcones(p, { mestre }) || h('small', { class: 'dica' }, 'Nenhum.'),
       botao('Marcador', () => escolherCondicao(p), { class: 'pequeno', icone: 'tag', title: 'Escolher uma condição' })),
   ];
+}
+
+// Todos os itens do personagem no Campo de Batalha (autor, 29/10): os equipados (com o lugar) e os da mochila,
+// com dano/IP, durabilidade atual/original, munição e se está travado ou quebrado.
+function itensCombate(p) {
+  const sis = estado.sistema;
+  const itens = p.itens || [];
+  const aberto = estado.sel[`itensCombate:${p.id}`] ?? true;
+  const linha = i => {
+    const dur = durabilidadeDe(i);
+    const lugar = i.equipado ? (i.slot === 'maos' ? (i.mao === 1 ? 'mão esq.' : 'mão dir.') : sis.slots.find(x => x.id === i.slot)?.nome || 'equipado') : 'mochila';
+    return h('li', { class: `item-combate ${i.equipado ? 'equipado' : ''}` },
+      icone(iconeItem(i)),
+      h('span', { class: 'item-combate-nome' }, i.nome, (i.quantidade || 1) > 1 ? h('small', {}, ` ×${i.quantidade}`) : null),
+      h('small', { class: `selo ${i.equipado ? 'ok' : ''}` }, lugar),
+      i.travado ? h('small', { class: 'selo perigo' }, 'travado') : null,
+      h('small', { class: 'dica' }, [i.dano ? `${danoDaArma(i, p)}${i.tipoDano ? ` ${i.tipoDano}` : ''}` : null, textoIp(i) || null,
+        i.slot === 'cabeca' && textoIp(i) ? 'só na cabeça' : null,
+        dur.tipo === 'normal' ? `durab. ${i.durabilidadeAtual ?? i.durabilidade}/${i.durabilidade}` : null,
+        i.capacidade ? `munição ${i.carregada || 0}/${i.capacidade}` : null].filter(Boolean).join(' · ')),
+      dur.quebrado ? h('small', { class: 'selo perigo' }, 'quebrado') : null);
+  };
+  const ordem = [...itens].sort((a, b) => Number(!!b.equipado) - Number(!!a.equipado));
+  return h('details', { class: 'itens-combate', open: aberto, ontoggle: e => { estado.sel[`itensCombate:${p.id}`] = e.target.open; } },
+    h('summary', {}, icone('backpack'), ` Itens (${itens.filter(i => i.equipado).length} equipados · ${itens.filter(i => !i.equipado).length} na mochila)`),
+    itens.length ? h('ul', { class: 'lista-itens-combate' }, ordem.map(linha)) : h('small', { class: 'dica' }, 'Nenhum item.'));
 }
 
 // Linha "Personagem | Arma | Distância" do esboço: quem age, o que empunha e a distância até o alvo (em branco por enquanto).
@@ -151,13 +179,15 @@ function resumoAcao(p, maos, participantes) {
 // IP geral e o de cada tipo de dano, em bolinhas (o geral vale contra tudo; o do tipo, só contra aquele dano).
 const SIGLA_IP = { 'Corte': 'COR', 'Perfuração': 'PER', 'Concussão': 'CON', 'Elétrico': 'ELÉ', 'Calor': 'CAL', 'Frio': 'FRI', 'Energia': 'ENE', 'Radiação': 'RAD',
   'Vibração': 'VIB', 'Onda de Choque': 'OND', 'Ácido': 'ÁCI', 'Venenoso': 'VEN', 'Psíquico': 'PSI', 'Impacto': 'IMP', 'Físico': 'FÍS', 'A distância': 'DIS', 'Elemental': 'ELM', 'Químico': 'QUÍ' };
-function ipView(ip) {
+function ipView(ip, cabeca = null) {
   const tipos = Object.entries(ip.tipos).filter(([, v]) => v > 0);
+  const naCabeca = cabeca ? [cabeca.geral ? `IP ${cabeca.geral}` : null, ...Object.entries(cabeca.tipos).filter(([, v]) => v > 0).map(([t, v]) => `IP ${v} ${t}`)].filter(Boolean) : [];
   const bola = (sigla, valor, titulo, classe = '') => h('span', { class: `bola-ip ${classe}`, title: titulo, 'aria-label': titulo }, h('strong', {}, valor), h('small', {}, sigla));
   return h('div', { class: 'ips' },
     bola('GERAL', ip.geral, `IP geral ${ip.geral}: vale contra qualquer dano`, 'geral'),
     tipos.map(([t, v]) => bola(SIGLA_IP[t] || t.slice(0, 3).toUpperCase(), v, `IP ${t} ${v}: só contra dano de ${t}${GRUPOS_IP[t] ? ` (${GRUPOS_IP[t].join(', ')})` : ''}`)),
-    tipos.length ? null : h('small', { class: 'dica' }, 'Nenhum IP por tipo de dano.'));
+    tipos.length ? null : h('small', { class: 'dica' }, 'Nenhum IP por tipo de dano.'),
+    naCabeca.length ? h('small', { class: 'selo', title: 'O capacete só protege contra ataque localizado na cabeça' }, icone('hard-hat'), ` Capacete: ${naCabeca.join(' · ')} (só na cabeça)`) : null);
 }
 
 // Humor do personagem (o real, que dá os efeitos; e o aparente, se houver máscara).
@@ -285,7 +315,8 @@ function botaoAtivar(p, x, lapis) {
   const mestre = estado.campanha.papel === 'mestre';
   const usados = p.usos?.[chaveHabilidade(x.nome)] || 0;
   const info = [
-    r.acao ? nomeAcao(r.acao).toLowerCase() : null,
+    // Sem a ação no livro: ação principal (autor, 29/10).
+    nomeAcao(r.acao || acoesDaHabilidade(p, sis, x)[0] || 'principal').toLowerCase(),
     r.custo?.recurso ? `${r.custo.qtd || 1} carga(s)` : null,
     r.custo?.hum ? `−${r.custo.hum} HUM` : null,
     r.usos ? `${Math.max(0, r.usos.max - usados)}/${r.usos.max} por descanso${r.usos.recarga === 'descanso-longo' ? ' longo' : ' (curto ou longo)'}` : null,

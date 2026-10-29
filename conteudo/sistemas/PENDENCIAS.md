@@ -432,15 +432,23 @@ Feito no app (vale para MSA e MSS):
 - **Descanso**: O Show Tem Que Continuar (curto: +1d4 SAN e Motivado no próximo combate), Fitoterapia (cria o remédio, que dura 24 h e tem botão Usar), Regeneração degenerativa (volta 1 de CONS por descanso), Roubar Característica (entra no descanso longo, −3 PV persistentes).
 - Livro do app: "Corpo Adaptado 2" e "O Show Tem Que Continuar" estavam grudados no texto de outra habilidade e viraram itens próprios; Cibermédico ganhou a frase nova ("1 vez em cada personagem por combate").
 
-Perguntas para o autor (o app fez a escolha entre parênteses até a resposta):
-1. **Digestão extracorpórea**: qual perícia rola o jato em cone? (Briga › Ataque desarmado; os alvos se defendem com Evasão.)
-2. **Radiação incontida (superaquecer)**: quanto de dano de Calor entra nos ataques físicos? Os 2 marcadores de vulnerabilidade vão para quem está na explosão ou para o próprio Mutante? (Dano de Calor: o mestre aplica; marcadores: em quem está na explosão.)
-3. **Pragas**: os marcadores genéticos do alvo somem ao "estourar"? (Ficam.) Qual ação gasta? (Principal.)
-4. **Mutação precisa** e **Mãos da criação**: gastam alguma ação? (Nenhuma.)
-5. **Névoa Alucinógena**: a ficha da **Besta-Cavalo** não está no Livro dos Monstros do app — mande a ficha ou diga qual criatura usar. (Sem ela, a alucinação nasce em branco e o mestre preenche.)
-6. **Artefato Corrosivo**: quantos artefatos por descanso? (Sem limite.) E o "+1 frasco" dos Frascos Instáveis entra quando os frascos estiverem no app.
-7. **Bug na rede**: o item fica travado por quanto tempo? (Até o fim do combate.)
-8. **Controle Remoto**: hackear pede algum teste? (Nenhum.)
-9. **Sobrecarga Neural**: "Defesa Passiva" do autômato = a mesma defesa contra tiro (50 + 5 × nível)? (Sim.)
-10. **Tóxico** (+25% contra veneno) e **Vetor** (+10% contra doença): em qual teste exatamente? (O mestre aplica, até existir o teste de veneno/doença.)
-11. **Ilusionista da Sucata**: ficou como estava ("já está certo").
+Respostas do autor (29/10, mesma noite):
+- **Digestão extracorpórea**: o jato usa Armas de Fogo › **Jato** (feito).
+- **Pragas**: os marcadores genéticos **estouram e somem** (feito); gasta a ação principal.
+- **Regra geral**: habilidade sem a ação descrita no livro gasta a **ação principal** (feito: vale para todas as de ativar).
+- **Artefato Corrosivo**: melhora os Frascos Instáveis, onde está o limite: 1 frasco por descanso + 1 do Artefato = 2 por descanso (feito; o frasco extra do teste de Engenharia › Química o mestre soma até os frascos entrarem no app).
+- **LEMBRETE (não pedir agora)**: fichas das bestas citadas por habilidades (ex.: **Besta-Cavalo** da Névoa Alucinógena). Até lá a alucinação nasce em branco e o mestre preenche.
+
+Ainda em aberto (o autor vai reler):
+1. **Radiação incontida (superaquecer)**: quanto de dano de Calor entra nos ataques físicos? Os 2 marcadores de vulnerabilidade vão para quem está na explosão ou para o próprio Mutante? (Dano de Calor: o mestre aplica; marcadores: em quem está na explosão.)
+2. **Bug na rede**: o item fica travado por quanto tempo? (Até o fim do combate.)
+3. **Mutação precisa** e **Mãos da criação**: agora gastam a ação principal pela regra geral.
+4. **Controle Remoto**: hackear pede algum teste? (Nenhum.)
+5. **Sobrecarga Neural**: "Defesa Passiva" do autômato = a mesma defesa contra tiro (50 + 5 × nível)? (Sim.)
+6. **Tóxico** (+25% contra veneno) e **Vetor** (+10% contra doença): em qual teste exatamente? (O mestre aplica, até existir o teste de veneno/doença.)
+
+## 29/10 — Combate (pedidos do autor)
+- **Capacete** (slot Cabeça / Capacete): o IP dele só vale contra golpe **localizado na cabeça**. Fora disso não entra no IP do personagem (no Campo de Batalha aparece à parte: "Capacete: IP N (só na cabeça)").
+- **MOD FOR**: confirmado — soma no dano corpo a corpo (MOD = (FOR − 10) ÷ 2, arredondado para baixo; ex.: FOR 13 → +1). O "−1" visto no teste era o IP do capacete do alvo, descontado de todo golpe (corrigido acima).
+- **Mestre atacando**: o painel fica no personagem que atacou (antes ia para o alvo, que esperava a defesa).
+- **Itens no Campo de Batalha**: lista de todos os itens do personagem (equipados com o lugar, e os da mochila), com dano/IP, durabilidade, munição, travado/quebrado.

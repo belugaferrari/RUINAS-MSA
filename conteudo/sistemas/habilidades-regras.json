@@ -470,7 +470,8 @@
         "digestao": true,
         "cena": true,
         "texto": "acertado pelo jato ácido (pode ser devorado)"
-      }
+      },
+      "pericia": "armas-de-fogo.jato"
     },
     "texto": "ataque em cone (4,5 m, 2d6 ácido, 1 por descanso: aparece nas armas); o botão Ativar devora (ação completa) quem foi acertado e está abatido: +1d4 PV"
   },
@@ -570,7 +571,7 @@
     "escolhas": [
       "alvo"
     ],
-    "texto": "alvo a até 4,5 m com marcadores genéticos: por 2d4 turnos +1 no dano físico que toma, desvantagem em Percepção, sem concentração e 1 de dano por turno"
+    "texto": "alvo a até 4,5 m com marcadores genéticos (eles estouram e somem): por 2d4 turnos +1 no dano físico que toma, desvantagem em Percepção, sem concentração e 1 de dano por turno"
   },
   "toque contagioso": {
     "modo": "sempre",
@@ -706,7 +707,11 @@
       "alvo",
       "itemDoAlvo"
     ],
-    "texto": "arremessa (Esportes › Arremessar): o item escolhido do alvo perde 1d4 de IP; Frascos Instáveis +1 por descanso"
+    "texto": "arremessa (Esportes › Arremessar): o item escolhido do alvo perde 1d4 de IP; entra nos Frascos Instáveis, cujo limite sobe +1 (1 frasco + 1 por descanso; o frasco extra do teste de Engenharia › Química o mestre soma)",
+    "usos": {
+      "max": 2,
+      "recarga": "descanso"
+    }
   },
   "maos da criacao": {
     "modo": "ativar",

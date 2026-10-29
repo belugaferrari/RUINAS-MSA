@@ -318,3 +318,29 @@ test('Tóxico: o monstro que o fere corpo a corpo e falha no WILL% não o ataca 
     assert.throws(() => executar(c, 'combate.atacar', { atacante: monstro.id, alvo: eu.id, opcoes: {} }, ctxM), /repelido/);
   }
 });
+
+test('capacete (slot Cabeça): o IP só vale contra golpe localizado na cabeça; o MOD FOR entra no dano corpo a corpo', () => {
+  const { ps: [eu, ele] } = campo();
+  eu.atributos = { ...eu.atributos, FOR: 13 };
+  ele.itens = [{ uid: 'cap', nome: 'Capacete', tipo: 'defesa', slot: 'cabeca', equipado: true, ipTipos: { geral: 3 } }];
+  assert.equal(C.ipContra(ele, mss, 'Corte'), 0);
+  assert.equal(C.ipContra(ele, mss, 'Corte', false, 'cabeca'), 3);
+  const r = comDados(0.99, () => C.resolverAtaque(eu, ele, mss, { surpresa: true }, 'nenhuma'));
+  assert.equal(r.ip, 0);
+  assert.deepEqual(r.danoPartes.find(x => x.nome === 'MOD FOR'), { nome: 'MOD FOR', total: 1 });
+  const rc = comDados(0.99, () => C.resolverAtaque(eu, ele, mss, { surpresa: true, localizado: true, local: 'cabeca' }, 'nenhuma'));
+  assert.equal(rc.ip, 3);
+});
+
+test('Pragas: os marcadores genéticos estouram e somem; habilidade sem ação no livro gasta a principal', () => {
+  const { c, ps: [eu, ele] } = campo();
+  comClasse(eu, 'Mutante', 'RADIANTE (a Praga)', 10);
+  ele.marcadores = ['Marcador genético', 'Marcador genético'];
+  executar(c, 'habilidade.ativar', { id: eu.id, hab: hab(eu, 'Pragas').id, escolhas: { alvo: ele.id } }, ctxM);
+  assert.ok(!ele.marcadores.some(m => /gen[ée]tico/i.test(m)));
+  assert.ok(ele.marcas.some(m => m.pragas));
+  comClasse(eu, 'Mutante', 'ADAPTADO', 12);
+  novoTurno(c);
+  executar(c, 'habilidade.ativar', { id: eu.id, hab: hab(eu, 'Mutação precisa').id, escolhas: { pericia: 'esportes' } }, ctxM);
+  assert.equal(c.salas.batalha.combate.gasto[eu.id].principal, 1);
+});
