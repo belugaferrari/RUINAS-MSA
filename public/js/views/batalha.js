@@ -4,7 +4,7 @@
 import { h, botao, selecao, aviso, icone, titulo, vazio, pedirTexto, confirmar } from '../ui.js';
 import { estado, render, personagemPorId } from '../estado.js';
 import { acao } from '../api.js';
-import { derivados, listaHabilidades, efeitosHabilidade, modoHabilidade, temHabilidade, tipoCriatura, chaveHabilidade, GRUPOS_IP, acoesDaHabilidade, nomeAcao, dadosDaHabilidade, ehAtaqueEspecial, TIPOS_ACAO, acaoDoAtaqueEspecial, podeRepetir, duracaoDaHabilidade, textoDuracao, durabilidadeDe, textoIp } from '/shared/regras.js';
+import { derivados, listaHabilidades, efeitosHabilidade, modoHabilidade, temHabilidade, tipoCriatura, chaveHabilidade, GRUPOS_IP, acoesDaHabilidade, nomeAcao, dadosDaHabilidade, ehAtaqueEspecial, TIPOS_ACAO, acaoDoAtaqueEspecial, podeRepetir, duracaoDaHabilidade, textoDuracao, durabilidadeDe, textoIp, escolhasPermitidas } from '/shared/regras.js';
 import { armasDisponiveis, ipDe, opcoesDefesa, defesaDoAlvo, danoDaArma, recursoDe, LOCAIS_ATAQUE } from '/shared/combate.js';
 import { trilhaCompacta, escolherCondicao, cargaView, iconeItem } from './ficha.js';
 import { painelSlot, naMao, maoHabil } from './boneco.js';
@@ -198,15 +198,20 @@ function quadroHabilidades(p, mestre) {
     (modo === 'sempre' ? automaticas : modo === 'lembrete' ? lembretes : modo === 'ativar' ? deAtivar : comNumero).push(x);
   }
   const recursos = lista.filter(x => x.regra?.recurso).map(x => recursoDe(p, sis, x.regra.recurso.id)).filter(Boolean);
+  const moral = (p.moral?.criacao || 0) + (p.moral?.danca || 0);
   return [
-    recursos.length || p.pvTemp || p.essencia ? h('div', { class: 'hab-recursos barra' },
+    recursos.length || p.pvTemp || p.essencia || moral || p.caracteristicaRoubada?.pendente ? h('div', { class: 'hab-recursos barra' },
       recursos.map(r => h('span', { class: 'recurso' }, icone('zap'), h('strong', {}, ` ${r.nome}: ${r.restantes}/${r.max}`),
         r.id === 'nucleo' ? botao('Usar como bateria', () => acao('habilidade.recurso', { id: p.id, recurso: r.id }).then(x => aviso(x.texto)), { class: 'pequeno', disabled: !r.restantes }) : null,
         // Núcleo: com coração humano, cada carga causa 1d6 de dano. O mestre marca quando o coração for artificial.
         r.id === 'nucleo' ? h('label', { class: 'linha', title: 'Com coração humano, cada carga usada causa 1d6 de dano' },
           h('input', { type: 'checkbox', checked: !!p.coracaoArtificial, disabled: !mestre, onchange: e => acao('personagem.atualizar', { id: p.id, patch: { coracaoArtificial: e.target.checked } }) }), 'coração artificial') : null)),
       p.pvTemp ? h('span', { class: 'selo ok' }, icone('heart'), ` ${p.pvTemp} PV temporários`) : null,
-      p.essencia ? h('span', { class: 'selo ok' }, `Essência: ${p.essencia.sigla} ${p.essencia.valor} (de ${p.essencia.de})`) : null) : null,
+      p.essencia ? h('span', { class: 'selo ok' }, `Essência: ${p.essencia.sigla} ${p.essencia.valor} (de ${p.essencia.de})`) : null,
+      // Moral (Mãos da criação, Dançarino): +1d20 no próximo teste.
+      moral ? h('span', { class: 'recurso' }, icone('sparkles'), h('strong', {}, ` Moral: ${moral}`),
+        botao('Usar (+1d20 no próximo teste)', () => acao('moral.usar', { id: p.id }).then(() => aviso('Moral guardada: +1d20 no próximo teste.')), { class: 'pequeno' })) : null,
+      p.caracteristicaRoubada?.pendente ? h('span', { class: 'selo' }, `Característica roubada: ${p.caracteristicaRoubada.pendente.nome} (entra no próximo descanso longo)`) : null) : null,
     deAtivar.length ? h('div', { class: 'hab-grupo' },
       h('h4', {}, icone('flame'), ' Ativar (custo, usos ou duração)'),
       h('ul', { class: 'lista-habilidades' }, deAtivar.map(x => botaoAtivar(p, x, lapis)))) : null,
@@ -214,7 +219,8 @@ function quadroHabilidades(p, mestre) {
       h('h4', {}, icone('badge-check'), ' Automáticas (o app aplica sozinho)'),
       h('ul', { class: 'lista-habilidades' }, automaticas.map(x => h('li', { class: 'ativa' },
         h('div', { class: 'hab-texto' }, cabeca(x),
-          h('small', { class: 'hab-efeito' }, icone('zap'), ` ${efeitosHabilidade(p, sis, x).notas.join(' · ') || x.regra?.texto || ''}`)),
+          h('small', { class: 'hab-efeito' }, icone('zap'), ` ${efeitosHabilidade(p, sis, x).notas.join(' · ') || x.regra?.texto || ''}`),
+          x.regra?.escolhaFixa ? escolhaFixa(p, x, mestre) : null),
         mestre ? h('div', { class: 'hab-botoes' }, lapis(x)) : null)))) : null,
     comNumero.length ? h('div', { class: 'hab-grupo' },
       h('h4', {}, icone('zap'), ' Ligar no combate'),
@@ -234,6 +240,33 @@ function quadroHabilidades(p, mestre) {
         h('div', { class: 'hab-texto' }, cabeca(x), h('small', { class: 'hab-resumo' }, primeiraFrase(x.descricao))),
         mestre ? h('div', { class: 'hab-botoes' }, lapis(x)) : null)))) : null,
   ];
+}
+
+// Escolha que fica na ficha: tipo de dano (Mutação monstruosa, Corpo adaptado 2) ou perícias (Melhor do mundo).
+function escolhaFixa(p, x, mestre) {
+  const sis = estado.sistema;
+  const r = x.regra;
+  const chave = chaveHabilidade(x.nome);
+  const atual = p.escolhasHab?.[chave] || {};
+  if (r.escolhaFixa === 'pericias') {
+    const max = escolhasPermitidas(p, r, x);
+    if (!max) return h('small', { class: 'dica' }, `a primeira escolha vem no ${r.aPartirDe}º nível`);
+    const opcoes = [{ valor: '', rotulo: '— escolher —' }, ...sis.pericias.filter(q => !(r.exceto || []).includes(q.id)).map(q => ({ valor: q.id, rotulo: q.nome }))];
+    const lista = [...(atual.pericias || [])];
+    return h('div', { class: 'barra escolhas-hab' }, Array.from({ length: max }, (_, i) => {
+      const fixa = !mestre && atual.pericias?.[i];
+      return selecao(opcoes, lista[i] || '', v => {
+        lista[i] = v;
+        acao('habilidade.escolher', { id: p.id, hab: x.id, pericias: lista.filter(Boolean) }).catch(e => aviso(e.message, 'erro'));
+      }, { 'aria-label': `${x.nome}: perícia ${i + 1}`, disabled: !!fixa });
+    }));
+  }
+  const tipos = (sis.tiposDano || ['Corte', 'Perfuração', 'Concussão', 'Elétrico', 'Calor', 'Frio', 'Ácido']).map(t => ({ valor: t, rotulo: t }));
+  const pode = mestre || !atual.tipoDano || (r.trocaNoDescanso && p.trocaLiberada?.[chave]);
+  return h('label', { class: 'linha' }, r.escolhaFixa === 'resistencia' ? 'Resistência: ' : 'Tipo de dano: ',
+    selecao([{ valor: '', rotulo: '— escolher —' }, ...tipos], atual.tipoDano || '', v => v && acao('habilidade.escolher', { id: p.id, hab: x.id, tipoDano: v }).catch(e => aviso(e.message, 'erro')),
+      { 'aria-label': `${x.nome}: tipo de dano`, disabled: !pode }),
+    r.trocaNoDescanso && p.trocaLiberada?.[chave] ? h('small', { class: 'selo ok' }, 'pode trocar agora (descanso longo)') : null);
 }
 
 // Quanto tempo a habilidade gasta (do texto do livro, da regra própria ou do lápis do mestre: "ação: bônus").
@@ -313,6 +346,18 @@ function campoEscolha(p, x, k, esc) {
   if (k === 'pericia') return campo('Perícia', sis.pericias.map(q => ({ valor: q.id, rotulo: q.nome })), 'pericia');
   if (k === 'tipoIp') return campo('IP', [{ valor: 'geral', rotulo: 'Geral (até +2)' }, ...['Corte', 'Perfuração', 'Concussão', 'Elétrico', 'Calor', 'Frio'].map(t => ({ valor: t, rotulo: `${t} (até +4)` }))], 'tipoIp');
   if (k === 'efeito') return campo('Engenhoca', [{ valor: 'fumaca', rotulo: 'Fumaça (raio 3 m)' }, { valor: 'ruido', rotulo: 'Ruído (raio 15 m)' }], 'efeito');
+  // Habilidades do Relatório (29/10).
+  if (k === 'pontos') return campo('CONS → FOR', [0, 1, 2, 3, 4, 5, 6].map(n => ({ valor: String(n), rotulo: n ? `${n} ponto${n > 1 ? 's' : ''}` : 'nenhum' })), 'pontos');
+  if (k === 'radiacao') return campo('Efeito', [{ valor: 'brilhar', rotulo: 'Brilhar (+5% de defesa)' }, { valor: 'superaquecer', rotulo: 'Superaquecer (explosão)' }], 'efeito');
+  if (k === 'criacao') return campo('Ao criar', [{ valor: 'moral', rotulo: '+1 ponto de Moral' }, { valor: 'aprimoramento', rotulo: 'Aprimoramento no item' }], 'efeito');
+  if (k === 'remedio') return campo('Remédio', [{ valor: 'cura', rotulo: 'Cura 1D6' }, { valor: 'deslocamento', rotulo: '+3 m de deslocamento (5 turnos)' },
+    { valor: 'ignorar', rotulo: 'Ignorar efeitos negativos (3 turnos)' }, { valor: 'veneno', rotulo: 'Veneno 1D4 + MOD INT' }], 'efeito');
+  if (k === 'alvoMorto') return campo('Criatura morta', campoBatalha.filter(q => q.id !== p.id && (q.marcadores || []).includes('Morto')).map(q => ({ valor: q.id, rotulo: q.nome })), 'alvo');
+  if (k === 'caracteristica') {
+    const b = personagemPorId(esc.alvo);
+    return campo('Característica', (b ? listaHabilidades(b, sis) : []).filter(y => !y.unica).map(y => ({ valor: y.id, rotulo: y.nome })), 'caracteristica');
+  }
+  if (k === 'itemQualquer') return campo('Item', (p.itens || []).filter(i => !i.natural && !i.sucata).map(i => ({ valor: i.uid, rotulo: i.nome })), 'item');
   if (k === 'item' || k === 'itemQuebrado') {
     const itens = (p.itens || []).filter(i => i.durabilidade != null && !i.consumivel && (k === 'item' || (i.durabilidadeAtual ?? i.durabilidade) <= 0));
     return campo(k === 'item' ? 'Item' : 'Item quebrado', itens.map(i => ({ valor: i.uid, rotulo: `${i.nome} (${i.durabilidadeAtual ?? i.durabilidade}/${i.durabilidade})` })), 'item');
@@ -465,6 +510,17 @@ function quadroAtaques(p, participantes, mestre) {
           h('ul', {}, MANOBRAS.map(id => subs('briga').find(s => s.id === id)).filter(Boolean).map(s => linhaSub(s.id, s.nome))))),
       grupo('Armas brancas', 'arma-branca', i => i.pericia?.startsWith('arma-branca.')),
       grupo('Armas de fogo', 'armas-de-fogo', i => i.pericia?.startsWith('armas-de-fogo.')),
+      // Ataques com a "arma" da própria habilidade (Muco radioativo, Jato ácido, Sobrecarga Neural): usos por descanso.
+      auto && automaticas.some(a => a.habilidade) ? h('li', { class: 'ataque-grupo' }, h('div', { class: 'ataque-cabeca' }, h('strong', {}, 'Ataques de habilidade')),
+        h('ul', {}, automaticas.filter(a => a.habilidade).map(a => {
+          const hb = listaHabilidades(p, sis).find(x => x.id === a.habilidade);
+          const u = hb?.regra?.arma?.usos;
+          const restam = u ? Math.max(0, u.max - (p.usos?.[`${chaveHabilidade(hb.nome)}#ataque`] || 0)) : null;
+          return h('li', { class: 'ataque-linha arma' },
+            h('span', { class: 'ataque-nome' }, a.nome, h('small', {}, ` ${a.dano} ${a.tipoDano} · ${pct(a.pericia)} · ${String(a.alcanceM).replace('.', ',')} m${a.area ? ' (área)' : ''}`)),
+            restam != null ? h('span', { class: 'selo' }, `${restam}/${u.max}`) : null,
+            dado(`${p.nome} ataca ${b?.nome || 'o alvo'} com ${a.nome}`, () => atacar(a.uid), { disabled: !alvo && !estado.sel.ataque?.varios }));
+        }))) : null,
       ataquesEspeciais(p, alvo, b),
       auto && temHabilidade(p, sis, 'Dano ao sistema') ? h('li', { class: 'ataque-grupo' }, h('div', { class: 'ataque-cabeca' }, h('strong', {}, 'Emissor Neural')),
         h('ul', {}, h('li', { class: 'ataque-linha' },
@@ -510,7 +566,8 @@ function ataquesEspeciais(p, alvo, b) {
     .filter(({ ataque, acoes }) => ataque || acoes.length)
     // Com regra própria: as de escolher alvo/aliado/item se ativam no quadro de Habilidades; as passivas e as reações que o
     // app oferece sozinho (Ataque inesperado, Invenção protetora) não são ataques a fazer.
-    .filter(({ x }) => !x.regra?.escolhas && !['reduzirDano', 'absorverDano'].includes(x.regra?.especial) && !(x.regra?.modo === 'sempre' && !x.regra.especial && !x.regra.acao))
+    .filter(({ x }) => !x.regra?.escolhas && !x.regra?.aposToque && !x.regra?.arma && !['reduzirDano', 'absorverDano', 'morteEpidemica', 'epidemia', 'toxico', 'vetor', 'dancarino', 'show', 'grandeTruque'].includes(x.regra?.especial)
+      && !(x.regra?.modo === 'sempre' && !x.regra.especial && !x.regra.acao))
     .sort((a, b2) => Number(b2.ataque) - Number(a.ataque));
   const armas = armasDisponiveis(p, sis);
   const chaveArma = `especialArma:${p.id}`;

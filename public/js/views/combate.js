@@ -52,7 +52,7 @@ export function ofertasView(mestre) {
     const chave = `oferta:${o.id}`;
     if (!o.alvos.includes(estado.sel[chave])) estado.sel[chave] = o.alvos[0];
     return h('div', { class: 'oferta', role: 'alert' },
-      h('div', {}, icone(o.tipo === 'reacao' ? 'shield' : 'zap'), ' ', h('strong', {}, o.habilidade), o.acao ? h('small', { class: `selo acao acao-${o.acao}` }, o.acao === 'reacao' ? 'Reação' : 'Ação livre') : null, `: ${o.texto}`),
+      h('div', {}, icone(o.tipo === 'reacao' ? 'shield' : 'zap'), ' ', h('strong', {}, o.habilidade), o.acao ? h('small', { class: `selo acao acao-${o.acao}` }, { reacao: 'Reação', movimento: 'Ação de movimento', bonus: 'Ação bônus' }[o.acao] || 'Ação livre') : null, `: ${o.texto}`),
       h('div', { class: 'barra' },
         o.alvos.length > 1 ? selecao(o.alvos.map(id => ({ valor: id, rotulo: personagemPorId(id)?.nome || '?' })), estado.sel[chave], v => { estado.sel[chave] = v; }, { 'aria-label': 'Alvo' })
           : h('span', {}, `Alvo: ${personagemPorId(o.alvos[0])?.nome || '?'}`),

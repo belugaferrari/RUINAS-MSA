@@ -571,7 +571,10 @@ export function equipamento(p, mestre, filtro = null) {
     itens.length ? tabela(['Item', 'Slot · mãos', 'Durab.', 'Dano / IP', 'Bônus', 'Venda', ''], itens.map(i => ({
       class: i.equipado ? 'equipado' : null,
       celulas: [
-        h('span', { class: 'item-nome' }, icone(iconeItem(i)), i.nome, i.equipado ? h('span', { class: 'selo ok' }, 'equipado') : null),
+        h('span', { class: 'item-nome' }, icone(iconeItem(i)), i.nome, i.equipado ? h('span', { class: 'selo ok' }, 'equipado') : null,
+          // Bug na rede: travado = continua equipado, mas não pode ser usado (até o fim do combate; o mestre destrava).
+          i.travado ? h('span', { class: 'selo perigo', title: `Travado por ${i.travado.nome}: equipado, mas não pode ser usado` }, icone('lock'), ' Travado') : null,
+          i.travado && mestre ? botao('Destravar', () => acao('item.destravar', { id: p.id, uid: i.uid }), { class: 'pequeno' }) : null),
         [sis.slots.find(s => s.id === i.slot)?.nome || '—', textoMaos(i)],
         mestre && durabilidadeDe(i).tipo === 'normal'
           ? campo(`${p.id}:dur:${i.uid}`, i.durabilidadeAtual ?? i.durabilidade, v => acao('item.durabilidade', { id: p.id, uid: i.uid, valor: v }), { tipo: 'number', class: 'num', 'aria-label': `Durabilidade de ${i.nome}` })
@@ -580,6 +583,8 @@ export function equipamento(p, mestre, filtro = null) {
         textoBonus(i, estado.sistema) || '—',
         h('span', { class: 'moeda' }, icone('coins'), i.venda ?? '—'),
         [
+          // Remédio natural (Fitoterapia): usa em si (ou num aliado a 1,5 m, pelo Campo de Batalha).
+          i.remedio ? botao('Usar', () => acao('remedio.usar', { id: p.id, uid: i.uid }).then(r => aviso(r.texto)), { class: 'pequeno primario', icone: 'heart' }) : null,
           i.slot ? botao(i.equipado ? 'Desequipar' : 'Equipar', () => acao('item.equipar', { id: p.id, uid: i.uid, equipar: !i.equipado }), { class: i.equipado ? 'pequeno' : 'primario pequeno', icone: i.equipado ? 'x' : 'shirt' }) : null,
           (mestre || estado.campanha.lojaAberta) ? botao('Vender', async () => {
             if (await confirmar(`Vender ${i.nome} por ${i.venda ?? 0}?`)) await acao('item.vender', { id: p.id, uid: i.uid });

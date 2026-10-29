@@ -417,3 +417,30 @@ Feito (regras em `habilidades-regras.json`; efeitos próprios em `server/actions
   comparado com o deslocamento dele (vermelho se passar — só avisa). Pegadas marcam o quadrado de onde saiu.
 - Links: botão "Mapa" no Campo de Batalha e "Campo de Batalha" no Mapa.
 - Provisório: o contador mede a distância em linha reta (do início até onde está), não o caminho percorrido.
+
+## 29/10 — Relatório de habilidades (3ª parte: Mutante e Perito, 33 respostas)
+Feito no app (vale para MSA e MSS):
+- **Ataques especiais com arma própria** (aparecem na lista de armas do Campo de Batalha, com usos): Muco radioativo (2d6 radioativo, 9 m, Armas de Fogo › Projéteis, +1d6 contra quem tem mutação, CONS% do alvo em desvantagem até o fim do combate, 3 por descanso longo), Digestão extracorpórea (cone de 4,5 m, 2d6 ácido, 1 por descanso; o botão Ativar devora quem foi acertado e caiu: +1d4 PV), Sobrecarga Neural (2d8 elétrico que ignora IP, só contra drone/autômato/máquina/ciborgue, 15 m).
+- **Resistências e imunidades**: Evolução humana (resistência a Corte, imune a crítico), Corpo Adaptado 2 (o jogador escolhe a resistência; só troca depois de um descanso longo).
+- **Escolhas que ficam na ficha**: Mutação monstruosa (tipo do +1d4), Melhor do mundo (+5% numa perícia base no 6º nível e a cada 3; não aceita as de combate).
+- **Marcas com contador de turnos**: Mutação precisa (vantagem + CONS→FOR por 10 turnos), Pragas, Analista de risco (bônus ligado ao alvo analisado), Esporos gasosos (até o fim do combate), Cibermédico (membro travado 1d4 turnos).
+- **Ofertas depois de acertar um toque/Briga**: Toque contagioso (ação livre) e Cibermédico (ação de movimento, fechando a ação completa).
+- **Reações automáticas**: Morte Epidêmica, Epidemia (o contágio continua em cadeia), O Grande Truque, Tóxico, Vetor.
+- **Moral** (Mãos da criação e Dançarino): contador na ficha e botão "Usar" (+1d20 no próximo teste). Dança aparece como defesa no lugar da Esquiva.
+- **Item Travado** (Bug na rede): continua equipado, não pode ser usado; destrava no fim do combate (o mestre pode destravar antes).
+- **Companheiros por habilidade**: Controle Remoto (10 turnos, age logo depois do Hacker), Programador (o item vira companheiro, até 3), Alucinação maligna da Névoa Alucinógena (10 turnos, só ataca quem a vê, dano na Sanidade).
+- **Descanso**: O Show Tem Que Continuar (curto: +1d4 SAN e Motivado no próximo combate), Fitoterapia (cria o remédio, que dura 24 h e tem botão Usar), Regeneração degenerativa (volta 1 de CONS por descanso), Roubar Característica (entra no descanso longo, −3 PV persistentes).
+- Livro do app: "Corpo Adaptado 2" e "O Show Tem Que Continuar" estavam grudados no texto de outra habilidade e viraram itens próprios; Cibermédico ganhou a frase nova ("1 vez em cada personagem por combate").
+
+Perguntas para o autor (o app fez a escolha entre parênteses até a resposta):
+1. **Digestão extracorpórea**: qual perícia rola o jato em cone? (Briga › Ataque desarmado; os alvos se defendem com Evasão.)
+2. **Radiação incontida (superaquecer)**: quanto de dano de Calor entra nos ataques físicos? Os 2 marcadores de vulnerabilidade vão para quem está na explosão ou para o próprio Mutante? (Dano de Calor: o mestre aplica; marcadores: em quem está na explosão.)
+3. **Pragas**: os marcadores genéticos do alvo somem ao "estourar"? (Ficam.) Qual ação gasta? (Principal.)
+4. **Mutação precisa** e **Mãos da criação**: gastam alguma ação? (Nenhuma.)
+5. **Névoa Alucinógena**: a ficha da **Besta-Cavalo** não está no Livro dos Monstros do app — mande a ficha ou diga qual criatura usar. (Sem ela, a alucinação nasce em branco e o mestre preenche.)
+6. **Artefato Corrosivo**: quantos artefatos por descanso? (Sem limite.) E o "+1 frasco" dos Frascos Instáveis entra quando os frascos estiverem no app.
+7. **Bug na rede**: o item fica travado por quanto tempo? (Até o fim do combate.)
+8. **Controle Remoto**: hackear pede algum teste? (Nenhum.)
+9. **Sobrecarga Neural**: "Defesa Passiva" do autômato = a mesma defesa contra tiro (50 + 5 × nível)? (Sim.)
+10. **Tóxico** (+25% contra veneno) e **Vetor** (+10% contra doença): em qual teste exatamente? (O mestre aplica, até existir o teste de veneno/doença.)
+11. **Ilusionista da Sucata**: ficou como estava ("já está certo").

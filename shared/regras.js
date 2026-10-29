@@ -254,8 +254,12 @@ export function listaHabilidades(ficha, sistema) {
     sistema.raca?.habilidadeUnica && !ficha.criatura ? { id: 'raca', nome: sistema.raca.habilidadeUnica.nome, descricao: sistema.raca.habilidadeUnica.descricao, tipo: sistema.raca.nome, vezes: 1 } : null,
   ].filter(Boolean).map(x => ({ ...x, regra: regraDaHabilidade(x.nome, sistema) })).concat(mutacoesComoHabilidades(ficha, sistema)).concat(
     (ficha.habilidadesProprias || []).map((x, i) => ({ id: `m:${i}:${x.nome}`, nome: x.nome, descricao: x.descricao || x.efeitos || '', tipo: x.unica ? 'Habilidade única' : 'Monstro', unica: !!x.unica, vezes: 1,
-      regra: x.modo === 'lembrete' && !x.efeitos ? null : { modo: x.modo || 'sempre', efeitos: x.efeitos || '' } })));
+      regra: x.modo === 'lembrete' && !x.efeitos ? null : { modo: x.modo || 'sempre', efeitos: x.efeitos || '' } })),
+    // Roubar Característica (Mutante Adaptado): a característica tirada de uma criatura morta, depois do descanso longo.
+    ficha.caracteristicaRoubada?.ativa ? [roubadaComoHabilidade(ficha.caracteristicaRoubada.ativa, sistema)] : []);
 }
+const roubadaComoHabilidade = (x, sistema) => ({ id: 'roubada', nome: x.nome, descricao: x.descricao || x.efeitos || '', tipo: `Característica roubada (de ${x.de || '?'})`, vezes: 1,
+  regra: regraDaHabilidade(x.nome, sistema) || (x.efeitos ? { modo: x.modo && x.modo !== 'lembrete' ? x.modo : 'sempre', efeitos: x.efeitos } : null) });
 
 // Mutações do personagem (tabela d100 do autor): controlada (só o benefício), descontrolada e temporária (benefício e ônus).
 // Viram habilidades automáticas: o app aplica o "beneficio"/"onus" da tabela; o resto do texto é lembrete.
@@ -337,7 +341,25 @@ export function efeitosHabilidade(ficha, sistema, hab) {
   const regra = hab.regra === undefined ? regraDaHabilidade(hab.nome, sistema) : hab.regra;
   const texto = ficha.ajustesHabilidades?.[hab.id] ?? (regra ? regra.efeitos || '' : hab.descricao);
   const r = efeitosDoTexto(texto, sistema, { tipoIp });
-  return regra ? efeitosDaRegra(regra, r, sistema, rotulosEfeitos(sistema), hab.vezes || 1) : r;
+  if (!regra) return r;
+  efeitosDaRegra(regra, r, sistema, rotulosEfeitos(sistema), hab.vezes || 1);
+  // Escolhas que ficam na ficha (Corpo adaptado 2: o tipo da resistência; Melhor do mundo: as perícias com +5%).
+  const esc = ficha.escolhasHab?.[chaveHabilidade(hab.nome)];
+  if (regra.escolhaFixa === 'resistencia' && esc?.tipoDano) { r.resistencias.push(esc.tipoDano); r.notas.push(`resistência a ${esc.tipoDano}`); }
+  if (regra.escolhaFixa === 'pericias') {
+    for (const id of (esc?.pericias || []).slice(0, escolhasPermitidas(ficha, regra, hab))) {
+      r.pericias[id] = (r.pericias[id] || 0) + (regra.bonus || 5);
+      r.notas.push(`${sistema.pericias.find(x => x.id === id)?.nome || id} +${regra.bonus || 5}%`);
+    }
+  }
+  if (regra.escolhaFixa === 'tipoDano' && esc?.tipoDano) r.notas.push(`tipo escolhido: ${esc.tipoDano}`);
+  return r;
+}
+// Quantas escolhas a habilidade dá: Melhor do mundo, uma no 6º nível e mais uma a cada 3 níveis.
+export function escolhasPermitidas(ficha, regra, hab) {
+  if (regra.escolhaFixa !== 'pericias') return 1;
+  const n = regra.aPartirDe ? Math.max(0, Math.floor(((ficha.nivel || 1) - regra.aPartirDe) / (regra.aCada || 3)) + 1) : 1;
+  return Math.max(n, hab?.vezes || 1);
 }
 
 // Como a habilidade funciona no app: "sempre" (aplicada sozinha), "ligar" (botão liga/desliga), "ativar" (botão com custo/duração)
@@ -379,6 +401,9 @@ export function danoDasHabilidades(ficha, sistema, arma, especialId = null) {
     for (const e of ef.danoDados) partes.push({ nome: x.nome, expr: e });
     for (const c of ef.danoCond) if (armaNaCondicao(arma, c.cond)) partes.push({ nome: x.nome, ...(c.fixo ? { fixo: c.fixo } : { expr: c.dados }) });
     for (const m of ef.margemEfeito) if (armaNaCondicao(arma, m.cond)) margem += m.valor;
+    // Mutação monstruosa: +1d4 do tipo escolhido nos ataques físicos (não nos ataques especiais de habilidade).
+    const tipo = x.regra?.danoEscolhido && ficha.escolhasHab?.[chaveHabilidade(x.nome)]?.tipoDano;
+    if (tipo && !arma?.habilidade) partes.push({ nome: `${x.nome} (${tipo})`, expr: x.regra.danoEscolhido });
   }
   return { partes, margem };
 }
@@ -400,7 +425,8 @@ export function habilidadeValendo(ficha, sistema, nome) {
 // Vantagem por habilidade: alvo = 'ataque' | 'iniciativa' | 'testes' | id de perícia/subperícia. "contra" = tipos de criatura do oponente.
 export function vantagemPorHabilidade(ficha, sistema, alvos, oponentes = null) {
   const lista = Array.isArray(alvos) ? alvos : [alvos];
-  const tipos = oponentes ? oponentes.map(tipoCriatura) : null;
+  // Ciborgue (classe) conta como alvo "ciborgue" para habilidades como Cibermédico.
+  const tipos = oponentes ? oponentes.flatMap(o => [tipoCriatura(o), ...(o?.classe === 'ciborgue' ? ['ciborgue'] : [])]) : null;
   // Marcas temporárias (Inspiração motivacional: vantagem numa perícia por 2d4 turnos).
   if ((ficha.marcas || []).some(m => m.vantagem && lista.includes(m.vantagem))) return true;
   return bonusHabilidades(ficha, sistema).vantagens.some(v => (lista.includes(v.alvo) || v.alvo === 'testes')
@@ -444,8 +470,17 @@ export function derivados(ficha, sistema) {
     condTestes += (c.testes || 0) * c.qtd;
   }
   const atributos = {}, percentual = {}, bonusPericial = {}, mod = {};
+  // Marcas temporárias que mexem em atributos e em testes de atributo (Mutação precisa: CONS → FOR; Esporos: −10% CONS%).
+  const marcaAtr = {}, marcaTesteAtr = {};
+  for (const m of ficha.marcas || []) {
+    for (const [k, v] of Object.entries(m.atributos || {})) marcaAtr[k] = (marcaAtr[k] || 0) + v;
+    for (const [k, v] of Object.entries(m.testesAtributos || {})) marcaTesteAtr[k] = (marcaTesteAtr[k] || 0) + v;
+  }
+  // Regeneração degenerativa: CONS consumida (volta 1 por descanso).
+  marcaAtr.CONS = (marcaAtr.CONS || 0) - Math.max(0, ficha.consPerdida || 0);
+  for (const [k, v] of Object.entries(marcaTesteAtr)) condTesteAtr[k] = (condTesteAtr[k] || 0) + v;
   for (const a of sistema.atributos) {
-    let v = (ficha.atributos?.[a.sigla] ?? 0) + (bonus[a.sigla] || 0) + (condAtr[a.sigla] || 0) + (hab.atributos[a.sigla] || 0);
+    let v = (ficha.atributos?.[a.sigla] ?? 0) + (bonus[a.sigla] || 0) + (condAtr[a.sigla] || 0) + (hab.atributos[a.sigla] || 0) + (marcaAtr[a.sigla] || 0);
     // Essência monstruosa: até o fim do combate, o atributo do personagem fica igual ao mais alto do monstro abatido
     // (rinoceronte com CONS 18 → CONS 18), mesmo que o do personagem fosse maior (autor, 21/10).
     if (ficha.essencia?.sigla === a.sigla) v = ficha.essencia.valor;
@@ -474,7 +509,8 @@ export function derivados(ficha, sistema) {
   // Usa os atributos da ficha: condições que baixam a CONS não diminuem o PV total.
   const pvBase = (ficha.atributos?.FOR ?? 0) + (ficha.atributos?.CONS ?? 0) + 5 * (nivel - 1) + (profissao?.extras?.pv || 0) + hab.pv;
   // PV persistentes (perdidos até o efeito acabar) e permanentes (nunca voltam) baixam o máximo.
-  const pvPersistente = Math.max(0, ficha.pv?.persistente || 0);
+  // Roubar Característica: −3 PV persistentes enquanto usa a característica roubada.
+  const pvPersistente = Math.max(0, ficha.pv?.persistente || 0) + (ficha.caracteristicaRoubada?.ativa ? 3 : 0);
   const pvPermanente = Math.max(0, ficha.pv?.permanente || 0);
   const pvMax = Math.max(1, pvBase - pvPersistente - pvPermanente);
   const sanidadeMax = (ficha.atributos?.INT ?? 0) + (ficha.atributos?.WILL ?? 0) + 10;
@@ -501,7 +537,7 @@ export function derivados(ficha, sistema) {
     habilidades: hab,
     carga: (ficha.itens || []).reduce((s, i) => s + (i.peso || 0), 0),
     ...carga,
-    ...deslocamento(sistema, condicoes, carga.cargaNivel, ficha.deslocamentoBase ?? null),
+    ...deslocamento(sistema, condicoes, carga.cargaNivel, ficha.deslocamentoBase ?? null, (ficha.marcas || []).filter(m => m.deslocamento)),
     limitePericia: limitePericia(nivel, sistema),
     atributoMax: atributoMax(nivel, sistema),
     temClasse: nivel >= (r.nivelClasse ?? 3),
@@ -512,7 +548,7 @@ export function derivados(ficha, sistema) {
 // Deslocamento por turno (planilha de regras gerais): humano 9 m = 6 quadrados de 1,5 m.
 // Preso (Paralisado, Enraizado, Imobilizado, Desmaiado, Esmagado) = 0; Dano a membros inferiores −3 m cada;
 // Sobrecarregado −4,5 m; Supercarregado só 1 passo (1,5 m).
-export function deslocamento(sistema, condicoes, cargaNivel, proprio = null) {
+export function deslocamento(sistema, condicoes, cargaNivel, proprio = null, marcas = []) {
   // Monstros têm o deslocamento da planilha; personagens, o da raça.
   const base = parseFloat(String(proprio ?? sistema.raca?.deslocamento ?? '9').replace(',', '.')) || 9;
   const motivos = [];
@@ -524,6 +560,8 @@ export function deslocamento(sistema, condicoes, cargaNivel, proprio = null) {
     const pernas = condicoes.find(c => c.id === 'membros-inferiores');
     if (pernas) { m -= 3 * pernas.qtd; motivos.push(`${pernas.nome} −${3 * pernas.qtd} m`); }
     if (cargaNivel === 'sobrecarregado') { m -= 4.5; motivos.push('Sobrecarregado −4,5 m'); }
+    // Marcas temporárias que dão deslocamento (remédio da Fitoterapia: +3 m por 5 turnos).
+    for (const x of marcas) { m += x.deslocamento; motivos.push(`${x.nome} +${String(x.deslocamento).replace('.', ',')} m`); }
     if (cargaNivel === 'supercarregado') { m = Math.min(m, 1.5); motivos.push('Supercarregado: só 1 passo'); }
   }
   m = Math.max(0, m);
@@ -669,7 +707,14 @@ export const tipoIp = nome => SINONIMOS_IP[semAcento(nome).replace(/\s*\(.*$/, '
 
 // IP de um item: { geral, tipos }. Usa "ipTipos" do catálogo ou lê o texto ("IP 3 (Corte) IP 1 (Outros)", "IP 2 (Corte/Perf)").
 // Parte do corpo entre parênteses (Cabeça, Pernas…) ou "Outros" contam como geral.
+// Artefato Corrosivo: o IP corroído sai do IP do item (geral e de cada tipo), sem ficar negativo.
 export function ipDoItem(i) {
+  const r = ipDoItemBase(i);
+  const menos = i.ipCorroido || 0;
+  if (!menos) return r;
+  return { geral: Math.max(0, r.geral - menos), tipos: Object.fromEntries(Object.entries(r.tipos).map(([k, v]) => [k, Math.max(0, v - menos)])) };
+}
+function ipDoItemBase(i) {
   if (i.ipTipos) return { geral: i.ipTipos.geral || 0, tipos: Object.fromEntries(Object.entries(i.ipTipos).filter(([k]) => k !== 'geral')) };
   const texto = [i.efeitos, i.efeitosObs, i.observacoes].filter(Boolean).join(' ');
   const r = { geral: 0, tipos: {} };

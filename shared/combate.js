@@ -71,15 +71,38 @@ export const danoDaArma = (item, p) => subirPassos(item.dano, passosDeMelhoria(i
 export function armasDisponiveis(p, sistema) {
   const cfg = sistema.combate || {};
   // Arma quebrada (durabilidade 0) não ataca até ser reparada.
-  const armas = (p.itens || []).filter(i => i.equipado && i.tipo === 'arma' && i.dano && !(i.durabilidade != null && (i.durabilidadeAtual ?? i.durabilidade) <= 0)).map(i => ({
+  // Item travado (Bug na rede) continua equipado, mas não pode ser usado.
+  const armas = (p.itens || []).filter(i => i.equipado && i.tipo === 'arma' && i.dano && !i.travado && !(i.durabilidade != null && (i.durabilidadeAtual ?? i.durabilidade) <= 0)).map(i => ({
     uid: i.uid, nome: i.nome, dano: danoDaArma(i, p), acerto: i.acerto ?? null, pericia: i.pericia || null, tipoDano: i.tipoDano || 'Físico', natural: !!i.natural,
     efeitoDano: i.efeitoDano ?? cfg.chancePorTipo?.[i.tipoDano] ?? cfg.efeitoPadrao, penetracao: i.penetracao || 0, alcance: i.alcance || (i.pericia?.startsWith('armas-de-fogo') ? 'distancia' : 'corpo'),
     // Cadência: quantos disparos (balas e danos) por ataque — da arma ou da subperícia (ex.: Rifle de Assalto 2).
     cadencia: Math.max(1, i.cadencia ?? cfg.cadencia?.[i.pericia] ?? 1),
   }));
   const natural = armaNaturalDe(p, sistema);
-  return [{ uid: 'desarmado', efeitoDano: cfg.efeitoPadrao, ...cfg.desarmado }, ...(natural ? [natural] : []), ...armas];
+  return [{ uid: 'desarmado', efeitoDano: cfg.efeitoPadrao, ...cfg.desarmado }, ...(natural ? [natural] : []), ...armas, ...armasDeHabilidade(p, sistema)];
 }
+
+// Ataques especiais que são uma "arma" da própria habilidade (Muco radioativo, Digestão extracorpórea, Sobrecarga Neural):
+// dano, tipo, perícia e alcance da regra (habilidades-regras.json, campo "arma"). Sem usos restantes, não aparece.
+export const chaveUsoArma = hab => `${chaveHabilidade(hab.nome)}#ataque`;
+export function usosArmaRestantes(p, hab) {
+  const u = hab.regra?.arma?.usos;
+  return u ? Math.max(0, u.max - (p.usos?.[chaveUsoArma(hab)] || 0)) : Infinity;
+}
+function armasDeHabilidade(p, sistema) {
+  const cfg = sistema.combate || {};
+  return listaHabilidades(p, sistema).filter(h => h.regra?.arma && usosArmaRestantes(p, h) > 0).map(h => {
+    const a = h.regra.arma;
+    return {
+      uid: `hab:${h.id}`, nome: a.nome || h.nome, dano: a.dano, acerto: null, pericia: a.pericia || 'briga.ataque-desarmado', tipoDano: a.tipoDano || 'Físico',
+      habilidade: h.id, efeitoDano: cfg.chancePorTipo?.[a.tipoDano] ?? cfg.efeitoPadrao, penetracao: 0, cadencia: 1,
+      alcance: (a.metros || 1.5) > 1.5 ? 'distancia' : 'corpo', alcanceM: a.metros || 1.5, area: !!a.area, ignoraIp: !!a.ignoraIp,
+      contraTipos: a.contraTipos || null, acao: a.acao || 'principal', extraContraMutacao: a.extraContraMutacao || null,
+    };
+  });
+}
+// O alvo está com mutação (qualquer uma, ou é Mutante/criatura mutante)?
+export const temMutacao = p => (p?.mutacoes || []).length > 0 || tipoCriatura(p) === 'mutante' || p?.classe === 'mutante';
 
 // Arma natural (garras e presas do Transmorfo desperto; com Garras Retráteis, mesmo sem despertar): ataque especial com o
 // mesmo dado e a mesma perícia do desarmado, mas com dano de perfuração e os bônus (+1 do Despertar, +1 por Corpo
@@ -115,6 +138,9 @@ export function opcoesDefesa(alvo, arma, sistema, { area = false } = {}) {
   } else if (arma.alcance === 'corpo') {
     opcoes.push({ id: 'esquiva', nome: 'Esquiva', valor: sub('briga.esquiva'),
       nota: arma.uid === 'desarmado' ? 'se não for acertado, pode se deslocar até 1,5 m' : 'se não for acertado, pode se deslocar até 1,5 m; se for acertado, +2 de dano' });
+    // Dançarino (Artista): Artes › Dança no lugar da Esquiva (passou: +1 de Moral, até 3 por batalha).
+    if (temHabilidade(alvo, sistema, 'Dançarino')) opcoes.push({ id: 'danca', nome: 'Dança (no lugar da Esquiva)', valor: sub('arte.danca'),
+      nota: 'Dançarino: se não for acertado, +1 de Moral (até 3 por batalha)' });
     // Defesa desarmada: contra ataque desarmado e contra arma natural (garras, presas, chifres… — autor, 26/10).
     if (arma.uid === 'desarmado' || arma.natural) opcoes.push({ id: 'defesa-desarmada', nome: 'Defesa desarmada', valor: sub('briga.defesa-desarmada') });
     for (const a of armasDisponiveis(alvo, sistema)) {
@@ -255,7 +281,7 @@ export function resolverAtaque(atacante, alvo, sistema, op = {}, defesaId = 'nen
   if (!teste.sucesso && !(op.area && defesa.id === 'evasao')) return r;
 
   // Penetração ignora até N pontos de IP do alvo.
-  r.ip = cfg.ignoramIP.includes(arma.tipoDano) ? 0 : Math.max(0, ipContra(alvo, sistema, arma.tipoDano, arma.alcance === 'distancia') - (arma.penetracao || 0));
+  r.ip = cfg.ignoramIP.includes(arma.tipoDano) || arma.ignoraIp ? 0 : Math.max(0, ipContra(alvo, sistema, arma.tipoDano, arma.alcance === 'distancia') - (arma.penetracao || 0));
   // Cada disparo (cadência) é um dano separado, cada um descontando o IP. Crítico, localizado e bônus entram no primeiro.
   const disparos = Math.max(1, Math.min(arma.cadencia || 1, op.disparos || arma.cadencia || 1));
   const partes = [];
@@ -265,12 +291,13 @@ export function resolverAtaque(atacante, alvo, sistema, op = {}, defesaId = 'nen
     const rolar = (nome, expr) => { const x = rolarDado(expr, rng); doDisparo.push({ nome, expr, dados: x.dados, total: x.total }); };
     rolar(disparos > 1 ? `${arma.nome} (${n + 1}º)` : arma.nome, arma.dano);
     if (n === 0) {
-      if (teste.critico === 'acerto') {
+      if (teste.critico === 'acerto' && derivados(alvo, sistema).habilidades.imuneCritico) r.semCritico = true;
+      else if (teste.critico === 'acerto') {
         const m = /d(\d+)/i.exec(arma.dano);
         if (m) rolar('crítico', `1d${m[1]}`);
       }
       if (op.localizado) rolar('localizado', cfg.localizado.dano);
-      if (teste.sucesso && defesa.id === 'esquiva' && arma.uid !== 'desarmado') doDisparo.push({ nome: 'esquiva contra arma', total: cfg.esquivaArmada });
+      if (teste.sucesso && ['esquiva', 'danca'].includes(defesa.id) && arma.uid !== 'desarmado') doDisparo.push({ nome: 'esquiva contra arma', total: cfg.esquivaArmada });
       if (arma.alcance === 'corpo' && da.mod.FOR) doDisparo.push({ nome: 'MOD FOR', total: da.mod.FOR });
       if (r.perdaSacrificio) doDisparo.push({ nome: 'Sacrifício', total: r.perdaSacrificio });
       // Habilidades que somam dano, cada uma com o seu nome (para a conta): as ligadas e automáticas — só as que valem
@@ -281,6 +308,12 @@ export function resolverAtaque(atacante, alvo, sistema, op = {}, defesaId = 'nen
         else doDisparo.push({ nome: parte.nome, total: parte.fixo });
       }
       if (op.cargaNucleo) rolar('Carga do Núcleo (elétrico)', '2d6');
+      // Muco radioativo: +1d6 se o alvo estiver com mutação.
+      if (arma.extraContraMutacao && temMutacao(alvo)) rolar(`${arma.nome} (alvo com mutação)`, arma.extraContraMutacao);
+      // Marcas do atacante que somam dano (Analista de risco: +1d4 contra o alvo analisado).
+      for (const m of atacante.marcas || []) if (m.dano && (!m.contra || m.contra === alvo.id)) rolar(m.nome, m.dano);
+      // Marcas do alvo que aumentam o dano físico que ele toma (Pragas: +1).
+      if (/f[ií]sic|corte|cortante|perfura|concuss|cin[eé]tic/i.test(arma.tipoDano || 'Físico')) for (const m of alvo.marcas || []) if (m.danoFisicoRecebido) doDisparo.push({ nome: m.nome, total: m.danoFisicoRecebido });
       if (investida) doDisparo.push({ nome: `Investida (${investida} quadrado${investida > 1 ? 's' : ''})`, total: investida });
     }
     const bruto = doDisparo.reduce((s, p) => s + p.total, 0);
@@ -297,8 +330,10 @@ export function resolverAtaque(atacante, alvo, sistema, op = {}, defesaId = 'nen
   // Afinidade principal (1ª afinidade elementar do monstro): recebe metade do dano dos tipos ligados a ela (base.json).
   const afinidade = (sistema.afinidadesElementais || []).find(x => x.nome.toLowerCase() === String(alvo.afinidades?.[0] || '').toLowerCase());
   const danosDaAfinidade = (afinidade ? afinidade.danos : alvo.afinidades?.[0] ? [alvo.afinidades[0]] : []).map(x => String(x).toLowerCase());
+  // Resistências por habilidade (Evolução humana: Corte; Corpo adaptado 2: o tipo escolhido) contam como as da ficha.
+  const resistHab = (derivados(alvo, sistema).habilidades.resistencias || []).some(x => String(x).toLowerCase() === tipoD);
   if (tipoD && tem2(alvo.imunidades)) { r.dano = 0; r.imune = arma.tipoDano; }
-  else if (tipoD && (tem2(alvo.resistencias) || danosDaAfinidade.includes(tipoD))) { r.dano = Math.floor(r.dano / 2); r.resistencia = arma.tipoDano; r.porAfinidade = !tem2(alvo.resistencias) ? alvo.afinidades[0] : null; }
+  else if (tipoD && (tem2(alvo.resistencias) || resistHab || danosDaAfinidade.includes(tipoD))) { r.dano = Math.floor(r.dano / 2); r.resistencia = arma.tipoDano; r.porAfinidade = !tem2(alvo.resistencias) && !resistHab ? alvo.afinidades[0] : null; }
   else if (tipoD && tem2(alvo.vulnerabilidades)) { r.dano *= 2; r.vulnerabilidade = arma.tipoDano; }
   if (tem(alvo, 'Queimadura')) { r.dano += 1; r.queimadura = true; }
   const efeito = cfg.efeitosPorTipo[arma.tipoDano];

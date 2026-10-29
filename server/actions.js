@@ -2,7 +2,7 @@ import { db, save, uid } from './db.js';
 import { converterLinha } from './itens.js';
 import { imagemDeLink } from '../shared/imagens.js';
 import { sistema, idSistema } from './sistema.js';
-import { LOCAIS_ATAQUE, resolverAtaque, aplicarAtaque, armasDisponiveis, opcoesDefesa, sobrevida, rolarIniciativa, resolverManipulacao, modHumorTestes, humorDe, espectroDe, humorAparente, empatiaNatural, liberdadeDeHumor, modoRolagem, modoHumorTeste, recursoDe, gastarRecurso, racaDe, distanciaPecas, usosRestantes, gastarUso, testeContra, ipContra, resistenciaManipulacao } from '../shared/combate.js';
+import { LOCAIS_ATAQUE, resolverAtaque, aplicarAtaque, armasDisponiveis, opcoesDefesa, sobrevida, rolarIniciativa, resolverManipulacao, modHumorTestes, humorDe, espectroDe, humorAparente, empatiaNatural, liberdadeDeHumor, modoRolagem, modoHumorTeste, recursoDe, gastarRecurso, racaDe, distanciaPecas, usosRestantes, gastarUso, testeContra, ipContra, resistenciaManipulacao, chaveUsoArma, temMutacao } from '../shared/combate.js';
 import { sincronizarEfeitos, passarTurnoEfeitos, efeitosAoAgir, cargaNoTurno, descansar, sortearMutacao } from '../shared/efeitos.js';
 import { fichasDeTeste, relatorioFicha, kitDeTeste, periciasDeTeste } from '../shared/fichasTeste.js';
 import { monstroNoEstagio, textoDeslocamentos, textoND, ladoNoMapa, ameacaNoMapa } from '../shared/monstros.js';
@@ -10,7 +10,7 @@ import { sortearEncontro, cenarioSemIA } from '../shared/encontro.js';
 import { FORMAS_AREA, quadradosDaArea, atingidosPelaArea } from '../shared/area.js';
 import { TIPOS_OBJETO, tipoObjeto, coberturaPeloMapa, foraDaVisaoDosPJs, bloqueadoPorObjeto } from '../shared/objetosMapa.js';
 import { passarNecessidades, comer, beber, dormir, rolarCaos, climaDoDia, descreverRelogio, fimDoCombate } from '../shared/tempo.js';
-import { podeSeduzir, itemAberto, itemVisivel, xpParaSubir, novaFicha, podeEquipar, rolarDado, rolarAtributosCriacao, testeDMil, gerarEncontro, derivados, problemasFicha, LIMITE_SALA, desgastarItem, repararItem, durabilidadeDe, listaHabilidades, vantagemPorHabilidade, temHabilidade, regraDaHabilidade, tipoCriatura, chaveHabilidade, TIPOS_ACAO, nomeAcao, acoesDaHabilidade, dadosDaHabilidade, ehAtaqueEspecial, acaoDoAtaqueEspecial, perderPv, textoPv, duracaoDaHabilidade, podeRepetir, textoDuracao, habilidadeValendo, temItem, tipoDaArma, TIPOS_MUTACAO, mutacaoDaTabela, temMutacaoDescontrolada } from '../shared/regras.js';
+import { podeSeduzir, itemAberto, itemVisivel, xpParaSubir, novaFicha, podeEquipar, rolarDado, rolarAtributosCriacao, testeDMil, gerarEncontro, derivados, problemasFicha, LIMITE_SALA, desgastarItem, repararItem, durabilidadeDe, listaHabilidades, vantagemPorHabilidade, temHabilidade, regraDaHabilidade, tipoCriatura, chaveHabilidade, TIPOS_ACAO, nomeAcao, acoesDaHabilidade, dadosDaHabilidade, ehAtaqueEspecial, acaoDoAtaqueEspecial, perderPv, textoPv, duracaoDaHabilidade, podeRepetir, textoDuracao, habilidadeValendo, temItem, tipoDaArma, TIPOS_MUTACAO, mutacaoDaTabela, temMutacaoDescontrolada, condicoesAtivas, textoIp, armaNaCondicao, escolhasPermitidas } from '../shared/regras.js';
 
 const GRUPO_ENCONTROS = 'encontros';
 const MAX_LOG = 100;
@@ -440,6 +440,36 @@ function ordenarIniciativa(cb) {
 // Quem está no campo além do personagem (para habilidades que dependem do tipo de criatura dos oponentes).
 const oponentesDe = (c, s, p) => s.participantes.filter(id => id !== p.id).map(id => c.personagens.find(x => x.id === id)).filter(Boolean);
 
+// O Show Tem Que Continuar: quem participou do descanso curto do Artista começa o próximo combate Motivado.
+function motivarNoCombate(c, p, sis) {
+  if (!p.motivadoProximoCombate) return;
+  delete p.motivadoProximoCombate;
+  if (!sis.social?.humores?.some(h => h.id === 'motivado')) return;
+  p.humor = 'motivado';
+  registrar(c.salas.batalha.log, { autor: p.nome, rotulo: 'O Show Tem Que Continuar', texto: `${p.nome} começa o combate Motivado` });
+}
+// Descanso e as habilidades do Relatório (29/10): CONS da Regeneração degenerativa, característica roubada, Moral,
+// Toque contagioso e a troca da resistência do Corpo adaptado 2.
+function descansoRelatorio(p, sis, tipo) {
+  const notas = [];
+  if (p.consPerdida > 0) { p.consPerdida -= 1; notas.push(`Regeneração degenerativa: +1 CONS${p.consPerdida ? ` (faltam ${p.consPerdida})` : ''}`); }
+  if (tipo !== 'longo') return notas;
+  const cr = p.caracteristicaRoubada;
+  if (cr?.pendente) {
+    notas.push(`Roubar Característica: ${cr.pendente.nome} (de ${cr.pendente.de}) incorporada${cr.ativa ? `; ${cr.ativa.nome} foi expelida` : ''} (−3 PV persistentes)`);
+    cr.ativa = cr.pendente;
+    delete cr.pendente;
+  }
+  if (p.moral?.criacao) { notas.push(`Moral da criação (${p.moral.criacao}) acabou`); p.moral.criacao = 0; }
+  delete p.contagiados;
+  if (temHabilidade(p, sis, 'Corpo adaptado 2')) {
+    (p.trocaLiberada ||= {})['corpo adaptado 2'] = true;
+    const atual = p.escolhasHab?.['corpo adaptado 2']?.tipoDano;
+    notas.push(`Corpo adaptado 2: escolha a resistência de hoje${atual ? ` (agora: ${atual})` : ''} — avise o mestre`);
+  }
+  return notas;
+}
+
 function entrarNoCombate(c, s, p) {
   if (s.combate.ordem.some(o => o.id === p.id)) return;
   const sis = sistema(c.sistema);
@@ -447,6 +477,7 @@ function entrarNoCombate(c, s, p) {
   const r = rolarIniciativa(p, sis, Math.random, oponentesDe(c, s, p));
   s.combate.ordem.push({ id: p.id, ini: r.total, agi: r.agi });
   p.emCombate = true;
+  motivarNoCombate(c, p, sis);
   ordenarIniciativa(s.combate);
   s.combate.vez = Math.max(0, s.combate.ordem.findIndex(o => o.id === atual));
   registrar(s.log, { autor: p.nome, rotulo: `${p.nome} entrou no combate`, texto: `iniciativa ${r.total}` });
@@ -467,7 +498,7 @@ function encerrarAtivacoes(c, p, sis, soCombate = true) {
   if (p.essencia) { fim.push(`Essência (${p.essencia.sigla})`); delete p.essencia; }
   // Marcas temporárias: as de turnos acabam com o combate; as "até o fim da cena" (Olhar Penetrante) acabam no descanso.
   const antes = (p.marcas || []).length;
-  p.marcas = (p.marcas || []).filter(m => !(m.turnos || (!soCombate && m.cena)));
+  p.marcas = (p.marcas || []).filter(m => !(m.turnos || m.combate || (!soCombate && m.cena)));
   if ((p.marcas || []).length < antes) fim.push('marcas temporárias');
   if (p.humorForcado) delete p.humorForcado;
   if (p.ipTemp) { delete p.ipTemp; fim.push('IP improvisado'); }
@@ -805,6 +836,483 @@ const ESPECIAIS = {
   },
 };
 
+// ---------- Mutante e Perito (Relatório de Habilidades, respostas do autor em 29/10) ----------
+const ehMutante = x => x?.classe === 'mutante' || tipoCriatura(x) === 'mutante';
+const condicaoPorId = (sis, id) => (sis.condicoes || []).find(x => x.id === id);
+const qtdCondicao = (x, sis, id) => condicoesAtivas(x, sis).find(k => k.id === id)?.qtd || 0;
+function darMarcadores(x, sis, id, n) {
+  const cond = condicaoPorId(sis, id);
+  if (!cond || n <= 0) return;
+  for (let i = 0; i < n; i++) (x.marcadores ||= []).push(cond.nome);
+  sincronizarEfeitos(x, sis);
+}
+function tirarMarcadores(x, sis, id) {
+  const cond = condicaoPorId(sis, id);
+  if (!cond) return;
+  x.marcadores = (x.marcadores || []).filter(m => !String(m).toLowerCase().startsWith(cond.nome.toLowerCase()));
+  sincronizarEfeitos(x, sis);
+}
+function curarPv(p, sis, n) {
+  if (!p.pv) return;
+  p.pv.atual = Math.min(derivados(p, sis).pvMax, p.pv.atual + n);
+  if (p.pv.atual > 0) p.marcadores = (p.marcadores || []).filter(m => m !== 'Desmaiado');
+}
+// Quem está a até "raio" metros de x no mapa (sem peões no mapa, ninguém: o mestre aplica).
+const pertoDe = (c, x, raio) => c.salas.batalha.participantes.filter(id => id !== x.id).map(id => c.personagens.find(y => y.id === id)).filter(Boolean)
+  .filter(y => { const d = distanciaPecas(c, x.id, y.id); return d != null && d <= raio; });
+function exigirAlcance(c, p, b, metros) {
+  const d = distanciaPecas(c, p.id, b.id);
+  if (d != null && d > metros) throw erro(`${b.nome} está a ${String(d).replace('.', ',')} m: o alcance é ${String(metros).replace('.', ',')} m.`);
+}
+// Teste de CONS% (depois do Muco radioativo, em desvantagem até o fim do combate).
+function testeCONS(x, sis, nd) {
+  const modo = (x.marcas || []).some(m => m.desvantagemCons) ? 'desvantagem' : null;
+  return testeContra(derivados(x, sis).percentual.CONS ?? 0, nd, sis, { modo });
+}
+// O mesmo ND do teste dos marcadores de vulnerabilidade no descanso longo: 40 + 10 × marcadores (doente: 70 + 10 ×).
+const ndVulnerabilidade = (x, sis) => (qtdCondicao(x, sis, 'doenca') ? 70 : 40) + 10 * qtdCondicao(x, sis, 'vulnerabilidade');
+const ndDistancia = (sis, b) => (sis.combate?.distancia?.base ?? 50) + (sis.combate?.distancia?.porNivel ?? 5) * (b.nivel || 1);
+
+// Mutação temporária na hora (d100). Com "turnos", some sozinha depois. Perto de um Radiante com Epidemia, a mutação de
+// quem não é mutante se alastra.
+function desenvolverMutacao(c, x, sis, { turnos = null, vistos = new Set() } = {}) {
+  const m = sortearMutacao(x, sis, 'temporaria');
+  if (m && turnos) x.mutacoes.at(-1).turnos = turnos;
+  const notas = [`${x.nome} desenvolve uma mutação: ${m ? `${m.n}. ${m.nome}` : 'o mestre escolhe'}${turnos ? ` (${turnos} turno(s))` : ''}`];
+  if (!ehMutante(x)) notas.push(...epidemia(c, x, sis, vistos));
+  return notas;
+}
+// Epidemia: quem não é mutante desenvolveu mutação a até 15 m de um Radiante → os outros nesse raio fazem CONS% contra os
+// próprios marcadores de vulnerabilidade (falhou: também desenvolvem, e o contágio continua).
+function epidemia(c, x, sis, vistos = new Set()) {
+  vistos.add(x.id);
+  const notas = [];
+  for (const r of c.salas.batalha.participantes.map(id => c.personagens.find(y => y.id === id)).filter(Boolean)) {
+    if (r.id === x.id || !habilidadeValendo(r, sis, 'Epidemia')) continue;
+    const d = distanciaPecas(c, r.id, x.id);
+    if (d == null || d > 15) continue;
+    for (const y of pertoDe(c, r, 15)) {
+      if (vistos.has(y.id) || ehMutante(y)) continue;
+      vistos.add(y.id);
+      const t = testeCONS(y, sis, ndVulnerabilidade(y, sis));
+      notas.push(`Epidemia (${r.nome}): ${contaTeste(`CONS% de ${y.nome}`, t)}`);
+      if (!t.sucesso) notas.push(...desenvolverMutacao(c, y, sis, { vistos }));
+    }
+  }
+  return notas;
+}
+// Coloca b na ordem de iniciativa logo depois de p (Controle Remoto, Alucinação maligna).
+function agirDepoisDe(c, b, p) {
+  const cb = c.salas.batalha.combate;
+  if (!cb) return;
+  const atual = cb.ordem[cb.vez]?.id;
+  const ob = cb.ordem.find(o => o.id === b.id), op = cb.ordem.find(o => o.id === p.id);
+  if (!ob || !op) return;
+  cb.ordem.splice(cb.ordem.indexOf(ob), 1);
+  ob.ini = op.ini - 0.5;
+  ob.agi = op.agi;
+  cb.ordem.splice(cb.ordem.indexOf(op) + 1, 0, ob);
+  cb.vez = Math.max(0, cb.ordem.findIndex(o => o.id === atual));
+}
+function devolverControle(b) {
+  const a = b.controle?.antes;
+  if (!a) return;
+  for (const k of ['donoId', 'companheiroDe', 'companheiroTipo']) { if (a[k] == null) delete b[k]; else b[k] = a[k]; }
+  if (!b.donoId) b.donoId = null;
+  delete b.controle;
+}
+export const totalMoral = p => (p.moral?.criacao || 0) + (p.moral?.danca || 0);
+// Remédios da Fitoterapia (escolhidos na criação; o remédio dura 24 h).
+export const REMEDIOS = [
+  { id: 'cura', nome: 'Cura 1D6', texto: () => 'cura 1D6 PV na hora' },
+  { id: 'deslocamento', nome: '+3 m de deslocamento', texto: () => '+3 m de deslocamento por 5 turnos' },
+  { id: 'ignorar', nome: 'Ignorar efeitos negativos', texto: () => 'o alvo ignora todos os efeitos negativos por 3 turnos' },
+  { id: 'veneno', nome: 'Veneno', texto: m => `veneno: 1D4 ${m >= 0 ? '+' : '−'} ${Math.abs(m)} (MOD INT) de dano` },
+];
+// Alucinação maligna (Névoa Alucinógena): ficha da Besta-Cavalo (sem ela no Livro dos Monstros, o mestre preenche);
+// ataca só quem a vê, logo depois do turno dele, por 10 turnos; o dano é psicológico (Sanidade).
+function criarAlucinacao(c, p, x, sis) {
+  const semAc = t => String(t || '').normalize('NFKD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  const modelo = (sis.monstros || []).find(m => /besta.?cavalo/.test(semAc(m.nome)));
+  let al;
+  if (modelo) al = npcDeMonstro(c, modelo);
+  else { al = { ...novaFicha(sis, c), id: uid(), tipo: 'npc', criatura: true, tipoCriatura: 'besta' }; delete al.sanidade; delete al.humanidade; }
+  if (!c.grupos.some(g => g.id === 'companheiros')) c.grupos.push({ id: 'companheiros', nome: 'Companheiros' });
+  Object.assign(al, { nome: `Alucinação maligna (${x.nome})`, grupoId: 'companheiros', companheiroDe: p.id, companheiroTipo: 'alucinacao', donoId: p.donoId || null,
+    alucinacao: { alvo: x.id, de: p.id, turnos: 10 } });
+  c.personagens.push(al);
+  const s = c.salas.batalha;
+  if (!s.participantes.includes(al.id)) s.participantes.push(al.id);
+  if (s.combate) { entrarNoCombate(c, s, al); agirDepoisDe(c, al, x); }
+  return { al, semFicha: !modelo };
+}
+
+Object.assign(ESPECIAIS, {
+  // Digestão extracorpórea: devorar (ação completa) quem foi acertado pelo jato ácido e está abatido: +1d4 PV.
+  devorar(c, p, sis, hab, esc) {
+    const b = alvoEscolhido(c, esc, 'Escolha a criatura acertada pelo jato ácido.');
+    if (!(b.marcas || []).some(m => m.digestaoDe === p.id)) throw erro(`${b.nome} não foi acertado pelo seu jato ácido.`);
+    if (!((b.pv && b.pv.atual <= 0) || (b.marcadores || []).some(x => ['Morto', 'Desmaiado'].includes(x)))) throw erro(`${b.nome} ainda está de pé.`);
+    b.marcas = b.marcas.filter(m => m.digestaoDe !== p.id);
+    const d = rolarDado('1d4');
+    curarPv(p, sis, d.total);
+    return { rotulo: `${p.nome} devora ${b.nome}`, notas: [`+${d.total} PV [${d.dados.join(', ')}] (${textoPv(p)} PV)`] };
+  },
+
+  // Mutação precisa: 10 turnos com vantagem numa perícia e até 6 pontos da CONS passados para a FOR.
+  mutacaoPrecisa(c, p, sis, hab, esc) {
+    const per = sis.pericias.find(x => x.id === esc.pericia);
+    if (!per) throw erro('Escolha a perícia.');
+    const cons = derivados(p, sis).atributos.CONS ?? 0;
+    const n = Math.max(0, Math.min(6, cons - 1, parseInt(esc.pontos, 10) || 0));
+    marcar(p, { nome: `Mutação precisa (${per.nome}${n ? `; CONS −${n}, FOR +${n}` : ''})`, vantagem: per.id, ...(n ? { atributos: { CONS: -n, FOR: n } } : {}), turnos: 10, de: p.id });
+    return { notas: [`vantagem em ${per.nome} por 10 turnos`, n ? `CONS −${n} e FOR +${n}` : null, 'braço em forma de arma branca: o dano é o da arma escolhida (o mestre aplica)'].filter(Boolean) };
+  },
+
+  // Roubar Característica: uma característica (não única) de uma criatura morta no campo entra depois do próximo descanso
+  // longo — com Evolução humana, na hora e com +2d4 PV (1 vez por descanso longo). Uma por vez; −3 PV persistentes.
+  roubarCaracteristica(c, p, sis, hab, esc) {
+    const b = alvoEscolhido(c, esc, 'Escolha a criatura morta.');
+    if (!(b.marcadores || []).includes('Morto')) throw erro(`${b.nome} precisa estar morto.`);
+    const x = listaHabilidades(b, sis).find(h => h.id === esc.caracteristica);
+    if (!x || x.unica) throw erro('Escolha uma característica que não seja única.');
+    const propria = (b.habilidadesProprias || []).find(h => h.nome === x.nome);
+    const roubada = { nome: x.nome, descricao: x.descricao, efeitos: propria?.efeitos || '', modo: propria?.modo || null, de: b.nome };
+    const cr = p.caracteristicaRoubada ||= {};
+    if (temHabilidade(p, sis, 'Evolução humana') && usosRestantes(p, sis, 'evolucao humana') > 0) {
+      gastarUso(p, 'evolucao humana');
+      cr.ativa = roubada;
+      delete cr.pendente;
+      const d = rolarDado('2d4');
+      curarPv(p, sis, d.total);
+      return { notas: [`${x.nome} (de ${b.nome}) incorporada na hora (Evolução humana)`, `+${d.total} PV [${d.dados.join(', ')}] (${textoPv(p)} PV)`, '−3 PV persistentes enquanto usar'] };
+    }
+    cr.pendente = roubada;
+    return { notas: [`${x.nome} (de ${b.nome}) entra depois do próximo descanso longo${cr.ativa ? `, no lugar de ${cr.ativa.nome}` : ''}`, '−3 PV persistentes enquanto usar'] };
+  },
+
+  // Caos genéticos: alvo a até 4,5 m (não mutante) faz CONS% contra os próprios marcadores de vulnerabilidade. Falhou:
+  // 2d4 de dano puro e uma mutação na hora; passou: perde os marcadores de vulnerabilidade.
+  caosGenetico(c, p, sis, hab, esc) {
+    const b = alvoEscolhido(c, esc);
+    if (ehMutante(b)) throw erro('Caos genéticos não afeta mutantes.');
+    exigirAlcance(c, p, b, 4.5);
+    const t = testeCONS(b, sis, ndVulnerabilidade(b, sis));
+    const notas = [contaTeste(`CONS% de ${b.nome} (marcadores de vulnerabilidade)`, t)];
+    if (t.sucesso) { tirarMarcadores(b, sis, 'vulnerabilidade'); notas.push(`${b.nome} perde os marcadores de vulnerabilidade`); }
+    else {
+      const d = rolarDado('2d4');
+      if (b.pv) perderPv(b, d.total);
+      notas.push(`${d.total} de dano puro [${d.dados.join(', ')}]${b.pv ? ` (${textoPv(b)} PV)` : ''}`, ...desenvolverMutacao(c, b, sis));
+    }
+    return { rotulo: `${hab.nome} em ${b.nome}`, notas, sucesso: !t.sucesso };
+  },
+
+  // Esporos gasosos: raio de 3 m em volta do Radiante: 1 marcador genético e −10% nos testes de CONS% até o fim do combate.
+  esporos(c, p, sis) {
+    if (!c.mapa?.pecas?.[p.id]) return { notas: ['sem peão no mapa: o mestre aplica (1 marcador genético e −10% em CONS% para quem estiver ou passar na área; a nuvem dura 5 turnos)'] };
+    const naArea = pertoDe(c, p, 3);
+    for (const y of naArea) {
+      darMarcadores(y, sis, 'genetico', 1);
+      if (!(y.marcas || []).some(m => m.esporos)) marcar(y, { nome: 'Esporos gasosos (−10% CONS%)', esporos: true, testesAtributos: { CONS: -10 }, combate: true, de: p.id });
+    }
+    return { notas: [naArea.length ? `${naArea.map(y => y.nome).join(', ')}: +1 marcador genético e −10% em CONS% até o fim do combate` : 'ninguém na área agora',
+      'a nuvem fica 5 turnos no lugar (não acompanha o Radiante; vento forte dispersa): quem entrar depois, o mestre aplica'] };
+  },
+
+  // Pragas: alvo a até 4,5 m com marcadores genéticos: do próximo turno em diante, por 2d4 turnos, +1 em todo dano físico
+  // que toma, desvantagem em testes de Percepção, sem concentração e 1 de dano por turno (insetos).
+  pragas(c, p, sis, hab, esc) {
+    const b = alvoEscolhido(c, esc);
+    exigirAlcance(c, p, b, 4.5);
+    if (!qtdCondicao(b, sis, 'genetico')) throw erro(`${b.nome} não tem marcadores genéticos.`);
+    const turnos = rolarDado('2d4').total;
+    b.marcas = (b.marcas || []).filter(m => !m.pragas);
+    marcar(b, { nome: 'Pragas', pragas: true, danoFisicoRecebido: 1, desvantagemAtributo: 'PER', semConcentracao: true, danoPorTurno: 1, turnos: turnos + 1, de: p.id });
+    return { rotulo: `${hab.nome} em ${b.nome}`, notas: [`do próximo turno em diante, por ${turnos} turnos: +1 em todo dano físico, desvantagem em testes de Percepção, sem concentração e 1 de dano por turno`] };
+  },
+
+  // Toque contagioso (oferecido depois de acertar um toque/ataque de Briga): CONS% Difícil ou o alvo desenvolve a mutação
+  // descontrolada do Radiante por 5 turnos, sem controle, e toma 1d6. Cada alvo uma vez por descanso longo.
+  toqueContagioso(c, p, sis, hab, esc) {
+    const b = alvoEscolhido(c, esc);
+    if ((p.contagiados || []).includes(b.id)) throw erro(`${b.nome} já foi afetado pelo Toque contagioso desde o último descanso longo.`);
+    const t = testeCONS(b, sis, ndDe(sis, 'Difícil'));
+    const notas = [contaTeste(`CONS% de ${b.nome}`, t)];
+    if (t.sucesso) return { rotulo: `${hab.nome} em ${b.nome}`, notas, sucesso: false };
+    (p.contagiados ||= []).push(b.id);
+    const desc = (p.mutacoes || []).find(m => m.tipo === 'descontrolada');
+    const mm = desc && mutacaoDaTabela(sis, desc.n);
+    if (mm) (b.mutacoes ||= []).push({ id: uid(), n: mm.n, tipo: 'temporaria', turnos: 5, contagio: p.id });
+    const d = rolarDado('1d6');
+    if (b.pv) perderPv(b, d.total);
+    notas.push(`${b.nome} desenvolve ${mm ? `${mm.n}. ${mm.nome}` : 'a mutação descontrolada do Radiante (o mestre define)'} por 5 turnos, sem controle`,
+      `${d.total} de dano [${d.dados.join(', ')}]${b.pv ? ` (${textoPv(b)} PV)` : ''}`);
+    if (!ehMutante(b)) notas.push(...epidemia(c, b, sis));
+    return { rotulo: `${hab.nome} em ${b.nome}`, notas, sucesso: true };
+  },
+
+  // Radiação incontida: brilhar (+5% de defesa, sem furtividade, até o fim da cena) ou superaquecer (1d6 em você e
+  // explosão de 2d4 de Calor em quem estiver a 1,5 m, com 2 marcadores de vulnerabilidade).
+  radiacao(c, p, sis, hab, esc) {
+    if (esc.efeito !== 'superaquecer') {
+      marcar(p, { nome: 'Brilhando (Radiação incontida)', defesa: 5, cena: true, semFurtividade: true, de: p.id });
+      return { notas: ['brilha 9 m por até 15 minutos: +5% de defesa (ofuscação); não pode se esconder nem usar furtividade'] };
+    }
+    const d = rolarDado('1d6');
+    if (p.pv) perderPv(p, d.total);
+    const notas = [`superaquece: ${d.total} de dano em ${p.nome} [${d.dados.join(', ')}] (${textoPv(p)} PV)`, 'dano de Calor nos ataques físicos: o mestre aplica (valor ainda em aberto)'];
+    if (!c.mapa?.pecas?.[p.id]) notas.push('sem peão no mapa: o mestre aplica a explosão (2d4 de Calor e 2 marcadores de vulnerabilidade em quem estiver a 1,5 m)');
+    else for (const y of pertoDe(c, p, 1.5)) {
+      const e = rolarDado('2d4');
+      const ip = ipContra(y, sis, 'Calor');
+      const dano = Math.max(sis.combate?.danoMinimo ?? 0, e.total - ip);
+      if (y.pv) perderPv(y, dano);
+      darMarcadores(y, sis, 'vulnerabilidade', 2);
+      notas.push(`${y.nome}: ${dano} de Calor [${e.dados.join(', ')}]${ip ? ` − IP ${ip}` : ''} e 2 marcadores de vulnerabilidade${y.pv ? ` (${textoPv(y)} PV)` : ''}`);
+    }
+    marcar(p, { nome: 'Superaquecido (Radiação incontida)', cena: true, de: p.id });
+    return { notas };
+  },
+
+  // Regeneração degenerativa: consome 1 de CONS e cura 1d4 PV (ação bônus: uma vez por turno). CONS 0 = morte.
+  regenDegenerativa(c, p, sis) {
+    p.consPerdida = (p.consPerdida || 0) + 1;
+    const cons = derivados(p, sis).atributos.CONS ?? 0;
+    const d = rolarDado('1d4');
+    curarPv(p, sis, d.total);
+    const notas = [`CONS −1 (agora ${cons}; volta 1 por descanso)`, `+${d.total} PV [${d.dados.join(', ')}] (${textoPv(p)} PV)`];
+    if (cons <= 0) { (p.marcadores ||= []).push('Morto'); notas.push(`${p.nome} chegou a 0 de CONS e morreu`); }
+    return { notas };
+  },
+
+  // Analista de risco: INT% Normal contra um alvo à vista; passou: até o fim do combate (ou da cena), +1d4 de dano e +10%
+  // nas defesas contra ele, vantagem em Armadilhas › Desarmar; revela os PV atuais e a durabilidade dos itens dele.
+  analista(c, p, sis, hab, esc) {
+    const b = alvoEscolhido(c, esc);
+    const t = testeContra(derivados(p, sis).percentual.INT ?? 0, ndDe(sis, 'Normal'), sis);
+    const notas = [contaTeste('INT%', t)];
+    if (!t.sucesso) return { rotulo: `${hab.nome}: ${b.nome}`, notas, sucesso: false };
+    p.marcas = (p.marcas || []).filter(m => !m.analista);
+    marcar(p, { nome: `Analista de risco (${b.nome})`, analista: true, dano: '1d4', defesa: 10, contra: b.id, vantagem: 'armadilhas.desarmar',
+      ...(c.salas.batalha.combate ? { combate: true } : { cena: true }), de: p.id });
+    const itens = (b.itens || []).filter(i => i.durabilidade != null).map(i => `${i.nome} ${i.durabilidadeAtual ?? i.durabilidade}/${i.durabilidade}`);
+    notas.push(`contra ${b.nome}: +1d4 de dano e +10% nas defesas; vantagem em Armadilhas › Desarmar`,
+      b.pv ? `PV de ${b.nome}: ${textoPv(b)}` : null, itens.length ? `durabilidade: ${itens.join(', ')}` : null);
+    return { rotulo: `${hab.nome}: ${b.nome}`, notas: notas.filter(Boolean), sucesso: true };
+  },
+
+  // Bug na rede: trava um item a até 15 m (continua equipado, mas não pode ser usado) até o fim do combate. Membro
+  // cibernético: INT% contra WILL% + 30 do dono; outro item: Computação › Decodificação Normal.
+  bugNaRede(c, p, sis, hab, esc) {
+    const b = alvoEscolhido(c, esc, 'Escolha quem está com o item.');
+    exigirAlcance(c, p, b, 15);
+    const it = (b.itens || []).find(i => i.uid === esc.item);
+    if (!it) throw erro('Escolha o item.');
+    const ciber = it.tipo === 'implante' || /cibern|implante|bi[oô]nic/i.test(`${it.nome} ${it.tipo || ''}`);
+    const t = ciber ? testeContra(derivados(p, sis).percentual.INT ?? 0, (derivados(b, sis).percentual.WILL ?? 0) + 30, sis)
+      : testar(p, sis, 'computacao.decodificacao', ndDe(sis, 'Normal'));
+    const notas = [contaTeste(ciber ? `INT% contra WILL% + 30 de ${b.nome}` : 'Computação › Decodificação', t)];
+    if (t.sucesso) { it.travado = { de: p.id, nome: hab.nome }; notas.push(`${it.nome} de ${b.nome} está TRAVADO (continua equipado, mas não pode ser usado) até o fim do combate`); }
+    return { rotulo: `${hab.nome}: ${it.nome} de ${b.nome}`, notas, sucesso: t.sucesso };
+  },
+
+  // Controle Remoto: drone, autômato ou sistema de defesa a até 60 m vira seu companheiro por 10 turnos e age logo depois de você.
+  controleRemoto(c, p, sis, hab, esc) {
+    const b = alvoEscolhido(c, esc);
+    if (!['drone', 'automato', 'maquina'].includes(tipoCriatura(b))) throw erro('Só drones, autômatos ou sistemas de defesa (máquinas).');
+    exigirAlcance(c, p, b, 60);
+    if (b.controle) devolverControle(b);
+    b.controle = { de: p.id, turnos: 10, antes: { donoId: b.donoId ?? null, companheiroDe: b.companheiroDe ?? null, companheiroTipo: b.companheiroTipo ?? null } };
+    Object.assign(b, { donoId: p.donoId || null, companheiroDe: p.id, companheiroTipo: 'hackeado' });
+    agirDepoisDe(c, b, p);
+    return { rotulo: `${hab.nome}: ${b.nome}`, notas: [`${b.nome} fica sob o controle de ${p.nome} por 10 turnos (aparece nos companheiros) e age logo depois dele`] };
+  },
+
+  // Programador: Computação › Programação Difícil; o item elétrico/eletrônico vira um companheiro (controle com ação livre), até 3.
+  programador(c, p, sis, hab, esc, ctx) {
+    const it = (p.itens || []).find(i => i.uid === esc.item);
+    if (!it) throw erro('Escolha o item elétrico/eletrônico.');
+    if (c.personagens.filter(x => x.companheiroDe === p.id && x.companheiroTipo === 'programado').length >= 3) throw erro(`${p.nome} já controla 3 objetos (o máximo).`);
+    const t = testar(p, sis, 'computacao.programacao', ndDe(sis, 'Difícil'));
+    const notas = [contaTeste('Computação › Programação', t)];
+    if (!t.sucesso) return { rotulo: `${hab.nome}: ${it.nome}`, notas, sucesso: false };
+    const { id } = acoes['companheiro.criar'](c, { de: p.id, nome: it.nome, tipo: 'automato' }, { ...ctx, mestre: true });
+    const comp = personagem(c, id);
+    comp.companheiroTipo = 'programado';
+    p.itens = p.itens.filter(i => i !== it);
+    it.equipado = false;
+    comp.itens = [it];
+    notas.push(`${it.nome} virou companheiro de ${p.nome} (controle com ação livre); outras pessoas têm −30% para manipulá-lo`);
+    return { rotulo: `${hab.nome}: ${it.nome}`, notas, sucesso: true };
+  },
+
+  // Artefato Corrosivo: arremessa (Esportes › Arremessar contra a defesa a distância do alvo); acertou: o item escolhido perde 1d4 de IP.
+  artefatoCorrosivo(c, p, sis, hab, esc) {
+    const b = alvoEscolhido(c, esc, 'Escolha quem está com o item.');
+    const it = (b.itens || []).find(i => i.uid === esc.item);
+    if (!it) throw erro('Escolha o item.');
+    const t = testar(p, sis, 'esportes.arremessar', ndDistancia(sis, b));
+    const notas = [contaTeste(`Esportes › Arremessar contra a defesa de ${b.nome}`, t)];
+    if (!t.sucesso) return { rotulo: `${hab.nome} em ${it.nome} de ${b.nome}`, notas, sucesso: false };
+    const d = rolarDado('1d4');
+    it.ipCorroido = (it.ipCorroido || 0) + d.total;
+    notas.push(`${it.nome} perde ${d.total} de IP [${d.dados.join(', ')}] (agora: ${textoIp(it) || 'sem IP'})`);
+    return { rotulo: `${hab.nome} em ${it.nome} de ${b.nome}`, notas, sucesso: true };
+  },
+
+  // Mãos da criação: ao criar algo, um Aprimoramento no item (o mestre aplica) ou 1 ponto de Moral até o descanso longo.
+  maosDaCriacao(c, p, sis, hab, esc) {
+    if (esc.efeito === 'aprimoramento') return { notas: ['o item criado recebe um Aprimoramento (o mestre aplica)'] };
+    (p.moral ||= {}).criacao = (p.moral.criacao || 0) + 1;
+    return { notas: [`+1 ponto de Moral até o próximo descanso longo (Moral: ${totalMoral(p)})`] };
+  },
+
+  // Névoa Alucinógena: arremessa o frasco (Esportes › Arremessar contra a defesa a distância do alvo); quem estiver a 1,5 m
+  // de onde quebrou faz CONS% Muito Difícil: falhou, perde 1d4 de Sanidade e passa a ver uma Alucinação maligna.
+  nevoa(c, p, sis, hab, esc) {
+    const b = alvoEscolhido(c, esc, 'Escolha onde o frasco quebra (o alvo).');
+    const ta = testar(p, sis, 'esportes.arremessar', ndDistancia(sis, b));
+    const notas = [contaTeste(`Esportes › Arremessar contra a defesa de ${b.nome}`, ta)];
+    if (!ta.sucesso) { notas.push('o frasco quebrou longe do alvo (o mestre decide onde)'); return { rotulo: `${hab.nome} em ${b.nome}`, notas, sucesso: false }; }
+    const afetados = [b, ...pertoDe(c, b, 1.5).filter(y => y.id !== p.id && !y.alucinacao)];
+    for (const x of afetados) {
+      const t = testeCONS(x, sis, ndDe(sis, 'Muito Difícil'));
+      notas.push(contaTeste(`CONS% de ${x.nome}`, t));
+      if (t.sucesso) continue;
+      const d = rolarDado('1d4');
+      if (x.sanidade) danoTemporario(x, 'sanidade', d.total);
+      const { al, semFicha } = criarAlucinacao(c, p, x, sis);
+      notas.push(`${x.nome} perde ${d.total} de Sanidade${x.sanidade ? ` (SAN ${x.sanidade.atual})` : ' (sem Sanidade na ficha)'} e vê ${al.nome} — ataca logo depois do turno dele por 10 turnos${semFicha ? ' (falta a ficha da Besta-Cavalo: o mestre preenche)' : ''}`);
+    }
+    notas.push('quem terminar este turno e o próximo a até 4,5 m também faz o teste (o mestre aplica)');
+    return { rotulo: `${hab.nome} em ${b.nome}`, notas, sucesso: true };
+  },
+
+  // Cibermédico (oferecido depois de acertar um toque): com a ação de movimento (fecha a ação completa), trava um membro
+  // cibernético do alvo por 1d4 turnos. Uma vez em cada personagem por combate.
+  ciberMedico(c, p, sis, hab, esc) {
+    const b = alvoEscolhido(c, esc);
+    const cb = c.salas.batalha.combate;
+    p.cibermedicoEm = cb ? p.cibermedicoEm || {} : {};
+    if (p.cibermedicoEm[b.id]) throw erro(`${p.nome} já travou um membro de ${b.nome} neste combate.`);
+    p.cibermedicoEm[b.id] = true;
+    const turnos = rolarDado('1d4').total;
+    marcar(b, { nome: 'Membro cibernético travado', membroTravado: true, turnos, de: p.id });
+    return { rotulo: `${hab.nome} em ${b.nome}`, notas: [`um membro cibernético de ${b.nome} fica travado por ${turnos} turno(s) (o mestre diz qual e o efeito)`], sucesso: true };
+  },
+
+  // Fitoterapia: no descanso, Medicina › Farmacêutica Normal cria um remédio natural com a função escolhida (dura 24 h).
+  fitoterapia(c, p, sis, hab, esc) {
+    if (c.salas.batalha.combate && c.salas.batalha.participantes.includes(p.id)) throw erro('Fitoterapia é feita no descanso (curto ou longo), fora do combate.');
+    const op = REMEDIOS.find(x => x.id === esc.efeito) || REMEDIOS[0];
+    const t = testar(p, sis, 'medicina.farmaceutica', ndDe(sis, 'Normal'));
+    const notas = [contaTeste('Medicina › Farmacêutica', t)];
+    if (!t.sucesso) return { rotulo: hab.nome, notas, sucesso: false };
+    const modInt = derivados(p, sis).mod.INT || 0;
+    (p.itens ||= []).push({ uid: uid(), nome: `Remédio natural: ${op.nome}`, tipo: 'consumivel', consumivel: true, quantidade: 1, peso: 0, raridade: 'Comum',
+      descricao: `${op.texto(modInt)} (feito por ${p.nome}; dura 24 h)`, remedio: { efeito: op.id, modInt }, validoAte: (c.relogio?.horas || 0) + 24 });
+    notas.push(`criou Remédio natural (${op.texto(modInt)}) — vale por 24 h`);
+    return { rotulo: hab.nome, notas, sucesso: true };
+  },
+});
+
+// Ganchos do combate para as habilidades do Relatório (29/10), chamados ao resolver um ataque.
+// Antes do dano: O Grande Truque (1 vez por descanso longo, reação: o dano que levaria a 0 PV não acontece).
+function antesDoDano(c, s, a, b, r, sis) {
+  const notas = [];
+  if (!(r.dano > 0) || !b.pv || b.pv.atual <= 0) return notas;
+  const truque = habilidadeValendo(b, sis, 'O Grande Truque');
+  if (truque && b.pv.atual + (b.pvTemp || 0) - r.dano <= 0 && usosRestantes(b, sis, 'o grande truque') > 0) {
+    const g = s.combate?.gasto?.[b.id];
+    const reacaoLivre = !g || g.reacaoRodada !== s.combate?.rodada || !(g.reacao >= 1);
+    if (reacaoLivre) {
+      if (s.combate) gastarAcao(c, b, 'reacao');
+      gastarUso(b, 'o grande truque');
+      r.dano = 0; r.danoPartes = []; r.efeito = null;
+      if (!(b.marcadores || []).includes('Furtivo')) (b.marcadores ||= []).push('Furtivo');
+      notas.push(`O Grande Truque: ${b.nome} some numa nuvem de fumaça (não toma o dano), deixa algo no lugar e reaparece em estado Furtivo num quadrado livre a até 12 m (mova o peão); desorientação em 1,5 m (o mestre aplica)`);
+    }
+  }
+  // Alucinação maligna: o dano é psicológico (Sanidade).
+  if (r.dano > 0 && a.alucinacao) {
+    if (b.sanidade) { danoTemporario(b, 'sanidade', r.dano); notas.push(`dano psicológico: ${b.nome} perde ${r.dano} de Sanidade (SAN ${b.sanidade.atual})`); }
+    else notas.push(`dano psicológico (${r.dano}): ${b.nome} não tem Sanidade na ficha — o mestre aplica`);
+    r.dano = 0; r.danoPartes = []; r.efeito = null;
+  }
+  return notas;
+}
+// Depois do dano: Morte Epidêmica, Tóxico, Vetor, Dançarino e o efeito do ataque especial de habilidade (Muco, Digestão).
+function depoisDoDano(c, s, a, b, r, pend, defesa, sis, pvAntes) {
+  const notas = [];
+  const corpo = pend.alcance !== 'distancia';
+  const fisico = !pend.habilidade;
+  if (r.sucesso && pend.habilidade) {
+    const hab = listaHabilidades(a, sis).find(x => x.id === pend.habilidade);
+    const m = hab?.regra?.arma?.marcaNoAlvo;
+    if (m) {
+      b.marcas = (b.marcas || []).filter(x => x.nome !== m.nome || x.de !== a.id);
+      marcar(b, { ...m, ...(m.digestao ? { digestaoDe: a.id } : {}), de: a.id });
+      notas.push(`${b.nome}: ${m.texto || m.nome}`);
+    }
+  }
+  // Dançarino: defendeu com Dança → +1 de Moral (até 3 por batalha; zera no fim do combate).
+  if (defesa === 'danca' && !r.sucesso) {
+    const mo = b.moral ||= {};
+    if ((mo.danca || 0) < 3) { mo.danca = (mo.danca || 0) + 1; notas.push(`Dançarino: ${b.nome} ganha 1 ponto de Moral (Moral: ${totalMoral(b)})`); }
+  }
+  if (!(r.dano > 0)) return notas;
+  // Tóxico: animal, besta ou monstro que lhe causou dano corpo a corpo faz WILL% Normal para continuar atacando.
+  if (corpo && habilidadeValendo(b, sis, 'Tóxico') && ['animal', 'besta', 'monstro'].includes(tipoCriatura(a)) && !(a.marcas || []).some(m => m.naoAtaca === b.id)) {
+    const t = testeContra(derivados(a, sis).percentual.WILL ?? 0, ndDe(sis, 'Normal'), sis);
+    if (!t.sucesso) marcar(a, { nome: `Repelido por ${b.nome} (Tóxico)`, naoAtaca: b.id, combate: true, de: b.id });
+    notas.push(`Tóxico: ${contaTeste(`WILL% de ${a.nome}`, t)}${t.sucesso ? '' : ` — o sangue de ${b.nome} repele ${a.nome}, que não o ataca mais neste combate`}`);
+  }
+  // Vetor: doente, quem o acerta com ataque físico ganha 1 marcador de vulnerabilidade (até 3).
+  if (fisico && habilidadeValendo(b, sis, 'Vetor') && qtdCondicao(b, sis, 'doenca') && qtdCondicao(a, sis, 'vulnerabilidade') < 3) {
+    darMarcadores(a, sis, 'vulnerabilidade', 1);
+    notas.push(`Vetor: ${a.nome} ganha 1 marcador de vulnerabilidade`);
+  }
+  // Morte Epidêmica: o Radiante chegou a 0 PV → explode (9 m): 2d10 radioativo e 2 marcadores genéticos em todos; quem tem
+  // mutação toma +1d10, +1 marcador e uma mutação momentânea (1d4 turnos). Ele fica em coma (Desmaiado).
+  if (pvAntes > 0 && b.pv && b.pv.atual <= 0 && habilidadeValendo(b, sis, 'Morte Epidêmica')) {
+    notas.push(`Morte Epidêmica: o corpo de ${b.nome} se rompe numa nuvem radioativa (9 m)`);
+    if (!c.mapa?.pecas?.[b.id]) notas.push('sem peão no mapa: o mestre aplica (2d10 radioativo e 2 marcadores genéticos em quem estiver a 9 m; com mutação +1d10, +1 marcador e mutação de 1d4 turnos)');
+    else for (const y of pertoDe(c, b, 9)) {
+      const mutado = temMutacao(y);
+      const d = rolarDado(mutado ? '2d10+1d10' : '2d10');
+      const ip = ipContra(y, sis, 'Radioativo');
+      const dano = Math.max(sis.combate?.danoMinimo ?? 0, d.total - ip);
+      if (y.pv) perderPv(y, dano);
+      darMarcadores(y, sis, 'genetico', mutado ? 3 : 2);
+      notas.push(`${y.nome}: ${dano} radioativo [${d.dados.join(', ')}]${ip ? ` − IP ${ip}` : ''}, ${mutado ? 3 : 2} marcadores genéticos${y.pv ? ` (${textoPv(y)} PV)` : ''}`);
+      if (mutado) notas.push(...desenvolverMutacao(c, y, sis, { turnos: rolarDado('1d4').total }));
+    }
+    if (!(b.marcadores || []).includes('Desmaiado')) (b.marcadores ||= []).push('Desmaiado');
+    notas.push(`${b.nome} murcha e entra em coma (Desmaiado): precisa de resgate`);
+  }
+  return notas;
+}
+// Fim do turno de quem agiu: Pragas (1 de dano), mutações com prazo, drones hackeados e alucinações descontam um turno.
+function fimDoTurnoRelatorio(c, p, sis) {
+  const notas = [];
+  for (const m of p.marcas || []) if (m.danoPorTurno && p.pv) { perderPv(p, m.danoPorTurno); notas.push(`${m.nome}: ${m.danoPorTurno} de dano (${textoPv(p)} PV)`); }
+  const antes = (p.mutacoes || []).length;
+  p.mutacoes = (p.mutacoes || []).filter(m => !m.turnos || --m.turnos > 0);
+  if (p.mutacoes.length < antes) notas.push('mutação momentânea acabou');
+  for (const x of c.personagens.filter(y => y.controle?.de === p.id)) {
+    if (--x.controle.turnos > 0) continue;
+    devolverControle(x);
+    notas.push(`${x.nome} saiu do Controle Remoto`);
+  }
+  if (p.alucinacao && --p.alucinacao.turnos <= 0) {
+    notas.push(`${p.nome} se desfez`);
+    acoes['personagem.remover'](c, { id: p.id }, { mestre: true, user: { id: 'sistema' } });
+    if (c.mapa?.pecas) delete c.mapa.pecas[p.id];
+  }
+  return notas;
+}
+
 // Usa a habilidade (ver habilidade.usar); "acao" vem da oferta de reação/ação livre.
 function usarHabilidade(c, p, sis, hab, acao = null) {
   const dur = duracaoDaHabilidade(hab);
@@ -852,6 +1360,12 @@ function terminarCombatePara(c, p) {
   const sis = sistema(c.sistema);
   encerrarAtivacoes(c, p, sis);
   delete p.emCombate;
+  // Relatório (29/10): itens travados destravam, a Moral da Dança zera, o drone hackeado volta, o Cibermédico recomeça.
+  for (const it of p.itens || []) delete it.travado;
+  if (p.moral?.danca) p.moral.danca = 0;
+  delete p.cibermedicoEm;
+  if (p.controle) devolverControle(p);
+  p.mutacoes = (p.mutacoes || []).filter(m => !m.turnos);
   const nota = fimDoCombate(p, sis, derivados(p, sis).percentual.CONS ?? 0);
   sincronizarEfeitos(p, sis);
   if (nota) registrar(c.salas.batalha.log, { autor: p.nome, rotulo: 'Fim do combate — Necessidades', texto: nota });
@@ -881,7 +1395,7 @@ function iniciarCombate(c) {
     return { id: p.id, ini: r.total, agi: r.agi, dados: r.dados };
   });
   s.combate = { rodada: 1, turno: 1, vez: 0, ordem, turnoDesde: Date.now() };
-  for (const p of vivos) p.emCombate = true;
+  for (const p of vivos) { p.emCombate = true; motivarNoCombate(c, p, sis); }
   ordenarIniciativa(s.combate);
   s.ativo = s.combate.ordem[0].id;
   const pos0 = c.mapa?.pecas?.[s.ativo];
@@ -915,6 +1429,11 @@ function resolverPendente(c, s, pend, defesa, sis) {
     throw erro(e.message);
   }
   s.pendentes = (s.pendentes || []).filter(x => x.id !== pend.id);
+  // Usos do ataque especial de habilidade (Muco radioativo: 3 por descanso longo), gastos ao resolver. Vários alvos: um uso só.
+  if (pend.habilidade && !pend.opcoes?.multiplo) {
+    const habA = listaHabilidades(a, sis).find(x => x.id === pend.habilidade);
+    if (habA?.regra?.arma?.usos) gastarUso(a, chaveUsoArma(habA));
+  }
   // Ataque localizado num item do alvo: o golpe vai no item, não no PV. Dano focado em itens ainda não tem regra no
   // livro (o mestre aplica); Engenharia Reversa tira 1 de durabilidade por acerto; Destruidor de itens soma 1d6.
   const local = pend.opcoes?.local || null;
@@ -931,7 +1450,10 @@ function resolverPendente(c, s, pend, defesa, sis) {
     }
     r.dano = 0; r.danoPartes = []; r.efeito = null;
   }
-  const notas = [...notasItem, ...aplicarAtaque(a, b, r, sis)];
+  const pvAntes = b.pv?.atual ?? 0;
+  const notas = [...notasItem, ...antesDoDano(c, s, a, b, r, sis), ...aplicarAtaque(a, b, r, sis)];
+  if (r.semCritico) notas.push(`${b.nome} é imune a acertos críticos (sem o dado extra)`);
+  notas.push(...depoisDoDano(c, s, a, b, r, pend, defesa, sis, pvAntes));
   const notaMut = mutacaoSeMexe(c, a, r.ds);
   if (notaMut) notas.push(notaMut);
   // Evasão é ação bônus (livro): gasta a de quem se defende.
@@ -1054,6 +1576,9 @@ const ehArmadilha = it => /armadilh/i.test(`${it.categoria || ''} ${it.nome || '
 export const TIPOS_COMPANHEIRO = [
   { id: 'familiar', nome: 'Familiar' }, { id: 'animal', nome: 'Animal' }, { id: 'montaria', nome: 'Montaria' },
   { id: 'automato', nome: 'Autômato / drone' }, { id: 'invencao', nome: 'Invenção' }, { id: 'implante', nome: 'Implante' }, { id: 'outro', nome: 'Outro' },
+  // Criados por habilidade: drone hackeado (Controle Remoto), item programado (Programador), Alucinação maligna (Névoa).
+  { id: 'hackeado', nome: 'Hackeado (Controle Remoto)', habilidade: true }, { id: 'programado', nome: 'Programado (Programador)', habilidade: true },
+  { id: 'alucinacao', nome: 'Alucinação maligna', habilidade: true },
 ];
 
 // Núcleo energético com coração humano: cada carga usada causa 1d6 de dano (o mestre marca "coração artificial" na ficha).
@@ -1159,6 +1684,15 @@ function criarOfertas(c, s, a, b, r, pend, sis) {
       s.ofertas = s.ofertas.filter(o => !(o.personagem === b.id && o.habilidade === hab.nome));
       s.ofertas.push({ id: uid(), tipo: 'reacao', habilidade: hab.nome, habId: hab.id, personagem: b.id, alvos: [a.id], acao: tipo, ataque: !hab.regra?.especial && ehAtaqueEspecial(hab), dados: dadosDaHabilidade(hab), dano: r.dano,
         texto: `${b.nome} ${r.sucesso ? 'foi atingido' : 'escapou'} (ataque de ${a.nome}): pode usar ${hab.nome} como ${nomeAcao(tipo).toLowerCase()} agora` });
+    }
+  }
+  // Toque contagioso (Radiante) e Cibermédico (Socorrista): depois de acertar um toque/ataque de Briga, a habilidade vira oferta.
+  if (r.sucesso && !pend.habilidade && armaNaCondicao({ uid: pend.opcoes?.armaUid || 'desarmado', pericia: r.pericia, natural: pend.natural }, 'desarmado')) {
+    for (const hab of listaHabilidades(a, sis).filter(x => x.regra?.aposToque)) {
+      if (hab.regra.especial === 'toqueContagioso' && (a.contagiados || []).includes(b.id)) continue;
+      if (hab.regra.especial === 'ciberMedico' && a.cibermedicoEm?.[b.id]) continue;
+      s.ofertas.push({ id: uid(), tipo: 'aposToque', habilidade: hab.nome, habId: hab.id, personagem: a.id, alvos: [b.id], acao: hab.regra.acaoOferta || 'livre',
+        texto: `${a.nome} tocou ${b.nome}: pode usar ${hab.nome} (${nomeAcao(hab.regra.acaoOferta || 'livre').toLowerCase()})` });
     }
   }
   // Guerras diplomáticas: ao causar dano, ação bônus de Intimidação contra WILL% + 30 do alvo para ele parar de atacar.
@@ -2003,7 +2537,9 @@ export const acoes = {
       const pedido = ['vantagem', 'desvantagem'].includes(modo) ? modo : null;
       // O humor também entra sozinho (ex.: Atraído → Percepção em desvantagem).
       const pelHumor = p ? modoHumorTeste(p, sis, acaoRef) : { vantagem: false, desvantagem: false };
-      const porMarca = p && (p.marcas || []).some(m => m.desvantagem);
+      // Pragas: desvantagem nos testes de Percepção (perícias e atributo PER).
+      const atrRef = !acaoRef ? null : acaoRef.startsWith('atr:') ? acaoRef.slice(4) : sis.pericias.find(x => x.id === acaoRef.slice(4).split('.')[0])?.atributo;
+      const porMarca = p && (p.marcas || []).some(m => m.desvantagem || (m.desvantagemAtributo && m.desvantagemAtributo === atrRef));
       const modoFinal = modoRolagem(pedido === 'vantagem' || porHabilidade || pelHumor.vantagem, pedido === 'desvantagem' || pelHumor.desvantagem || porMarca);
       const motivo = [porHabilidade && modoFinal === 'vantagem' ? 'habilidade' : null, (pelHumor.vantagem || pelHumor.desvantagem) && modoFinal ? `humor ${pelHumor.humor}` : null].filter(Boolean).join(', ');
       // Marcas: −15% das Bugigangas (até o fim do turno) e a Inspiração (+1d20 no resultado; gasta-se neste teste).
@@ -2052,7 +2588,7 @@ export const acoes = {
     // Fim do turno de quem estava agindo: os efeitos com tempo descontam um turno.
     if (atual) {
       (cb.turnosFeitos ||= {})[atual.id] = (cb.turnosFeitos[atual.id] || 0) + 1;
-      const notasEfeitos = [...passarTurnoEfeitos(atual, sis), ...cargaNoTurno(atual, derivados(atual, sis)), ...passarTurnoHabilidades(atual)];
+      const notasEfeitos = [...passarTurnoEfeitos(atual, sis), ...cargaNoTurno(atual, derivados(atual, sis)), ...passarTurnoHabilidades(atual), ...fimDoTurnoRelatorio(c, atual, sis)];
       if (notasEfeitos.length) registrar(s.log, { autor: atual.nome, rotulo: 'Efeitos', texto: notasEfeitos.join(' · ') });
     }
     // Ofertas de ação extra (Quebra-Hordas, Guerras diplomáticas) valem só no turno em que surgiram.
@@ -2074,6 +2610,11 @@ export const acoes = {
     if (cb.gasto?.[p.id]) { const r = cb.gasto[p.id]; cb.gasto[p.id] = { reacao: r.reacao || 0, reacaoRodada: r.reacaoRodada }; }
     const nota = sobrevida(p, sis);
     if (nota) registrar(s.log, { autor: p.nome, rotulo: 'Sobrevida', texto: nota });
+    // Alucinação maligna que acabou (10 turnos): sai do campo depois de passar a vez.
+    for (const x of c.personagens.filter(y => y.alucinacao && y.alucinacao.turnos <= 0 && y.id !== p.id)) {
+      acoes['personagem.remover'](c, { id: x.id }, { ...ctx, mestre: true });
+      if (c.mapa?.pecas) delete c.mapa.pecas[x.id];
+    }
   },
 
   // Quantos turnos faltam num efeito (0 tira o efeito). O tempo varia: vem da regra ou da habilidade que causou.
@@ -2114,6 +2655,8 @@ export const acoes = {
     const ids = s.combate.ordem.map(o => o.id);
     s.combate = null;
     for (const id of ids) terminarCombatePara(c, c.personagens.find(p => p.id === id));
+    // Alucinações malignas (Névoa Alucinógena) somem com o fim do combate.
+    for (const x of c.personagens.filter(y => y.alucinacao)) { acoes['personagem.remover'](c, { id: x.id }, ctx); if (c.mapa?.pecas) delete c.mapa.pecas[x.id]; }
     s.ativo = null;
   },
 
@@ -2133,6 +2676,10 @@ export const acoes = {
     delete op.coberturaDoMapa; delete op.defesaExtra;
     // Foco de Atenção: quem falhou no WILL só ataca o Galante enquanto durar (o mestre pode passar por cima).
     const foco = (a.marcas || []).find(m => m.soAtaca && m.soAtaca !== b.id);
+    // Tóxico: a criatura repelida não ataca mais quem a repeliu (o mestre tira a marca, se quiser). Alucinação maligna só ataca quem a vê.
+    const repelido = (a.marcas || []).find(m => m.naoAtaca === b.id);
+    if (repelido) throw erro(`${a.nome} foi repelido por ${b.nome} (${repelido.nome}): não o ataca mais neste combate.`);
+    if (a.alucinacao && a.alucinacao.alvo !== b.id) throw erro(`${a.nome} só existe para ${personagem(c, a.alucinacao.alvo).nome}: só pode atacá-lo.`);
     if (foco && !ctx.mestre) throw erro(`${a.nome} está com o foco preso em ${personagem(c, foco.soAtaca).nome} (${foco.nome}): só pode atacá-lo.`);
     // Padrão de ataque: depois do 3º turno do inimigo, +10% nas defesas contra ele.
     if (s.combate && (s.combate.turnosFeitos?.[a.id] || 0) >= 3 && habilidadeValendo(b, sis, 'Padrão de ataque')) op.defesaExtra = [{ nome: 'Padrão de ataque', valor: 10 }];
@@ -2158,7 +2705,16 @@ export const acoes = {
       if (!especial) throw erro(`${a.nome} não tem essa habilidade.`);
     }
     const foraDoTurno = cbA && cbA.ordem[cbA.vez]?.id !== a.id;
-    const tipoAcao = especial ? (foraDoTurno ? 'reacao' : acaoDoAtaqueEspecial(a, sis, especial)) : foraDoTurno ? 'reacao' : 'principal';
+    // Arma da própria habilidade (Muco radioativo, Sobrecarga Neural…): a ação, os alvos, o alcance e os usos vêm da regra.
+    const armaHab = armasDisponiveis(a, sis).find(x => x.uid === (op.armaUid || 'desarmado') && x.habilidade);
+    if (armaHab) {
+      if (armaHab.contraTipos && !armaHab.contraTipos.some(t => t === tipoCriatura(b) || (t === 'ciborgue' && (b.classe === 'ciborgue' || (b.itens || []).some(i => i.tipo === 'implante')))))
+        throw erro(`${armaHab.nome} só funciona contra ${armaHab.contraTipos.join(', ')}.`);
+      const dHab = distanciaPecas(c, a.id, b.id);
+      if (dHab != null && dHab > armaHab.alcanceM) throw erro(`${b.nome} está a ${String(dHab).replace('.', ',')} m: ${armaHab.nome} alcança ${String(armaHab.alcanceM).replace('.', ',')} m.`);
+      if (armaHab.area) op.area = true;
+    }
+    const tipoAcao = foraDoTurno ? 'reacao' : armaHab ? armaHab.acao : especial ? acaoDoAtaqueEspecial(a, sis, especial) : 'principal';
     // Mira: +30% neste ataque, gastando a ação de movimento. Instável (SAN abaixo de 16) não pode mirar (livro).
     // Mira só no ataque a distância (autor, 26/10).
     if (op.mira && armasDisponiveis(a, sis).find(x => x.uid === (op.armaUid || 'desarmado'))?.alcance !== 'distancia') delete op.mira;
@@ -2174,7 +2730,7 @@ export const acoes = {
     const arma = armasDisponiveis(a, sis).find(x => x.uid === (op.armaUid || 'desarmado'));
     if (!arma) throw erro('Arma não equipada.');
     // Corpo a corpo: o alvo precisa estar na área de ameaça (1 quadrado; Enorme/Imenso 2; Colossal 3). Só avisa.
-    const dist = arma.alcance !== 'distancia' && !op.area ? distanciaPecas(c, a.id, b.id) : null;
+    const dist = arma.alcance !== 'distancia' && !op.area && !arma.habilidade ? distanciaPecas(c, a.id, b.id) : null;
     const alcanceCorpo = Math.max(ameacaNoMapa(a) * 1.5, Number(arma.alcanceM) || 0);
     if (dist != null && dist > alcanceCorpo) excesso = [excesso, `${b.nome} está a ${String(dist).replace('.', ',')} m, fora da área de ameaça de ${a.nome} (${String(alcanceCorpo).replace('.', ',')} m)`].filter(Boolean).join('; ');
     // Munição: cada ataque com arma de fogo gasta 1 (cadência natural).
@@ -2196,7 +2752,7 @@ export const acoes = {
       try { gastarRecurso(a, sis, 'nucleo', 1); } catch (e) { throw erro(e.message); }
       registrar(s.log, { autor: a.nome, rotulo: 'Carga do Núcleo', texto: `+2d6 elétrico no ataque${cargaNoCoracao(a)}` });
     }
-    const pend = { id: uid(), atacante: a.id, alvo: b.id, opcoes: op, arma: arma.nome, alcance: arma.alcance, area: !!op.area, em: Date.now(), municao: itemArma?.capacidade ? itemArma.uid : null,
+    const pend = { id: uid(), atacante: a.id, alvo: b.id, opcoes: op, arma: arma.nome, habilidade: arma.habilidade || null, alcance: arma.alcance, area: !!op.area, em: Date.now(), municao: itemArma?.capacidade ? itemArma.uid : null,
       armaTipo: tipoDaArma(arma), tipoDano: arma.tipoDano || null, natural: !!arma.natural };
     // Contra tiro, ou com o alvo pego de surpresa, não há defesa a escolher: resolve na hora.
     if (op.surpresa || opcoesDefesa(b, arma, sis, { area: pend.area }).length === 1) return { ...resolverPendente(c, s, pend, 'nenhuma', sis), excesso };
@@ -2280,6 +2836,11 @@ export const acoes = {
       registrar(s.log, { autor: a.nome, rotulo: `${a.nome} usa ${of.habilidade}`, texto: `${nomeAcao(of.acao)}${excesso ? ` · atenção: ${excesso}` : ''}` });
       return { texto: `${a.nome} usou ${of.habilidade} (${nomeAcao(of.acao)}).`, excesso };
     }
+    if (of.tipo === 'aposToque') {
+      const hab = listaHabilidades(a, sis).find(x => x.id === of.habId);
+      if (!hab) throw erro(`${a.nome} não tem essa habilidade.`);
+      return ativarHabilidade(c, a, sis, hab, { ctx, acao: of.acao, escolhas: { alvo: b.id } });
+    }
     if (of.tipo === 'guerrasDiplomaticas') {
       const da = derivados(a, sis), db = derivados(b, sis);
       const nd = (db.percentual.WILL ?? 0) + 30;
@@ -2349,6 +2910,81 @@ export const acoes = {
     const x = (p.mutacoes || []).find(y => y.id === mutacao);
     if (!x || !TIPOS_MUTACAO.some(t => t.id === tipo)) throw erro('Mutação ou tipo inválido.');
     x.tipo = tipo;
+  },
+
+  // Escolha que fica na ficha (Corpo adaptado 2: a resistência; Mutação monstruosa: o tipo de dano; Melhor do mundo: as
+  // perícias). O jogador escolhe o que está vazio; trocar é do mestre — salvo o Corpo adaptado 2 depois do descanso longo.
+  'habilidade.escolher'(c, { id, hab: habId, tipoDano, pericias }, ctx) {
+    const p = personagem(c, id);
+    exigirDonoOuMestre(ctx, p);
+    const sis = sistema(c.sistema);
+    const hab = listaHabilidades(p, sis).find(x => x.id === habId);
+    const r = hab?.regra;
+    if (!r?.escolhaFixa) throw erro('Essa habilidade não tem escolha.');
+    const chave = chaveHabilidade(hab.nome);
+    const atual = (p.escolhasHab ||= {})[chave] || {};
+    if (['resistencia', 'tipoDano'].includes(r.escolhaFixa)) {
+      const tipo = String(tipoDano || '').trim().slice(0, 40);
+      if (!tipo) throw erro('Escolha o tipo de dano.');
+      const liberado = ctx.mestre || !atual.tipoDano || (r.trocaNoDescanso && p.trocaLiberada?.[chave]);
+      if (!liberado) throw erro(r.trocaNoDescanso ? 'A resistência só muda no fim de um descanso longo (ou pelo mestre).' : 'Já escolhido: para trocar, peça ao mestre.');
+      p.escolhasHab[chave] = { ...atual, tipoDano: tipo };
+      if (p.trocaLiberada) delete p.trocaLiberada[chave];
+      registrar(c.log, { autor: p.nome, rotulo: hab.nome, texto: `${r.escolhaFixa === 'resistencia' ? 'resistência' : 'tipo de dano'}: ${tipo}` });
+      return { tipoDano: tipo };
+    }
+    const max = escolhasPermitidas(p, r, hab);
+    const validas = [...new Set((Array.isArray(pericias) ? pericias : []).filter(x => sis.pericias.some(q => q.id === x) && !(r.exceto || []).includes(x)))].slice(0, max);
+    const antes = atual.pericias || [];
+    if (!ctx.mestre && antes.some((x, i) => validas[i] !== x)) throw erro('As perícias já escolhidas só mudam pelo mestre.');
+    p.escolhasHab[chave] = { ...atual, pericias: validas };
+    return { pericias: validas, max };
+  },
+
+  // Moral (Mãos da criação, Dançarino): gasta 1 ponto para +1d20 no próximo teste.
+  'moral.usar'(c, { id }, ctx) {
+    const p = personagem(c, id);
+    exigirDonoOuMestre(ctx, p);
+    if (!totalMoral(p)) throw erro(`${p.nome} não tem pontos de Moral.`);
+    if ((p.marcas || []).some(m => m.d20)) throw erro(`${p.nome} já tem um +1d20 guardado para o próximo teste.`);
+    const fonte = p.moral.danca ? 'danca' : 'criacao';
+    p.moral[fonte] -= 1;
+    marcar(p, { nome: 'Moral (+1d20)', d20: true, de: p.id });
+    registrar(c.log, { autor: p.nome, rotulo: 'Moral', texto: `+1d20 no próximo teste (restam ${totalMoral(p)})` });
+    return { restantes: totalMoral(p) };
+  },
+
+  // Usar o remédio natural (Fitoterapia) em si ou em outro personagem.
+  'remedio.usar'(c, { id, uid: itemUid, alvo }, ctx) {
+    const p = personagem(c, id);
+    exigirDonoOuMestre(ctx, p);
+    const sis = sistema(c.sistema);
+    const it = (p.itens || []).find(i => i.uid === itemUid && i.remedio);
+    if (!it) throw erro('Remédio não encontrado.');
+    const b = alvo ? personagem(c, alvo) : p;
+    if (b.id !== p.id) exigirAlcance(c, p, b, 1.5);
+    const e = it.remedio.efeito;
+    let texto;
+    if (e === 'cura') { const d = rolarDado('1d6'); curarPv(b, sis, d.total); texto = `${b.nome} +${d.total} PV [${d.dados.join(', ')}] (${textoPv(b)} PV)`; }
+    else if (e === 'deslocamento') { marcar(b, { nome: 'Remédio natural (+3 m de deslocamento)', deslocamento: 3, turnos: 5, de: p.id }); texto = `${b.nome}: +3 m de deslocamento por 5 turnos`; }
+    else if (e === 'ignorar') { marcar(b, { nome: 'Remédio natural (ignora efeitos negativos)', ignoraNegativos: true, turnos: 3, de: p.id }); texto = `${b.nome} ignora todos os efeitos negativos por 3 turnos (o mestre aplica)`; }
+    else {
+      const d = rolarDado(`1d4${it.remedio.modInt >= 0 ? '+' : ''}${it.remedio.modInt}`);
+      const n = Math.max(0, d.total);
+      if (b.pv) perderPv(b, n);
+      texto = `veneno em ${b.nome}: ${n} de dano [${d.dados.join(', ')}]${b.pv ? ` (${textoPv(b)} PV)` : ''}`;
+    }
+    if ((it.quantidade || 1) > 1) it.quantidade -= 1; else p.itens = p.itens.filter(i => i !== it);
+    if (c.salas.batalha.combate && c.salas.batalha.participantes.includes(p.id)) gastarAcao(c, p, 'principal');
+    registrar(c.salas.batalha.participantes.includes(p.id) ? c.salas.batalha.log : c.log, { autor: p.nome, rotulo: it.nome, texto });
+    return { texto };
+  },
+
+  // O mestre destrava um item travado (Bug na rede) antes do fim do combate.
+  'item.destravar'(c, { id, uid: itemUid }, ctx) {
+    exigirMestre(ctx);
+    const it = (personagem(c, id).itens || []).find(i => i.uid === itemUid);
+    if (it) delete it.travado;
   },
 
   // O mestre tira uma marca temporária (Inspiração, Foco, Trauma momentâneo…) ou solta o humor forçado.
@@ -2551,7 +3187,9 @@ export const acoes = {
       if (!interrompido && p.usos) {
         // "Por descanso longo" volta no longo; "por descanso" (curto ou longo: Inspiração motivacional, Gambiarras) em qualquer um.
         for (const k of Object.keys(p.usos)) {
-          const rec = sis.habilidadesRegras?.[k]?.usos?.recarga;
+          // "chave#ataque": usos do ataque especial da habilidade (Muco radioativo, Digestão extracorpórea).
+          const [kh, parte] = k.split('#');
+          const rec = parte === 'ataque' ? sis.habilidadesRegras?.[kh]?.arma?.usos?.recarga : sis.habilidadesRegras?.[k]?.usos?.recarga;
           if (rec === 'descanso' || (tipo === 'longo' && rec === 'descanso-longo')) delete p.usos[k];
         }
       }
@@ -2560,6 +3198,7 @@ export const acoes = {
         const recarrega = new Set(Object.values(sis.habilidadesRegras || {}).filter(r => r.recurso?.recarga === 'descanso-longo').map(r => r.recurso.id));
         for (const k of Object.keys(p.recursos)) if (recarrega.has(k)) delete p.recursos[k];
       }
+      if (!interrompido) notas.push(...descansoRelatorio(p, sis, tipo));
       sincronizarEfeitos(p, sis);
       notas.push(...lembretesDescanso(p, sis, tipo));
       const usos = p.descansosDoDia?.dia === dia ? p.descansosDoDia : { dia, curto: 0, longo: 0 };
@@ -2568,6 +3207,17 @@ export const acoes = {
       linhas.push(`${p.nome}: ${notas.filter(Boolean).join(', ') || 'nada a recuperar'}`);
       // Uma entrada por personagem, com os dados da recuperação e os testes dos marcadores: o dono vê numa janela.
       porPersonagem.push({ id: p.id, nome: p.nome, donoId: p.donoId || null, notas: notas.filter(Boolean) });
+    }
+    // O Show Tem Que Continuar: no descanso curto com um Artista que tem a habilidade, todos os que descansam juntos
+    // recuperam +1d4 de Sanidade e começam o próximo combate Motivados.
+    const artista = tipo === 'curto' && !interrompido && alvos.find(p => temHabilidade(p, sis, 'O Show Tem Que Continuar'));
+    if (artista) for (const [i, p] of alvos.entries()) {
+      const d = rolarDado('1d4');
+      if (p.sanidade) p.sanidade.atual = Math.min(p.sanidade.max ?? derivados(p, sis).sanidadeMax, p.sanidade.atual + d.total);
+      p.motivadoProximoCombate = true;
+      const txt = `O Show Tem Que Continuar (${artista.nome}): +${d.total} Sanidade [${d.dados.join(', ')}]${p.sanidade ? ` (${p.sanidade.atual})` : ''} e começa o próximo combate Motivado`;
+      porPersonagem[i].notas.push(txt);
+      linhas[i] += ` · ${txt}`;
     }
     const nome = tipo === 'longo' ? (interrompido ? 'Descanso longo interrompido' : 'Descanso longo') : 'Descanso curto';
     for (const x of porPersonagem) {
@@ -2592,6 +3242,13 @@ export const acoes = {
       if (notas.length) linhas.push(`${p.nome}: ${notas.join(', ')}`);
     }
     registrar(c.log, { autor: 'Mestre', rotulo: `+${h} h — ${descreverRelogio(c.relogio.horas)}`, texto: linhas.join(' · ') || 'ninguém sofreu com fome, sede ou sono' });
+    // Remédios naturais (Fitoterapia) duram 24 h.
+    for (const p of c.personagens) {
+      const vencidos = (p.itens || []).filter(i => i.validoAte != null && i.validoAte <= c.relogio.horas);
+      if (!vencidos.length) continue;
+      p.itens = p.itens.filter(i => !vencidos.includes(i));
+      linhas.push(`${p.nome}: ${vencidos.map(i => i.nome).join(', ')} estragou (24 h)`);
+    }
     let clima = null;
     for (let d = diaAntes; d < Math.floor(c.relogio.horas / 24); d++) clima = novoDiaClima(c);
     return { relogio: c.relogio, linhas, clima };

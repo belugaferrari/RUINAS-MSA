@@ -447,5 +447,332 @@
     "acao": "reacao",
     "especial": "absorverDano",
     "texto": "se o ataque o deixar com 0 PV ou menos: reação, a Invenção! entra no caminho, absorve 100% do dano e é destruída (o app oferece)"
+  },
+  "digestao extracorporea": {
+    "modo": "ativar",
+    "acao": "completa",
+    "especial": "devorar",
+    "escolhas": [
+      "alvo"
+    ],
+    "arma": {
+      "nome": "Jato ácido (Digestão extracorpórea)",
+      "dano": "2d6",
+      "tipoDano": "Ácido",
+      "metros": 4.5,
+      "area": true,
+      "usos": {
+        "max": 1,
+        "recarga": "descanso"
+      },
+      "marcaNoAlvo": {
+        "nome": "Ácido digestivo",
+        "digestao": true,
+        "cena": true,
+        "texto": "acertado pelo jato ácido (pode ser devorado)"
+      }
+    },
+    "texto": "ataque em cone (4,5 m, 2d6 ácido, 1 por descanso: aparece nas armas); o botão Ativar devora (ação completa) quem foi acertado e está abatido: +1d4 PV"
+  },
+  "evolucao humana": {
+    "modo": "sempre",
+    "resistencia": [
+      "Corte"
+    ],
+    "imuneCritico": true,
+    "usos": {
+      "max": 1,
+      "recarga": "descanso-longo"
+    },
+    "texto": "Roubar Característica na hora (ação completa) e +2d4 PV, 1 vez por descanso longo; Licantropia falsa vira qualquer pessoa com Disfarce Difícil com vantagem (o mestre aplica)"
+  },
+  "mutacao precisa": {
+    "modo": "ativar",
+    "especial": "mutacaoPrecisa",
+    "usos": {
+      "max": 1,
+      "recarga": "descanso"
+    },
+    "escolhas": [
+      "pericia",
+      "pontos"
+    ],
+    "texto": "10 turnos: vantagem na perícia escolhida e até 6 pontos da CONS passados para a FOR; braço em forma de arma branca; 1 vez por descanso"
+  },
+  "roubar caracteristica": {
+    "modo": "ativar",
+    "acao": "completa",
+    "especial": "roubarCaracteristica",
+    "repetir": true,
+    "escolhas": [
+      "alvoMorto",
+      "caracteristica"
+    ],
+    "texto": "escolha uma característica (não única) de uma criatura morta no campo: entra depois do próximo descanso longo (uma por vez; −3 PV persistentes)"
+  },
+  "caos geneticos": {
+    "modo": "ativar",
+    "acao": "principal",
+    "especial": "caosGenetico",
+    "repetir": true,
+    "escolhas": [
+      "alvo"
+    ],
+    "texto": "alvo a até 4,5 m (não mutante): CONS% contra os marcadores de vulnerabilidade; falhou, 2d4 de dano puro e mutação na hora; passou, perde os marcadores"
+  },
+  "epidemia": {
+    "modo": "sempre",
+    "especial": "epidemia",
+    "texto": "quem não é mutante desenvolve mutação a até 15 m de você: os outros no raio fazem CONS% contra os próprios marcadores de vulnerabilidade (automático)"
+  },
+  "esporos gasosos": {
+    "modo": "ativar",
+    "acao": "bonus",
+    "especial": "esporos",
+    "usos": {
+      "max": 1,
+      "recarga": "descanso"
+    },
+    "texto": "raio de 3 m: +1 marcador genético e −10% em CONS% até o fim do combate; 1 vez por descanso"
+  },
+  "morte epidemica": {
+    "modo": "sempre",
+    "especial": "morteEpidemica",
+    "texto": "chegou a 0 PV: explode (9 m) — 2d10 radioativo e 2 marcadores genéticos em todos; com mutação +1d10, +1 marcador e mutação de 1d4 turnos; você fica em coma (automático)"
+  },
+  "muco radioativo": {
+    "modo": "sempre",
+    "arma": {
+      "nome": "Muco radioativo",
+      "dano": "2d6",
+      "tipoDano": "Radioativo",
+      "pericia": "armas-de-fogo.projeteis",
+      "metros": 9,
+      "usos": {
+        "max": 3,
+        "recarga": "descanso-longo"
+      },
+      "extraContraMutacao": "1d6",
+      "marcaNoAlvo": {
+        "nome": "Muco radioativo",
+        "desvantagemCons": true,
+        "combate": true,
+        "texto": "testes de CONS% em desvantagem até o fim do combate"
+      }
+    },
+    "texto": "ataque especial (aparece nas armas): 2d6 radioativo a até 9 m, +1d6 contra quem tem mutação; o alvo faz CONS% em desvantagem até o fim do combate; 3 por descanso longo"
+  },
+  "pragas": {
+    "modo": "ativar",
+    "acao": "principal",
+    "especial": "pragas",
+    "repetir": true,
+    "escolhas": [
+      "alvo"
+    ],
+    "texto": "alvo a até 4,5 m com marcadores genéticos: por 2d4 turnos +1 no dano físico que toma, desvantagem em Percepção, sem concentração e 1 de dano por turno"
+  },
+  "toque contagioso": {
+    "modo": "sempre",
+    "especial": "toqueContagioso",
+    "aposToque": true,
+    "acaoOferta": "livre",
+    "texto": "depois de acertar um toque/Briga, o app oferece: CONS% Difícil ou o alvo desenvolve a sua mutação descontrolada por 5 turnos e toma 1d6; cada alvo 1 vez por descanso longo"
+  },
+  "mutacao monstruosa": {
+    "modo": "sempre",
+    "escolhaFixa": "tipoDano",
+    "danoEscolhido": "1d4",
+    "texto": "+1d4 do tipo escolhido (elemental ou de energia) nos ataques físicos"
+  },
+  "radiacao incontida": {
+    "modo": "ativar",
+    "especial": "radiacao",
+    "usos": {
+      "max": 1,
+      "recarga": "descanso"
+    },
+    "escolhas": [
+      "radiacao"
+    ],
+    "texto": "brilhar (+5% de defesa, sem furtividade, 15 min) ou superaquecer (explosão: 1d6 em você, 2d4 e 2 marcadores de vulnerabilidade a 1,5 m); 1 vez por descanso"
+  },
+  "regeneracao degenerativa": {
+    "modo": "ativar",
+    "acao": "bonus",
+    "especial": "regenDegenerativa",
+    "repetir": true,
+    "texto": "gasta 1 de CONS e cura 1d4 PV (1 por turno); CONS 0 = morte; volta 1 de CONS por descanso"
+  },
+  "corpo adaptado 2": {
+    "modo": "sempre",
+    "escolhaFixa": "resistencia",
+    "trocaNoDescanso": true,
+    "texto": "resistência (metade do dano) ao tipo escolhido; troca no fim de cada descanso longo"
+  },
+  "toxico": {
+    "modo": "sempre",
+    "especial": "toxico",
+    "texto": "+25% para resistir a venenos (o mestre aplica no teste); animal, besta ou monstro que lhe causar dano corpo a corpo faz WILL% Normal para continuar atacando (automático)"
+  },
+  "vetor": {
+    "modo": "sempre",
+    "especial": "vetor",
+    "texto": "+10% para resistir a doença (o mestre aplica); doente, quem o acerta com ataque físico ganha 1 marcador de vulnerabilidade (até 3; automático)"
+  },
+  "analista de risco": {
+    "modo": "ativar",
+    "acao": "bonus",
+    "especial": "analista",
+    "repetir": true,
+    "escolhas": [
+      "alvo"
+    ],
+    "texto": "INT% Normal: contra o alvo, +1d4 de dano e +10% nas defesas até o fim do combate; vantagem em Armadilhas › Desarmar; mostra PV e durabilidade"
+  },
+  "foco absoluto": {
+    "modo": "ligar",
+    "efeitos": "+10% em todos os testes",
+    "texto": "ligue enquanto estiver concentrado: testes de Concentração são Normais (ND 70) e os demais +10%"
+  },
+  "melhor do mundo": {
+    "modo": "sempre",
+    "escolhaFixa": "pericias",
+    "bonus": 5,
+    "aPartirDe": 6,
+    "aCada": 3,
+    "exceto": [
+      "briga",
+      "arma-branca",
+      "armas-de-fogo"
+    ],
+    "texto": "+5% numa perícia base à escolha no 6º nível e a cada 3 níveis (exceto combate)"
+  },
+  "bug na rede": {
+    "modo": "ativar",
+    "acao": "principal",
+    "especial": "bugNaRede",
+    "repetir": true,
+    "escolhas": [
+      "alvo",
+      "itemDoAlvo"
+    ],
+    "texto": "Computação › Decodificação Normal (membro cibernético: INT% contra WILL% + 30): o item a até 15 m fica Travado (equipado, mas sem uso) até o fim do combate"
+  },
+  "controle remoto": {
+    "modo": "ativar",
+    "acao": "bonus",
+    "especial": "controleRemoto",
+    "repetir": true,
+    "escolhas": [
+      "alvo"
+    ],
+    "texto": "drone, autômato ou sistema de defesa a até 60 m vira seu companheiro por 10 turnos e age logo depois de você"
+  },
+  "programador": {
+    "modo": "ativar",
+    "acao": "completa",
+    "especial": "programador",
+    "repetir": true,
+    "escolhas": [
+      "itemQualquer"
+    ],
+    "texto": "Computação › Programação Difícil: o item elétrico/eletrônico vira seu companheiro (ação livre para controlar; até 3); outros têm −30% para manipulá-lo"
+  },
+  "sobrecarga neural": {
+    "modo": "sempre",
+    "arma": {
+      "nome": "Sobrecarga Neural",
+      "dano": "2d8",
+      "tipoDano": "Elétrico",
+      "pericia": "computacao.interface-neural",
+      "metros": 15,
+      "ignoraIp": true,
+      "contraTipos": [
+        "drone",
+        "automato",
+        "maquina",
+        "ciborgue"
+      ]
+    },
+    "texto": "ataque especial (aparece nas armas): Computação › Interface Neural contra autômato, drone ou ciborgue a até 15 m, 2d8 elétrico que ignora IP"
+  },
+  "artefato corrosivo": {
+    "modo": "ativar",
+    "acao": "principal",
+    "especial": "artefatoCorrosivo",
+    "repetir": true,
+    "escolhas": [
+      "alvo",
+      "itemDoAlvo"
+    ],
+    "texto": "arremessa (Esportes › Arremessar): o item escolhido do alvo perde 1d4 de IP; Frascos Instáveis +1 por descanso"
+  },
+  "maos da criacao": {
+    "modo": "ativar",
+    "especial": "maosDaCriacao",
+    "repetir": true,
+    "escolhas": [
+      "criacao"
+    ],
+    "texto": "ao passar no teste final de criação: um Aprimoramento no item OU 1 ponto de Moral até o descanso longo (Moral: +1d20 num teste)"
+  },
+  "nevoa alucinogena": {
+    "modo": "ativar",
+    "acao": "principal",
+    "especial": "nevoa",
+    "usos": {
+      "max": 1,
+      "recarga": "descanso"
+    },
+    "escolhas": [
+      "alvo"
+    ],
+    "texto": "arremessa o frasco: a 1,5 m, CONS% Muito Difícil ou perde 1d4 de Sanidade e vê uma Alucinação maligna (ataca depois do turno dele por 10 turnos, dano psicológico); 1 por descanso"
+  },
+  "dancarino": {
+    "modo": "sempre",
+    "especial": "dancarino",
+    "texto": "defesa \"Dança\" no lugar da Esquiva (Artes › Dança); defendeu, +1 de Moral (até 3 por batalha; zera no fim)"
+  },
+  "o show tem que continuar": {
+    "modo": "sempre",
+    "especial": "show",
+    "texto": "no descanso curto com você, todos que descansam juntos recuperam +1d4 de Sanidade e começam o próximo combate Motivados (automático)"
+  },
+  "o grande truque": {
+    "modo": "sempre",
+    "especial": "grandeTruque",
+    "usos": {
+      "max": 1,
+      "recarga": "descanso-longo"
+    },
+    "texto": "1 vez por descanso longo, o dano que o levaria a 0 PV não acontece: some na fumaça e reaparece Furtivo a até 12 m (reação automática)"
+  },
+  "cibermedico": {
+    "modo": "sempre",
+    "vantagem": [
+      "ataque",
+      "medicina"
+    ],
+    "contra": [
+      "drone",
+      "automato",
+      "maquina",
+      "ciborgue"
+    ],
+    "especial": "ciberMedico",
+    "aposToque": true,
+    "acaoOferta": "movimento",
+    "texto": "depois de acertar um toque, o app oferece (fecha a ação completa): trava um membro cibernético por 1d4 turnos; 1 vez em cada personagem por combate"
+  },
+  "fitoterapia": {
+    "modo": "ativar",
+    "especial": "fitoterapia",
+    "repetir": true,
+    "escolhas": [
+      "remedio"
+    ],
+    "texto": "no descanso: Medicina › Farmacêutica Normal cria um remédio natural (cura 1D6, +3 m por 5 turnos, ignorar efeitos negativos por 3 turnos ou veneno 1D4 + MOD INT); dura 24 h"
   }
 }

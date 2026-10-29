@@ -12,7 +12,7 @@ const COMBATE = ['briga', 'arma-branca', 'armas-de-fogo'];
 // e mudança na Humanidade máxima.
 // danoCond: dano que só vale num tipo de ataque ({ fixo | dados, cond: 'desarmado' | 'branca' | 'distancia' | 'corpo' }).
 const vazio = () => ({ atributos: {}, testes: 0, pericias: {}, subpericias: {}, pv: 0, ip: { geral: 0, tipos: {} }, danoFixo: 0, danoDados: [], danoCond: [], notas: [],
-  rmnp: 0, imune: [], vantagens: [], defesas: [], humanidadeMax: 0, margemEfeito: [], mod: {} });
+  rmnp: 0, imune: [], vantagens: [], defesas: [], humanidadeMax: 0, margemEfeito: [], mod: {}, resistencias: [], imuneCritico: false });
 
 // Condição do bônus de dano pela frase onde ele aparece ("Ataques desarmados causam +1 Dano" → só desarmado).
 const COND_NOME = { desarmado: 'ataques desarmados', branca: 'armas brancas', distancia: 'ataques a distância', corpo: 'corpo a corpo' };
@@ -170,6 +170,9 @@ export function efeitosDaRegra(regra, base, sistema, rotulos = {}, vezes = 1) {
   const nomeContra = contra ? ` contra ${contra.map(id => rotulos.tipos?.[id] || id).join(' e ')}` : '';
   if (regra.rmnp) { r.rmnp += regra.rmnp; r.notas.push(`R.MNP ${regra.rmnp > 0 ? '+' : ''}${regra.rmnp}`); }
   if (regra.imune?.length) { r.imune.push(...regra.imune); r.notas.push(`imune a ${regra.imune.join(', ')}`); }
+  // Resistência (metade do dano) a tipos de dano e imunidade a acerto crítico (Evolução humana).
+  if (regra.resistencia?.length) { r.resistencias.push(...regra.resistencia); r.notas.push(`resistência a ${regra.resistencia.join(', ')}`); }
+  if (regra.imuneCritico) { r.imuneCritico = true; r.notas.push('imune a acertos críticos'); }
   if (regra.humanidadeMax) { r.humanidadeMax += regra.humanidadeMax; r.notas.push(`Humanidade máxima ${regra.humanidadeMax}`); }
   if (regra.vantagem?.length) {
     for (const alvo of regra.vantagem) r.vantagens.push({ alvo, contra });
@@ -192,6 +195,7 @@ export function somarEfeitos(lista) {
     r.danoDados.push(...x.danoDados); r.notas.push(...x.notas); r.danoCond.push(...(x.danoCond || [])); r.margemEfeito.push(...(x.margemEfeito || []));
     r.rmnp += x.rmnp || 0; r.humanidadeMax += x.humanidadeMax || 0;
     for (const [k, v] of Object.entries(x.mod || {})) r.mod[k] = (r.mod[k] || 0) + v;
+    r.resistencias.push(...(x.resistencias || [])); r.imuneCritico ||= !!x.imuneCritico;
     r.imune.push(...(x.imune || [])); r.vantagens.push(...(x.vantagens || [])); r.defesas.push(...(x.defesas || []));
   }
   return r;

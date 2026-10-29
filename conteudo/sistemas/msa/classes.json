@@ -2726,8 +2726,13 @@
     },
     {
      "nome": "Regeneração degenerativa",
-     "descricao": "O mutante pode consumir 1 ponto de sua CONS por turno para se curar 1d4 PVs como uma ação bônus. Se chegar a 0 CONS ele morre. O mutante regenera 1 Ponto de CONS por descanso (curto ou longo). Corpo Adaptado. O seu tecido celular pode se adaptar aos perigos do seu dia. Escolha 1 tipo de dano (Concussão, Perfuração, Corte, Calor, Frio, Ácido, Veneno, etc.). Você recebe Resistência Natural (toma metade do dano) a este tipo de dano escolhido. Você pode alterar este tipo de resistência no fim de cada Descanso Longo, à medida que o seu corpo \"muda a pele\". Você deve avisar ao mestre logo que o descanso longo termina qual será o tipo de dano.",
+     "descricao": "O mutante pode consumir 1 ponto de sua CONS por turno para se curar 1d4 PVs como uma ação bônus. Se chegar a 0 CONS ele morre. O mutante regenera 1 Ponto de CONS por descanso (curto ou longo).",
      "id": "regeneracao-degenerativa"
+    },
+    {
+     "nome": "Corpo Adaptado 2",
+     "descricao": "O seu tecido celular pode se adaptar aos perigos do seu dia. Escolha 1 tipo de dano (Concussão, Perfuração, Corte, Calor, Frio, Ácido, Veneno, etc.). Você recebe Resistência Natural (toma metade do dano) a este tipo de dano escolhido. Você pode alterar este tipo de resistência no fim de cada Descanso Longo, à medida que o seu corpo \"muda a pele\". Você deve avisar ao mestre logo que o descanso longo termina qual será o tipo de dano.",
+     "id": "corpo-adaptado-2"
     },
     {
      "nome": "Mutação aprimorada",
@@ -2822,7 +2827,7 @@
       {
        "nivel": 12,
        "nome": "Cibermédico",
-       "descricao": "Seus testes de cura e ataque mirando maquinas e ciborgues são feitos com vantagem. Acertando um ataque de toque, com uma ação completa, você pode ‘travar’ um membro cibernético por 1d4 turnos."
+       "descricao": "Seus testes de cura e ataque mirando maquinas e ciborgues são feitos com vantagem. Acertando um ataque de toque, com uma ação completa, você pode ‘travar’ um membro cibernético por 1d4 turnos. Você pode usar essa habilidade 1 vez em cada personagem por combate."
       },
       {
        "nivel": 15,
@@ -3277,7 +3282,12 @@
       {
        "nivel": 5,
        "nome": "Dançarino",
-       "descricao": "Você pode rolar testes de Artes[Dança] no lugar de Esquiva. Sempre que fizer isso com sucesso, ganhe 1 ponto de Moral. Você pode acumular até 3 pontos de moral por batalha e eles zeram quando a batalha termina. Nível 6: O Show Tem Que Continuar. A sua performance salva mentes. Durante um Descanso Curto, você pode usar Artes ou Jogos para entreter o grupo. Todos os aliados que participarem recuperam 1d4 de Sanidade (SAN) extra e começam o próximo combate com o humor Motivado."
+       "descricao": "Você pode rolar testes de Artes[Dança] no lugar de Esquiva. Sempre que fizer isso com sucesso, ganhe 1 ponto de Moral. Você pode acumular até 3 pontos de moral por batalha e eles zeram quando a batalha termina."
+      },
+      {
+       "nivel": 6,
+       "nome": "O Show Tem Que Continuar",
+       "descricao": "A sua performance salva mentes. Durante um Descanso Curto, você pode usar Artes ou Jogos para entreter o grupo. Todos os aliados que participarem recuperam 1d4 de Sanidade (SAN) extra e começam o próximo combate com o humor Motivado."
       },
       {
        "nivel": 8,
