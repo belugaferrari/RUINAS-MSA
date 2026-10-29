@@ -3,6 +3,7 @@ import path from 'node:path';
 import { RAIZ, DATA_DIR } from './db.js';
 import { ARQ_MONSTROS } from './monstros.js';
 import { ARQ_HABILIDADES } from './habilidadesPlanilha.js';
+import { ARQ_MUTACOES } from './mutacoesPlanilha.js';
 
 export const CONTEUDO = path.join(RAIZ, 'conteudo');
 const SISTEMAS = path.join(CONTEUDO, 'sistemas');
@@ -52,7 +53,9 @@ export function sistema(id = SISTEMA_PADRAO) {
   const arqMonstros = fs.existsSync(ARQ_MONSTROS) ? ARQ_MONSTROS : !process.env.ITENS_EXEMPLO && fs.existsSync(MONSTROS_PADRAO) ? MONSTROS_PADRAO : null;
   // Habilidades por planilha do mestre (classes, vantagens, defeitos, capacidades e as regras do app).
   const arqHabilidades = fs.existsSync(ARQ_HABILIDADES) ? ARQ_HABILIDADES : null;
-  const assinatura = [...lista, ...(arqItens ? [arqItens] : []), ...(arqMonstros ? [arqMonstros] : []), ...(arqHabilidades ? [arqHabilidades] : [])].map(a => `${a}:${fs.statSync(a).mtimeMs}`).join('|');
+  // Tabela de mutações por planilha do mestre.
+  const arqMutacoes = fs.existsSync(ARQ_MUTACOES) ? ARQ_MUTACOES : null;
+  const assinatura = [...lista, ...(arqItens ? [arqItens] : []), ...(arqMonstros ? [arqMonstros] : []), ...(arqHabilidades ? [arqHabilidades] : []), ...(arqMutacoes ? [arqMutacoes] : [])].map(a => `${a}:${fs.statSync(a).mtimeMs}`).join('|');
   const atual = cache.get(id);
   if (atual && atual.assinatura === assinatura) return atual.dados;
   const [base, proprio, pericias, profissoes, classesArq, vantagens, habRegras, mutacoes] = lista.map(ler);
@@ -84,7 +87,7 @@ export function sistema(id = SISTEMA_PADRAO) {
     defeitos: [...v.defeitosLeves, ...v.defeitosNormais],
     capacidades: v.capacidades,
     // Tabela de mutações (d100), igual no MSA e no MSS.
-    mutacoes: mutacoes.mutacoes,
+    mutacoes: arqMutacoes ? ler(arqMutacoes).mutacoes : mutacoes.mutacoes,
   };
   // As colunas originais da planilha ("planilha") só servem para exportar de volta: não vão para o navegador.
   if (arqItens) dados.itens = ler(arqItens).itens.map(({ planilha, ...it }) => it);

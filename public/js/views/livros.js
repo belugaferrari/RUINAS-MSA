@@ -460,6 +460,25 @@ function detalheClasse(c) {
     h('ul', { class: 'lista-regras' }, c.vantagens.map(item)));
 }
 
+// Tabela de mutações (d100): consulta para todos; o mestre tem a planilha (baixar, enviar, ligar ao Google).
+export function mutacoesLivroView() {
+  const sis = estado.sistema;
+  const q = busca('mutacoesRef');
+  const lista = (sis.mutacoes || []).filter(m => !q || sa(`${m.n} ${m.nome} ${m.efeito}`).includes(q));
+  return h('div', {},
+    h('div', { class: 'barra' }, titulo('Mutações (d100)', 'dna', 'h2'), h('span', { class: 'espaco' }),
+      h('label', { class: 'busca' }, icone('search'), filtroBusca('mutacoesRef', 'Buscar mutação…'))),
+    h('p', { class: 'dica' }, 'Controlada: só o benefício. Descontrolada e temporária: benefício e ônus. O que está em "no app" o app aplica sozinho; o resto do texto o mestre aplica.'),
+    estado.campanha?.papel === 'mestre' ? planilhaFrente({
+      chave: 'mutacoesPlanilha', titulo: 'Mutações', rota: '/api/mutacoes', arquivo: 'mutacoes-ilhas-das-ruinas.xlsx', unidade: 'mutações',
+      explicacao: 'Baixe a planilha (uma linha por mutação: nº do d100, nome, efeito, benefício e ônus no app), edite e envie de volta — ou ligue a uma planilha do Google. Vale no MSA e no MSS e para todas as campanhas deste PC.',
+    }) : null,
+    lista.length ? tabela(['Nº', 'Mutação', 'Efeito', 'No app'], lista.map(m => [
+      h('strong', {}, String(m.n)), h('strong', {}, m.nome), m.efeito,
+      h('small', {}, [m.beneficio ? `benefício: ${m.beneficio}` : null, m.onus ? `ônus: ${m.onus}` : null].filter(Boolean).join(' · ') || '—'),
+    ]), 'compacta') : vazio('Nenhuma mutação encontrada.', 'dna'));
+}
+
 // Vantagens, defeitos e capacidades (capítulo 4).
 export function vantagensView() {
   const sis = estado.sistema;
@@ -620,9 +639,10 @@ export function referenciaView(inicial, comLivro) {
   const opcoes = [
     ...(comLivro ? [['livro', 'Livro', 'book-open']] : []),
     ['classes', 'Classes', 'shield'], ['pericias', 'Perícias e profissões', 'target'], ['vantagens', 'Vantagens e defeitos', 'sparkles'],
+    ['mutacoes', 'Mutações', 'dna'],
   ];
   const chave = `ref:${comLivro ? 'livro' : 'classes'}`;
   const atual = estado.sel[chave] || inicial;
-  const conteudo = { livro: () => livroView(estado.sistema.livro || 'regras-msa', `Livro de Regras · ${estado.sistema.nome}`), classes: classesView, pericias: periciasView, vantagens: vantagensView }[atual];
+  const conteudo = { livro: () => livroView(estado.sistema.livro || 'regras-msa', `Livro de Regras · ${estado.sistema.nome}`), classes: classesView, pericias: periciasView, vantagens: vantagensView, mutacoes: mutacoesLivroView }[atual];
   return h('div', {}, abas(opcoes, atual, id => { estado.sel[chave] = id; render(); }), conteudo());
 }

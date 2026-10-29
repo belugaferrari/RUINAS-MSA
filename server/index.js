@@ -17,6 +17,7 @@ migrarCampanhas();
 import { modeloNpcs, lerNpcs } from './excel.js';
 import { lerPlanilhaMonstros, planilhaMonstros, catalogoMonstros, salvarCatalogoMonstros, voltarMonstrosPadrao } from './monstros.js';
 import { planilhaHabilidades, lerPlanilhaHabilidades, catalogoHabilidades, salvarCatalogoHabilidades, voltarHabilidadesPadrao } from './habilidadesPlanilha.js';
+import { planilhaMutacoes, lerPlanilhaMutacoes, catalogoMutacoes, salvarCatalogoMutacoes, voltarMutacoesPadrao } from './mutacoesPlanilha.js';
 import { configPublica, salvarConfigIA, gerarTexto, lerImagemJson } from './ia.js';
 import { objetosDaIA, PEDIDO_MAPA_IA, ESQUEMA_MAPA_IA } from '../shared/objetosMapa.js';
 import { SISTEMA_IA, pedidoIA } from '../shared/encontro.js';
@@ -196,7 +197,7 @@ app.post('/api/campanhas/:id/importar-npcs', upload.single('arquivo'), rota(asyn
 // Qualquer mestre de campanha pode atualizar o catálogo; vale para todas as campanhas deste PC.
 function exigirAlgumMestre(req) {
   const user = autenticado(req);
-  if (!db.campaigns.some(c => c.mestreId === user.id)) throw Object.assign(new Error('Só quem é mestre de uma campanha pode mudar o catálogo de itens.'), { status: 403 });
+  if (!db.campaigns.some(c => c.mestreId === user.id)) throw Object.assign(new Error('Só quem é mestre de uma campanha pode mudar os catálogos e as planilhas do jogo.'), { status: 403 });
   return user;
 }
 
@@ -381,6 +382,46 @@ async function atualizarHabilidadesDoGoogle() {
   try { const r = await puxarHabilidadesDoGoogle(cat.googleSheets); console.log(`Habilidades atualizadas do Google: ${r.total} linhas.`); } catch (e) { console.log(`Habilidades: não deu para puxar do Google (${e.message})`); }
 }
 if (!process.env.ITENS_EXEMPLO) { setTimeout(atualizarHabilidadesDoGoogle, 6000); setInterval(atualizarHabilidadesDoGoogle, 30 * 60 * 1000).unref(); }
+
+// Frente do jogo por planilha (uma por frente: mutações e as próximas): baixar, enviar, puxar do Google (e depois sozinho
+// a cada 30 min) e voltar ao livro do autor. f: { rota, arquivo, nome, gerar(), ler(buffer) → { lista, avisos }, catalogo(), salvar(lista, arquivo, extra), voltar() }.
+function rotasDePlanilha(f) {
+  app.get(`${f.rota}/origem`, rota(req => {
+    autenticado(req);
+    const cat = f.catalogo();
+    return cat ? { origem: 'mestre', atualizadoEm: cat.atualizadoEm, arquivo: cat.arquivo, total: cat.total ?? null, googleSheets: cat.googleSheets || null } : { origem: 'padrao' };
+  }));
+  app.get(`${f.rota}.xlsx`, async (req, res) => {
+    try { exigirAlgumMestre(req); res.attachment(f.arquivo); res.send(Buffer.from(await f.gerar())); } catch (e) { res.status(e.status || 400).send(e.message); }
+  });
+  const importar = async (buffer, arquivo, extra = {}) => {
+    const { lista, avisos } = await f.ler(buffer);
+    if (!lista.length) throw new Error(`A planilha não tem ${f.nome}.`);
+    f.salvar(lista, arquivo, extra);
+    io.emit('sistema:atualizado');
+    return { total: lista.length, avisos: avisos.slice(0, 30) };
+  };
+  const puxar = async link => { const { id, buffer } = await baixarDoGoogle(link); return importar(buffer, 'Google Planilhas', { googleSheets: `https://docs.google.com/spreadsheets/d/${id}/edit` }); };
+  app.post(f.rota, upload.single('arquivo'), rota(async req => {
+    exigirAlgumMestre(req);
+    if (!req.file) throw new Error('Envie a planilha .xlsx.');
+    return importar(req.file.buffer, req.file.originalname);
+  }));
+  app.post(`${f.rota}/google`, rota(async req => { exigirAlgumMestre(req); return puxar(req.body?.link); }));
+  app.post(`${f.rota}/padrao`, rota(req => { exigirAlgumMestre(req); f.voltar(); io.emit('sistema:atualizado'); return { ok: true }; }));
+  const automatico = async () => {
+    const cat = f.catalogo();
+    if (!cat?.googleSheets) return;
+    try { const r = await puxar(cat.googleSheets); console.log(`${f.nome}: atualizado do Google (${r.total}).`); } catch (e) { console.log(`${f.nome}: não deu para puxar do Google (${e.message})`); }
+  };
+  if (!process.env.ITENS_EXEMPLO) { setTimeout(automatico, 7000); setInterval(automatico, 30 * 60 * 1000).unref(); }
+}
+rotasDePlanilha({
+  rota: '/api/mutacoes', arquivo: 'mutacoes-ilhas-das-ruinas.xlsx', nome: 'mutações',
+  gerar: () => planilhaMutacoes(sistema('mss').mutacoes),
+  ler: async buffer => { const r = await lerPlanilhaMutacoes(buffer); return { lista: r.mutacoes, avisos: r.avisos }; },
+  catalogo: catalogoMutacoes, salvar: salvarCatalogoMutacoes, voltar: voltarMutacoesPadrao,
+});
 
 app.post('/api/itens/padrao', rota(req => {
   exigirAlgumMestre(req);

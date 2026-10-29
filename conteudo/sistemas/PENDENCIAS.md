@@ -457,5 +457,8 @@ Ainda em aberto (o autor vai reler):
 - **Habilidades** (feito): Livro > Classes > "Habilidades, classes e vantagens (planilha)". Abas Habilidades, Classes, Especializações e Progressão.
   O texto do livro e as colunas de regra do app (Modo, Ação, Efeitos, Especial, Dano, Tipo de dano, Perícia, Alcance, Usos, Recarga, Duração, Escolhas)
   ficam lado a lado. Mudar o dano = mudar a coluna "Dano". Ligada ao Google, o app puxa sozinho a cada 30 minutos.
-- Próximas frentes, nesta ordem: **Mutações** → **Profissões** → **Armadilhas** → **Aprimoramentos de itens** → **Cibernéticos**.
+- **Habilidades — aguardando o autor**: ele termina a revisão das habilidades na planilha dele; depois eu reviso e passo tudo para a
+  planilha do app (preenchendo a coluna "Dano" com os danos que hoje estão só no texto e a coluna "O app entende").
+- **Mutações** (feito): Livro > Mutações (consulta para todos; planilha para o mestre: Nº d100, Mutação, Efeito, Benefício e Ônus no app).
+- Próximas frentes, nesta ordem: **Profissões** → **Armadilhas** → **Aprimoramentos de itens** → **Cibernéticos**.
 - **Cibernéticos**: ainda pouco desenvolvidos; algumas regras estão implícitas na classe **Ciborgue** (o app vai partir delas e listar o que falta).
