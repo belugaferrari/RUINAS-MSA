@@ -3,6 +3,9 @@
 > **LEMBRETE PARA A FINALIZAÇÃO (autor, 28/10):** quando o app estiver para ser finalizado, lembrar o autor de pedir para
 > **dobrar todos os efeitos de dano e de cura** (não fazer antes: ainda falta entrar muita informação).
 
+> **Ações por turno (autor, 29/10):** todo ataque (arma, desarmado, habilidade) gasta a ação principal; repetir uma ação
+> já gasta no turno (ou a reação na rodada) agora é recusado, e nada da ação fica pela metade.
+
 
 ## Livro MSA
 

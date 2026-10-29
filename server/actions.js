@@ -988,8 +988,8 @@ function resolverPendente(c, s, pend, defesa, sis) {
 export const ndReparo = it => 60 + 10 * Math.max(0, (it.durabilidade ?? 0) - (it.durabilidadeAtual ?? it.durabilidade ?? 0));
 
 // Economia do turno (livro): 1 ação principal, 1 de movimento e 1 bônus por turno, ações livres à vontade; a completa
-// gasta a principal e a de movimento; a reação é 1 por rodada, fora do turno. O app anota o que foi gasto e AVISA quando
-// passa do limite (não bloqueia: o mestre decide). Devolve o aviso, se houver.
+// gasta a principal e a de movimento; a reação é 1 por rodada, fora do turno. Desde 29/10 (autor) o app BLOQUEIA quando a
+// ação já foi gasta (um ataque gasta a principal: não dá para atacar de novo no mesmo turno). O mestre desmarca no turno.
 const LIMITE_ACOES = { principal: 1, movimento: 1, bonus: 1, reacao: 1 };
 function gastarAcao(c, p, tipo, { desfazer = false } = {}) {
   const cb = c.salas.batalha.combate;
@@ -1000,7 +1000,7 @@ function gastarAcao(c, p, tipo, { desfazer = false } = {}) {
   const avisos = [];
   for (const k of partes) {
     if (desfazer) { g[k] = Math.max(0, (g[k] || 0) - 1); continue; }
-    if ((g[k] || 0) >= (LIMITE_ACOES[k] ?? 1)) avisos.push(`${p.nome} já usou a ${nomeAcao(k).toLowerCase()} ${k === 'reacao' ? 'nesta rodada' : 'neste turno'}`);
+    if ((g[k] || 0) >= (LIMITE_ACOES[k] ?? 1)) throw erro(`${p.nome} já usou a ${nomeAcao(k).toLowerCase()} ${k === 'reacao' ? 'nesta rodada' : 'neste turno'}.`);
     g[k] = (g[k] || 0) + 1;
   }
   return avisos.length ? avisos.join('; ') : null;
@@ -3012,10 +3012,36 @@ export const acoes = {
   },
 };
 
+// Volta um objeto ao que era (cópia "antes"), no próprio lugar: os mesmos objetos continuam valendo para quem os tem.
+function restaurar(dest, src) {
+  const objeto = v => v && typeof v === 'object';
+  if (Array.isArray(dest)) {
+    for (let i = 0; i < src.length; i++) {
+      if (objeto(dest[i]) && objeto(src[i]) && Array.isArray(dest[i]) === Array.isArray(src[i])) restaurar(dest[i], src[i]);
+      else dest[i] = src[i];
+    }
+    dest.length = src.length;
+    return;
+  }
+  for (const k of Object.keys(dest)) if (!(k in src)) delete dest[k];
+  for (const [k, v] of Object.entries(src)) {
+    if (objeto(dest[k]) && objeto(v) && Array.isArray(dest[k]) === Array.isArray(v)) restaurar(dest[k], v);
+    else dest[k] = v;
+  }
+}
+
 export function executar(c, tipo, dados, ctx) {
   const fn = acoes[tipo];
   if (!fn) throw erro(`Ação desconhecida: ${tipo}`);
-  const r = fn(c, dados || {}, ctx);
+  // Se a ação der erro no meio, a campanha volta a como estava (nada fica pela metade: munição, ação gasta…).
+  const antes = structuredClone(c);
+  let r;
+  try {
+    r = fn(c, dados || {}, ctx);
+  } catch (e) {
+    restaurar(c, antes);
+    throw e;
+  }
   save();
   return r;
 }

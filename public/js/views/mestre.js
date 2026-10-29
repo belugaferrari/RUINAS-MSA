@@ -13,13 +13,14 @@ import { confrontoView } from './confronto.js';
 import { criacaoView, iniciarCriacao } from './criacao.js';
 import { versaoApp } from './versao.js';
 import { mapaView } from './mapa.js';
+import { companheirosMestreView } from './companheiros.js';
 import { tipoCriatura } from '/shared/regras.js';
 import { relogioTopo } from './tempo.js';
 import { CATEGORIAS_IMAGEM, categoriaDaImagem } from '/shared/imagens.js';
 
 const ABAS = [
   ['jogadores', 'Jogadores', 'users'], ['npcs', 'NPCs', 'ghost'], ['imagens', 'Imagens', 'image'], ['social', 'Sala Social', 'drama'],
-  ['batalha', 'Campo de Batalha', 'swords'], ['mapa', 'Mapa', 'map'], ['confronto', 'Confronto', 'scale'], ['resumo', 'Resumo', 'heart-pulse'], ['regras', 'Livro de Regras', 'book-open'],
+  ['batalha', 'Campo de Batalha', 'swords'], ['companheiros', 'Companheiros', 'paw-print'], ['mapa', 'Mapa', 'map'], ['confronto', 'Confronto', 'scale'], ['resumo', 'Resumo', 'heart-pulse'], ['regras', 'Livro de Regras', 'book-open'],
   ['monstros', 'Livro dos Monstros', 'skull'], ['mestre', 'Livro do Mestre', 'library'], ['loja', 'Loja', 'store'],
   ['classes', 'Classes', 'shield'], ['lore', 'Lore', 'scroll'], ['campanha', 'Campanha', 'notebook-pen'],
 ];
@@ -53,6 +54,7 @@ function conteudoAba(aba) {
     case 'social': return salaView('social');
     case 'batalha': return salaView('batalha');
     case 'mapa': return mapaView();
+    case 'companheiros': return companheirosMestreView();
     case 'confronto': return confrontoView();
     case 'resumo': return abaResumo();
     case 'regras': return livroView(estado.sistema.livro || 'regras-msa', `Livro de Regras · ${estado.sistema.nome}`);

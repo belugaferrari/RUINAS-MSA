@@ -123,8 +123,12 @@ test('Armadura improvisada: +1 de IP por uso, até +2 geral ou +4 de um tipo; so
   const h = hab(eu, 'Armadura improvisada');
   const ip0 = R.derivados(eu, mss).ip.geral;
   executar(c, 'habilidade.ativar', { id: eu.id, hab: h.id, escolhas: { alvo: eu.id, tipoIp: 'geral' } }, ctxM);
+  // 1 por turno (ação bônus): no mesmo turno é recusado.
+  assert.throws(() => executar(c, 'habilidade.ativar', { id: eu.id, hab: h.id, escolhas: { alvo: eu.id, tipoIp: 'geral' } }, ctxM), /bônus/);
+  delete c.salas.batalha.combate.gasto; // novo turno (cada ataque gasta a ação)
   executar(c, 'habilidade.ativar', { id: eu.id, hab: h.id, escolhas: { alvo: eu.id, tipoIp: 'geral' } }, ctxM);
   assert.equal(R.derivados(eu, mss).ip.geral, ip0 + 2);
+  delete c.salas.batalha.combate.gasto; // novo turno (cada ataque gasta a ação)
   assert.throws(() => executar(c, 'habilidade.ativar', { id: eu.id, hab: h.id, escolhas: { alvo: eu.id, tipoIp: 'geral' } }, ctxM), /máximo/);
   assert.throws(() => executar(c, 'habilidade.ativar', { id: eu.id, hab: h.id, escolhas: { alvo: eu.id, tipoIp: 'Corte' } }, ctxM), /geral/);
   executar(c, 'combate.encerrar', {}, ctxM);
@@ -152,6 +156,7 @@ test('ataque localizado num item: o golpe vai no item; com Engenharia Reversa el
   ele.itens = [{ uid: 'esc', nome: 'Escudo', tipo: 'defesa', slot: 'maos', equipado: true, durabilidade: 5, durabilidadeAtual: 5 }];
   comDados(0.99, () => executar(c, 'habilidade.ativar', { id: eu.id, hab: hab(eu, 'Engenharia Reversa').id, escolhas: { alvo: ele.id, item: 'esc' } }, ctxM));
   assert.ok(eu.marcas.some(m => m.item?.uid === 'esc'));
+  delete c.salas.batalha.combate.gasto; // o ataque vem no turno seguinte (a Engenharia Reversa gastou a principal)
   const pv = ele.pv.atual;
   const r = comDados(0.99, () => executar(c, 'combate.atacar', { atacante: eu.id, alvo: ele.id, opcoes: { armaUid: 'desarmado', localizado: true, local: 'item:esc', surpresa: true } }, ctxM));
   assert.equal(r.sucesso, true);
@@ -159,6 +164,7 @@ test('ataque localizado num item: o golpe vai no item; com Engenharia Reversa el
   assert.equal(ele.itens[0].durabilidadeAtual, 4);
   assert.match(r.rotulo, /\(Escudo\)/);
   // Local do corpo aparece no registro.
+  delete c.salas.batalha.combate.gasto; // novo turno (cada ataque gasta a ação)
   const r2 = comDados(0.99, () => executar(c, 'combate.atacar', { atacante: eu.id, alvo: ele.id, opcoes: { armaUid: 'desarmado', localizado: true, local: 'cabeca', surpresa: true } }, ctxM));
   assert.match(r2.rotulo, /\(Cabeça\)/);
 });

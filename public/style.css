@@ -1516,3 +1516,12 @@ input.largo { flex: 1 1 20em; min-width: 0; }
 .mapa-links { align-items: center; flex-wrap: wrap; gap: .6em; margin-bottom: .6em; }
 .contador-turno { display: inline-flex; align-items: center; gap: .25em; flex-wrap: wrap; padding: .3em .7em; border-radius: 999px; background: var(--painel2); border: 1px solid var(--ouro-esc); }
 .contador-turno.passou { border-color: var(--perigo); color: #ff8a7a; }
+/* Mão no Campo de Batalha: a arma com desenho, dano, maestria, durabilidade e munição (autor, 29/10). */
+.mao-arma { display: flex; gap: .5em; align-items: flex-start; min-width: 0; }
+.mao-icone { flex: none; width: 2.6em; height: 2.6em; display: grid; place-items: center; border-radius: 8px; background: var(--painel2); border: 1px solid var(--ouro-esc); color: var(--ouro); }
+.mao-icone svg { width: 1.6em; height: 1.6em; }
+.mao-icone.quebrado { border-color: var(--perigo); color: var(--perigo); }
+.mao-info { display: flex; flex-direction: column; min-width: 0; gap: .05em; }
+.mao-info small { opacity: .9; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mao-info small.perigo { color: var(--perigo); }
+.mao-item.vazia { opacity: .6; }

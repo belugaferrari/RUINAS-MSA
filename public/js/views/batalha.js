@@ -4,9 +4,9 @@
 import { h, botao, selecao, aviso, icone, titulo, vazio, pedirTexto, confirmar } from '../ui.js';
 import { estado, render, personagemPorId } from '../estado.js';
 import { acao } from '../api.js';
-import { derivados, listaHabilidades, efeitosHabilidade, modoHabilidade, temHabilidade, tipoCriatura, chaveHabilidade, GRUPOS_IP, acoesDaHabilidade, nomeAcao, dadosDaHabilidade, ehAtaqueEspecial, TIPOS_ACAO, acaoDoAtaqueEspecial, podeRepetir, duracaoDaHabilidade, textoDuracao } from '/shared/regras.js';
+import { derivados, listaHabilidades, efeitosHabilidade, modoHabilidade, temHabilidade, tipoCriatura, chaveHabilidade, GRUPOS_IP, acoesDaHabilidade, nomeAcao, dadosDaHabilidade, ehAtaqueEspecial, TIPOS_ACAO, acaoDoAtaqueEspecial, podeRepetir, duracaoDaHabilidade, textoDuracao, durabilidadeDe, textoIp } from '/shared/regras.js';
 import { armasDisponiveis, ipDe, opcoesDefesa, defesaDoAlvo, danoDaArma, recursoDe, LOCAIS_ATAQUE } from '/shared/combate.js';
-import { trilhaCompacta, escolherCondicao, cargaView } from './ficha.js';
+import { trilhaCompacta, escolherCondicao, cargaView, iconeItem } from './ficha.js';
 import { painelSlot, naMao, maoHabil } from './boneco.js';
 import { FORMAS_AREA, areaDoTexto } from '/shared/area.js';
 import { coberturaPeloMapa } from '/shared/objetosMapa.js';
@@ -73,7 +73,16 @@ function quadroPersonagem(p, meus, chave, mestre, participantes) {
     const habil = maoHabil(p) === n;
     return h('div', { class: `mao ${habil ? 'habil' : ''}` },
       h('small', {}, rotulo, habil ? h('span', { class: 'selo ok' }, 'hábil') : null),
-      h('span', { class: 'mao-item', title: it?.nome || 'vazia' }, it ? [icone(it.tipo === 'arma' ? 'sword' : 'hand'), ` ${it.nome}`, (it.ocupa ?? 1) >= 2 ? h('small', {}, ' (2 mãos)') : null] : '—'),
+      // A arma na mão (autor, 29/10): desenho do tipo, dano, maestria/mãos e durabilidade atual/original (e munição).
+      it ? h('div', { class: 'mao-arma' },
+        h('span', { class: `mao-icone ${durabilidadeDe(it).quebrado ? 'quebrado' : ''}` }, icone(iconeItem(it))),
+        h('div', { class: 'mao-info' },
+          h('strong', { class: 'mao-item', title: it.nome }, it.nome),
+          it.dano || it.danoTexto ? h('small', {}, icone('swords'), ` ${danoDaArma(it, p) || it.danoTexto}${it.tipoDano ? ` ${it.tipoDano}` : ''}`) : textoIp(it) ? h('small', {}, icone('shield'), ` ${textoIp(it)}`) : null,
+          h('small', {}, icone('hand'), ` maestria ${it.maestria ?? 0} · ${Math.max(1, it.ocupa ?? 1)} mão${(it.ocupa ?? 1) > 1 ? 's' : ''}`),
+          durabilidadeDe(it).tipo === 'normal' ? h('small', { class: durabilidadeDe(it).quebrado ? 'perigo' : '' }, icone('wrench'), ` durabilidade ${durabilidadeDe(it).atual}/${durabilidadeDe(it).max}${durabilidadeDe(it).quebrado ? ' (quebrada)' : ''}`) : null,
+          it.capacidade ? h('small', {}, icone('target'), ` munição ${it.carregada || 0}/${it.capacidade}`) : null))
+        : h('span', { class: 'mao-item vazia' }, '— vazia'),
       botao(abertoMao === id ? 'Fechar' : 'Equipar', () => { estado.sel[`boneco:${p.id}`] = abertoMao === id ? null : id; render(); },
         { class: 'pequeno', icone: 'shirt', title: `${rotulo}: equipar ou trocar`, 'aria-expanded': abertoMao === id }));
   };

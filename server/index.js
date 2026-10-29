@@ -199,6 +199,12 @@ function exigirAlgumMestre(req) {
   return user;
 }
 
+// Endereços deste PC na rede (para abrir no celular na mesma Wi-Fi: "localhost" no celular é o próprio celular).
+app.get('/api/rede', rota(() => ({
+  porta: PORTA,
+  enderecos: Object.values(os.networkInterfaces()).flat().filter(i => i && i.family === 'IPv4' && !i.internal).map(i => `http://${i.address}:${PORTA}`),
+})));
+
 app.get('/api/itens/origem', rota(req => { autenticado(req); return origemCatalogo(); }));
 
 app.get('/api/itens.xlsx', async (req, res) => {

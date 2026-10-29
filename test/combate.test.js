@@ -310,11 +310,13 @@ test('munição: tiro gasta, recarrega da caixa, cancelar devolve', () => {
   executar(c, 'combate.atacar', { atacante: a, alvo: b, opcoes: { armaUid: arma.uid } }, ctxM);
   assert.equal(arma.carregada, 5);
   // Ataque em área fica esperando a defesa; cancelar devolve a bala.
+  delete c.salas.batalha.combate.gasto; // novo turno (cada ataque gasta a ação)
   const pend = executar(c, 'combate.atacar', { atacante: a, alvo: b, opcoes: { armaUid: arma.uid, area: true } }, ctxM);
   assert.equal(arma.carregada, 4);
   executar(c, 'combate.cancelar', { id: pend.id }, ctxM);
   assert.equal(arma.carregada, 5);
   arma.carregada = 0;
+  delete c.salas.batalha.combate.gasto; // novo turno (cada ataque gasta a ação)
   assert.throws(() => executar(c, 'combate.atacar', { atacante: a, alvo: b, opcoes: { armaUid: arma.uid } }, ctxM), /sem munição/);
   const r = executar(c, 'item.recarregar', { id: a, uid: arma.uid }, ctxM);
   assert.equal(r.carregada, 6);

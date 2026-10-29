@@ -200,6 +200,7 @@ test('Quebra-Hordas oferece ataque extra contra outra criatura da mesma raça, u
   const s = c.salas.batalha;
   let tentativas = 0;
   while (!(s.ofertas || []).length && tentativas++ < 40) {
+    delete s.combate?.gasto; // cada tentativa num turno novo (o ataque gasta a ação)
     executar(c, 'combate.atacar', { atacante: ids[0], alvo: ids[1], opcoes: { surpresa: true } }, ctxM);
   }
   const of = s.ofertas[0];

@@ -60,3 +60,20 @@ function novoCompanheiro(p) {
       }, { class: 'primario', icone: 'paw-print' })),
     h('p', { class: 'dica' }, 'Com uma criatura como base, o companheiro já vem com atributos, ataques e habilidades dela. As regras de cada classe (Treinador, Ciborgue, Inventor…) para companheiros entram depois.'));
 }
+
+// Mestre (autor, 29/10): todos os companheiros da campanha, por dono, e a aba de companheiros de qualquer personagem.
+export function companheirosMestreView() {
+  const c = estado.campanha;
+  const donos = c.personagens.filter(p => !p.companheiroDe && (p.tipo === 'pj' || c.personagens.some(x => x.companheiroDe === p.id)));
+  if (!donos.length) return vazio('Nenhum personagem de jogador ainda.', 'paw-print');
+  const chave = 'compMestre';
+  if (!donos.some(p => p.id === estado.sel[chave])) estado.sel[chave] = (donos.find(p => c.personagens.some(x => x.companheiroDe === p.id)) || donos[0]).id;
+  const todos = c.personagens.filter(x => x.companheiroDe);
+  return h('div', { class: 'companheiros-mestre' },
+    h('div', { class: 'barra' }, titulo('Companheiros da campanha', 'paw-print', 'h2'), h('span', { class: 'selo' }, `${todos.length}`)),
+    todos.length ? h('ul', { class: 'lista-companheiros-mestre' }, donos.filter(p => todos.some(x => x.companheiroDe === p.id)).map(p => h('li', {},
+      h('strong', {}, p.nome), ': ',
+      todos.filter(x => x.companheiroDe === p.id).map((x, i) => [i ? ', ' : '', h('button', { type: 'button', class: 'link', onclick: () => { estado.sel[chave] = p.id; render(); } }, `${x.nome} (${nomeTipo(x.companheiroTipo)})`)])))) : h('p', { class: 'dica' }, 'Nenhum companheiro ainda.'),
+    h('label', { class: 'linha' }, 'Personagem', selecao(donos.map(p => ({ valor: p.id, rotulo: `${p.nome}${p.tipo === 'npc' ? ' (NPC)' : ''}` })), estado.sel[chave], v => { estado.sel[chave] = v; render(); }, { 'aria-label': 'Dono dos companheiros' })),
+    companheirosView(c.personagens.find(p => p.id === estado.sel[chave])));
+}

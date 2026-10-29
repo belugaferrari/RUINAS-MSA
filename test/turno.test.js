@@ -40,13 +40,14 @@ test('economia do turno: o ataque gasta a principal; o 2º ataque avisa; o próx
   const vez = cb.ordem[cb.vez].id, outro = ids.find(x => x !== vez);
   const r1 = executar(c, 'combate.atacar', { atacante: vez, alvo: outro, opcoes: { surpresa: true } }, ctxM);
   assert.ok(!r1.excesso);
-  const r2 = executar(c, 'combate.atacar', { atacante: vez, alvo: outro, opcoes: { surpresa: true } }, ctxM);
-  assert.match(r2.excesso, /já usou a ação principal/);
+  // O 2º ataque no mesmo turno é recusado (autor, 29/10) e nada muda.
+  const antes = JSON.stringify(c.salas.batalha.log.length);
+  assert.throws(() => executar(c, 'combate.atacar', { atacante: vez, alvo: outro, opcoes: { surpresa: true } }, ctxM), /já usou a ação principal/);
+  assert.equal(JSON.stringify(c.salas.batalha.log.length), antes);
   // O outro ataca fora do turno: gasta a reação (1 por rodada).
   executar(c, 'combate.atacar', { atacante: outro, alvo: vez, opcoes: { surpresa: true } }, ctxM);
   assert.equal(cb.gasto[outro].reacao, 1);
-  const mov = executar(c, 'combate.acao', { id: vez, tipo: 'completa', rotulo: 'teste' }, ctxM);
-  assert.match(mov.excesso, /principal/);
+  assert.throws(() => executar(c, 'combate.acao', { id: vez, tipo: 'completa', rotulo: 'teste' }, ctxM), /principal/);
   executar(c, 'combate.proximo', {}, ctxM);
   executar(c, 'combate.proximo', {}, ctxM);
   assert.ok(!cb.gasto[vez].principal, 'novo turno devolve a principal');
@@ -98,6 +99,7 @@ test('reações e ações livres aparecem como ataque especial momentâneo para 
   s.ofertas = [];
   try {
     Math.random = () => 0.97; // agora acerta: Predador Apex não aparece
+    delete c.salas.batalha.combate.gasto; // novo turno (cada ataque gasta a ação)
     executar(c, 'combate.atacar', { atacante: ids[1], alvo: ids[0], opcoes: { surpresa: true } }, ctxM);
   } finally { Math.random = rnd; }
   assert.ok(!s.ofertas.some(o => o.habilidade === 'Predador Apex'));
@@ -142,6 +144,7 @@ test('Ataque Desarmado Treinado: automático, +1 só no ataque desarmado, não a
     const r = executar(c, 'combate.atacar', { atacante: ids[0], alvo: ids[1], opcoes: { surpresa: true, armaUid: 'desarmado' } }, ctxM);
     assert.match(r.texto, /\(Ataque Desarmado Treinado\)/);
     assert.match(r.texto, /tomou \d+ de dano = /);
+    delete c.salas.batalha.combate.gasto; // novo turno (cada ataque gasta a ação)
     const r2 = executar(c, 'combate.atacar', { atacante: ids[0], alvo: ids[1], opcoes: { surpresa: true, armaUid: 'f' } }, ctxM);
     assert.ok(!/Ataque Desarmado Treinado/.test(r2.texto), 'não soma no ataque armado');
   } finally { Math.random = rnd; }

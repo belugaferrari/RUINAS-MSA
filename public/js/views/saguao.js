@@ -71,7 +71,21 @@ export function telaSaguao() {
         : 'Aparecem aqui as campanhas abertas pelos mestres e as que você já participa. Campanhas fechadas não podem ser acessadas.'),
       lista.length ? h('div', { class: 'lista-campanhas' }, lista.map(c => cartaoCampanha(c, mestre, suporte)))
         : vazio(mestre ? 'Nenhuma campanha ainda. Crie a primeira!' : suporte ? 'Nenhuma campanha com o Suporte liberado para você.' : 'Nenhuma campanha aberta no momento.', 'map'),
+      mestre ? enderecoCelular() : null,
       mestre ? versaoApp() : null));
+}
+
+// Endereço para abrir no celular (mesma Wi-Fi). "localhost" só funciona no próprio PC.
+let rede = null;
+function enderecoCelular() {
+  if (!rede) { rede = { enderecos: [] }; get('/api/rede').then(r => { rede = r; render(); }).catch(() => {}); }
+  if (location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') return null;
+  return h('div', { class: 'bloco endereco-celular' },
+    h('h3', { class: 'com-icone' }, icone('smartphone'), 'Abrir no celular ou em outro PC'),
+    rede.enderecos.length
+      ? [h('p', {}, 'Com o aparelho na mesma Wi-Fi deste PC, abra no navegador dele:'), h('ul', {}, rede.enderecos.map(e => h('li', {}, h('code', {}, e))))]
+      : h('p', { class: 'dica' }, 'Este PC não está numa rede (Wi-Fi ou cabo).'),
+    h('p', { class: 'dica' }, '"localhost" no celular aponta para o próprio celular, por isso não abre. Se o endereço acima não abrir: confira se o celular está na mesma Wi-Fi (não nos dados móveis) e, no Windows, permita o Node.js no Firewall para redes privadas (na primeira vez o Windows pergunta; se negou, vá em Firewall do Windows › Permitir um aplicativo › Node.js › Privada). A rede Wi-Fi do PC precisa estar como "Rede privada".'));
 }
 
 function cartaoCampanha(c, mestre, suporte = false) {
