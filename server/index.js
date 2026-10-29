@@ -16,6 +16,7 @@ try { reconverterCatalogos(sistema('mss')); } catch (e) { console.log(`Catálogo
 migrarCampanhas();
 import { modeloNpcs, lerNpcs } from './excel.js';
 import { lerPlanilhaMonstros, planilhaMonstros, catalogoMonstros, salvarCatalogoMonstros, voltarMonstrosPadrao } from './monstros.js';
+import { planilhaHabilidades, lerPlanilhaHabilidades, catalogoHabilidades, salvarCatalogoHabilidades, voltarHabilidadesPadrao } from './habilidadesPlanilha.js';
 import { configPublica, salvarConfigIA, gerarTexto, lerImagemJson } from './ia.js';
 import { objetosDaIA, PEDIDO_MAPA_IA, ESQUEMA_MAPA_IA } from '../shared/objetosMapa.js';
 import { SISTEMA_IA, pedidoIA } from '../shared/encontro.js';
@@ -331,6 +332,55 @@ app.post('/api/monstros/padrao', rota(req => {
   io.emit('sistema:atualizado');
   return { ok: true };
 }));
+
+// Habilidades por planilha (classes, especializações, habilidades, vantagens, defeitos, capacidades e regras do app).
+// Vale para todas as campanhas deste PC; ligada ao Google, o app puxa sozinho ao abrir e a cada 30 minutos.
+app.get('/api/habilidades/origem', rota(req => {
+  autenticado(req);
+  const cat = catalogoHabilidades();
+  return cat ? { origem: 'mestre', atualizadoEm: cat.atualizadoEm, arquivo: cat.arquivo, total: cat.total ?? null, googleSheets: cat.googleSheets || null } : { origem: 'padrao' };
+}));
+app.get('/api/habilidades.xlsx', async (req, res) => {
+  try {
+    exigirAlgumMestre(req);
+    res.attachment('habilidades-ilhas-das-ruinas.xlsx');
+    res.send(Buffer.from(await planilhaHabilidades(sistema('msa'), sistema('mss'))));
+  } catch (e) {
+    res.status(e.status || 400).send(e.message);
+  }
+});
+async function importarHabilidades(buffer, arquivo, extra = {}) {
+  const { catalogo, total, avisos } = await lerPlanilhaHabilidades(buffer, sistema('mss'));
+  if (!total) throw new Error('A planilha não tem habilidades (aba "Habilidades", coluna "Nome").');
+  salvarCatalogoHabilidades({ ...catalogo, total }, arquivo, extra);
+  io.emit('sistema:atualizado');
+  return { total, avisos: avisos.slice(0, 30) };
+}
+app.post('/api/habilidades', upload.single('arquivo'), rota(async req => {
+  exigirAlgumMestre(req);
+  if (!req.file) throw new Error('Envie a planilha .xlsx.');
+  return importarHabilidades(req.file.buffer, req.file.originalname);
+}));
+async function puxarHabilidadesDoGoogle(link) {
+  const { id, buffer } = await baixarDoGoogle(link);
+  return importarHabilidades(buffer, 'Google Planilhas', { googleSheets: `https://docs.google.com/spreadsheets/d/${id}/edit` });
+}
+app.post('/api/habilidades/google', rota(async req => {
+  exigirAlgumMestre(req);
+  return puxarHabilidadesDoGoogle(req.body?.link);
+}));
+app.post('/api/habilidades/padrao', rota(req => {
+  exigirAlgumMestre(req);
+  voltarHabilidadesPadrao();
+  io.emit('sistema:atualizado');
+  return { ok: true };
+}));
+async function atualizarHabilidadesDoGoogle() {
+  const cat = catalogoHabilidades();
+  if (!cat?.googleSheets) return;
+  try { const r = await puxarHabilidadesDoGoogle(cat.googleSheets); console.log(`Habilidades atualizadas do Google: ${r.total} linhas.`); } catch (e) { console.log(`Habilidades: não deu para puxar do Google (${e.message})`); }
+}
+if (!process.env.ITENS_EXEMPLO) { setTimeout(atualizarHabilidadesDoGoogle, 6000); setInterval(atualizarHabilidadesDoGoogle, 30 * 60 * 1000).unref(); }
 
 app.post('/api/itens/padrao', rota(req => {
   exigirAlgumMestre(req);

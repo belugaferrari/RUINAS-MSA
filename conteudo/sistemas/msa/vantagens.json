@@ -415,7 +415,7 @@
    {
     "nome": "Fotofobia",
     "requisito": "",
-    "descricao": "Seus olhos ardem com luz forte ou sol do meio-dia. Quando estiver sob o Sol ou em ambiente muito iluminado seus testes recebem -10%.DEFEITOS LEVES",
+    "descricao": "Seus olhos ardem com luz forte ou sol do meio-dia. Quando estiver sob o Sol ou em ambiente muito iluminado seus testes recebem -10%.",
     "revisao": false,
     "id": "fotofobia",
     "tipo": "leve"

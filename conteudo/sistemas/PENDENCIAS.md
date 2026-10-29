@@ -452,3 +452,10 @@ Ainda em aberto (o autor vai reler):
 - **MOD FOR**: confirmado — soma no dano corpo a corpo (MOD = (FOR − 10) ÷ 2, arredondado para baixo; ex.: FOR 13 → +1). O "−1" visto no teste era o IP do capacete do alvo, descontado de todo golpe (corrigido acima).
 - **Mestre atacando**: o painel fica no personagem que atacou (antes ia para o alvo, que esperava a defesa).
 - **Itens no Campo de Batalha**: lista de todos os itens do personagem (equipados com o lugar, e os da mochila), com dano/IP, durabilidade, munição, travado/quebrado.
+
+## 29/10 — Planilhas por frente (autor: "uma planilha separada para cada frente")
+- **Habilidades** (feito): Livro > Classes > "Habilidades, classes e vantagens (planilha)". Abas Habilidades, Classes, Especializações e Progressão.
+  O texto do livro e as colunas de regra do app (Modo, Ação, Efeitos, Especial, Dano, Tipo de dano, Perícia, Alcance, Usos, Recarga, Duração, Escolhas)
+  ficam lado a lado. Mudar o dano = mudar a coluna "Dano". Ligada ao Google, o app puxa sozinho a cada 30 minutos.
+- Próximas frentes, nesta ordem: **Mutações** → **Profissões** → **Armadilhas** → **Aprimoramentos de itens** → **Cibernéticos**.
+- **Cibernéticos**: ainda pouco desenvolvidos; algumas regras estão implícitas na classe **Ciborgue** (o app vai partir delas e listar o que falta).

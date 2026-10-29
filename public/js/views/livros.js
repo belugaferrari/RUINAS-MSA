@@ -334,6 +334,58 @@ function planilhaMonstrosMestre() {
       : 'No Google Planilhas: Compartilhar > Acesso geral > "Qualquer pessoa com o link" (Leitor). Depois de puxar uma vez, o app passa a atualizar sozinho (ao abrir e a cada 30 minutos).'));
 }
 
+// Planilha de uma frente do jogo (Habilidades; depois Profissões, Mutações, Armadilhas…), só o mestre: baixar a planilha
+// atual, enviar de volta, ligar a uma planilha do Google (o app puxa sozinho a cada 30 min) ou voltar ao livro do autor.
+// rota: '/api/habilidades' (com /origem, .xlsx, /google e /padrao).
+export function planilhaFrente({ chave, titulo: tituloPainel, rota, arquivo: nomeArquivo, explicacao, unidade = 'linhas' }) {
+  const info = estado.sel[`${chave}Info`];
+  if (!info && !estado.sel[`${chave}Pedido`]) {
+    estado.sel[`${chave}Pedido`] = true;
+    get(`${rota}/origem`).then(r => { estado.sel[`${chave}Info`] = r; render(); }).catch(() => {});
+  }
+  const recarregar = () => { estado.sel[`${chave}Info`] = null; estado.sel[`${chave}Pedido`] = false; };
+  const avisar = (r, de = '') => aviso(`${r.total} ${unidade} lidas${de}.${r.avisos?.length ? ` Atenção: ${r.avisos.join(' ')}` : ''}`, r.avisos?.length ? 'erro' : 'ok');
+  const arquivo = h('input', { type: 'file', accept: '.xlsx', 'aria-label': `${tituloPainel} (.xlsx)` });
+  const googleLink = h('input', { type: 'url', class: 'largo', placeholder: 'Link da planilha no Google (docs.google.com/spreadsheets/…)', value: estado.sel[`${chave}Google`] ?? info?.googleSheets ?? '',
+    'aria-label': 'Link da planilha no Google', oninput: e => { estado.sel[`${chave}Google`] = e.target.value; } });
+  return h('details', { class: 'bloco', open: !!estado.sel[`${chave}Aberto`], ontoggle: e => { estado.sel[`${chave}Aberto`] = e.target.open; } },
+    h('summary', {}, icone('file-spreadsheet'), ` ${tituloPainel} (planilha)`),
+    h('p', { class: 'dica' }, info ? (info.origem === 'mestre'
+      ? `Em uso: a sua planilha${info.arquivo ? ` (${info.arquivo})` : ''}${info.total ? ` · ${info.total} ${unidade}` : ''}${info.atualizadoEm ? ` · ${formatarData(info.atualizadoEm)}` : ''}.`
+      : 'Em uso: o livro do autor (vem com as atualizações do app).') : 'Carregando…'),
+    h('p', { class: 'dica' }, explicacao),
+    h('div', { class: 'barra' },
+      botao('Baixar planilha', () => baixarArquivo(`${rota}.xlsx`, nomeArquivo), { icone: 'download' }),
+      arquivo,
+      botao('Enviar planilha', async () => {
+        if (!arquivo.files[0]) throw new Error('Escolha a planilha .xlsx.');
+        const form = new FormData();
+        form.append('arquivo', arquivo.files[0]);
+        const r = await enviarArquivo(rota, form);
+        recarregar();
+        avisar(r);
+      }, { class: 'primario', icone: 'upload' }),
+      info?.origem === 'mestre' ? botao('Voltar ao livro do autor', async () => {
+        if (!(await confirmar(`Apagar a planilha enviada (${tituloPainel}) e voltar ao livro do autor?`))) return;
+        await enviarArquivo(`${rota}/padrao`, new FormData());
+        recarregar();
+      }, { class: 'perigo', icone: 'refresh-cw' }) : null),
+    h('div', { class: 'barra' },
+      googleLink,
+      botao('Puxar do Google Planilhas', async () => {
+        const r = await post(`${rota}/google`, { link: googleLink.value });
+        recarregar();
+        avisar(r, ' do Google');
+      }, { class: 'primario', icone: 'refresh-cw', title: 'A planilha precisa estar em Compartilhar > "Qualquer pessoa com o link" (Leitor)' })),
+    h('p', { class: 'dica' }, info?.googleSheets
+      ? 'Ligado à planilha do Google: o app puxa sozinho ao abrir e a cada 30 minutos. "Puxar do Google Planilhas" atualiza na hora. Enviar um arquivo .xlsx desliga a atualização automática.'
+      : 'No Google Planilhas: Compartilhar > Acesso geral > "Qualquer pessoa com o link" (Leitor). Depois de puxar uma vez, o app passa a atualizar sozinho (ao abrir e a cada 30 minutos).'));
+}
+const planilhaHabilidadesMestre = () => planilhaFrente({
+  chave: 'habilidadesPlanilha', titulo: 'Habilidades, classes e vantagens', rota: '/api/habilidades', arquivo: 'habilidades-ilhas-das-ruinas.xlsx',
+  explicacao: 'Baixe a planilha (abas Habilidades, Classes, Especializações e Progressão; instruções dentro dela), edite e envie de volta — ou ligue a uma planilha do Google. Vale para MSA e MSS e para todas as campanhas deste PC. Para mudar o dano de uma habilidade, mude a coluna "Dano".',
+});
+
 // Imagem do monstro: arquivo enviado pelo mestre ou link (Google Drive compartilhado ou endereço na internet).
 function imagemMonstro(m, mestre, estagio = null) {
   const url = urlImagemMonstro(m, estagio);
@@ -373,6 +425,7 @@ export function classesView() {
     h('div', { class: 'barra' }, titulo('Classes', 'shield', 'h2'), seloRevisao(true, 'base MSS — conferir para o MSA'), h('span', { class: 'espaco' }),
       h('label', { class: 'busca' }, icone('search'), filtroBusca('classes', 'Buscar classe ou habilidade…'))),
     h('p', { class: 'dica' }, `Os personagens recebem a classe no nível ${sis.regras.nivelClasse} e escolhem a especialização no nível ${sis.regras.nivelEspecializacao}.`),
+    estado.campanha?.papel === 'mestre' ? planilhaHabilidadesMestre() : null,
     h('div', { class: 'cartoes classes' }, lista.map(c => h('button', {
       type: 'button', class: `cartao escolha ${sel?.id === c.id ? 'escolhido' : ''}`, 'aria-pressed': sel?.id === c.id,
       onclick: () => { estado.sel.classeVista = sel?.id === c.id ? null : c.id; estado.sel.espVista = null; render(); },

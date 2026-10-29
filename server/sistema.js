@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { RAIZ, DATA_DIR } from './db.js';
 import { ARQ_MONSTROS } from './monstros.js';
+import { ARQ_HABILIDADES } from './habilidadesPlanilha.js';
 
 export const CONTEUDO = path.join(RAIZ, 'conteudo');
 const SISTEMAS = path.join(CONTEUDO, 'sistemas');
@@ -49,12 +50,22 @@ export function sistema(id = SISTEMA_PADRAO) {
   // Livro dos Monstros: o enviado pelo mestre (data/), senão o do autor (conteudo/sistemas/monstros.json).
   // Nos testes (ITENS_EXEMPLO=1) ficam só os exemplos do base.json.
   const arqMonstros = fs.existsSync(ARQ_MONSTROS) ? ARQ_MONSTROS : !process.env.ITENS_EXEMPLO && fs.existsSync(MONSTROS_PADRAO) ? MONSTROS_PADRAO : null;
-  const assinatura = [...lista, ...(arqItens ? [arqItens] : []), ...(arqMonstros ? [arqMonstros] : [])].map(a => `${a}:${fs.statSync(a).mtimeMs}`).join('|');
+  // Habilidades por planilha do mestre (classes, vantagens, defeitos, capacidades e as regras do app).
+  const arqHabilidades = fs.existsSync(ARQ_HABILIDADES) ? ARQ_HABILIDADES : null;
+  const assinatura = [...lista, ...(arqItens ? [arqItens] : []), ...(arqMonstros ? [arqMonstros] : []), ...(arqHabilidades ? [arqHabilidades] : [])].map(a => `${a}:${fs.statSync(a).mtimeMs}`).join('|');
   const atual = cache.get(id);
   if (atual && atual.assinatura === assinatura) return atual.dados;
-  const [base, proprio, pericias, profissoes, classes, vantagens, habRegras, mutacoes] = lista.map(ler);
-  const v = vantagens.dados;
-  const { _aviso, ...habilidadesRegras } = habRegras;
+  const [base, proprio, pericias, profissoes, classesArq, vantagens, habRegras, mutacoes] = lista.map(ler);
+  let v = vantagens.dados;
+  let { _aviso, ...habilidadesRegras } = habRegras;
+  let classes = classesArq.dados;
+  if (arqHabilidades) {
+    const cat = ler(arqHabilidades);
+    const doSis = cat.sistemas?.[id];
+    if (doSis?.classes) classes = doSis.classes;
+    if (doSis?.vantagens) v = doSis.vantagens;
+    if (cat.regras) habilidadesRegras = cat.regras;
+  }
   // Subperícias que só existem para quem tem certa habilidade (ex.: Sentidos › Ondas, do Receptor Neural).
   const listaPericias = pericias.dados.map(p => ({ ...p, subpericias: [...p.subpericias] }));
   for (const [chave, r] of Object.entries(habilidadesRegras)) {
@@ -68,7 +79,7 @@ export function sistema(id = SISTEMA_PADRAO) {
     habilidadesRegras,
     pericias: listaPericias,
     profissoes: profissoes.dados,
-    classes: classes.dados,
+    classes,
     vantagens: v.gerais,
     defeitos: [...v.defeitosLeves, ...v.defeitosNormais],
     capacidades: v.capacidades,
