@@ -1507,3 +1507,12 @@ input.largo { flex: 1 1 20em; min-width: 0; }
   .palco-lado strong { overflow-wrap: anywhere; }
 }
 @media (prefers-reduced-motion: reduce) { .palco-hit, .palco-resultado, .palco-arma-icone { animation: none !important; } .palco-hit { display: none; } }
+
+/* Mapa: de onde o personagem da vez saiu e quanto andou no turno (autor, 29/10). */
+.inicio-turno { position: absolute; left: calc((var(--col) + var(--ox)) * var(--cel)); top: calc((var(--lin) + var(--oy)) * var(--cel));
+  width: calc(var(--cel) * var(--lado, 1)); height: calc(var(--cel) * var(--lado, 1)); display: grid; place-items: center; pointer-events: none; z-index: 1;
+  border: 2px dashed var(--ouro); border-radius: 50%; background: rgba(212, 162, 76, .18); color: var(--ouro); }
+.inicio-turno svg { width: 50%; height: 50%; filter: drop-shadow(0 1px 2px #000); }
+.mapa-links { align-items: center; flex-wrap: wrap; gap: .6em; margin-bottom: .6em; }
+.contador-turno { display: inline-flex; align-items: center; gap: .25em; flex-wrap: wrap; padding: .3em .7em; border-radius: 999px; background: var(--painel2); border: 1px solid var(--ouro-esc); }
+.contador-turno.passou { border-color: var(--perigo); color: #ff8a7a; }

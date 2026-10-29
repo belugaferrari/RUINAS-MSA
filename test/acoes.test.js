@@ -212,7 +212,7 @@ test('mapa e Suporte: mestre escolhe e ajusta, Suporte move peões e mostra só 
   assert.equal(c.mapa.grade.ox, 0.99);
   executar(c, 'mapa.mover', { id, col: 3, lin: 4 }, ctxM);
   // Jogador não mexe; Suporte só entra se liberado.
-  assert.throws(() => executar(c, 'mapa.mover', { id, col: 1, lin: 1 }, { user: jog, mestre: false }), /mestre ou o Suporte/);
+  assert.throws(() => executar(c, 'mapa.mover', { id, col: 1, lin: 1 }, { user: jog, mestre: false }), /só move o seu personagem/);
   assert.throws(() => entrarNaCampanha(c, sup, 'suporte'), /não liberou/);
   entrarNaCampanha(c, m, 'suporte');
   executar(c, 'suporte.adicionar', { nome: 'ajudante' }, ctxM);

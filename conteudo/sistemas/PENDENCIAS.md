@@ -406,3 +406,11 @@ Feito (regras em `habilidades-regras.json`; efeitos próprios em `server/actions
 - (28/10) Planilha de itens exportada: todas as colunas originais como vieram (inclusive "A definir"), na ordem do "num ctrl".
   O catálogo do app foi conferido com as duas planilhas do autor ("itens" e "revisão parcial 1", a revisão vale): 1449 itens,
   nenhum faltando. Repetidos na planilha original (mesmo "num ctrl"): 10 no "itens" e 15 no "revisão" — fica a última linha.
+
+## 29/10 — Mapa no turno
+- Na vez de um personagem no Campo de Batalha, o jogador dono dele (ou do companheiro) move o peão livremente no Mapa
+  (arrastar ou clicar no quadrado). Fora da vez, só o mestre e o Suporte mexem.
+- Contador no Mapa: quanto o personagem da vez andou desde o começo do turno (diagonal = 1 quadrado), em quadrados e metros,
+  comparado com o deslocamento dele (vermelho se passar — só avisa). Pegadas marcam o quadrado de onde saiu.
+- Links: botão "Mapa" no Campo de Batalha e "Campo de Batalha" no Mapa.
+- Provisório: o contador mede a distância em linha reta (do início até onde está), não o caminho percorrido.

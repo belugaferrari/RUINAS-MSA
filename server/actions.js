@@ -884,6 +884,8 @@ function iniciarCombate(c) {
   for (const p of vivos) p.emCombate = true;
   ordenarIniciativa(s.combate);
   s.ativo = s.combate.ordem[0].id;
+  const pos0 = c.mapa?.pecas?.[s.ativo];
+  s.combate.inicioTurno = pos0 ? { id: s.ativo, col: pos0.col, lin: pos0.lin } : null;
   const nomes = s.combate.ordem.map(o => `${c.personagens.find(p => p.id === o.id).nome} ${o.ini}`);
   registrar(s.log, { autor: 'Mestre', rotulo: 'Combate iniciado — iniciativa', texto: nomes.join(' · ') });
 }
@@ -1680,8 +1682,14 @@ export const acoes = {
 
   // Mestre e Suporte colocam e movem os peões (col/lin = quadrado da grade).
   'mapa.mover'(c, { id, col, lin }, ctx) {
-    if (!ctx.mestre && !ctx.suporte) throw erro('Só o mestre ou o Suporte mexem no mapa.');
-    personagem(c, id);
+    const p = personagem(c, id);
+    // O jogador move o peão do próprio personagem (ou de um companheiro dele) na vez dele no Campo de Batalha (autor, 29/10).
+    const cb = c.salas.batalha.combate;
+    const vezDele = cb && cb.ordem[cb.vez]?.id === id;
+    if (!ctx.mestre && !ctx.suporte) {
+      if (p.donoId !== ctx.user.id) throw erro('Você só move o seu personagem.');
+      if (!vezDele) throw erro(`Só na vez de ${p.nome} no Campo de Batalha.`);
+    }
     c.mapa ||= novoMapa();
     const antes = c.mapa.pecas[id];
     // O Suporte não enxerga peões ocultos, então também não mexe neles.
@@ -1690,6 +1698,8 @@ export const acoes = {
     // Obstáculo (parede, árvore, veículo…) não deixa o peão entrar no quadrado.
     const bloq = bloqueadoPorObjeto(c.mapa.objetos, novo.col, novo.lin, ladoNoMapa(personagem(c, id)));
     if (bloq) throw erro(`${bloq.nome || tipoObjeto(bloq.tipo).nome} bloqueia esse quadrado.`);
+    // Onde o peão começou o turno (para o contador de espaço no mapa).
+    if (vezDele && antes && cb.inicioTurno?.id !== id) cb.inicioTurno = { id, col: antes.col, lin: antes.lin };
     c.mapa.pecas[id] = { ...antes, ...novo };
   },
 
@@ -2057,6 +2067,9 @@ export const acoes = {
     }
     const p = c.personagens.find(x => x.id === cb.ordem[cb.vez].id);
     s.ativo = p.id;
+    // Começo do turno: guarda onde o peão está (contador de espaço andado no mapa).
+    const pos = c.mapa?.pecas?.[p.id];
+    cb.inicioTurno = pos ? { id: p.id, col: pos.col, lin: pos.lin } : null;
     // Novo turno: ação principal, de movimento e bônus voltam (a reação volta a cada rodada).
     if (cb.gasto?.[p.id]) { const r = cb.gasto[p.id]; cb.gasto[p.id] = { reacao: r.reacao || 0, reacaoRodada: r.reacaoRodada }; }
     const nota = sobrevida(p, sis);

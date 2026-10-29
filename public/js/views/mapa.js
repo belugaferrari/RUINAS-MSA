@@ -60,7 +60,12 @@ export function mapaView() {
   const armando = estado.sel.mapaArmar;
   // Ataque em área: só vale com o atacante no mapa (jogador marca no próprio personagem; o mestre, em qualquer um).
   const area = estado.sel.areaAtaque && mapa.pecas?.[estado.sel.areaAtaque.atacante] ? estado.sel.areaAtaque : null;
-  const clicavel = mover || !!armando || !!area;
+  // Na vez de um personagem dele no Campo de Batalha, o jogador move esse peão livremente (autor, 29/10).
+  const cb = c.salas?.batalha?.combate;
+  const daVez = cb ? personagemPorId(cb.ordem?.[cb.vez]?.id) : null;
+  const minhaVez = !mover && daVez && daVez.donoId === estado.usuario?.id && mapa.pecas?.[daVez.id] ? daVez.id : null;
+  const podeMover = id => mover || id === minhaVez;
+  const clicavel = mover || !!minhaVez || !!armando || !!area;
   // Mestre: NPCs fora da visão de todos os PJs ficam nublados (lembrete do Esconder-se / modo fantasma).
   const foraDaVisao = new Set(mestre ? foraDaVisaoDosPJs({ mapa, personagens: c.personagens }) : []);
   const quadro = mapa.midia ? h('div', {
@@ -102,20 +107,27 @@ export function mapaView() {
         if (texto) acao('mapa.marcar', { col, lin, texto }).catch(err => aviso(err.message, 'erro'));
         return;
       }
-      if (!estado.sel.mapaSel) return;
-      acao('mapa.mover', { id: estado.sel.mapaSel, col, lin }).catch(err => aviso(err.message, 'erro'));
+      // O jogador na vez dele: o clique leva o peão do personagem da vez.
+      const quem = mover ? estado.sel.mapaSel : minhaVez;
+      if (!quem) return;
+      acao('mapa.mover', { id: quem, col, lin }).catch(err => aviso(err.message, 'erro'));
     } : null,
   },
     midiaEl(mapa.midia),
     h('div', { class: 'mapa-grade', 'aria-hidden': 'true' }),
     mestre ? (mapa.marcas || []).map(marca) : null,
     (mapa.objetos || []).map(o => objetoMapa(o, mestre)),
-    pecas.map(x => peao(x, g, mover, sel, foraDaVisao.has(x.p.id))),
+    marcaInicioTurno(cb, mapa),
+    pecas.map(x => peao(x, g, podeMover(x.p.id), sel || minhaVez, foraDaVisao.has(x.p.id))),
     // Proposta da IA (só o mestre): contornos tracejados dos objetos marcados, ainda não aceitos.
     mestre && estado.sel.propostaIA ? estado.sel.propostaIA.objetos.filter(o => o.marcado).map(o => h('span', { class: `objeto-mapa proposta obj-${o.tipo}`, style: { '--col': o.col, '--lin': o.lin, '--l': o.l, '--a': o.a }, title: `${o.nome} (proposta da IA)` }, icone(tipoObjeto(o.tipo).icone || 'box'))) : null,
     area ? h('div', { class: 'area-camada', 'aria-hidden': 'true' }, area && estado.sel.areaPonto ? quadradosAreaEls(area, estado.sel.areaPonto, mapa) : null) : null) : vazio(mestre ? 'Escolha o mapa abaixo (envie imagens, GIFs ou vídeos na aba Imagens).' : 'O mestre ainda não escolheu um mapa.', 'map');
 
   return h('div', { class: 'mapa-tela' },
+    // Links entre o Mapa e o Campo de Batalha (o Suporte só tem o Mapa).
+    c.papel !== 'suporte' ? h('div', { class: 'barra mapa-links' },
+      botao('Campo de Batalha', () => { estado.aba = 'batalha'; render(); }, { class: 'pequeno', icone: 'swords', title: 'Ir para o Campo de Batalha' }),
+      contadorTurno(cb, mapa, minhaVez)) : contadorTurno(cb, mapa, null),
     area ? painelArea(area, mapa) : estado.sel.areaAtaque ? h('div', { class: 'bloco aviso-revisar' }, `Para o ataque em área, ${personagemPorId(estado.sel.areaAtaque.atacante)?.nome || 'o atacante'} precisa estar no mapa.`,
       botao('Cancelar', () => { estado.sel.areaAtaque = null; render(); }, { class: 'pequeno' })) : null,
     mestre ? controlesMestre(mapa) : null,
@@ -445,6 +457,39 @@ function peao(x, g, mover, sel, nublado = false) {
     h('small', { class: 'peao-nome' }, p.nome));
   if (mover) arrastavel(el, p, g, ladoNoMapa(p));
   return el;
+}
+
+// Espaço andado no turno: do quadrado onde o personagem da vez começou o turno até onde ele está (diagonal = 1 quadrado).
+function andadoNoTurno(cb, mapa) {
+  const ini = cb?.inicioTurno;
+  const id = cb?.ordem?.[cb.vez]?.id;
+  const pos = id && mapa.pecas?.[id];
+  if (!ini || ini.id !== id || !pos) return null;
+  return { id, ini, quadrados: Math.max(Math.abs(pos.col - ini.col), Math.abs(pos.lin - ini.lin)) };
+}
+// Marca no mapa de onde o personagem da vez saiu (pegadas no quadrado de início).
+function marcaInicioTurno(cb, mapa) {
+  const a = andadoNoTurno(cb, mapa);
+  if (!a || !a.quadrados) return null;
+  const p = personagemPorId(a.id);
+  return h('span', { class: 'inicio-turno', style: { '--col': a.ini.col, '--lin': a.ini.lin, '--lado': ladoNoMapa(p) }, title: `${p?.nome} começou o turno aqui`, 'aria-hidden': 'true' }, icone('footprints'));
+}
+// Contador: "Lia andou 4 quadrados (6 m) de 6 (9 m)" — em vermelho se passar do deslocamento.
+function contadorTurno(cb, mapa, minhaVez) {
+  const a = andadoNoTurno(cb, mapa);
+  if (!cb) return null;
+  const id = cb.ordem?.[cb.vez]?.id;
+  const p = personagemPorId(id);
+  if (!p || !mapa.pecas?.[id]) return p ? h('small', { class: 'dica' }, `Vez de ${p.nome} (fora do mapa)`) : null;
+  const d = p.itens && p.atributos ? derivados(p, estado.sistema) : null;
+  const max = d?.deslocamentoQuadrados ?? null;
+  const q = a?.quadrados || 0;
+  const m = n => `${String(n * METROS_POR_QUADRADO).replace('.', ',')} m`;
+  const passou = max != null && q > max;
+  return h('span', { class: `contador-turno ${passou ? 'passou' : ''}`, role: 'status', 'aria-live': 'polite' },
+    icone('footprints'), h('strong', {}, ` ${p.nome}`), ` andou ${q} quadrado${q === 1 ? '' : 's'} (${m(q)})`,
+    max != null ? ` de ${max} (${m(max)})` : '', passou ? ' — passou do deslocamento' : '',
+    minhaVez ? h('small', { class: 'dica' }, ' · sua vez: arraste o peão ou clique no quadrado') : null);
 }
 
 // Arrastar com o dedo ou o mouse: o peão segue o ponteiro e, ao soltar, vai para o quadrado embaixo dele.

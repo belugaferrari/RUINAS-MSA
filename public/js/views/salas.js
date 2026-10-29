@@ -26,6 +26,8 @@ export function salaView(nome) {
       h('span', { class: 'selo' }, icone('users'), `${s.participantes.length}/${LIMITE_SALA}`),
       h('span', { class: 'espaco' }),
       adicionar(nome, s, mestre),
+      // Link para o Mapa (e o Mapa tem o link de volta).
+      nome === 'batalha' ? botao('Mapa', () => { estado.aba = 'mapa'; render(); }, { class: 'pequeno', icone: 'map', title: 'Ver o mapa (na sua vez, você move o seu personagem lá)' }) : null,
       mestre ? botao('Esvaziar sala', async () => {
         if (await confirmar(`Remover todos de ${TITULOS[nome]} e limpar o registro?`)) await acao('sala.limpar', { sala: nome });
       }, { class: 'perigo', icone: 'trash-2' }) : null),
