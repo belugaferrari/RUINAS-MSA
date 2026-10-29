@@ -1208,7 +1208,11 @@ span.peao { display: grid; }
 /* Mapa em tela inteira (horizontal). "girar": o celular está em pé e o mapa é deitado 90° pelo CSS. */
 .mapa-barra-cheia { display: flex; justify-content: flex-end; gap: .3em; }
 .mapa-centro.tela-cheia { position: fixed; inset: 0; z-index: 90; background: #000; display: block; padding: 0; margin: 0; }
-.mapa-centro.tela-cheia > :not(.mapa-rolagem):not(.mapa-barra-cheia) { display: none; }
+.mapa-centro.tela-cheia > :not(.mapa-rolagem):not(.mapa-barra-cheia):not(.mapa-contador-cheia) { display: none; }
+.mapa-contador-cheia { display: none; }
+.mapa-centro.tela-cheia .mapa-contador-cheia { display: block; position: fixed; top: max(8px, env(safe-area-inset-top)); left: max(8px, env(safe-area-inset-left));
+  z-index: 95; max-width: calc(100vw - 200px); background: #000c; color: #fff; padding: .3rem .6rem; border-radius: 8px; font-size: .9rem; pointer-events: none; }
+.mapa-centro.tela-cheia .mapa-contador-cheia:empty { display: none; }
 .mapa-centro.tela-cheia .mapa-barra-cheia { position: fixed; top: max(8px, env(safe-area-inset-top)); right: max(8px, env(safe-area-inset-right)); z-index: 95; }
 .mapa-centro.tela-cheia .mapa-barra-cheia button { background: #000c; }
 .mapa-centro.tela-cheia .mapa-rolagem { width: 100vw; height: 100vh; height: 100dvh; overflow: auto; border-radius: 0; display: flex; align-items: center; justify-content: center; }

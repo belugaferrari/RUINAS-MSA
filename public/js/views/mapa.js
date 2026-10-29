@@ -140,6 +140,8 @@ export function mapaView() {
               botao('Sair', sairTelaCheia, { class: 'pequeno', icone: 'minimize-2', title: 'Sair da tela inteira' })]
             : [botao('Girar', () => { estado.sel.mapaGirarNormal = !estado.sel.mapaGirarNormal; render(); }, { class: `pequeno ${estado.sel.mapaGirarNormal ? 'primario' : ''}`, icone: 'rotate-cw', title: 'Girar o mapa 90°', 'aria-pressed': !!estado.sel.mapaGirarNormal }),
               botao('Tela inteira', entrarTelaCheia, { class: 'pequeno', icone: 'maximize-2', title: 'Mapa em tela inteira, na horizontal' })]) : null,
+        // Na tela inteira o resto da página some: o contador de deslocamento do turno fica por cima do mapa (autor, 29/10).
+        estado.sel.mapaCheia && mapa.midia ? h('div', { class: 'mapa-contador-cheia' }, contadorTurno(cb, mapa, minhaVez)) : null,
         h('div', { class: 'mapa-rolagem', style: mapa.midia ? { '--aspecto': aspectos.get(`${mapa.midia.tipo}:${mapa.midia.url}`) || 1.5 } : null }, quadro),
         mover && mapa.midia ? h('p', { class: 'dica' }, icone('info'), ' Arraste os peões, ou escolha um na lista e clique no quadrado de destino. Cada quadrado = 1,5 m.') : null,
         mestre && mapa.midia ? h('div', { class: 'barra' },
