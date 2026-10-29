@@ -460,5 +460,6 @@ Ainda em aberto (o autor vai reler):
 - **Habilidades — aguardando o autor**: ele termina a revisão das habilidades na planilha dele; depois eu reviso e passo tudo para a
   planilha do app (preenchendo a coluna "Dano" com os danos que hoje estão só no texto e a coluna "O app entende").
 - **Mutações** (feito): Livro > Mutações (consulta para todos; planilha para o mestre: Nº d100, Mutação, Efeito, Benefício e Ônus no app).
-- Próximas frentes, nesta ordem: **Profissões** → **Armadilhas** → **Aprimoramentos de itens** → **Cibernéticos**.
+- **Profissões** (feito): Livro > Perícias e profissões (planilha para o mestre). Subperícias escritas como no livro; cada sistema usa só as que existem nele.
+- Próximas frentes, nesta ordem: **Armadilhas** → **Aprimoramentos de itens** → **Cibernéticos**.
 - **Cibernéticos**: ainda pouco desenvolvidos; algumas regras estão implícitas na classe **Ciborgue** (o app vai partir delas e listar o que falta).

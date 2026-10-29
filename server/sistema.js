@@ -4,6 +4,7 @@ import { RAIZ, DATA_DIR } from './db.js';
 import { ARQ_MONSTROS } from './monstros.js';
 import { ARQ_HABILIDADES } from './habilidadesPlanilha.js';
 import { ARQ_MUTACOES } from './mutacoesPlanilha.js';
+import { ARQ_PROFISSOES } from './profissoesPlanilha.js';
 
 export const CONTEUDO = path.join(RAIZ, 'conteudo');
 const SISTEMAS = path.join(CONTEUDO, 'sistemas');
@@ -55,7 +56,8 @@ export function sistema(id = SISTEMA_PADRAO) {
   const arqHabilidades = fs.existsSync(ARQ_HABILIDADES) ? ARQ_HABILIDADES : null;
   // Tabela de mutações por planilha do mestre.
   const arqMutacoes = fs.existsSync(ARQ_MUTACOES) ? ARQ_MUTACOES : null;
-  const assinatura = [...lista, ...(arqItens ? [arqItens] : []), ...(arqMonstros ? [arqMonstros] : []), ...(arqHabilidades ? [arqHabilidades] : []), ...(arqMutacoes ? [arqMutacoes] : [])].map(a => `${a}:${fs.statSync(a).mtimeMs}`).join('|');
+  const arqProfissoes = fs.existsSync(ARQ_PROFISSOES) ? ARQ_PROFISSOES : null;
+  const assinatura = [...lista, ...[arqItens, arqMonstros, arqHabilidades, arqMutacoes, arqProfissoes].filter(Boolean)].map(a => `${a}:${fs.statSync(a).mtimeMs}`).join('|');
   const atual = cache.get(id);
   if (atual && atual.assinatura === assinatura) return atual.dados;
   const [base, proprio, pericias, profissoes, classesArq, vantagens, habRegras, mutacoes] = lista.map(ler);
@@ -81,7 +83,8 @@ export function sistema(id = SISTEMA_PADRAO) {
     ...mesclar(base, proprio),
     habilidadesRegras,
     pericias: listaPericias,
-    profissoes: profissoes.dados,
+    // Profissões por planilha do mestre (cada sistema com as suas).
+    profissoes: (arqProfissoes && ler(arqProfissoes).sistemas?.[id]) || profissoes.dados,
     classes,
     vantagens: v.gerais,
     defeitos: [...v.defeitosLeves, ...v.defeitosNormais],

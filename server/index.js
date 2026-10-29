@@ -18,6 +18,7 @@ import { modeloNpcs, lerNpcs } from './excel.js';
 import { lerPlanilhaMonstros, planilhaMonstros, catalogoMonstros, salvarCatalogoMonstros, voltarMonstrosPadrao } from './monstros.js';
 import { planilhaHabilidades, lerPlanilhaHabilidades, catalogoHabilidades, salvarCatalogoHabilidades, voltarHabilidadesPadrao } from './habilidadesPlanilha.js';
 import { planilhaMutacoes, lerPlanilhaMutacoes, catalogoMutacoes, salvarCatalogoMutacoes, voltarMutacoesPadrao } from './mutacoesPlanilha.js';
+import { planilhaProfissoes, lerPlanilhaProfissoes, catalogoProfissoes, salvarCatalogoProfissoes, voltarProfissoesPadrao } from './profissoesPlanilha.js';
 import { configPublica, salvarConfigIA, gerarTexto, lerImagemJson } from './ia.js';
 import { objetosDaIA, PEDIDO_MAPA_IA, ESQUEMA_MAPA_IA } from '../shared/objetosMapa.js';
 import { SISTEMA_IA, pedidoIA } from '../shared/encontro.js';
@@ -384,7 +385,7 @@ async function atualizarHabilidadesDoGoogle() {
 if (!process.env.ITENS_EXEMPLO) { setTimeout(atualizarHabilidadesDoGoogle, 6000); setInterval(atualizarHabilidadesDoGoogle, 30 * 60 * 1000).unref(); }
 
 // Frente do jogo por planilha (uma por frente: mutações e as próximas): baixar, enviar, puxar do Google (e depois sozinho
-// a cada 30 min) e voltar ao livro do autor. f: { rota, arquivo, nome, gerar(), ler(buffer) → { lista, avisos }, catalogo(), salvar(lista, arquivo, extra), voltar() }.
+// a cada 30 min) e voltar ao livro do autor. f: { rota, arquivo, nome, gerar(), ler(buffer) → { dados, total, avisos }, catalogo(), salvar(dados, arquivo, extra), voltar() }.
 function rotasDePlanilha(f) {
   app.get(`${f.rota}/origem`, rota(req => {
     autenticado(req);
@@ -395,11 +396,11 @@ function rotasDePlanilha(f) {
     try { exigirAlgumMestre(req); res.attachment(f.arquivo); res.send(Buffer.from(await f.gerar())); } catch (e) { res.status(e.status || 400).send(e.message); }
   });
   const importar = async (buffer, arquivo, extra = {}) => {
-    const { lista, avisos } = await f.ler(buffer);
-    if (!lista.length) throw new Error(`A planilha não tem ${f.nome}.`);
-    f.salvar(lista, arquivo, extra);
+    const { dados, total, avisos } = await f.ler(buffer);
+    if (!total) throw new Error(`A planilha não tem ${f.nome}.`);
+    f.salvar(dados, arquivo, extra);
     io.emit('sistema:atualizado');
-    return { total: lista.length, avisos: avisos.slice(0, 30) };
+    return { total, avisos: avisos.slice(0, 30) };
   };
   const puxar = async link => { const { id, buffer } = await baixarDoGoogle(link); return importar(buffer, 'Google Planilhas', { googleSheets: `https://docs.google.com/spreadsheets/d/${id}/edit` }); };
   app.post(f.rota, upload.single('arquivo'), rota(async req => {
@@ -419,8 +420,14 @@ function rotasDePlanilha(f) {
 rotasDePlanilha({
   rota: '/api/mutacoes', arquivo: 'mutacoes-ilhas-das-ruinas.xlsx', nome: 'mutações',
   gerar: () => planilhaMutacoes(sistema('mss').mutacoes),
-  ler: async buffer => { const r = await lerPlanilhaMutacoes(buffer); return { lista: r.mutacoes, avisos: r.avisos }; },
+  ler: async buffer => { const r = await lerPlanilhaMutacoes(buffer); return { dados: r.mutacoes, total: r.mutacoes.length, avisos: r.avisos }; },
   catalogo: catalogoMutacoes, salvar: salvarCatalogoMutacoes, voltar: voltarMutacoesPadrao,
+});
+rotasDePlanilha({
+  rota: '/api/profissoes', arquivo: 'profissoes-ilhas-das-ruinas.xlsx', nome: 'profissões',
+  gerar: () => planilhaProfissoes(sistema('msa'), sistema('mss')),
+  ler: async buffer => { const r = await lerPlanilhaProfissoes(buffer, sistema('msa'), sistema('mss')); return { dados: { ...r.catalogo, total: r.total }, total: r.total, avisos: r.avisos }; },
+  catalogo: catalogoProfissoes, salvar: salvarCatalogoProfissoes, voltar: voltarProfissoesPadrao,
 });
 
 app.post('/api/itens/padrao', rota(req => {

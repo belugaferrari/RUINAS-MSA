@@ -506,6 +506,10 @@ export function periciasView() {
       h('label', { class: 'busca' }, icone('search'), filtroBusca('periciasRef', 'Buscar…'))),
     h('p', { class: 'dica' }, `${sis.regras.formulas.pontosPericia}. ${sis.regras.formulas.limitePericia}. Perícia base custa ${sis.regras.pericias.custoBase} PP por ponto (combate: ${sis.regras.pericias.custoBaseCombate}).`),
     titulo('Profissões', 'backpack', 'h3'),
+    estado.campanha?.papel === 'mestre' ? planilhaFrente({
+      chave: 'profissoesPlanilha', titulo: 'Profissões', rota: '/api/profissoes', arquivo: 'profissoes-ilhas-das-ruinas.xlsx', unidade: 'profissões',
+      explicacao: 'Baixe a planilha (uma linha por profissão: descrição, vantagem, bônus %, subperícias como no livro e PV a mais), edite e envie de volta — ou ligue a uma planilha do Google. Vale para todas as campanhas deste PC.',
+    }) : null,
     h('div', { class: 'cartoes' }, sis.profissoes.map(p => h('div', { class: 'cartao' }, titulo(p.nome, 'backpack'), h('p', {}, p.descricao), h('p', {}, h('strong', {}, 'Vantagem: '), p.vantagem), h('small', {}, `+${p.bonus}% em ${p.subpericiasLivro.join('; ')}`)))),
     titulo('Perícias', 'target', 'h3'),
     lista.map(p => h('details', { class: 'bloco', open: !!q },
