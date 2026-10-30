@@ -67,4 +67,9 @@ export function emitir(evento, dados) {
   });
 }
 
-export const acao = (tipo, dados) => emitir('acao', { tipo, dados });
+// Último ataque feito nesta tela (o painel do mestre não pula para o alvo de um ataque que ele mesmo acabou de fazer).
+export const ataqueDaTela = { id: null, em: 0 };
+export const acao = (tipo, dados) => {
+  if (String(tipo).startsWith('combate.atacar') && dados?.atacante) Object.assign(ataqueDaTela, { id: dados.atacante, em: Date.now() });
+  return emitir('acao', { tipo, dados });
+};

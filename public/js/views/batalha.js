@@ -3,7 +3,7 @@
 // Embaixo ficam o turno, os participantes (o campo) e o registro.
 import { h, botao, selecao, aviso, icone, titulo, vazio, pedirTexto, confirmar } from '../ui.js';
 import { estado, render, personagemPorId } from '../estado.js';
-import { acao } from '../api.js';
+import { acao, ataqueDaTela } from '../api.js';
 import { derivados, listaHabilidades, efeitosHabilidade, modoHabilidade, temHabilidade, tipoCriatura, chaveHabilidade, GRUPOS_IP, acoesDaHabilidade, nomeAcao, dadosDaHabilidade, ehAtaqueEspecial, TIPOS_ACAO, acaoDoAtaqueEspecial, podeRepetir, duracaoDaHabilidade, textoDuracao, durabilidadeDe, textoIp, escolhasPermitidas } from '/shared/regras.js';
 import { armasDisponiveis, ipDe, opcoesDefesa, defesaDoAlvo, danoDaArma, recursoDe, LOCAIS_ATAQUE } from '/shared/combate.js';
 import { trilhaCompacta, escolherCondicao, cargaView, iconeItem } from './ficha.js';
@@ -26,11 +26,12 @@ export function controladoNaSala(nome, participantes, mestre) {
   const vezAgora = cb ? `${cb.rodada}:${cb.vez}` : null;
   if (daVez && estado.sel[`${chave}:vez`] !== vezAgora) estado.sel[chave] = daVez.id;
   estado.sel[`${chave}:vez`] = vezAgora;
-  // Ataque novo esperando a defesa de um dos seus: o painel vai para ele. O mestre controla os dois lados: se foi ele que
-  // atacou com o personagem que está na tela, o painel fica nesse personagem (a defesa se escolhe no quadro "aguardando").
+  // Ataque novo esperando a defesa de um dos seus: o painel vai para ele. O mestre controla os dois lados: se o ataque
+  // saiu desta tela há pouco (o mestre atacou), o painel fica em quem atacou (a defesa se escolhe no quadro "aguardando").
   if (nome === 'batalha') {
     const pend = (estado.campanha.salas.batalha.pendentes || []).find(x => meus.some(p => p.id === x.alvo));
-    if (pend && estado.sel[`${chave}:pend`] !== pend.id && !(mestre && estado.sel[chave] === pend.atacante)) estado.sel[chave] = pend.alvo;
+    const daTela = pend && mestre && ataqueDaTela.id === pend.atacante && Date.now() - ataqueDaTela.em < 15000;
+    if (pend && estado.sel[`${chave}:pend`] !== pend.id && !daTela) estado.sel[chave] = pend.alvo;
     estado.sel[`${chave}:pend`] = pend?.id || null;
   }
   if (!meus.some(p => p.id === estado.sel[chave])) estado.sel[chave] = (daVez || meus.find(p => p.tipo === 'pj') || meus[0])?.id || null;
