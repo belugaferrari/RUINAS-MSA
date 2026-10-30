@@ -6,6 +6,8 @@ import { itemVisivel, itemAberto, textoIp, textoBonus } from '/shared/regras.js'
 import { imagemDeLink } from '/shared/imagens.js';
 import { buscarMonstros, monstroNoEstagio, textoDeslocamentos, textoND, periciasAcimaDoLimite } from '/shared/monstros.js';
 import { marked } from '/vendor/marked.js';
+import { calcularArmadilha } from '/shared/armadilhas.js';
+import { PROGRESSAO_DANO } from '/shared/regras.js';
 
 const cacheLivros = {};
 
@@ -479,6 +481,58 @@ export function mutacoesLivroView() {
     ]), 'compacta') : vazio('Nenhuma mutação encontrada.', 'dna'));
 }
 
+// Armadilhas (Capítulo 8): montar armadilha (calculadora do ND), as prontas e as tabelas. O mestre tem a planilha.
+export function armadilhasLivroView() {
+  const t = estado.sistema.armadilhas;
+  const mestre = estado.campanha?.papel === 'mestre';
+  const painel = mestre ? planilhaFrente({
+    chave: 'armadilhasPlanilha', titulo: 'Armadilhas', rota: '/api/armadilhas', arquivo: 'armadilhas-ilhas-das-ruinas.xlsx', unidade: 'linhas',
+    explicacao: 'Baixe a planilha (abas Prontas, Gatilhos, Áreas, Efeitos e Geral), edite e envie de volta — ou ligue a uma planilha do Google. A calculadora abaixo usa os números das tabelas. Vale no MSA e no MSS.',
+  }) : null;
+  if (!t) return h('div', {}, titulo('Armadilhas', 'triangle-alert', 'h2'), painel, vazio('Sem tabela de armadilhas.', 'triangle-alert'));
+  const e = estado.sel.montarArmadilha ||= { gatilho: t.gatilhos[0]?.nome || '', area: t.areas[0]?.id || 'unico', passos: 1, dano: '1d4', efeitos: [] };
+  const r = calcularArmadilha(t, e);
+  const area = t.areas.find(a => a.id === e.area);
+  const muda = (k, v) => { e[k] = v; render(); };
+  const sinal = v => (v > 0 ? `+${v}` : `${v}`);
+  return h('div', {},
+    titulo('Armadilhas', 'triangle-alert', 'h2'),
+    h('p', { class: 'dica' }, 'Toda armadilha é um "Item Estático". Improvisar/Produzir, Armar, Encontrar e Desarmar usam as subperícias de Armadilhas. ',
+      (t.notas || []).join(' ')),
+    painel,
+    h('section', { class: 'bloco' },
+      titulo('Montar armadilha', 'hammer', 'h3'),
+      h('div', { class: 'barra escolhas-hab' },
+        h('label', { class: 'linha' }, 'Gatilho ', selecao(t.gatilhos.map(g => ({ valor: g.nome, rotulo: g.nome })), e.gatilho, v => muda('gatilho', v), { 'aria-label': 'Gatilho' })),
+        h('label', { class: 'linha' }, 'Área ', selecao(t.areas.map(a => ({ valor: a.id, rotulo: a.nome })), e.area, v => muda('area', v), { 'aria-label': 'Área afetada' })),
+        area && area.maxPassos !== 1 ? h('label', { class: 'linha' }, 'Passos (1,5 m) ', h('input', { type: 'number', min: 1, max: area.maxPassos || 20, class: 'curto', value: r.passos,
+          onchange: ev => muda('passos', parseInt(ev.target.value, 10) || 1), 'aria-label': 'Passos da área' })) : null,
+        h('label', { class: 'linha' }, 'Dano ', selecao(PROGRESSAO_DANO.map(d => ({ valor: d, rotulo: d.toUpperCase() })), e.dano, v => muda('dano', v), { 'aria-label': 'Tamanho do dano' }))),
+      h('div', { class: 'barra' }, h('small', {}, 'Efeitos: '), t.efeitos.map(x => h('label', { class: 'linha', title: x.material ? `Exige: ${x.material}` : '' },
+        h('input', { type: 'checkbox', checked: e.efeitos.includes(x.nome), onchange: ev => muda('efeitos', ev.target.checked ? [...e.efeitos, x.nome] : e.efeitos.filter(n => n !== x.nome)) }),
+        ` ${x.nome} (${sinal(x.criar)})`))),
+      h('div', { class: 'defesas' },
+        [['Produzir', r.criar], ['Armar', r.armar], ['Encontrar', r.encontrar], ['Desarmar', r.desarmar]]
+          .map(([n, v]) => h('div', { class: 'defesa' }, h('small', {}, `ND ${n}`), h('strong', {}, String(v))))),
+      h('p', { class: 'dica' }, `ND de criação: ${r.partes.map(p => `${p.nome} ${sinal(p.valor)}`).join(' · ')}. Custo material: ${r.custo || '—'} · Tempo: ${r.tempo || '—'}${r.materiais.length ? ` · Exige: ${r.materiais.join('; ')}` : ''}.`)),
+    titulo('Armadilhas prontas', 'package', 'h3'),
+    h('div', { class: 'cartoes' }, t.prontas.map(a => h('div', { class: 'cartao' },
+      titulo(a.nome, 'triangle-alert'),
+      h('p', {}, h('strong', {}, 'Materiais: '), a.materiais),
+      h('p', {}, h('strong', {}, 'Gatilho: '), a.gatilho, ' · ', h('strong', {}, 'Área: '), a.area),
+      h('p', {}, `ND Improvisar ${a.ndImprovisar ?? '—'} · Armar ${a.ndArmar ?? '—'} · Desarmar ${a.ndDesarmar ?? '—'} · Encontrar ${a.ndEncontrar ?? '—'}`),
+      h('p', {}, h('strong', {}, 'Dano: '), a.dano ? `${a.dano.toUpperCase()} ${a.tipoDano}` : 'nenhum'),
+      a.efeitos ? h('p', {}, h('strong', {}, 'Efeitos: '), a.efeitos) : null,
+      a.obs ? h('small', { class: 'dica' }, a.obs) : null))),
+    titulo('Gatilhos', 'zap', 'h3'),
+    tabela(['Gatilho', 'Criar', 'Armar', 'Encontrar', 'Desarmar', 'Observações'], t.gatilhos.map(g => [h('strong', {}, g.nome), sinal(g.criar), sinal(g.armar), sinal(g.encontrar), sinal(g.desarmar), g.obs]), 'compacta'),
+    titulo('Áreas', 'maximize-2', 'h3'),
+    tabela(['Área', 'ND Criar', 'Custo material', 'Tempo'], t.areas.map(a => [h('strong', {}, a.nome),
+      [a.modFixo ? sinal(a.modFixo) : null, a.modPorPasso ? `${sinal(a.modPorPasso)} por passo` : null].filter(Boolean).join(' ') || '+0', a.custo, a.tempo]), 'compacta'),
+    titulo('Efeitos', 'activity', 'h3'),
+    tabela(['Efeito', 'ND Criar', 'Material exigido'], t.efeitos.map(x => [h('strong', {}, x.nome), sinal(x.criar), x.material || '—']), 'compacta'));
+}
+
 // Vantagens, defeitos e capacidades (capítulo 4).
 export function vantagensView() {
   const sis = estado.sistema;
@@ -643,10 +697,10 @@ export function referenciaView(inicial, comLivro) {
   const opcoes = [
     ...(comLivro ? [['livro', 'Livro', 'book-open']] : []),
     ['classes', 'Classes', 'shield'], ['pericias', 'Perícias e profissões', 'target'], ['vantagens', 'Vantagens e defeitos', 'sparkles'],
-    ['mutacoes', 'Mutações', 'dna'],
+    ['mutacoes', 'Mutações', 'dna'], ['armadilhas', 'Armadilhas', 'triangle-alert'],
   ];
   const chave = `ref:${comLivro ? 'livro' : 'classes'}`;
   const atual = estado.sel[chave] || inicial;
-  const conteudo = { livro: () => livroView(estado.sistema.livro || 'regras-msa', `Livro de Regras · ${estado.sistema.nome}`), classes: classesView, pericias: periciasView, vantagens: vantagensView, mutacoes: mutacoesLivroView }[atual];
+  const conteudo = { livro: () => livroView(estado.sistema.livro || 'regras-msa', `Livro de Regras · ${estado.sistema.nome}`), classes: classesView, pericias: periciasView, vantagens: vantagensView, mutacoes: mutacoesLivroView, armadilhas: armadilhasLivroView }[atual];
   return h('div', {}, abas(opcoes, atual, id => { estado.sel[chave] = id; render(); }), conteudo());
 }

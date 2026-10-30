@@ -19,6 +19,7 @@ import { lerPlanilhaMonstros, planilhaMonstros, catalogoMonstros, salvarCatalogo
 import { planilhaHabilidades, lerPlanilhaHabilidades, catalogoHabilidades, salvarCatalogoHabilidades, voltarHabilidadesPadrao } from './habilidadesPlanilha.js';
 import { planilhaMutacoes, lerPlanilhaMutacoes, catalogoMutacoes, salvarCatalogoMutacoes, voltarMutacoesPadrao } from './mutacoesPlanilha.js';
 import { planilhaProfissoes, lerPlanilhaProfissoes, catalogoProfissoes, salvarCatalogoProfissoes, voltarProfissoesPadrao } from './profissoesPlanilha.js';
+import { planilhaArmadilhas, lerPlanilhaArmadilhas, catalogoArmadilhas, salvarCatalogoArmadilhas, voltarArmadilhasPadrao } from './armadilhasPlanilha.js';
 import { configPublica, salvarConfigIA, gerarTexto, lerImagemJson } from './ia.js';
 import { objetosDaIA, PEDIDO_MAPA_IA, ESQUEMA_MAPA_IA } from '../shared/objetosMapa.js';
 import { SISTEMA_IA, pedidoIA } from '../shared/encontro.js';
@@ -428,6 +429,13 @@ rotasDePlanilha({
   gerar: () => planilhaProfissoes(sistema('msa'), sistema('mss')),
   ler: async buffer => { const r = await lerPlanilhaProfissoes(buffer, sistema('msa'), sistema('mss')); return { dados: { ...r.catalogo, total: r.total }, total: r.total, avisos: r.avisos }; },
   catalogo: catalogoProfissoes, salvar: salvarCatalogoProfissoes, voltar: voltarProfissoesPadrao,
+});
+
+rotasDePlanilha({
+  rota: '/api/armadilhas', arquivo: 'armadilhas-ilhas-das-ruinas.xlsx', nome: 'armadilhas',
+  gerar: () => planilhaArmadilhas(sistema('mss').armadilhas || {}),
+  ler: async buffer => { const r = await lerPlanilhaArmadilhas(buffer, sistema('mss').armadilhas); return { dados: { ...r.tabela, total: r.total }, total: r.total, avisos: r.avisos }; },
+  catalogo: catalogoArmadilhas, salvar: salvarCatalogoArmadilhas, voltar: voltarArmadilhasPadrao,
 });
 
 app.post('/api/itens/padrao', rota(req => {

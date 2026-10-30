@@ -461,5 +461,10 @@ Ainda em aberto (o autor vai reler):
   planilha do app (preenchendo a coluna "Dano" com os danos que hoje estão só no texto e a coluna "O app entende").
 - **Mutações** (feito): Livro > Mutações (consulta para todos; planilha para o mestre: Nº d100, Mutação, Efeito, Benefício e Ônus no app).
 - **Profissões** (feito): Livro > Perícias e profissões (planilha para o mestre). Subperícias escritas como no livro; cada sistema usa só as que existem nele.
-- Próximas frentes, nesta ordem: **Armadilhas** → **Aprimoramentos de itens** → **Cibernéticos**.
+- **Armadilhas** (feito): Livro > Armadilhas — as 7 prontas e as tabelas da planilha do autor (15/10; a tabela de Gatilhos não estava no livro),
+  calculadora "Montar armadilha" (passos do Capítulo 8; o exemplo do livro dá 140/60/60/60) e a planilha (Prontas, Gatilhos, Áreas, Efeitos, Geral).
+  A confirmar com o autor: **Cone** — o modificador do dano conta de novo por passo também no cone? (o app conta 1 vez); **nível** das armadilhas prontas
+  (o Último recurso do Sussurrante e o Sortudo citam "nível 3 ou inferior na tabela de armadilhas prontas", mas a tabela não tem nível).
+  Ainda não automatizado: acionar a armadilha no mapa (dano e efeitos no alvo, esquiva/evasão).
+- Próximas frentes, nesta ordem: **Aprimoramentos de itens** → **Cibernéticos**.
 - **Cibernéticos**: ainda pouco desenvolvidos; algumas regras estão implícitas na classe **Ciborgue** (o app vai partir delas e listar o que falta).

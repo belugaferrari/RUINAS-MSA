@@ -1,0 +1,265 @@
+{
+ "_fonte": "Planilha do autor \"Sistema MSS - armadilhas.xlsx\" (15/10) e Livro, Capítulo 8: Armadilhas. Vale no MSA e no MSS.",
+ "base": 50,
+ "danoPorPasso": 5,
+ "prontas": [
+  {
+   "id": "alarme-de-latas",
+   "nome": "Alarme de Latas",
+   "materiais": "Corda/fio, latas velhas, pregos ou vidro.",
+   "gatilho": "Fio Tensionado",
+   "area": "Som (Raio de 30m)",
+   "ndImprovisar": 50,
+   "ndArmar": 50,
+   "ndDesarmar": 50,
+   "ndEncontrar": 50,
+   "dano": "",
+   "tipoDano": "",
+   "efeitos": "Alerta inimigos; anula Furtividade de quem tropeçar."
+  },
+  {
+   "id": "buraco-de-estacas-punji",
+   "nome": "Buraco de Estacas (Punji)",
+   "materiais": "Ferramenta de escavação, 5+ estacas de madeira ou metal afiado.",
+   "gatilho": "Placa de Pressão (Falsa Cobertura)",
+   "area": "1 Quadrado (1,5m)",
+   "ndImprovisar": 70,
+   "ndArmar": 50,
+   "ndDesarmar": 50,
+   "ndEncontrar": 70,
+   "dano": "2d8",
+   "tipoDano": "Perfuração",
+   "efeitos": "Ferida Aberta 2; Enraizado (até gastar Ação Principal para sair)."
+  },
+  {
+   "id": "pendulo-de-sucata",
+   "nome": "Pêndulo de Sucata",
+   "materiais": "3m de cabo grosso, bloco de motor ou pedra pesada.",
+   "gatilho": "Fio Tensionado",
+   "area": "Linha (3m)",
+   "ndImprovisar": 70,
+   "ndArmar": 70,
+   "ndDesarmar": 70,
+   "ndEncontrar": 70,
+   "dano": "2d10",
+   "tipoDano": "Concussão",
+   "efeitos": "Aturdido 1; alvo é Deslocado (empurrado) 1 passo."
+  },
+  {
+   "id": "garra-enferrujada",
+   "nome": "Garra Enferrujada",
+   "materiais": "Sucata metálica, molas fortes (Requer peças mecânicas prévias).",
+   "gatilho": "Placa de Pressão",
+   "area": "1 Quadrado (1,5m)",
+   "ndImprovisar": 100,
+   "ndArmar": 70,
+   "ndDesarmar": 70,
+   "ndEncontrar": 50,
+   "dano": "1d12",
+   "tipoDano": "Corte",
+   "efeitos": "Sangramento 2; Enraizado. (ND 50 para encontrar se não for camuflada).",
+   "obs": "ND 50 para encontrar se não for camuflada"
+  },
+  {
+   "id": "chicote-de-espinhos",
+   "nome": "Chicote de Espinhos",
+   "materiais": "Galho flexível ou cano de PVC, arame farpado, corda.",
+   "gatilho": "Fio Tensionado",
+   "area": "1 Quadrado (1,5m)",
+   "ndImprovisar": 70,
+   "ndArmar": 70,
+   "ndDesarmar": 70,
+   "ndEncontrar": 70,
+   "dano": "1d8",
+   "tipoDano": "Corte",
+   "efeitos": "Sangramento 1; alvo deixa cair o que estiver segurando (Erro Crítico automático)."
+  },
+  {
+   "id": "rede-de-queda",
+   "nome": "Rede de Queda",
+   "materiais": "Rede de pesca ou lona velha, pedras, contrapesos.",
+   "gatilho": "Fio Tensionado",
+   "area": "Explosão (Raio 3m)",
+   "ndImprovisar": 70,
+   "ndArmar": 70,
+   "ndDesarmar": 50,
+   "ndEncontrar": 70,
+   "dano": "1d4",
+   "tipoDano": "Concussão",
+   "efeitos": "Enraizado; Derrubado (todos na área precisam passar em Esquiva AGI ND 70)."
+  },
+  {
+   "id": "mina-quimica-improvisada",
+   "nome": "Mina Química Improvisada",
+   "materiais": "Frasco com ácido ou combustível, ignitor rústico, fio.",
+   "gatilho": "Fio Tensionado",
+   "area": "Explosão (Raio 3m)",
+   "ndImprovisar": 100,
+   "ndArmar": 100,
+   "ndDesarmar": 100,
+   "ndEncontrar": 70,
+   "dano": "3d6",
+   "tipoDano": "Ácido ou Calor",
+   "efeitos": "Queimadura 4. Alvos na área podem testar Evasão (AGI ND 70) para metade do dano."
+  }
+ ],
+ "gatilhos": [
+  {
+   "nome": "Ativação Manual",
+   "criar": 0,
+   "armar": 0,
+   "encontrar": 30,
+   "desarmar": -20,
+   "obs": "Exige que você esteja escondido próximo e gaste sua Ação Principal para puxar a corda/alavanca. Como não há fio no caminho, é muito difícil do inimigo Encontrar antes do bote. Se achado, é banal de desarmar (basta cortar a corda)."
+  },
+  {
+   "nome": "Fio Tensionado (Tripwire)",
+   "criar": 10,
+   "armar": 10,
+   "encontrar": 10,
+   "desarmar": 10,
+   "obs": "O clássico. Fio de nylon ou arame cruzando a passagem. Exige pontos de ancoragem (paredes, árvores)."
+  },
+  {
+   "nome": "Placa de Pressão",
+   "criar": 25,
+   "armar": 25,
+   "encontrar": 20,
+   "desarmar": 20,
+   "obs": "Mecanismo sob a terra ou piso. Exige peso mínimo para ativar. Difícil de criar e armar sem soterrar a trava acidentalmente."
+  },
+  {
+   "nome": "Temporizador (Timer)",
+   "criar": 30,
+   "armar": 20,
+   "encontrar": 30,
+   "desarmar": -10,
+   "obs": "Requer sucata eletrônica ou mecânica de relógio. Fácil de Encontrar se fizer barulho (tic-tac), mas um inferno para Desarmar sem cortar o fio errado."
+  },
+  {
+   "nome": "Sensor de Proximidade / Movimento",
+   "criar": 50,
+   "armar": 30,
+   "encontrar": 40,
+   "desarmar": 50,
+   "obs": "Tecnologia do Velho Mundo (Exige peças de Computação ou Engenharia prévias). Quase invisível e extremamente letal para quem tenta abrir a carcaça para desarmar."
+  },
+  {
+   "nome": "Sensor de Temperatura",
+   "criar": 30,
+   "armar": 50,
+   "encontrar": 40,
+   "desarmar": 50,
+   "obs": "Dispara ao detectar calor corporal ou motores. Tecnologia raríssima."
+  }
+ ],
+ "areas": [
+  {
+   "id": "unico",
+   "nome": "Alvo Único (1 Quadrado / 1,5m)",
+   "modFixo": 0,
+   "modPorPasso": 0,
+   "maxPassos": 1,
+   "custo": "1x (Base)",
+   "tempo": "2 Rodadas (12 segundos)"
+  },
+  {
+   "id": "linha",
+   "nome": "Linha Curta (Até 3 Quadrados / 4,5m)",
+   "modFixo": 0,
+   "modPorPasso": 5,
+   "maxPassos": 3,
+   "custo": "3x",
+   "tempo": "1 Minuto por 1,5m (passo)"
+  },
+  {
+   "id": "explosao",
+   "nome": "Explosão",
+   "modFixo": 0,
+   "modPorPasso": 10,
+   "maxPassos": null,
+   "custo": "passos × 3",
+   "tempo": "passos × 5 Minutos"
+  },
+  {
+   "id": "cone",
+   "nome": "Cone",
+   "modFixo": 50,
+   "modPorPasso": 0,
+   "maxPassos": null,
+   "custo": "30x",
+   "tempo": "15 Minutos ou mais"
+  }
+ ],
+ "efeitos": [
+  {
+   "nome": "Dor",
+   "criar": 0,
+   "material": ""
+  },
+  {
+   "nome": "Sangramento",
+   "criar": 10,
+   "material": "Materiais cortantes"
+  },
+  {
+   "nome": "Dano a membros superiores",
+   "criar": 10,
+   "material": "explicar na elaboração"
+  },
+  {
+   "nome": "Dano a membros inferiores",
+   "criar": 10,
+   "material": "explicar na elaboração"
+  },
+  {
+   "nome": "Queimadura por fogo",
+   "criar": 20,
+   "material": "Combustivel"
+  },
+  {
+   "nome": "Queimadura por ácido",
+   "criar": 10,
+   "material": "Ácido"
+  },
+  {
+   "nome": "Ferida Aberta",
+   "criar": 20,
+   "material": "Armadilha de projéteis/disparos"
+  },
+  {
+   "nome": "Envenenado",
+   "criar": 25,
+   "material": "Mecanismos injetores"
+  },
+  {
+   "nome": "Enraizado",
+   "criar": 20,
+   "material": "Correntes ou semelhantes"
+  },
+  {
+   "nome": "Paralisado",
+   "criar": 25,
+   "material": "Confinamento"
+  },
+  {
+   "nome": "Aturdido",
+   "criar": 10,
+   "material": "Dano de concussão"
+  },
+  {
+   "nome": "Desorientado",
+   "criar": 10,
+   "material": "Armadilhas de queda"
+  },
+  {
+   "nome": "Estimulante",
+   "criar": 25,
+   "material": "Mecanismos injetores + a droga escolhida"
+  }
+ ],
+ "notas": [
+  "Sem os itens necessários (itens adaptados), o ND de criação sobe 20%.",
+  "Dano em área: o modificador do dano conta de novo para cada 1,5 m (passo) a mais da área."
+ ]
+}
