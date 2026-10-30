@@ -472,5 +472,9 @@ Ainda em aberto (o autor vai reler):
   se quebrar = durabilidade 0 ou sucata, perda de materiais na falha, materiais por aprimoramento, tempo. (Qualquer um pode aprimorar; é muito difícil.)
   Depois das regras: botão "Aprimorar" no item, efeitos aplicados no item e aprimoramentos temporários (Modificação momentânea, Aprimoramento improvisado).
   **Auras** (não são aprimoramentos): os "brindes" da Criação e manutenção (Sortudo, Melhorado, Afiado) somem rapidamente — a definir.
-- Próxima frente: **Cibernéticos**.
+- **Cibernéticos** (planilha feita, 30/10): Livro > Cibernéticos e aba Planilhas. Os implantes continuam no catálogo de itens (52, tipo "cibernetico");
+  a planilha completa o que é próprio de implante (Tipo: Membro/Órgão/Periférico, Local, Humanidade, Substitui membro, Cirurgia, Rejeição), as
+  Funções adicionais (vazias) e as Regras. Decisões do autor: Humanidade **−10 por implante (provisório)**; limite normal **1 implante** (reposição ou
+  qualquer outro); Ciborgue 2 no nível 3, +1 a cada 4 níveis, até 6. O **capítulo de cibernéticos ainda não existe** (o autor vai criar).
+  Ainda não automatizado: implantar no personagem (limite, Humanidade, efeitos, rejeição, função adicional) — depois das regras.
 - **Cibernéticos**: ainda pouco desenvolvidos; algumas regras estão implícitas na classe **Ciborgue** (o app vai partir delas e listar o que falta).

@@ -7,6 +7,7 @@ import { imagemDeLink } from '/shared/imagens.js';
 import { buscarMonstros, monstroNoEstagio, textoDeslocamentos, textoND, periciasAcimaDoLimite } from '/shared/monstros.js';
 import { marked } from '/vendor/marked.js';
 import { calcularArmadilha } from '/shared/armadilhas.js';
+import { implantesDoCatalogo } from '/shared/ciberneticos.js';
 import { PROGRESSAO_DANO } from '/shared/regras.js';
 
 const cacheLivros = {};
@@ -404,7 +405,32 @@ export function planilhasView() {
   return h('div', {},
     titulo('Planilhas do jogo', 'file-spreadsheet', 'h2'),
     h('p', { class: 'dica' }, 'Cada frente do jogo tem a sua planilha. Abra a que quiser: "Baixar planilha" traz o que está no app agora; edite e envie de volta, ou cole o link do Google Planilhas (o app puxa sozinho a cada 30 minutos). Valem para todas as campanhas deste PC.'),
-    catalogoMestre(), planilhaMonstrosMestre(), planilhaHabilidadesMestre(), planilhaMutacoesMestre(), planilhaProfissoesMestre(), planilhaArmadilhasMestre(), planilhaAprimoramentosMestre());
+    catalogoMestre(), planilhaMonstrosMestre(), planilhaHabilidadesMestre(), planilhaMutacoesMestre(), planilhaProfissoesMestre(), planilhaArmadilhasMestre(), planilhaAprimoramentosMestre(), planilhaCiberneticosMestre());
+}
+const planilhaCiberneticosMestre = () => planilhaFrente({
+  chave: 'ciberneticosPlanilha', titulo: 'Cibernéticos', rota: '/api/ciberneticos', arquivo: 'ciberneticos-ilhas-das-ruinas.xlsx', unidade: 'linhas',
+  explicacao: 'Baixe a planilha (abas Implantes, Funções adicionais e Regras), edite e envie de volta — ou ligue a uma planilha do Google. Os implantes são itens do catálogo (preço, peso, efeito ficam na planilha de itens); aqui fica o que é próprio de implante.',
+});
+// Cibernéticos: regras (limite de implantes, Humanidade), os implantes do catálogo e as funções adicionais. O mestre tem a planilha.
+export function ciberneticosLivroView() {
+  const sis = estado.sistema;
+  const t = sis.ciberneticos || {};
+  const r = t.regras || {};
+  const q = busca('ciberneticosRef');
+  const lista = implantesDoCatalogo(sis).filter(x => !q || sa(`${x.nome} ${x.local} ${x.tipo} ${x.efeitos}`).includes(q));
+  return h('div', {},
+    h('div', { class: 'barra' }, titulo('Cibernéticos', 'cpu', 'h2'), h('span', { class: 'espaco' }),
+      h('label', { class: 'busca' }, icone('search'), filtroBusca('ciberneticosRef', 'Buscar implante…'))),
+    h('ul', { class: 'lista-regras' }, (t.notas || []).map(n => h('li', {}, n)),
+      h('li', {}, `Limite de implantes: ${r.limiteNormal ?? 1} para qualquer personagem; Ciborgue: ${r.ciborgueNoNivel3 ?? 2} no nível 3 e +1 a cada ${r.ciborgueACadaNiveis ?? 4} níveis (até ${r.ciborgueMaximo ?? 6}).`)),
+    estado.campanha?.papel === 'mestre' ? planilhaCiberneticosMestre() : null,
+    titulo('Implantes', 'cpu', 'h3'),
+    lista.length ? tabela(['Implante', 'Tipo', 'Local', 'Humanidade', 'Efeito', 'Obs.'], lista.map(x => [
+      h('strong', {}, x.nome), x.tipo || '—', x.local || '—', String(x.humanidade), x.efeitos || '—',
+      [x.substitui ? 'substitui membro' : null, x.ndCirurgia ? `cirurgia ND ${x.ndCirurgia}` : null, x.rejeicao || null, x.obs || null].filter(Boolean).join(' · ') || '—',
+    ]), 'compacta') : vazio('Nenhum implante encontrado.', 'cpu'),
+    titulo('Funções adicionais (membros do Ciborgue)', 'sparkles', 'h3'),
+    (t.funcoes || []).length ? tabela(['Função', 'Para', 'Efeito'], t.funcoes.map(f => [h('strong', {}, f.nome), f.para || '—', f.efeito])) : h('p', { class: 'dica' }, 'Ainda não definidas (aba "Funções adicionais" da planilha).'));
 }
 const planilhaHabilidadesMestre = () => planilhaFrente({
   chave: 'habilidadesPlanilha', titulo: 'Habilidades, classes e vantagens', rota: '/api/habilidades', arquivo: 'habilidades-ilhas-das-ruinas.xlsx',
@@ -736,10 +762,10 @@ export function referenciaView(inicial, comLivro) {
   const opcoes = [
     ...(comLivro ? [['livro', 'Livro', 'book-open']] : []),
     ['classes', 'Classes', 'shield'], ['pericias', 'Perícias e profissões', 'target'], ['vantagens', 'Vantagens e defeitos', 'sparkles'],
-    ['mutacoes', 'Mutações', 'dna'], ['armadilhas', 'Armadilhas', 'triangle-alert'], ['aprimoramentos', 'Aprimoramentos', 'hammer'],
+    ['mutacoes', 'Mutações', 'dna'], ['armadilhas', 'Armadilhas', 'triangle-alert'], ['aprimoramentos', 'Aprimoramentos', 'hammer'], ['ciberneticos', 'Cibernéticos', 'cpu'],
   ];
   const chave = `ref:${comLivro ? 'livro' : 'classes'}`;
   const atual = estado.sel[chave] || inicial;
-  const conteudo = { livro: () => livroView(estado.sistema.livro || 'regras-msa', `Livro de Regras · ${estado.sistema.nome}`), classes: classesView, pericias: periciasView, vantagens: vantagensView, mutacoes: mutacoesLivroView, armadilhas: armadilhasLivroView, aprimoramentos: aprimoramentosLivroView }[atual];
+  const conteudo = { livro: () => livroView(estado.sistema.livro || 'regras-msa', `Livro de Regras · ${estado.sistema.nome}`), classes: classesView, pericias: periciasView, vantagens: vantagensView, mutacoes: mutacoesLivroView, armadilhas: armadilhasLivroView, aprimoramentos: aprimoramentosLivroView, ciberneticos: ciberneticosLivroView }[atual];
   return h('div', {}, abas(opcoes, atual, id => { estado.sel[chave] = id; render(); }), conteudo());
 }

@@ -21,6 +21,7 @@ import { planilhaMutacoes, lerPlanilhaMutacoes, catalogoMutacoes, salvarCatalogo
 import { planilhaProfissoes, lerPlanilhaProfissoes, catalogoProfissoes, salvarCatalogoProfissoes, voltarProfissoesPadrao } from './profissoesPlanilha.js';
 import { planilhaArmadilhas, lerPlanilhaArmadilhas, catalogoArmadilhas, salvarCatalogoArmadilhas, voltarArmadilhasPadrao } from './armadilhasPlanilha.js';
 import { planilhaAprimoramentos, lerPlanilhaAprimoramentos, catalogoAprimoramentos, salvarCatalogoAprimoramentos, voltarAprimoramentosPadrao } from './aprimoramentosPlanilha.js';
+import { planilhaCiberneticos, lerPlanilhaCiberneticos, catalogoCiberneticos, salvarCatalogoCiberneticos, voltarCiberneticosPadrao } from './ciberneticosPlanilha.js';
 import { configPublica, salvarConfigIA, gerarTexto, lerImagemJson } from './ia.js';
 import { objetosDaIA, PEDIDO_MAPA_IA, ESQUEMA_MAPA_IA } from '../shared/objetosMapa.js';
 import { SISTEMA_IA, pedidoIA } from '../shared/encontro.js';
@@ -444,6 +445,13 @@ rotasDePlanilha({
   gerar: () => planilhaAprimoramentos(sistema('mss').aprimoramentos || []),
   ler: async buffer => { const r = await lerPlanilhaAprimoramentos(buffer); return { dados: r.aprimoramentos, total: r.aprimoramentos.length, avisos: r.avisos }; },
   catalogo: catalogoAprimoramentos, salvar: salvarCatalogoAprimoramentos, voltar: voltarAprimoramentosPadrao,
+});
+
+rotasDePlanilha({
+  rota: '/api/ciberneticos', arquivo: 'ciberneticos-ilhas-das-ruinas.xlsx', nome: 'cibernéticos',
+  gerar: () => planilhaCiberneticos(sistema('mss')),
+  ler: async buffer => { const r = await lerPlanilhaCiberneticos(buffer, sistema('mss')); return { dados: { ...r.tabela, total: r.total }, total: r.total, avisos: r.avisos }; },
+  catalogo: catalogoCiberneticos, salvar: salvarCatalogoCiberneticos, voltar: voltarCiberneticosPadrao,
 });
 
 app.post('/api/itens/padrao', rota(req => {

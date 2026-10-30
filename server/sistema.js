@@ -7,6 +7,8 @@ import { ARQ_MUTACOES } from './mutacoesPlanilha.js';
 import { ARQ_PROFISSOES } from './profissoesPlanilha.js';
 import { ARQ_ARMADILHAS } from './armadilhasPlanilha.js';
 import { ARQ_APRIMORAMENTOS } from './aprimoramentosPlanilha.js';
+import { ARQ_CIBERNETICOS } from './ciberneticosPlanilha.js';
+const CIBERNETICOS_PADRAO = path.join(RAIZ, 'conteudo', 'sistemas', 'ciberneticos.json');
 const APRIMORAMENTOS_PADRAO = path.join(RAIZ, 'conteudo', 'sistemas', 'aprimoramentos.json');
 const ARMADILHAS_PADRAO = path.join(RAIZ, 'conteudo', 'sistemas', 'armadilhas.json');
 
@@ -65,7 +67,9 @@ export function sistema(id = SISTEMA_PADRAO) {
   const arqArmadilhas = fs.existsSync(ARQ_ARMADILHAS) ? ARQ_ARMADILHAS : fs.existsSync(ARMADILHAS_PADRAO) ? ARMADILHAS_PADRAO : null;
   // Aprimoramentos de itens: a planilha do mestre ou a lista do livro.
   const arqAprimoramentos = fs.existsSync(ARQ_APRIMORAMENTOS) ? ARQ_APRIMORAMENTOS : fs.existsSync(APRIMORAMENTOS_PADRAO) ? APRIMORAMENTOS_PADRAO : null;
-  const assinatura = [...lista, ...[arqItens, arqMonstros, arqHabilidades, arqMutacoes, arqProfissoes, arqArmadilhas, arqAprimoramentos].filter(Boolean)].map(a => `${a}:${fs.statSync(a).mtimeMs}`).join('|');
+  // Cibernéticos (o que é próprio dos implantes do catálogo de itens): a planilha do mestre ou a tabela padrão.
+  const arqCiberneticos = fs.existsSync(ARQ_CIBERNETICOS) ? ARQ_CIBERNETICOS : fs.existsSync(CIBERNETICOS_PADRAO) ? CIBERNETICOS_PADRAO : null;
+  const assinatura = [...lista, ...[arqItens, arqMonstros, arqHabilidades, arqMutacoes, arqProfissoes, arqArmadilhas, arqAprimoramentos, arqCiberneticos].filter(Boolean)].map(a => `${a}:${fs.statSync(a).mtimeMs}`).join('|');
   const atual = cache.get(id);
   if (atual && atual.assinatura === assinatura) return atual.dados;
   const [base, proprio, pericias, profissoes, classesArq, vantagens, habRegras, mutacoes] = lista.map(ler);
@@ -99,6 +103,7 @@ export function sistema(id = SISTEMA_PADRAO) {
     capacidades: v.capacidades,
     // Tabela de mutações (d100), igual no MSA e no MSS.
     mutacoes: arqMutacoes ? ler(arqMutacoes).mutacoes : mutacoes.mutacoes,
+    ciberneticos: arqCiberneticos ? (({ atualizadoEm, arquivo, googleSheets, _fonte, total, ...t }) => t)(ler(arqCiberneticos)) : null,
     aprimoramentos: arqAprimoramentos ? ler(arqAprimoramentos).aprimoramentos : [],
     armadilhas: arqArmadilhas ? (({ atualizadoEm, arquivo, googleSheets, _fonte, total, ...t }) => t)(ler(arqArmadilhas)) : null,
   };
