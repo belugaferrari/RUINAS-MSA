@@ -383,6 +383,29 @@ export function planilhaFrente({ chave, titulo: tituloPainel, rota, arquivo: nom
       ? 'Ligado à planilha do Google: o app puxa sozinho ao abrir e a cada 30 minutos. "Puxar do Google Planilhas" atualiza na hora. Enviar um arquivo .xlsx desliga a atualização automática.'
       : 'No Google Planilhas: Compartilhar > Acesso geral > "Qualquer pessoa com o link" (Leitor). Depois de puxar uma vez, o app passa a atualizar sozinho (ao abrir e a cada 30 minutos).'));
 }
+const planilhaMutacoesMestre = () => planilhaFrente({
+  chave: 'mutacoesPlanilha', titulo: 'Mutações', rota: '/api/mutacoes', arquivo: 'mutacoes-ilhas-das-ruinas.xlsx', unidade: 'mutações',
+  explicacao: 'Baixe a planilha (uma linha por mutação: nº do d100, nome, efeito, benefício e ônus no app), edite e envie de volta — ou ligue a uma planilha do Google. Vale no MSA e no MSS e para todas as campanhas deste PC.',
+});
+const planilhaProfissoesMestre = () => planilhaFrente({
+  chave: 'profissoesPlanilha', titulo: 'Profissões', rota: '/api/profissoes', arquivo: 'profissoes-ilhas-das-ruinas.xlsx', unidade: 'profissões',
+  explicacao: 'Baixe a planilha (uma linha por profissão: descrição, vantagem, bônus %, subperícias como no livro e PV a mais), edite e envie de volta — ou ligue a uma planilha do Google. Vale para todas as campanhas deste PC.',
+});
+const planilhaArmadilhasMestre = () => planilhaFrente({
+  chave: 'armadilhasPlanilha', titulo: 'Armadilhas', rota: '/api/armadilhas', arquivo: 'armadilhas-ilhas-das-ruinas.xlsx', unidade: 'linhas',
+  explicacao: 'Baixe a planilha (abas Prontas, Gatilhos, Áreas, Efeitos e Geral), edite e envie de volta — ou ligue a uma planilha do Google. A calculadora "Montar armadilha" usa os números das tabelas. Vale no MSA e no MSS.',
+});
+const planilhaAprimoramentosMestre = () => planilhaFrente({
+  chave: 'aprimoramentosPlanilha', titulo: 'Aprimoramentos', rota: '/api/aprimoramentos', arquivo: 'aprimoramentos-ilhas-das-ruinas.xlsx', unidade: 'aprimoramentos',
+  explicacao: 'Baixe a planilha (uma linha por aprimoramento: para que itens serve, efeito, o que o app aplica, se é repetível e os materiais), edite e envie de volta — ou ligue a uma planilha do Google. Vale no MSA e no MSS.',
+});
+// Todas as planilhas do jogo num lugar só (aba "Planilhas" do mestre). Cada uma também aparece junto da sua consulta no Livro.
+export function planilhasView() {
+  return h('div', {},
+    titulo('Planilhas do jogo', 'file-spreadsheet', 'h2'),
+    h('p', { class: 'dica' }, 'Cada frente do jogo tem a sua planilha. Abra a que quiser: "Baixar planilha" traz o que está no app agora; edite e envie de volta, ou cole o link do Google Planilhas (o app puxa sozinho a cada 30 minutos). Valem para todas as campanhas deste PC.'),
+    catalogoMestre(), planilhaMonstrosMestre(), planilhaHabilidadesMestre(), planilhaMutacoesMestre(), planilhaProfissoesMestre(), planilhaArmadilhasMestre(), planilhaAprimoramentosMestre());
+}
 const planilhaHabilidadesMestre = () => planilhaFrente({
   chave: 'habilidadesPlanilha', titulo: 'Habilidades, classes e vantagens', rota: '/api/habilidades', arquivo: 'habilidades-ilhas-das-ruinas.xlsx',
   explicacao: 'Baixe a planilha (abas Habilidades, Classes, Especializações e Progressão; instruções dentro dela), edite e envie de volta — ou ligue a uma planilha do Google. Vale para MSA e MSS e para todas as campanhas deste PC. Para mudar o dano de uma habilidade, mude a coluna "Dano".',
@@ -471,10 +494,7 @@ export function mutacoesLivroView() {
     h('div', { class: 'barra' }, titulo('Mutações (d100)', 'dna', 'h2'), h('span', { class: 'espaco' }),
       h('label', { class: 'busca' }, icone('search'), filtroBusca('mutacoesRef', 'Buscar mutação…'))),
     h('p', { class: 'dica' }, 'Controlada: só o benefício. Descontrolada e temporária: benefício e ônus. O que está em "no app" o app aplica sozinho; o resto do texto o mestre aplica.'),
-    estado.campanha?.papel === 'mestre' ? planilhaFrente({
-      chave: 'mutacoesPlanilha', titulo: 'Mutações', rota: '/api/mutacoes', arquivo: 'mutacoes-ilhas-das-ruinas.xlsx', unidade: 'mutações',
-      explicacao: 'Baixe a planilha (uma linha por mutação: nº do d100, nome, efeito, benefício e ônus no app), edite e envie de volta — ou ligue a uma planilha do Google. Vale no MSA e no MSS e para todas as campanhas deste PC.',
-    }) : null,
+    estado.campanha?.papel === 'mestre' ? planilhaMutacoesMestre() : null,
     lista.length ? tabela(['Nº', 'Mutação', 'Efeito', 'No app'], lista.map(m => [
       h('strong', {}, String(m.n)), h('strong', {}, m.nome), m.efeito,
       h('small', {}, [m.beneficio ? `benefício: ${m.beneficio}` : null, m.onus ? `ônus: ${m.onus}` : null].filter(Boolean).join(' · ') || '—'),
@@ -485,10 +505,7 @@ export function mutacoesLivroView() {
 export function armadilhasLivroView() {
   const t = estado.sistema.armadilhas;
   const mestre = estado.campanha?.papel === 'mestre';
-  const painel = mestre ? planilhaFrente({
-    chave: 'armadilhasPlanilha', titulo: 'Armadilhas', rota: '/api/armadilhas', arquivo: 'armadilhas-ilhas-das-ruinas.xlsx', unidade: 'linhas',
-    explicacao: 'Baixe a planilha (abas Prontas, Gatilhos, Áreas, Efeitos e Geral), edite e envie de volta — ou ligue a uma planilha do Google. A calculadora abaixo usa os números das tabelas. Vale no MSA e no MSS.',
-  }) : null;
+  const painel = mestre ? planilhaArmadilhasMestre() : null;
   if (!t) return h('div', {}, titulo('Armadilhas', 'triangle-alert', 'h2'), painel, vazio('Sem tabela de armadilhas.', 'triangle-alert'));
   const e = estado.sel.montarArmadilha ||= { gatilho: t.gatilhos[0]?.nome || '', area: t.areas[0]?.id || 'unico', passos: 1, dano: '1d4', efeitos: [] };
   const r = calcularArmadilha(t, e);
@@ -552,10 +569,7 @@ export function aprimoramentosLivroView() {
     h('div', { class: 'barra' }, titulo('Aprimoramentos de itens', 'hammer', 'h2'), h('span', { class: 'espaco' }),
       h('label', { class: 'busca' }, icone('search'), filtroBusca('aprimoramentosRef', 'Buscar aprimoramento…'))),
     h('p', { class: 'dica' }, 'Aprimorar exige consumir outros itens e/ou matérias-primas. Qualquer um pode tentar, mas é difícil: cada aprimoramento é mais difícil que o anterior e falhas podem quebrar o item. O mesmo aprimoramento pode ser repetido no item, salvo se a descrição disser o contrário.'),
-    estado.campanha?.papel === 'mestre' ? planilhaFrente({
-      chave: 'aprimoramentosPlanilha', titulo: 'Aprimoramentos', rota: '/api/aprimoramentos', arquivo: 'aprimoramentos-ilhas-das-ruinas.xlsx', unidade: 'aprimoramentos',
-      explicacao: 'Baixe a planilha (uma linha por aprimoramento: para que itens serve, efeito, o que o app aplica, se é repetível e os materiais), edite e envie de volta — ou ligue a uma planilha do Google. Vale no MSA e no MSS.',
-    }) : null,
+    estado.campanha?.papel === 'mestre' ? planilhaAprimoramentosMestre() : null,
     vis.length ? tabela(['Aprimoramento', 'Para', 'Efeito', 'No app', 'Repetível'], vis.map(a => [
       h('strong', {}, a.nome), a.para || 'qualquer item', a.efeito, h('small', {}, noApp(a)), a.repetivel === false ? 'não' : 'sim',
     ]), 'compacta') : vazio('Nenhum aprimoramento encontrado.', 'hammer'));
@@ -588,10 +602,7 @@ export function periciasView() {
       h('label', { class: 'busca' }, icone('search'), filtroBusca('periciasRef', 'Buscar…'))),
     h('p', { class: 'dica' }, `${sis.regras.formulas.pontosPericia}. ${sis.regras.formulas.limitePericia}. Perícia base custa ${sis.regras.pericias.custoBase} PP por ponto (combate: ${sis.regras.pericias.custoBaseCombate}).`),
     titulo('Profissões', 'backpack', 'h3'),
-    estado.campanha?.papel === 'mestre' ? planilhaFrente({
-      chave: 'profissoesPlanilha', titulo: 'Profissões', rota: '/api/profissoes', arquivo: 'profissoes-ilhas-das-ruinas.xlsx', unidade: 'profissões',
-      explicacao: 'Baixe a planilha (uma linha por profissão: descrição, vantagem, bônus %, subperícias como no livro e PV a mais), edite e envie de volta — ou ligue a uma planilha do Google. Vale para todas as campanhas deste PC.',
-    }) : null,
+    estado.campanha?.papel === 'mestre' ? planilhaProfissoesMestre() : null,
     h('div', { class: 'cartoes' }, sis.profissoes.map(p => h('div', { class: 'cartao' }, titulo(p.nome, 'backpack'), h('p', {}, p.descricao), h('p', {}, h('strong', {}, 'Vantagem: '), p.vantagem), h('small', {}, `+${p.bonus}% em ${p.subpericiasLivro.join('; ')}`)))),
     titulo('Perícias', 'target', 'h3'),
     lista.map(p => h('details', { class: 'bloco', open: !!q },

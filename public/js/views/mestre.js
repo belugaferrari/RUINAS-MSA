@@ -6,7 +6,7 @@ import { acao, emitir, enviarArquivo, get, post } from '../api.js';
 import { topo, carregarSaguao, listaSistemas } from './saguao.js';
 import { fichaView } from './ficha.js';
 import { salaView } from './salas.js';
-import { livroView, monstrosView, lojaView, markdown, referenciaView } from './livros.js';
+import { livroView, monstrosView, lojaView, markdown, referenciaView, planilhasView } from './livros.js';
 import { mapaRelacoesView } from './relacoes.js';
 import { painelDados, dadosAberto } from './dados.js';
 import { confrontoView } from './confronto.js';
@@ -22,7 +22,7 @@ const ABAS = [
   ['jogadores', 'Jogadores', 'users'], ['npcs', 'NPCs', 'ghost'], ['imagens', 'Imagens', 'image'], ['social', 'Sala Social', 'drama'],
   ['batalha', 'Campo de Batalha', 'swords'], ['companheiros', 'Companheiros', 'paw-print'], ['mapa', 'Mapa', 'map'], ['confronto', 'Confronto', 'scale'], ['resumo', 'Resumo', 'heart-pulse'], ['regras', 'Livro de Regras', 'book-open'],
   ['monstros', 'Livro dos Monstros', 'skull'], ['mestre', 'Livro do Mestre', 'library'], ['loja', 'Loja', 'store'],
-  ['classes', 'Classes', 'shield'], ['lore', 'Lore', 'scroll'], ['campanha', 'Campanha', 'notebook-pen'],
+  ['classes', 'Classes e tabelas', 'shield'], ['planilhas', 'Planilhas', 'file-spreadsheet'], ['lore', 'Lore', 'scroll'], ['campanha', 'Campanha', 'notebook-pen'],
 ];
 
 export function telaMestre() {
@@ -62,6 +62,7 @@ function conteudoAba(aba) {
     case 'mestre': return livroView('mestre', 'Livro do Mestre');
     case 'loja': return lojaView();
     case 'classes': return referenciaView('classes', false);
+    case 'planilhas': return planilhasView();
     case 'lore': return abaLore();
     case 'campanha': return abaCampanha();
     default: return vazio('Aba desconhecida.');
