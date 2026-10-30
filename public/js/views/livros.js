@@ -537,6 +537,30 @@ export function armadilhasLivroView() {
     tabela(['Efeito', 'ND Criar', 'Material exigido'], t.efeitos.map(x => [h('strong', {}, x.nome), sinal(x.criar), x.material || '—']), 'compacta'));
 }
 
+// Aprimoramentos de itens (Capítulo 4): a lista, para que itens servem e o que o app aplica. O mestre tem a planilha.
+// As regras do teste de aprimorar (ND que sobe a cada aprimoramento, quebra, materiais, tempo) vêm do autor.
+export function aprimoramentosLivroView() {
+  const lista = estado.sistema.aprimoramentos || [];
+  const q = busca('aprimoramentosRef');
+  const vis = lista.filter(a => !q || sa(`${a.nome} ${a.efeito} ${a.para}`).includes(q));
+  const sinal = v => (v > 0 ? `+${v}` : `${v}`);
+  const noApp = a => [a.testes ? `testes ${sinal(a.testes)}%` : null, a.dano ? `dano ${sinal(a.dano)}` : null, a.passos ? `${sinal(a.passos)} passo(s) de dano` : null,
+    a.danoExtra ? `+${a.danoExtra.toUpperCase()} ${a.tipoExtra || ''}`.trim() : null, a.durabilidade ? `durabilidade ${sinal(a.durabilidade)}` : null,
+    a.peso ? `${a.peso}% do peso` : null, a.deslocamento ? `deslocamento +${String(a.deslocamento).replace('.', ',')} m` : null,
+    a.moral ? `${a.moral} de Moral por descanso longo` : null, a.outros ? `${sinal(a.outros)}% para outros usarem` : null].filter(Boolean).join(' · ') || '— (o mestre aplica)';
+  return h('div', {},
+    h('div', { class: 'barra' }, titulo('Aprimoramentos de itens', 'hammer', 'h2'), h('span', { class: 'espaco' }),
+      h('label', { class: 'busca' }, icone('search'), filtroBusca('aprimoramentosRef', 'Buscar aprimoramento…'))),
+    h('p', { class: 'dica' }, 'Aprimorar exige consumir outros itens e/ou matérias-primas. Qualquer um pode tentar, mas é difícil: cada aprimoramento é mais difícil que o anterior e falhas podem quebrar o item. O mesmo aprimoramento pode ser repetido no item, salvo se a descrição disser o contrário.'),
+    estado.campanha?.papel === 'mestre' ? planilhaFrente({
+      chave: 'aprimoramentosPlanilha', titulo: 'Aprimoramentos', rota: '/api/aprimoramentos', arquivo: 'aprimoramentos-ilhas-das-ruinas.xlsx', unidade: 'aprimoramentos',
+      explicacao: 'Baixe a planilha (uma linha por aprimoramento: para que itens serve, efeito, o que o app aplica, se é repetível e os materiais), edite e envie de volta — ou ligue a uma planilha do Google. Vale no MSA e no MSS.',
+    }) : null,
+    vis.length ? tabela(['Aprimoramento', 'Para', 'Efeito', 'No app', 'Repetível'], vis.map(a => [
+      h('strong', {}, a.nome), a.para || 'qualquer item', a.efeito, h('small', {}, noApp(a)), a.repetivel === false ? 'não' : 'sim',
+    ]), 'compacta') : vazio('Nenhum aprimoramento encontrado.', 'hammer'));
+}
+
 // Vantagens, defeitos e capacidades (capítulo 4).
 export function vantagensView() {
   const sis = estado.sistema;
@@ -701,10 +725,10 @@ export function referenciaView(inicial, comLivro) {
   const opcoes = [
     ...(comLivro ? [['livro', 'Livro', 'book-open']] : []),
     ['classes', 'Classes', 'shield'], ['pericias', 'Perícias e profissões', 'target'], ['vantagens', 'Vantagens e defeitos', 'sparkles'],
-    ['mutacoes', 'Mutações', 'dna'], ['armadilhas', 'Armadilhas', 'triangle-alert'],
+    ['mutacoes', 'Mutações', 'dna'], ['armadilhas', 'Armadilhas', 'triangle-alert'], ['aprimoramentos', 'Aprimoramentos', 'hammer'],
   ];
   const chave = `ref:${comLivro ? 'livro' : 'classes'}`;
   const atual = estado.sel[chave] || inicial;
-  const conteudo = { livro: () => livroView(estado.sistema.livro || 'regras-msa', `Livro de Regras · ${estado.sistema.nome}`), classes: classesView, pericias: periciasView, vantagens: vantagensView, mutacoes: mutacoesLivroView, armadilhas: armadilhasLivroView }[atual];
+  const conteudo = { livro: () => livroView(estado.sistema.livro || 'regras-msa', `Livro de Regras · ${estado.sistema.nome}`), classes: classesView, pericias: periciasView, vantagens: vantagensView, mutacoes: mutacoesLivroView, armadilhas: armadilhasLivroView, aprimoramentos: aprimoramentosLivroView }[atual];
   return h('div', {}, abas(opcoes, atual, id => { estado.sel[chave] = id; render(); }), conteudo());
 }

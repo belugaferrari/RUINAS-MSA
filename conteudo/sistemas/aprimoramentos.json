@@ -1,0 +1,18 @@
+{
+ "_fonte": "Livro, Capítulo 4 (Aprimoramentos). Vale no MSA e no MSS. Regras do teste de aprimorar (ND, quebra, materiais, tempo): a enviar pelo autor.",
+ "aprimoramentos": [
+  { "id": "robusto", "nome": "Robusto", "para": "", "efeito": "Quando você for perder 1 de durabilidade, re-role o teste e fique com o segundo resultado (dura até perder 1 ponto de durabilidade).", "repetivel": true },
+  { "id": "melhorado", "nome": "Melhorado", "para": "", "efeito": "+5% nos testes.", "testes": 5, "repetivel": true },
+  { "id": "afiado", "nome": "Afiado", "para": "", "efeito": "+1 de dano.", "dano": 1, "repetivel": true },
+  { "id": "mortal", "nome": "Mortal", "para": "", "efeito": "Avance um passo no dado de dano.", "passos": 1, "repetivel": true },
+  { "id": "eletrificado", "nome": "Eletrificado", "para": "", "efeito": "Adicione +1D4 de dano Elétrico.", "danoExtra": "1d4", "tipoExtra": "Elétrico", "repetivel": true },
+  { "id": "radiante", "nome": "Radiante", "para": "", "efeito": "Adicione +1D4 de dano Fogo.", "danoExtra": "1d4", "tipoExtra": "Calor", "repetivel": true },
+  { "id": "veloz", "nome": "Veloz", "para": "", "efeito": "Aumente 1,5m seu deslocamento.", "deslocamento": 1.5, "repetivel": true },
+  { "id": "afixado", "nome": "Afixado", "para": "", "efeito": "Não cai no chão caso você largue.", "repetivel": true },
+  { "id": "alta-qualidade", "nome": "Alta qualidade", "para": "", "efeito": "+1 de durabilidade.", "durabilidade": 1, "repetivel": true },
+  { "id": "leve", "nome": "Leve", "para": "", "efeito": "70% do peso.", "peso": 70, "repetivel": true },
+  { "id": "disfarcado", "nome": "Disfarçado", "para": "", "efeito": "O item tem a aparência de um item distinto.", "repetivel": true },
+  { "id": "cravejado", "nome": "Cravejado", "para": "", "efeito": "1 ponto de moral por descanso longo.", "moral": 1, "repetivel": true },
+  { "id": "segredo", "nome": "Segredo", "para": "", "efeito": "-10% para outros usarem.", "outros": -10, "repetivel": true }
+ ]
+}

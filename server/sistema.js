@@ -6,6 +6,8 @@ import { ARQ_HABILIDADES } from './habilidadesPlanilha.js';
 import { ARQ_MUTACOES } from './mutacoesPlanilha.js';
 import { ARQ_PROFISSOES } from './profissoesPlanilha.js';
 import { ARQ_ARMADILHAS } from './armadilhasPlanilha.js';
+import { ARQ_APRIMORAMENTOS } from './aprimoramentosPlanilha.js';
+const APRIMORAMENTOS_PADRAO = path.join(RAIZ, 'conteudo', 'sistemas', 'aprimoramentos.json');
 const ARMADILHAS_PADRAO = path.join(RAIZ, 'conteudo', 'sistemas', 'armadilhas.json');
 
 export const CONTEUDO = path.join(RAIZ, 'conteudo');
@@ -61,7 +63,9 @@ export function sistema(id = SISTEMA_PADRAO) {
   const arqProfissoes = fs.existsSync(ARQ_PROFISSOES) ? ARQ_PROFISSOES : null;
   // Armadilhas (prontas e tabelas de montar): a planilha do mestre ou a tabela do autor.
   const arqArmadilhas = fs.existsSync(ARQ_ARMADILHAS) ? ARQ_ARMADILHAS : fs.existsSync(ARMADILHAS_PADRAO) ? ARMADILHAS_PADRAO : null;
-  const assinatura = [...lista, ...[arqItens, arqMonstros, arqHabilidades, arqMutacoes, arqProfissoes, arqArmadilhas].filter(Boolean)].map(a => `${a}:${fs.statSync(a).mtimeMs}`).join('|');
+  // Aprimoramentos de itens: a planilha do mestre ou a lista do livro.
+  const arqAprimoramentos = fs.existsSync(ARQ_APRIMORAMENTOS) ? ARQ_APRIMORAMENTOS : fs.existsSync(APRIMORAMENTOS_PADRAO) ? APRIMORAMENTOS_PADRAO : null;
+  const assinatura = [...lista, ...[arqItens, arqMonstros, arqHabilidades, arqMutacoes, arqProfissoes, arqArmadilhas, arqAprimoramentos].filter(Boolean)].map(a => `${a}:${fs.statSync(a).mtimeMs}`).join('|');
   const atual = cache.get(id);
   if (atual && atual.assinatura === assinatura) return atual.dados;
   const [base, proprio, pericias, profissoes, classesArq, vantagens, habRegras, mutacoes] = lista.map(ler);
@@ -95,6 +99,7 @@ export function sistema(id = SISTEMA_PADRAO) {
     capacidades: v.capacidades,
     // Tabela de mutações (d100), igual no MSA e no MSS.
     mutacoes: arqMutacoes ? ler(arqMutacoes).mutacoes : mutacoes.mutacoes,
+    aprimoramentos: arqAprimoramentos ? ler(arqAprimoramentos).aprimoramentos : [],
     armadilhas: arqArmadilhas ? (({ atualizadoEm, arquivo, googleSheets, _fonte, total, ...t }) => t)(ler(arqArmadilhas)) : null,
   };
   // As colunas originais da planilha ("planilha") só servem para exportar de volta: não vão para o navegador.

@@ -20,6 +20,7 @@ import { planilhaHabilidades, lerPlanilhaHabilidades, catalogoHabilidades, salva
 import { planilhaMutacoes, lerPlanilhaMutacoes, catalogoMutacoes, salvarCatalogoMutacoes, voltarMutacoesPadrao } from './mutacoesPlanilha.js';
 import { planilhaProfissoes, lerPlanilhaProfissoes, catalogoProfissoes, salvarCatalogoProfissoes, voltarProfissoesPadrao } from './profissoesPlanilha.js';
 import { planilhaArmadilhas, lerPlanilhaArmadilhas, catalogoArmadilhas, salvarCatalogoArmadilhas, voltarArmadilhasPadrao } from './armadilhasPlanilha.js';
+import { planilhaAprimoramentos, lerPlanilhaAprimoramentos, catalogoAprimoramentos, salvarCatalogoAprimoramentos, voltarAprimoramentosPadrao } from './aprimoramentosPlanilha.js';
 import { configPublica, salvarConfigIA, gerarTexto, lerImagemJson } from './ia.js';
 import { objetosDaIA, PEDIDO_MAPA_IA, ESQUEMA_MAPA_IA } from '../shared/objetosMapa.js';
 import { SISTEMA_IA, pedidoIA } from '../shared/encontro.js';
@@ -436,6 +437,13 @@ rotasDePlanilha({
   gerar: () => planilhaArmadilhas(sistema('mss').armadilhas || {}),
   ler: async buffer => { const r = await lerPlanilhaArmadilhas(buffer, sistema('mss').armadilhas); return { dados: { ...r.tabela, total: r.total }, total: r.total, avisos: r.avisos }; },
   catalogo: catalogoArmadilhas, salvar: salvarCatalogoArmadilhas, voltar: voltarArmadilhasPadrao,
+});
+
+rotasDePlanilha({
+  rota: '/api/aprimoramentos', arquivo: 'aprimoramentos-ilhas-das-ruinas.xlsx', nome: 'aprimoramentos',
+  gerar: () => planilhaAprimoramentos(sistema('mss').aprimoramentos || []),
+  ler: async buffer => { const r = await lerPlanilhaAprimoramentos(buffer); return { dados: r.aprimoramentos, total: r.aprimoramentos.length, avisos: r.avisos }; },
+  catalogo: catalogoAprimoramentos, salvar: salvarCatalogoAprimoramentos, voltar: voltarAprimoramentosPadrao,
 });
 
 app.post('/api/itens/padrao', rota(req => {

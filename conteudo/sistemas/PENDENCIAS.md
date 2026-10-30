@@ -466,5 +466,11 @@ Ainda em aberto (o autor vai reler):
   Respostas do autor (30/10): o dano em área **depende da descrição** — a calculadora e as prontas têm a opção "Dano atinge: a área toda" (conta por passo)
   ou "só o primeiro alvo" (conta uma vez). **Nível** das prontas: coluna "Nível" na planilha, em branco até o autor preencher.
   Ainda não automatizado: acionar a armadilha no mapa (dano e efeitos no alvo, esquiva/evasão).
-- Próximas frentes, nesta ordem: **Aprimoramentos de itens** → **Cibernéticos**.
+- **Aprimoramentos de itens** (planilha feita, 30/10): Livro > Aprimoramentos — os 13 do livro (Cap. 4), coluna "Para" (tipos de item; os de
+  armadilha são linhas próprias), colunas do que o app aplica e "Repetível" (padrão sim, salvo descrição em contrário). Fogo = Calor.
+  **LEMBRAR O AUTOR de mandar as regras do teste de aprimorar**: perícia, ND do 1º e quanto sobe a cada um, quando quebra (falha? erro crítico? DS?),
+  se quebrar = durabilidade 0 ou sucata, perda de materiais na falha, materiais por aprimoramento, tempo. (Qualquer um pode aprimorar; é muito difícil.)
+  Depois das regras: botão "Aprimorar" no item, efeitos aplicados no item e aprimoramentos temporários (Modificação momentânea, Aprimoramento improvisado).
+  **Auras** (não são aprimoramentos): os "brindes" da Criação e manutenção (Sortudo, Melhorado, Afiado) somem rapidamente — a definir.
+- Próxima frente: **Cibernéticos**.
 - **Cibernéticos**: ainda pouco desenvolvidos; algumas regras estão implícitas na classe **Ciborgue** (o app vai partir delas e listar o que falta).
