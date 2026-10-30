@@ -478,3 +478,26 @@ Ainda em aberto (o autor vai reler):
   qualquer outro); Ciborgue 2 no nível 3, +1 a cada 4 níveis, até 6. O **capítulo de cibernéticos ainda não existe** (o autor vai criar).
   Ainda não automatizado: implantar no personagem (limite, Humanidade, efeitos, rejeição, função adicional) — depois das regras.
 - **Cibernéticos**: ainda pouco desenvolvidos; algumas regras estão implícitas na classe **Ciborgue** (o app vai partir delas e listar o que falta).
+
+## 30/10 — Relatório de habilidades (4ª parte: Perito e Soldado, linhas 104–121)
+Feito no app (MSA e MSS):
+- **Defesa Total** (regra nova do autor): ação principal, +20% em todas as defesas até o começo do próximo turno; não vale contra ataque surpresa.
+  Botão "Defesa Total" nas ações do turno. **Movimento Preditivo**: +10% a mais e imune a crítico (o ataque de oportunidade ainda não é automático).
+- **Pré-requisitos das armas**: o app lê "Nível N", atributos ("DES 14", "CON 12"), perícias e subperícias ("Medicina > 50", "Perícia Pistolas > 30").
+  Equipar sem atender: aviso. Atacar: −30%, sem dano crítico e a arma **trava** se errar. **Mestre de Armas**: −15% nas armas de fogo e não trava.
+- **Eficiência de Recursos**: +1d10 no resultado do ataque com item (nos outros testes, some 1d10 no rolador).
+- **Diagnóstico Letal**: +1d6 contra quem está com efeito negativo (grupos Mental, Dano, Mobilidade, Fadiga; exceto Alerta e Estabilizado).
+- **Aprendizado Rápido**: +10% numa subperícia sem treino por 24 h (relógio da campanha); 1 por descanso.
+- **Capitão de Campo**: +10% em Liderança (sempre) e ordem tática (ação bônus): ataque com vantagem ou +1 passo, até o fim do próximo turno do aliado.
+- **Liderança inspiradora**: aliados +1d20 no acerto (não conta para o crítico) e Salvaguarda com vantagem; líder caído → aliados em desvantagem.
+- **Táticas de Esquadrão**: o comandante e um aliado atacando o mesmo inimigo na rodada → DS com vantagem.
+- **Tropa de elite**: aliados +1,5 m e vantagem contra o medo enquanto o Comandante está de pé no combate.
+- **Combate de Trincheira** (já existia), **Último homem de pé** (+1 IP; ao matar, +1d6 PV temporários), **Avaliação de Cenário** (Investigação Normal:
+  vantagem em Intuição e Armadilhas › Encontrar, +20% contra surpresa na cena), **Extração de emergência** (ligar: +1,5 m), **Predador Invisível**
+  (+1 dado no ataque surpresa; com abafador a mais de 9 m o app testa Furtividade contra a maior Percepção passiva + 30), **Tiro Funcional**
+  (não letal com armas a distância; −10% em objeto pequeno), **Arremesso preciso** (+10% em Arremessar), **Atirador perspicaz** (+5% por erro no mesmo alvo).
+Perguntas para o autor:
+1. **Arremesso**: o app não tem a regra de desvio do arremesso (onde cai o item ao errar). Qual é? (a vantagem diz "1,5 m para cada 10 pontos").
+2. **Pré-requisitos com nomes que não existem no livro**: "Pilotagem", "Tecnologia", "Construção", "Fazer", "Energia Alta", "Bateria" — qual perícia é cada um?
+3. **Intuição**: não existe subperícia "Intuição" no livro (Avaliação de Cenário e Sensores dão vantagem nela). É alguma subperícia de Sentidos?
+4. **Disparada** e **ataque de oportunidade** ainda não são automáticos (Extração de emergência, Movimento Preditivo, Táticas de Esquadrão).

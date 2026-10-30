@@ -332,6 +332,7 @@ export function opcoesGerais(p, mestre) {
   const op = { localizado: sel.localizado, surpresa: sel.surpresa, elevado: sel.elevado, cobertura: sel.cobertura, mira: sel.mira, area: sel.area, doisAtaques: sel.doisAtaques || null };
   if (tipoCriatura(p) === 'humanoide') op.sacrificio = sel.sacrificio;
   if (sel.cargaNucleo) op.cargaNucleo = true;
+  if (sel.naoLetal) op.naoLetal = true;
   if (sel.investida != null) op.investida = sel.investida;
   // Ataque localizado: onde mira (parte do corpo ou "item:<uid>" de um item equipado do alvo).
   if (sel.localizado && sel.local) op.local = sel.local;

@@ -585,7 +585,7 @@ export function equipamento(p, mestre, filtro = null) {
         [
           // Remédio natural (Fitoterapia): usa em si (ou num aliado a 1,5 m, pelo Campo de Batalha).
           i.remedio ? botao('Usar', () => acao('remedio.usar', { id: p.id, uid: i.uid }).then(r => aviso(r.texto)), { class: 'pequeno primario', icone: 'heart' }) : null,
-          i.slot ? botao(i.equipado ? 'Desequipar' : 'Equipar', () => acao('item.equipar', { id: p.id, uid: i.uid, equipar: !i.equipado }), { class: i.equipado ? 'pequeno' : 'primario pequeno', icone: i.equipado ? 'x' : 'shirt' }) : null,
+          i.slot ? botao(i.equipado ? 'Desequipar' : 'Equipar', () => acao('item.equipar', { id: p.id, uid: i.uid, equipar: !i.equipado }).then(r => r?.aviso && aviso(r.aviso, 'erro')), { class: i.equipado ? 'pequeno' : 'primario pequeno', icone: i.equipado ? 'x' : 'shirt' }) : null,
           (mestre || estado.campanha.lojaAberta) ? botao('Vender', async () => {
             if (await confirmar(`Vender ${i.nome} por ${i.venda ?? 0}?`)) await acao('item.vender', { id: p.id, uid: i.uid });
           }, { class: 'pequeno', icone: 'coins' }) : null,

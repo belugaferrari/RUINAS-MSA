@@ -5,6 +5,7 @@ import { sistema, idSistema } from './sistema.js';
 import { LOCAIS_ATAQUE, resolverAtaque, aplicarAtaque, armasDisponiveis, opcoesDefesa, sobrevida, rolarIniciativa, resolverManipulacao, modHumorTestes, humorDe, espectroDe, humorAparente, empatiaNatural, liberdadeDeHumor, modoRolagem, modoHumorTeste, recursoDe, gastarRecurso, racaDe, distanciaPecas, usosRestantes, gastarUso, testeContra, ipContra, resistenciaManipulacao, chaveUsoArma, temMutacao } from '../shared/combate.js';
 import { sincronizarEfeitos, passarTurnoEfeitos, efeitosAoAgir, cargaNoTurno, descansar, sortearMutacao } from '../shared/efeitos.js';
 import { fichasDeTeste, relatorioFicha, kitDeTeste, periciasDeTeste } from '../shared/fichasTeste.js';
+import { requisitosQueFaltam } from '../shared/requisitos.js';
 import { monstroNoEstagio, textoDeslocamentos, textoND, ladoNoMapa, ameacaNoMapa } from '../shared/monstros.js';
 import { sortearEncontro, cenarioSemIA } from '../shared/encontro.js';
 import { FORMAS_AREA, quadradosDaArea, atingidosPelaArea } from '../shared/area.js';
@@ -902,6 +903,38 @@ function epidemia(c, x, sis, vistos = new Set()) {
   }
   return notas;
 }
+// ---------- Soldado e Perito (Relatório, respostas de 30/10) ----------
+const dePe = x => x.pv && x.pv.atual > 0 && !(x.marcadores || []).some(m => ['Desmaiado', 'Morto'].includes(m));
+const naBatalha = c => c.salas.batalha.participantes.map(id => c.personagens.find(x => x.id === id)).filter(Boolean);
+// Liderança inspiradora de um aliado de quem ataca: 'bonus' (algum líder de pé), 'caido' (os líderes caíram) ou null.
+function liderancaPara(c, a, sis) {
+  const lideres = naBatalha(c).filter(x => x.id !== a.id && ladoDe(x) === ladoDe(a) && habilidadeValendo(x, sis, 'Liderança inspiradora'));
+  if (!lideres.length) return null;
+  return lideres.some(dePe) ? 'bonus' : 'caido';
+}
+// Táticas de Esquadrão: o comandante e ao menos um aliado atacando o mesmo inimigo nesta rodada → quem ataca rola o DS com vantagem.
+function taticasDeEsquadrao(c, a, b, sis) {
+  const cb = c.salas.batalha.combate;
+  if (!cb) return false;
+  if (cb.ataquesRodada?.rodada !== cb.rodada) cb.ataquesRodada = { rodada: cb.rodada, porAlvo: {} };
+  const ja = new Set([...(cb.ataquesRodada.porAlvo[b.id] || []), a.id]);
+  cb.ataquesRodada.porAlvo[b.id] = [...ja];
+  const lado = naBatalha(c).filter(x => ja.has(x.id) && ladoDe(x) === ladoDe(a));
+  return lado.length >= 2 && lado.some(x => habilidadeValendo(x, sis, 'Táticas de Esquadrão'));
+}
+// Tropa de elite: com o Comandante consciente e em combate, os aliados andam +1,5 m e têm vantagem contra o medo.
+function tropaDeElite(c, sis) {
+  const todos = naBatalha(c);
+  for (const x of todos) x.marcas = (x.marcas || []).filter(m => !m.tropaElite);
+  if (!c.salas.batalha.combate) return;
+  for (const cmd of todos.filter(x => dePe(x) && habilidadeValendo(x, sis, 'Tropa de elite'))) {
+    for (const x of todos.filter(y => y.id !== cmd.id && ladoDe(y) === ladoDe(cmd))) {
+      if ((x.marcas || []).some(m => m.tropaElite)) continue;
+      marcar(x, { nome: `Tropa de elite (${cmd.nome}): +1,5 m, vantagem contra o medo`, tropaElite: true, deslocamento: 1.5, vantagem: 'medo', combate: true, de: cmd.id });
+    }
+  }
+}
+
 // Coloca b na ordem de iniciativa logo depois de p (Controle Remoto, Alucinação maligna).
 function agirDepoisDe(c, b, p) {
   const cb = c.salas.batalha.combate;
@@ -949,6 +982,33 @@ function criarAlucinacao(c, p, x, sis) {
 }
 
 Object.assign(ESPECIAIS, {
+  // Aprendizado Rápido: +10% numa subperícia em que não tem treino, por 24 horas (relógio da campanha).
+  aprendizado(c, p, sis, hab, esc) {
+    const id = esc.sub;
+    const nome = nomeSubDe(sis, id || '');
+    if (!id || !sis.pericias.some(x => x.subpericias.some(y => y.id === id))) throw erro('Escolha a subperícia.');
+    if ((p.subpericias?.[id] || 0) > 0) throw erro(`${p.nome} já tem treino em ${nome}.`);
+    marcar(p, { nome: `Aprendizado Rápido (${nome} +10%)`, subpericias: { [id]: 10 }, ateHora: (c.relogio?.horas || 0) + 24, de: p.id });
+    return { notas: [`+10% em ${nome} pelas próximas 24 horas`, 'também pode ignorar um pré-requisito de item (o mestre aplica)'] };
+  },
+  // Capitão de Campo: ordem tática a um aliado (ataque com vantagem ou +1 passo sem ataque de oportunidade) até o fim do próximo turno dele.
+  ordemTatica(c, p, sis, hab, esc) {
+    const b = esc.alvo ? personagem(c, esc.alvo) : null;
+    if (!b || b.id === p.id) throw erro('Escolha o aliado.');
+    if (esc.ordem === 'passo') marcar(b, { nome: `Ordem de ${p.nome}: +1 passo (1,5 m) com ação bônus, sem ataque de oportunidade`, turnos: 1, de: p.id });
+    else marcar(b, { nome: `Ordem de ${p.nome}: ataque com vantagem`, vantagem: 'ataque', turnos: 1, de: p.id });
+    return { rotulo: `${hab.nome}: ordem a ${b.nome}`, notas: [esc.ordem === 'passo' ? `${b.nome} pode dar 1 passo a mais (ação bônus), sem ataque de oportunidade` : `${b.nome} ataca com vantagem`, 'até o fim do próximo turno dele'] };
+  },
+  // Avaliação de Cenário: Espionagem › Investigação Normal; passou → na cena, vantagem em Intuição e Armadilhas › Encontrar, +20% contra surpresa.
+  avaliacaoCenario(c, p, sis) {
+    const t = testar(p, sis, 'espionagem.investigacao', ndDe(sis, 'Normal'));
+    const notas = [contaTeste('Espionagem › Investigação', t)];
+    if (!t.sucesso) return { notas, sucesso: false };
+    p.marcas = (p.marcas || []).filter(m => !m.avaliacao);
+    marcar(p, { nome: 'Avaliação de Cenário', avaliacao: true, vantagem: ['armadilhas.encontrar', 'intuicao'], defesaSurpresa: 20, cena: true, de: p.id });
+    notas.push('nesta cena: vantagem em Intuição e em Armadilhas › Encontrar; +20% de defesa contra ataque surpresa');
+    return { notas, sucesso: true };
+  },
   // Digestão extracorpórea: devorar (ação completa) quem foi acertado pelo jato ácido e está abatido: +1d4 PV.
   devorar(c, p, sis, hab, esc) {
     const b = alvoEscolhido(c, esc, 'Escolha a criatura acertada pelo jato ácido.');
@@ -1260,11 +1320,42 @@ function depoisDoDano(c, s, a, b, r, pend, defesa, sis, pvAntes) {
       notas.push(`${b.nome}: ${m.texto || m.nome}`);
     }
   }
+  // Sem pré-requisito, errou: a arma trava (Mestre de Armas evita, nas armas de fogo).
+  if (!r.sucesso && r.travaSeErrar) {
+    const it = (a.itens || []).find(i => i.uid === pend.opcoes?.armaUid);
+    if (it) { it.travado = { nome: 'erro sem pré-requisito' }; notas.push(`${it.nome} travou (sem os pré-requisitos) — destrava no fim do combate ou pelo mestre`); }
+  }
+  // Atirador perspicaz: errou um tiro → +5% (acumula) no próximo contra este alvo; acertou → zera.
+  if (pend.alcance === 'distancia' && habilidadeValendo(a, sis, 'Atirador perspicaz')) {
+    a.perspicaz ||= {};
+    if (r.sucesso) delete a.perspicaz[b.id];
+    else { a.perspicaz[b.id] = (a.perspicaz[b.id] || 0) + 5; notas.push(`Atirador perspicaz: +${a.perspicaz[b.id]}% no próximo tiro em ${b.nome}`); }
+  }
+  // Último homem de pé: matou um adversário → +1d6 PV temporários (somem no fim do combate).
+  if (!r.mortoAntes && (b.marcadores || []).includes('Morto') && habilidadeValendo(a, sis, 'Ultimo homem de pé')) {
+    const d = rolarDado('1d6');
+    a.pvTemp = (a.pvTemp || 0) + d.total;
+    notas.push(`Último homem de pé: ${a.nome} +${d.total} PV temporários (${a.pvTemp})`);
+  }
+  // Predador Invisível: atirando com abafador a mais de 9 m, Furtividade contra a maior Percepção passiva (Sentidos + 50) do grupo do alvo + 30.
+  if (pend.alcance === 'distancia' && habilidadeValendo(a, sis, 'Predador Invisível')) {
+    const it = (a.itens || []).find(i => i.uid === pend.opcoes?.armaUid);
+    const abafada = it && /abafad|silencia|suprimid/i.test(`${it.nome} ${it.efeitos || ''} ${it.observacoes || ''} ${(it.aprimoramentos || []).join(' ')}`);
+    const dist = distanciaPecas(c, a.id, b.id);
+    if (abafada && dist != null && dist > 9) {
+      const grupo = c.salas.batalha.participantes.map(id => c.personagens.find(x => x.id === id)).filter(x => x && ladoDe(x) === ladoDe(b));
+      const passiva = Math.max(...grupo.map(x => (derivados(x, sis).pericias.sentidos ?? 0) + 50));
+      const t = testar(a, sis, 'espionagem.furtividade', passiva + 30);
+      notas.push(`Predador Invisível: ${contaTeste('Furtividade', t)} — ${t.sucesso ? `${a.nome} continua escondido` : `${a.nome} foi visto`}`);
+    }
+  }
   // Dançarino: defendeu com Dança → +1 de Moral (até 3 por batalha; zera no fim do combate).
   if (defesa === 'danca' && !r.sucesso) {
     const mo = b.moral ||= {};
     if ((mo.danca || 0) < 3) { mo.danca = (mo.danca || 0) + 1; notas.push(`Dançarino: ${b.nome} ganha 1 ponto de Moral (Moral: ${totalMoral(b)})`); }
   }
+  // Tropa de elite: o Comandante caiu (ou levantou) → os aliados perdem (ou recuperam) o bônus.
+  if (habilidadeValendo(b, sis, 'Tropa de elite')) tropaDeElite(c, sis);
   if (!(r.dano > 0)) return notas;
   // Tóxico: animal, besta ou monstro que lhe causou dano corpo a corpo faz WILL% Normal para continuar atacando.
   if (corpo && habilidadeValendo(b, sis, 'Tóxico') && ['animal', 'besta', 'monstro'].includes(tipoCriatura(a)) && !(a.marcas || []).some(m => m.naoAtaca === b.id)) {
@@ -1400,6 +1491,7 @@ function iniciarCombate(c) {
   });
   s.combate = { rodada: 1, turno: 1, vez: 0, ordem, turnoDesde: Date.now() };
   for (const p of vivos) { p.emCombate = true; motivarNoCombate(c, p, sis); }
+  tropaDeElite(c, sis);
   ordenarIniciativa(s.combate);
   s.ativo = s.combate.ordem[0].id;
   const pos0 = c.mapa?.pecas?.[s.ativo];
@@ -1455,8 +1547,11 @@ function resolverPendente(c, s, pend, defesa, sis) {
     r.dano = 0; r.danoPartes = []; r.efeito = null;
   }
   const pvAntes = b.pv?.atual ?? 0;
+  r.mortoAntes = (b.marcadores || []).includes('Morto');
   const notas = [...notasItem, ...antesDoDano(c, s, a, b, r, sis), ...aplicarAtaque(a, b, r, sis)];
   if (r.semCritico) notas.push(`${b.nome} é imune a acertos críticos (sem o dado extra)`);
+  if (r.semCriticoRequisito) notas.push(`sem os pré-requisitos de ${r.arma}: sem dano crítico`);
+  if (r.dsVantagem) notas.push('Táticas de Esquadrão: DS com vantagem');
   notas.push(...depoisDoDano(c, s, a, b, r, pend, defesa, sis, pvAntes));
   const notaMut = mutacaoSeMexe(c, a, r.ds);
   if (notaMut) notas.push(notaMut);
@@ -2099,6 +2194,9 @@ export const acoes = {
       const pedida = [0, 1].includes(Number(mao)) ? Number(mao) : null;
       it.mao = pedida ?? (!ocupadas.has(habil) ? habil : 1 - habil);
     } else delete it.mao;
+    // Pré-requisitos (autor, 30/10): equipa, mas avisa — sem eles a arma fica 30% mais difícil, sem crítico, e trava se errar.
+    const faltam = requisitosQueFaltam(p, sistema(c.sistema), it);
+    if (faltam.length) return { aviso: `${p.nome} não atende aos pré-requisitos de ${it.nome} (${faltam.join(', ')}): ${it.tipo === 'arma' ? 'ataques com −30% (Mestre de Armas: −15% nas armas de fogo), sem dano crítico e a arma trava se errar' : 'o mestre aplica a penalidade'}.` };
   },
 
   'item.comprar'(c, { id, itemId }, ctx) {
@@ -2537,7 +2635,8 @@ export const acoes = {
       const ndNum = nd === '' || nd == null ? null : Math.max(0, parseInt(nd, 10) || 0);
       // Vantagem/desvantagem: escolhida no rolador, ou automática por habilidade ligada (ex.: Zona de Abate em Briga › Deslocar).
       const alvosRef = !acaoRef ? [] : acaoRef.startsWith('sub:') ? [acaoRef.slice(4), acaoRef.slice(4).split('.')[0]] : acaoRef.startsWith('per:') ? [acaoRef.slice(4)] : [];
-      const porHabilidade = p && alvosRef.length && vantagemPorHabilidade(p, sis, alvosRef);
+      const porHabilidade = p && ((alvosRef.length && vantagemPorHabilidade(p, sis, alvosRef))
+        || (acaoRef === 'sub:briga.salvaguardar' && c.salas.batalha.participantes.includes(p.id) && liderancaPara(c, p, sis) === 'bonus'));
       const pedido = ['vantagem', 'desvantagem'].includes(modo) ? modo : null;
       // O humor também entra sozinho (ex.: Atraído → Percepção em desvantagem).
       const pelHumor = p ? modoHumorTeste(p, sis, acaoRef) : { vantagem: false, desvantagem: false };
@@ -2610,6 +2709,9 @@ export const acoes = {
     // Começo do turno: guarda onde o peão está (contador de espaço andado no mapa).
     const pos = c.mapa?.pecas?.[p.id];
     cb.inicioTurno = pos ? { id: p.id, col: pos.col, lin: pos.lin } : null;
+    // Começo do turno: a Defesa Total do turno anterior acaba; a Tropa de elite acompanha quem está de pé.
+    p.marcas = (p.marcas || []).filter(m => !m.ateMeuTurno);
+    tropaDeElite(c, sis);
     // Novo turno: ação principal, de movimento e bônus voltam (a reação volta a cada rodada).
     if (cb.gasto?.[p.id]) { const r = cb.gasto[p.id]; cb.gasto[p.id] = { reacao: r.reacao || 0, reacaoRodada: r.reacaoRodada }; }
     const nota = sobrevida(p, sis);
@@ -2728,6 +2830,12 @@ export const acoes = {
       const m = gastarAcao(c, a, 'movimento');
       if (m) excesso = [excesso, m].filter(Boolean).join('; ');
     }
+    // Relatório (30/10): Liderança inspiradora de um aliado (de pé: +1d20; caído: desvantagem), Táticas de Esquadrão
+    // (DS com vantagem quando o comandante e um aliado atacam o mesmo inimigo na rodada) e dano não letal (Tiro Funcional).
+    const lid = liderancaPara(c, a, sis);
+    if (lid) op.lideranca = lid; else delete op.lideranca;
+    if (taticasDeEsquadrao(c, a, b, sis)) op.dsVantagem = true; else delete op.dsVantagem;
+    if (op.naoLetal && !habilidadeValendo(a, sis, 'Tiro Funcional')) delete op.naoLetal;
     agressaoSubita(c, a, b, sis);
     const notasAgir = efeitosAoAgir(a, sis);
     if (notasAgir.length) registrar(s.log, { autor: a.nome, rotulo: 'Efeitos', texto: notasAgir.join(' · ') });
@@ -3020,6 +3128,21 @@ export const acoes = {
     return { excesso, gasto: c.salas.batalha.combate.gasto?.[p.id] || {} };
   },
 
+  // Defesa Total (autor, 30/10): postura em que abre mão de atacar — ação principal, +20% em todas as defesas até o começo
+  // do próximo turno (não vale contra ataque surpresa). Com Movimento Preditivo: +10% a mais e imune a crítico.
+  'combate.defesaTotal'(c, { id }, ctx) {
+    const p = personagem(c, id);
+    exigirDonoOuMestre(ctx, p);
+    if (!c.salas.batalha.combate) throw erro('Não há combate em andamento.');
+    gastarAcao(c, p, 'principal');
+    p.marcas = (p.marcas || []).filter(m => !m.defesaTotal);
+    marcar(p, { nome: 'Defesa Total (+20% nas defesas)', defesa: 20, defesaTotal: true, ateMeuTurno: true, de: p.id });
+    const preditivo = temHabilidade(p, sistema(c.sistema), 'Movimento Preditivo');
+    const texto = `ação principal · +20% em todas as defesas até o próximo turno (não vale contra surpresa)${preditivo ? ' · Movimento Preditivo: +10% a mais, imune a crítico e sem ataque de oportunidade' : ''}`;
+    registrar(c.salas.batalha.log, { autor: p.nome, rotulo: `${p.nome}: Defesa Total`, texto });
+    return { texto };
+  },
+
   // Gastar 1 carga de um recurso fora do ataque (Núcleo energético servindo de bateria).
   'habilidade.recurso'(c, { id, recurso }, ctx) {
     const p = personagem(c, id);
@@ -3246,6 +3369,12 @@ export const acoes = {
       if (notas.length) linhas.push(`${p.nome}: ${notas.join(', ')}`);
     }
     registrar(c.log, { autor: 'Mestre', rotulo: `+${h} h — ${descreverRelogio(c.relogio.horas)}`, texto: linhas.join(' · ') || 'ninguém sofreu com fome, sede ou sono' });
+    // Marcas com prazo no relógio (Aprendizado Rápido: 24 h).
+    for (const p of c.personagens) if ((p.marcas || []).some(m => m.ateHora != null && m.ateHora <= c.relogio.horas)) {
+      const fim = p.marcas.filter(m => m.ateHora != null && m.ateHora <= c.relogio.horas);
+      p.marcas = p.marcas.filter(m => !fim.includes(m));
+      linhas.push(`${p.nome}: ${fim.map(m => m.nome).join(', ')} acabou`);
+    }
     // Remédios naturais (Fitoterapia) duram 24 h.
     for (const p of c.personagens) {
       const vencidos = (p.itens || []).filter(i => i.validoAte != null && i.validoAte <= c.relogio.horas);

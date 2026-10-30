@@ -379,6 +379,8 @@ function campoEscolha(p, x, k, esc) {
   if (k === 'tipoIp') return campo('IP', [{ valor: 'geral', rotulo: 'Geral (até +2)' }, ...['Corte', 'Perfuração', 'Concussão', 'Elétrico', 'Calor', 'Frio'].map(t => ({ valor: t, rotulo: `${t} (até +4)` }))], 'tipoIp');
   if (k === 'efeito') return campo('Engenhoca', [{ valor: 'fumaca', rotulo: 'Fumaça (raio 3 m)' }, { valor: 'ruido', rotulo: 'Ruído (raio 15 m)' }], 'efeito');
   // Habilidades do Relatório (29/10).
+  if (k === 'subSemTreino') return campo('Subperícia sem treino', sis.pericias.flatMap(q => q.subpericias.filter(x => !(p.subpericias?.[x.id] > 0)).map(x => ({ valor: x.id, rotulo: `${q.nome} › ${x.nome}` }))), 'sub');
+  if (k === 'ordem') return campo('Ordem', [{ valor: 'ataque', rotulo: 'Atacar com vantagem' }, { valor: 'passo', rotulo: '+1 passo sem ataque de oportunidade' }], 'ordem');
   if (k === 'pontos') return campo('CONS → FOR', [0, 1, 2, 3, 4, 5, 6].map(n => ({ valor: String(n), rotulo: n ? `${n} ponto${n > 1 ? 's' : ''}` : 'nenhum' })), 'pontos');
   if (k === 'radiacao') return campo('Efeito', [{ valor: 'brilhar', rotulo: 'Brilhar (+5% de defesa)' }, { valor: 'superaquecer', rotulo: 'Superaquecer (explosão)' }], 'efeito');
   if (k === 'criacao') return campo('Ao criar', [{ valor: 'moral', rotulo: '+1 ponto de Moral' }, { valor: 'aprimoramento', rotulo: 'Aprimoramento no item' }], 'efeito');
@@ -586,7 +588,10 @@ function acoesDoTurno(p) {
     chip('principal', 'swords', 'Principal', 'Ação principal: atacar, correr, manobra, esconder-se'),
     chip('movimento', 'footprints', 'Movimento', 'Ação de movimento: deslocar-se (pode dividir antes e depois da principal)'),
     chip('bonus', 'zap', 'Bônus', 'Ação bônus: só com habilidade ou item que permita (ex.: sacar)'),
-    chip('reacao', 'shield', 'Reação', 'Reação: fora do seu turno, 1 por rodada (ex.: ataque de oportunidade)'));
+    chip('reacao', 'shield', 'Reação', 'Reação: fora do seu turno, 1 por rodada (ex.: ataque de oportunidade)'),
+    // Defesa Total (autor, 30/10): abre mão de atacar; ação principal; +20% em todas as defesas até o próximo turno (não vale contra surpresa).
+    daVez ? botao((p.marcas || []).some(m => m.defesaTotal) ? 'Em Defesa Total' : 'Defesa Total', () => acao('combate.defesaTotal', { id: p.id }).then(r => aviso(r.texto)),
+      { class: 'pequeno', icone: 'shield-check', disabled: (p.marcas || []).some(m => m.defesaTotal) || usado('principal') > 0, title: 'Ação principal: +20% em todas as defesas até o seu próximo turno (não vale contra ataque surpresa)' }) : null);
 }
 
 // Ataques especiais e habilidades que gastam ação (de todas as classes): o tempo que gastam, "Usar" (marca a ação do
@@ -698,6 +703,8 @@ function opcoesAtaque(p, mestre, outros = []) {
       p.sanidade && p.sanidade.atual < 16 ? null : caixa('mira', 'Mira (+30% no ataque a distância, gasta a ação de movimento)'),
       // Sacrifício: só humanos (autor, 25/10).
       tipoCriatura(p) === 'humanoide' ? caixa('sacrificio', 'Sacrifício (+10%, D6 de vida)') : null,
+      // Tiro Funcional: pode escolher dano não letal com armas a distância.
+      temHabilidade(p, estado.sistema, 'Tiro Funcional') ? caixa('naoLetal', 'Dano não letal (Tiro Funcional, armas a distância)') : null,
       // Uma arma em cada mão: dois ataques no turno (o segundo, com a outra mão, gasta a ação bônus).
       (p.itens || []).filter(i => i.equipado && i.slot === 'maos' && i.tipo === 'arma' && (i.ocupa ?? 1) < 2).length >= 2
         ? h('span', { title: temHabilidade(p, estado.sistema, 'Ambidestria') ? 'Ambidestria: o primeiro sem ônus, o segundo −20%' : 'Mão hábil −20%, mão inábil −40%' },

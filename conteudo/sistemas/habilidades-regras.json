@@ -779,5 +779,117 @@
       "remedio"
     ],
     "texto": "no descanso: Medicina › Farmacêutica Normal cria um remédio natural (cura 1D6, +3 m por 5 turnos, ignorar efeitos negativos por 3 turnos ou veneno 1D4 + MOD INT); dura 24 h"
+  },
+  "aprendizado rapido": {
+    "modo": "ativar",
+    "acao": "bonus",
+    "especial": "aprendizado",
+    "usos": {
+      "max": 1,
+      "recarga": "descanso"
+    },
+    "escolhas": [
+      "subSemTreino"
+    ],
+    "texto": "depois de ver alguém testar uma subperícia em que você não tem treino: +10% nela por 24 horas; também ignora pré-requisitos de itens (o mestre aplica); 1 vez por descanso"
+  },
+  "diagnostico letal": {
+    "modo": "sempre",
+    "danoContraCondicao": {
+      "dados": "1d6",
+      "grupos": [
+        "Mental",
+        "Dano",
+        "Mobilidade",
+        "Fadiga"
+      ],
+      "exceto": [
+        "alerta",
+        "estabilizado"
+      ]
+    },
+    "texto": "+1d6 de dano contra quem estiver com um efeito negativo (mental, físico ou de mobilidade) — automático"
+  },
+  "eficiencia de recursos": {
+    "modo": "sempre",
+    "especial": "eficiencia",
+    "texto": "+1d10 no resultado dos testes feitos com um item, inclusive ataques armados (automático no ataque; nos outros testes, some 1d10)"
+  },
+  "movimento preditivo": {
+    "modo": "sempre",
+    "especial": "movimentoPreditivo",
+    "texto": "em Defesa Total: +10% a mais nas defesas, imune a acerto crítico e os movimentos não geram ataque de oportunidade (automático)"
+  },
+  "mestre de armas": {
+    "modo": "sempre",
+    "texto": "sem os pré-requisitos de uma arma de fogo: só −15% (em vez de −30%) e a arma não trava ao errar; continua sem dano crítico (automático)"
+  },
+  "capitao de campo": {
+    "modo": "ativar",
+    "acao": "bonus",
+    "especial": "ordemTatica",
+    "repetir": true,
+    "passivo": "+10% em Liderança",
+    "escolhas": [
+      "aliado",
+      "ordem"
+    ],
+    "texto": "+10% em Liderança (sempre). Ordem tática (ação bônus) a um aliado: ataque com vantagem ou +1 passo sem ataque de oportunidade, até o fim do próximo turno dele"
+  },
+  "lideranca inspiradora": {
+    "modo": "sempre",
+    "especial": "liderancaInspiradora",
+    "texto": "de pé no combate: os aliados somam +1d20 no acerto (não conta para o crítico) e fazem Salvaguarda com vantagem; se você cair, eles atacam em desvantagem (automático)"
+  },
+  "taticas de esquadrao": {
+    "modo": "sempre",
+    "especial": "taticasEsquadrao",
+    "texto": "você e ao menos um aliado atacando o mesmo inimigo na rodada: quem ataca rola o DS com vantagem (automático); 1 passo na zona de ameaça dele não gera ataque de oportunidade"
+  },
+  "tropa de elite": {
+    "modo": "sempre",
+    "especial": "tropaElite",
+    "texto": "consciente e em combate: os aliados andam +1,5 m, têm vantagem contra o medo e ignoram terreno acidentado natural (automático)"
+  },
+  "combate de trincheira": {
+    "modo": "sempre",
+    "texto": "cobertura parcial conta como total contra atiradores a mais de 9 m (automático pelo mapa)"
+  },
+  "ultimo homem de pe": {
+    "modo": "sempre",
+    "efeitos": "+1 IP geral",
+    "especial": "ultimoHomem",
+    "texto": "+1 IP geral; ao matar um adversário, +1d6 PV temporários (somem no fim do combate; servem ao Sacrifício) — automático"
+  },
+  "avaliacao de cenario": {
+    "modo": "ativar",
+    "especial": "avaliacaoCenario",
+    "repetir": true,
+    "texto": "Espionagem › Investigação Normal ao entrar num ambiente fechado: na cena, vantagem em Intuição e em Armadilhas › Encontrar e +20% de defesa contra ataque surpresa"
+  },
+  "extracao de emergencia": {
+    "modo": "ligar",
+    "deslocamento": 1.5,
+    "texto": "ligue quando estiver em disparada: +1,5 m de deslocamento e +50% de defesa contra ataques de oportunidade (o mestre aplica a defesa)"
+  },
+  "predador invisivel": {
+    "modo": "sempre",
+    "especial": "predadorInvisivel",
+    "texto": "ataque surpresa: +1 dado de dano; atirando com abafador a mais de 9 m, o app testa Furtividade contra a maior Percepção passiva do grupo do alvo + 30 para você continuar escondido"
+  },
+  "tiro funcional": {
+    "modo": "sempre",
+    "especial": "tiroFuncional",
+    "texto": "tiro em objeto pequeno (ataque localizado num item): −10% em vez da penalidade normal; pode escolher dano não letal com armas a distância"
+  },
+  "arremesso preciso": {
+    "modo": "sempre",
+    "efeitos": "+10% em Arremessar",
+    "texto": "+10% em Esportes › Arremessar; errando, o desvio do item arremessado é a metade do normal (o mestre aplica)"
+  },
+  "atirador perspicaz": {
+    "modo": "sempre",
+    "especial": "atiradorPerspicaz",
+    "texto": "cada erro de ataque a distância contra um alvo dá +5% (acumula) no próximo tiro nele; zera ao acertar (automático)"
   }
 }

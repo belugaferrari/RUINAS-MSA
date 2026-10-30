@@ -1,7 +1,8 @@
 // Combate e regras sociais automatizadas (Livro MSS). Só valem quando o sistema da campanha liga
 // "modulos.combate" / "modulos.social". Escolhas provisórias estão em conteudo/sistemas/PENDENCIAS.md.
 import { ladoNoMapa } from './monstros.js';
-import { rolarDado, derivados, ipContraDano, listaHabilidades, vantagemPorHabilidade, tipoCriatura, subirPassos, temHabilidade, regraDaHabilidade, danoDasHabilidades, efeitosHabilidade, modoHabilidade, perderPv, chaveHabilidade, habilidadeValendo } from './regras.js';
+import { requisitosQueFaltam } from './requisitos.js';
+import { rolarDado, derivados, ipContraDano, listaHabilidades, vantagemPorHabilidade, tipoCriatura, subirPassos, temHabilidade, regraDaHabilidade, danoDasHabilidades, efeitosHabilidade, modoHabilidade, perderPv, chaveHabilidade, habilidadeValendo, condicoesAtivas } from './regras.js';
 
 const d100 = rng => 1 + Math.floor(rng() * 100);
 
@@ -26,13 +27,14 @@ export function rolarDP(modo, rng = Math.random) {
 }
 
 // Teste contra um valor fixo (ND ou ação passiva), com críticos do D-MIL.
-export function testeContra(acao, nd, sistema, { modo = null, rng = Math.random } = {}) {
+export function testeContra(acao, nd, sistema, { modo = null, rng = Math.random, dsVantagem = false } = {}) {
   const t = sistema.teste;
   const { dp, dados } = rolarDP(modo, rng);
   // Com vantagem/desvantagem o DS também rola duas vezes: o maior na vantagem, o menor na desvantagem.
+  // Táticas de Esquadrão: só o DS com vantagem (2d10, fica o maior).
   const dsDados = [1 + Math.floor(rng() * 10)];
-  if (modo) dsDados.push(1 + Math.floor(rng() * 10));
-  const ds = modo === 'desvantagem' ? Math.min(...dsDados) : Math.max(...dsDados);
+  if (modo || dsVantagem) dsDados.push(1 + Math.floor(rng() * 10));
+  const ds = modo === 'desvantagem' && !dsVantagem ? Math.min(...dsDados) : Math.max(...dsDados);
   const total = acao + dp;
   const critico = dp >= t.criticoAcerto ? 'acerto' : dp <= t.criticoErro ? 'erro' : null;
   const sucesso = critico === 'acerto' ? true : critico === 'erro' ? false : total >= nd;
@@ -77,6 +79,7 @@ export function armasDisponiveis(p, sistema) {
     efeitoDano: i.efeitoDano ?? cfg.chancePorTipo?.[i.tipoDano] ?? cfg.efeitoPadrao, penetracao: i.penetracao || 0, alcance: i.alcance || (i.pericia?.startsWith('armas-de-fogo') ? 'distancia' : 'corpo'),
     // Cadência: quantos disparos (balas e danos) por ataque — da arma ou da subperícia (ex.: Rifle de Assalto 2).
     cadencia: Math.max(1, i.cadencia ?? cfg.cadencia?.[i.pericia] ?? 1),
+    requisitos: i.requisitos || '',
   }));
   const natural = armaNaturalDe(p, sistema);
   return [{ uid: 'desarmado', efeitoDano: cfg.efeitoPadrao, ...cfg.desarmado }, ...(natural ? [natural] : []), ...armas, ...armasDeHabilidade(p, sistema)];
@@ -184,7 +187,10 @@ export function defesaDoAlvo(alvo, arma, sistema, { escolha = 'nenhuma', area = 
     if (atr && habilidadeValendo(alvo, sistema, x.nome)) partes.push({ nome: `${x.nome} (${atr})`, valor: derivados(alvo, sistema).atributos[atr] ?? 0 });
   }
   // Marcas temporárias do alvo (Foco de Atenção: + CAR contra quem está focado nele).
-  for (const m of alvo.marcas || []) if (m.defesa && (!m.contra || m.contra === atacante?.id)) partes.push({ nome: m.nome, valor: m.defesa });
+  for (const m of alvo.marcas || []) if (m.defesa && (!m.contra || m.contra === atacante?.id) && !(surpresa && m.defesaTotal)) partes.push({ nome: m.nome, valor: m.defesa });
+  // Defesa Total + Movimento Preditivo: +10% a mais. Avaliação de Cenário: +20% contra ataque surpresa.
+  if (!surpresa && (alvo.marcas || []).some(m => m.defesaTotal) && temHabilidade(alvo, sistema, 'Movimento Preditivo')) partes.push({ nome: 'Movimento Preditivo', valor: 10 });
+  if (surpresa) for (const m of alvo.marcas || []) if (m.defesaSurpresa) partes.push({ nome: m.nome, valor: m.defesaSurpresa });
   // Defesa calculada no servidor (Padrão de ataque: +10% depois do 3º turno do inimigo).
   for (const d of defesaExtra) partes.push(d);
   return { id: esc.id, nome: esc.nome, nota: esc.nota || null, total: partes.reduce((s, x) => s + x.valor, 0), partes };
@@ -229,7 +235,20 @@ export function resolverAtaque(atacante, alvo, sistema, op = {}, defesaId = 'nen
   const pericia = arma.pericia || 'briga.ataque-desarmado';
   const mods = [];
   const add = (nome, valor) => valor && mods.push({ nome, valor });
-  add('localizado', op.localizado ? cfg.localizado.mod : 0);
+  // Tiro Funcional: tiro num objeto pequeno (ataque localizado num item) com só −10%.
+  const tiroFuncional = op.localizado && String(op.local || '').startsWith('item:') && arma.alcance === 'distancia' && habilidadeValendo(atacante, sistema, 'Tiro Funcional');
+  add(tiroFuncional ? 'localizado (Tiro Funcional)' : 'localizado', op.localizado ? (tiroFuncional ? -10 : cfg.localizado.mod) : 0);
+  // Pré-requisitos da arma (autor, 30/10): sem eles, −30% (Mestre de Armas: −15% nas armas de fogo), sem dano crítico e
+  // a arma trava se errar (com Mestre de Armas, não trava).
+  const faltam = arma.requisitos ? requisitosQueFaltam(atacante, sistema, { requisitos: arma.requisitos }) : [];
+  const mestreArmas = faltam.length && String(pericia).startsWith('armas-de-fogo') && habilidadeValendo(atacante, sistema, 'Mestre de Armas');
+  if (faltam.length) add(`sem pré-requisito (${faltam.join(', ')})${mestreArmas ? ' — Mestre de Armas' : ''}`, mestreArmas ? -15 : -30);
+  // Eficiência de Recursos: +1d10 no teste feito com um item (ataque armado).
+  if (arma.uid !== 'desarmado' && !arma.natural && !arma.habilidade && habilidadeValendo(atacante, sistema, 'Eficiência de Recursos')) add('Eficiência de Recursos (1d10)', rolarDado('1d10', rng).total);
+  // Liderança inspiradora de um aliado de pé: +1d20 no acerto (soma ao d100, mas não conta para o crítico).
+  if (op.lideranca === 'bonus') add('Liderança inspiradora (1d20)', rolarDado('1d20', rng).total);
+  // Atirador perspicaz: +5% por erro seguido contra este alvo.
+  if (arma.alcance === 'distancia' && atacante.perspicaz?.[alvo.id]) add('Atirador perspicaz', atacante.perspicaz[alvo.id]);
   if (op.maos) add(op.maos.nome, op.maos.valor || 0);
   // Sacrifício: só humanos (autor, 25/10).
   if (tipoCriatura(atacante) !== 'humanoide') delete op.sacrificio;
@@ -267,15 +286,19 @@ export function resolverAtaque(atacante, alvo, sistema, op = {}, defesaId = 'nen
   if (tem(atacante, 'Aturdido')) motivosD.push('atacante aturdido');
   if (hA?.desvantagemAtaque) motivosD.push(hA.nome);
   if ((atacante.marcas || []).some(m => m.desvantagem)) motivosD.push('mutação descontrolada');
+  if (op.lideranca === 'caido') motivosD.push('o líder (Liderança inspiradora) caiu');
   // Alvo com habilidade que põe quem o ataca em desvantagem (Imunidade Diplomática, em cidade).
   for (const x of listaHabilidades(alvo, sistema)) if (x.regra?.desvantagemContraMim && habilidadeValendo(alvo, sistema, x.nome)) motivosD.push(`${x.nome} de ${alvo.nome}`);
   const modo = modoRolagem(motivosV.length > 0, motivosD.length > 0);
 
   const defesa = defesaDoAlvo(alvo, arma, sistema, { escolha: defesaId, area: !!op.area, surpresa: !!op.surpresa, atacante, defesaExtra: op.defesaExtra || [] });
-  const teste = testeContra(acao, defesa.total, sistema, { modo, rng });
+  const teste = testeContra(acao, defesa.total, sistema, { modo, rng, dsVantagem: !!op.dsVantagem });
   const r = {
     arma: arma.nome, pericia, acao, mods, defesa, ...teste, motivosVantagem: motivosV, motivosDesvantagem: motivosD,
-    dano: 0, danoBruto: 0, danoPartes: [], ip: 0, efeito: null, perdaSacrificio: 0, naoLetal: arma.tipoDano === 'Não letal',
+    dano: 0, danoBruto: 0, danoPartes: [], ip: 0, efeito: null, perdaSacrificio: 0,
+    // Tiro Funcional: pode escolher dano não letal com armas a distância.
+    naoLetal: arma.tipoDano === 'Não letal' || (!!op.naoLetal && arma.alcance === 'distancia' && !!habilidadeValendo(atacante, sistema, 'Tiro Funcional')),
+    ...(faltam.length ? { semPrerequisito: faltam, travaSeErrar: !mestreArmas } : {}), ...(op.dsVantagem ? { dsVantagem: true } : {}),
   };
   // Sacrifício: perde o D6 atual de vida mesmo errando (abandona a razão no ataque).
   if (op.sacrificio) r.perdaSacrificio = d6Atual(atacante.pv?.atual ?? 0);
@@ -293,7 +316,9 @@ export function resolverAtaque(atacante, alvo, sistema, op = {}, defesaId = 'nen
     const rolar = (nome, expr) => { const x = rolarDado(expr, rng); doDisparo.push({ nome, expr, dados: x.dados, total: x.total }); };
     rolar(disparos > 1 ? `${arma.nome} (${n + 1}º)` : arma.nome, arma.dano);
     if (n === 0) {
-      if (teste.critico === 'acerto' && derivados(alvo, sistema).habilidades.imuneCritico) r.semCritico = true;
+      const preditivo = (alvo.marcas || []).some(m => m.defesaTotal) && temHabilidade(alvo, sistema, 'Movimento Preditivo');
+      if (teste.critico === 'acerto' && (derivados(alvo, sistema).habilidades.imuneCritico || preditivo)) r.semCritico = true;
+      else if (teste.critico === 'acerto' && faltam.length) r.semCriticoRequisito = true;
       else if (teste.critico === 'acerto') {
         const m = /d(\d+)/i.exec(arma.dano);
         if (m) rolar('crítico', `1d${m[1]}`);
@@ -312,6 +337,11 @@ export function resolverAtaque(atacante, alvo, sistema, op = {}, defesaId = 'nen
       if (op.cargaNucleo) rolar('Carga do Núcleo (elétrico)', '2d6');
       // Muco radioativo: +1d6 se o alvo estiver com mutação.
       if (arma.extraContraMutacao && temMutacao(alvo)) rolar(`${arma.nome} (alvo com mutação)`, arma.extraContraMutacao);
+      // Diagnóstico Letal: +1d6 contra quem está com efeito negativo (mental, físico, mobilidade).
+      const diag = habilidadeValendo(atacante, sistema, 'Diagnóstico Letal')?.regra?.danoContraCondicao;
+      if (diag && condicoesAtivas(alvo, sistema).some(cd => diag.grupos.includes(cd.grupo) && !(diag.exceto || []).includes(cd.id))) rolar('Diagnóstico Letal', diag.dados);
+      // Predador Invisível: ataque surpresa com +1 dado de dano (o mesmo dado da arma).
+      if (op.surpresa && habilidadeValendo(atacante, sistema, 'Predador Invisível')) { const f = /d(\d+)/i.exec(arma.dano); if (f) rolar('Predador Invisível (+1 dado)', `1d${f[1]}`); }
       // Marcas do atacante que somam dano (Analista de risco: +1d4 contra o alvo analisado).
       for (const m of atacante.marcas || []) if (m.dano && (!m.contra || m.contra === alvo.id)) rolar(m.nome, m.dano);
       // Marcas do alvo que aumentam o dano físico que ele toma (Pragas: +1).

@@ -411,8 +411,11 @@ export function danoDasHabilidades(ficha, sistema, arma, especialId = null) {
 export function bonusHabilidades(ficha, sistema) {
   const ativas = new Set(ficha.ativas || []);
   // Automática que exige item (Aferição Perfeita: com kit de ferramentas) só vale com o item no inventário.
-  const lista = listaHabilidades(ficha, sistema).filter(x => ativas.has(x.id) || (x.regra?.modo === 'sempre' && (!x.regra.requerItem || temItem(ficha, x.regra.requerItem))));
-  return somarEfeitos(lista.map(x => efeitosHabilidade(ficha, sistema, x)));
+  const todas = listaHabilidades(ficha, sistema);
+  const lista = todas.filter(x => ativas.has(x.id) || (x.regra?.modo === 'sempre' && (!x.regra.requerItem || temItem(ficha, x.regra.requerItem))));
+  // Parte que vale sempre de uma habilidade de ativar (Capitão de Campo: +10% em Liderança).
+  const passivos = todas.filter(x => x.regra?.passivo && !lista.includes(x)).map(x => efeitosDoTexto(x.regra.passivo, sistema, { tipoIp }));
+  return somarEfeitos([...lista.map(x => efeitosHabilidade(ficha, sistema, x)), ...passivos]);
 }
 // Tem um item cujo nome casa com o padrão ("kit|ferrament")? Equipado, ou na mochila quando não se equipa.
 export const temItem = (ficha, padrao) => (ficha.itens || []).some(i => new RegExp(padrao, 'i').test(i.nome) && !i.sucata && (i.equipado || !i.slot));
@@ -428,7 +431,7 @@ export function vantagemPorHabilidade(ficha, sistema, alvos, oponentes = null) {
   // Ciborgue (classe) conta como alvo "ciborgue" para habilidades como Cibermédico.
   const tipos = oponentes ? oponentes.flatMap(o => [tipoCriatura(o), ...(o?.classe === 'ciborgue' ? ['ciborgue'] : [])]) : null;
   // Marcas temporárias (Inspiração motivacional: vantagem numa perícia por 2d4 turnos).
-  if ((ficha.marcas || []).some(m => m.vantagem && lista.includes(m.vantagem))) return true;
+  if ((ficha.marcas || []).some(m => m.vantagem && [].concat(m.vantagem).some(v => lista.includes(v)))) return true;
   return bonusHabilidades(ficha, sistema).vantagens.some(v => (lista.includes(v.alvo) || v.alvo === 'testes')
     && (!v.contra || (tipos && v.contra.some(t => tipos.includes(t)))));
 }
@@ -471,8 +474,9 @@ export function derivados(ficha, sistema) {
   }
   const atributos = {}, percentual = {}, bonusPericial = {}, mod = {};
   // Marcas temporárias que mexem em atributos e em testes de atributo (Mutação precisa: CONS → FOR; Esporos: −10% CONS%).
-  const marcaAtr = {}, marcaTesteAtr = {};
+  const marcaAtr = {}, marcaTesteAtr = {}, marcaSub = {};
   for (const m of ficha.marcas || []) {
+    for (const [k, v] of Object.entries(m.subpericias || {})) marcaSub[k] = (marcaSub[k] || 0) + v;
     for (const [k, v] of Object.entries(m.atributos || {})) marcaAtr[k] = (marcaAtr[k] || 0) + v;
     for (const [k, v] of Object.entries(m.testesAtributos || {})) marcaTesteAtr[k] = (marcaTesteAtr[k] || 0) + v;
   }
@@ -501,7 +505,7 @@ export function derivados(ficha, sistema) {
     const cond = condTestes + (condTesteAtr[p.atributo] || 0) + (condPericia[p.id] || 0) + hab.testes + (hab.pericias[p.id] || 0) + onusCivilizado + (bonus[`%${p.atributo}`] || 0);
     pericias[p.id] = base + bp + (bonus[p.id] || 0) + cond;
     for (const s of p.subpericias) {
-      subpericias[s.id] = base + (ficha.subpericias?.[s.id] ?? 0) + bp + (bonusProfissao[s.id] || 0) + (bonus[p.id] || 0) + (bonus[s.id] || 0) + cond + (hab.subpericias[s.id] || 0);
+      subpericias[s.id] = base + (ficha.subpericias?.[s.id] ?? 0) + bp + (bonusProfissao[s.id] || 0) + (bonus[p.id] || 0) + (bonus[s.id] || 0) + cond + (hab.subpericias[s.id] || 0) + (marcaSub[s.id] || 0);
     }
   }
   const nivel = ficha.nivel || 1;
@@ -539,7 +543,8 @@ export function derivados(ficha, sistema) {
     habilidades: hab,
     carga: (ficha.itens || []).reduce((s, i) => s + (i.peso || 0), 0),
     ...carga,
-    ...deslocamento(sistema, condicoes, carga.cargaNivel, ficha.deslocamentoBase ?? null, (ficha.marcas || []).filter(m => m.deslocamento)),
+    ...deslocamento(sistema, condicoes, carga.cargaNivel, ficha.deslocamentoBase ?? null,
+      [...(ficha.marcas || []).filter(m => m.deslocamento), ...(hab.deslocamento ? [{ nome: 'habilidades', deslocamento: hab.deslocamento }] : [])]),
     limitePericia: limitePericia(nivel, sistema),
     atributoMax: atributoMax(nivel, sistema),
     temClasse: nivel >= (r.nivelClasse ?? 3),

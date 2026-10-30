@@ -148,7 +148,8 @@ export function painelSlot(p, aberto, mestre) {
         livre += x.ocupa ?? 1;
       }
     }
-    await acao('item.equipar', { id: p.id, uid: it.uid, equipar: true, mao });
+    const r = await acao('item.equipar', { id: p.id, uid: it.uid, equipar: true, mao });
+    if (r?.aviso) aviso(r.aviso, 'erro');
     aviso(`${it.nome} equipado${slot === 'maos' && (it.ocupa ?? 1) < 2 ? ` na mão ${mao === 1 ? 'esquerda' : 'direita'}` : ''}.`);
   };
   return h('div', { class: 'boneco-painel' },

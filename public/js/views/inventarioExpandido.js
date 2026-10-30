@@ -119,7 +119,7 @@ export function cartaoItem(p, i, mestre) {
     texto('Aparência', i.aparencia, 'eye'),
     texto('Produção', producao, 'hammer'),
     h('footer', { class: 'barra' },
-      i.slot ? botao(i.equipado ? 'Desequipar' : 'Equipar', () => acao('item.equipar', { id: p.id, uid: i.uid, equipar: !i.equipado }), { class: i.equipado ? 'pequeno' : 'primario pequeno', icone: i.equipado ? 'x' : 'shirt' }) : null,
+      i.slot ? botao(i.equipado ? 'Desequipar' : 'Equipar', () => acao('item.equipar', { id: p.id, uid: i.uid, equipar: !i.equipado }).then(r => r?.aviso && aviso(r.aviso, 'erro')), { class: i.equipado ? 'pequeno' : 'primario pequeno', icone: i.equipado ? 'x' : 'shirt' }) : null,
       (mestre || estado.campanha.lojaAberta) ? botao('Vender', async () => {
         if (await confirmar(`Vender ${i.nome} por ${i.venda ?? 0}?`)) await acao('item.vender', { id: p.id, uid: i.uid });
       }, { class: 'pequeno', icone: 'coins' }) : null,
