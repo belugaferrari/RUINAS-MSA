@@ -15,7 +15,9 @@
    "ndEncontrar": 50,
    "dano": "",
    "tipoDano": "",
-   "efeitos": "Alerta inimigos; anula Furtividade de quem tropeçar."
+   "efeitos": "Alerta inimigos; anula Furtividade de quem tropeçar.",
+   "nivel": null,
+   "alvoDano": "area"
   },
   {
    "id": "buraco-de-estacas-punji",
@@ -29,7 +31,9 @@
    "ndEncontrar": 70,
    "dano": "2d8",
    "tipoDano": "Perfuração",
-   "efeitos": "Ferida Aberta 2; Enraizado (até gastar Ação Principal para sair)."
+   "efeitos": "Ferida Aberta 2; Enraizado (até gastar Ação Principal para sair).",
+   "nivel": null,
+   "alvoDano": "primeiro"
   },
   {
    "id": "pendulo-de-sucata",
@@ -43,7 +47,9 @@
    "ndEncontrar": 70,
    "dano": "2d10",
    "tipoDano": "Concussão",
-   "efeitos": "Aturdido 1; alvo é Deslocado (empurrado) 1 passo."
+   "efeitos": "Aturdido 1; alvo é Deslocado (empurrado) 1 passo.",
+   "nivel": null,
+   "alvoDano": "area"
   },
   {
    "id": "garra-enferrujada",
@@ -58,7 +64,9 @@
    "dano": "1d12",
    "tipoDano": "Corte",
    "efeitos": "Sangramento 2; Enraizado. (ND 50 para encontrar se não for camuflada).",
-   "obs": "ND 50 para encontrar se não for camuflada"
+   "obs": "ND 50 para encontrar se não for camuflada",
+   "nivel": null,
+   "alvoDano": "primeiro"
   },
   {
    "id": "chicote-de-espinhos",
@@ -72,7 +80,9 @@
    "ndEncontrar": 70,
    "dano": "1d8",
    "tipoDano": "Corte",
-   "efeitos": "Sangramento 1; alvo deixa cair o que estiver segurando (Erro Crítico automático)."
+   "efeitos": "Sangramento 1; alvo deixa cair o que estiver segurando (Erro Crítico automático).",
+   "nivel": null,
+   "alvoDano": "primeiro"
   },
   {
    "id": "rede-de-queda",
@@ -86,7 +96,9 @@
    "ndEncontrar": 70,
    "dano": "1d4",
    "tipoDano": "Concussão",
-   "efeitos": "Enraizado; Derrubado (todos na área precisam passar em Esquiva AGI ND 70)."
+   "efeitos": "Enraizado; Derrubado (todos na área precisam passar em Esquiva AGI ND 70).",
+   "nivel": null,
+   "alvoDano": "area"
   },
   {
    "id": "mina-quimica-improvisada",
@@ -100,7 +112,9 @@
    "ndEncontrar": 70,
    "dano": "3d6",
    "tipoDano": "Ácido ou Calor",
-   "efeitos": "Queimadura 4. Alvos na área podem testar Evasão (AGI ND 70) para metade do dano."
+   "efeitos": "Queimadura 4. Alvos na área podem testar Evasão (AGI ND 70) para metade do dano.",
+   "nivel": null,
+   "alvoDano": "area"
   }
  ],
  "gatilhos": [
@@ -260,6 +274,6 @@
  ],
  "notas": [
   "Sem os itens necessários (itens adaptados), o ND de criação sobe 20%.",
-  "Dano em área: o modificador do dano conta de novo para cada 1,5 m (passo) a mais da área."
+  "Dano em área: depende da descrição. Afetando a área toda, o modificador do dano conta de novo para cada 1,5 m (passo) a mais da área; afetando só o primeiro alvo, conta uma vez."
  ]
 }

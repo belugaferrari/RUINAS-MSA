@@ -3,7 +3,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { DATA_DIR } from './db.js';
-import { sem, numero, abrirPlanilha, aba, linhasDaAba, novaPlanilha, instrucoes, abaComDados } from './planilhaComum.js';
+import { sem, numero, abrirPlanilha, aba, linhasDaAba, novaPlanilha, instrucoes, abaComDados, listasComValidacao } from './planilhaComum.js';
 
 export const ARQ_ARMADILHAS = path.join(DATA_DIR, 'catalogo-armadilhas.json');
 export function catalogoArmadilhas() {
@@ -31,6 +31,8 @@ const COL_PRONTAS = [
   ['Tipo de dano', 'tipoDano', 14, null],
   ['Efeitos diversos', 'efeitos', 50, null],
   ['Observações', 'obs', 30, null],
+  ['Nível', 'nivel', 7, 'Nível da armadilha pronta (ex.: o Último recurso do Sussurrante usa as de nível 3 ou inferior)'],
+  ['Dano atinge', 'alvoDano', 14, 'área toda ou primeiro alvo (depende da descrição)'],
 ];
 const COL_GATILHOS = [
   ['Gatilho', 'nome', 30, 'Obrigatório'],
@@ -68,10 +70,11 @@ export async function planilhaArmadilhas(tab) {
     '• Aba Geral: a base do ND (50) e o ND por salto de dano (5).',
     '• Vale no MSA e no MSS e para todas as campanhas deste PC. Ligada ao Google Planilhas, o app puxa sozinho ao abrir e a cada 30 minutos.',
   ]);
-  abaComDados(wb, 'Prontas', COL_PRONTAS, tab.prontas || []);
+  const wsP = abaComDados(wb, 'Prontas', COL_PRONTAS, (tab.prontas || []).map(a => ({ ...a, nivel: a.nivel ?? '', alvoDano: a.alvoDano === 'primeiro' ? 'primeiro alvo' : 'área toda' })));
   abaComDados(wb, 'Gatilhos', COL_GATILHOS, tab.gatilhos || []);
   abaComDados(wb, 'Áreas', COL_AREAS, (tab.areas || []).map(a => ({ ...a, maxPassos: a.maxPassos ?? '' })));
   abaComDados(wb, 'Efeitos', COL_EFEITOS, tab.efeitos || []);
+  listasComValidacao(wb, [['Dano atinge', ['área toda', 'primeiro alvo'], [[wsP, COL_PRONTAS, 'alvoDano']]]]);
   abaComDados(wb, 'Geral', COL_GERAL, [
     { chave: 'base', valor: tab.base ?? 50, texto: 'ND base de qualquer armadilha improvisada (Fácil)' },
     { chave: 'danoPorPasso', valor: tab.danoPorPasso ?? 5, texto: 'ND de criação por salto na progressão de dano' },
@@ -92,6 +95,7 @@ export async function lerPlanilhaArmadilhas(buffer, padrao) {
     id: l.id || slug(l.nome), nome: l.nome, materiais: l.materiais || '', gatilho: l.gatilho || '', area: l.area || '',
     ndImprovisar: num(l.ndImprovisar), ndArmar: num(l.ndArmar), ndDesarmar: num(l.ndDesarmar), ndEncontrar: num(l.ndEncontrar),
     dano: (l.dano || '').toLowerCase(), tipoDano: l.tipoDano || '', efeitos: l.efeitos || '', ...(l.obs ? { obs: l.obs } : {}),
+    nivel: num(l.nivel), alvoDano: /primeiro/i.test(l.alvoDano) ? 'primeiro' : 'area',
   }));
   const gatilhos = com(aba(wb, 'Gatilhos'), COL_GATILHOS).map(l => ({ nome: l.nome, criar: num(l.criar) ?? 0, armar: num(l.armar) ?? 0, encontrar: num(l.encontrar) ?? 0, desarmar: num(l.desarmar) ?? 0, obs: l.obs || '' }));
   const areas = com(aba(wb, 'Áreas') || aba(wb, 'Areas'), COL_AREAS).map(l => ({

@@ -36,3 +36,11 @@ test('planilha de armadilhas: ida e volta igual; mudar um gatilho muda a calcula
   P.voltarArmadilhasPadrao();
   assert.equal(calcularArmadilha(sistema('mss').armadilhas, { gatilho: 'Fio Tensionado (Tripwire)', area: 'unico', dano: '1d4', efeitos: [] }).criar, 60);
 });
+
+test('dano em área: na área toda conta por passo; só o primeiro alvo conta uma vez; prontas têm nível (em branco) e "dano atinge"', () => {
+  const tab = sistema('mss').armadilhas;
+  const base = { gatilho: 'Fio Tensionado (Tripwire)', area: 'cone', passos: 3, dano: '1d8', efeitos: [] };
+  assert.equal(calcularArmadilha(tab, base).criar, 50 + 10 + 50 + 10 * 3);
+  assert.equal(calcularArmadilha(tab, { ...base, alvoDano: 'primeiro' }).criar, 50 + 10 + 50 + 10);
+  assert.ok(tab.prontas.every(a => a.nivel === null && ['area', 'primeiro'].includes(a.alvoDano)));
+});
