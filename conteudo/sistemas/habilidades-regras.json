@@ -868,9 +868,9 @@
     "texto": "Espionagem › Investigação Normal ao entrar num ambiente fechado: na cena, vantagem em Intuição e em Armadilhas › Encontrar e +20% de defesa contra ataque surpresa"
   },
   "extracao de emergencia": {
-    "modo": "ligar",
-    "deslocamento": 1.5,
-    "texto": "ligue quando estiver em disparada: +1,5 m de deslocamento e +50% de defesa contra ataques de oportunidade (o mestre aplica a defesa)"
+    "modo": "sempre",
+    "deslocamentoNaDisparada": 1.5,
+    "texto": "em Disparada: +1,5 m de deslocamento e +50% de defesa contra ataques de oportunidade (automático quando você usa Disparada)"
   },
   "predador invisivel": {
     "modo": "sempre",

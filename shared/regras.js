@@ -544,7 +544,9 @@ export function derivados(ficha, sistema) {
     carga: (ficha.itens || []).reduce((s, i) => s + (i.peso || 0), 0),
     ...carga,
     ...deslocamento(sistema, condicoes, carga.cargaNivel, ficha.deslocamentoBase ?? null,
-      [...(ficha.marcas || []).filter(m => m.deslocamento), ...(hab.deslocamento ? [{ nome: 'habilidades', deslocamento: hab.deslocamento }] : [])]),
+      [...(ficha.marcas || []).filter(m => m.deslocamento || m.disparada), ...(hab.deslocamento ? [{ nome: 'habilidades', deslocamento: hab.deslocamento }] : []),
+        // Extração de emergência: +1,5 m quando está em Disparada.
+        ...((ficha.marcas || []).some(m => m.disparada) ? listaHabilidades(ficha, sistema).filter(x => x.regra?.deslocamentoNaDisparada).map(x => ({ nome: x.nome, deslocamento: x.regra.deslocamentoNaDisparada })) : [])]),
     limitePericia: limitePericia(nivel, sistema),
     atributoMax: atributoMax(nivel, sistema),
     temClasse: nivel >= (r.nivelClasse ?? 3),
@@ -568,7 +570,9 @@ export function deslocamento(sistema, condicoes, cargaNivel, proprio = null, mar
     if (pernas) { m -= 3 * pernas.qtd; motivos.push(`${pernas.nome} −${3 * pernas.qtd} m`); }
     if (cargaNivel === 'sobrecarregado') { m -= 4.5; motivos.push('Sobrecarregado −4,5 m'); }
     // Marcas temporárias que dão deslocamento (remédio da Fitoterapia: +3 m por 5 turnos).
-    for (const x of marcas) { m += x.deslocamento; motivos.push(`${x.nome} +${String(x.deslocamento).replace('.', ',')} m`); }
+    // Disparada (livro): desloca o dobro do deslocamento base.
+    if (marcas.some(x => x.disparada)) { m += base; motivos.push(`Disparada +${String(base).replace('.', ',')} m`); }
+    for (const x of marcas.filter(y => y.deslocamento)) { m += x.deslocamento; motivos.push(`${x.nome} +${String(x.deslocamento).replace('.', ',')} m`); }
     if (cargaNivel === 'supercarregado') { m = Math.min(m, 1.5); motivos.push('Supercarregado: só 1 passo'); }
   }
   m = Math.max(0, m);

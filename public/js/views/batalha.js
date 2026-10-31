@@ -590,6 +590,8 @@ function acoesDoTurno(p) {
     chip('bonus', 'zap', 'Bônus', 'Ação bônus: só com habilidade ou item que permita (ex.: sacar)'),
     chip('reacao', 'shield', 'Reação', 'Reação: fora do seu turno, 1 por rodada (ex.: ataque de oportunidade)'),
     // Defesa Total (autor, 30/10): abre mão de atacar; ação principal; +20% em todas as defesas até o próximo turno (não vale contra surpresa).
+    daVez ? botao((p.marcas || []).some(m => m.disparada) ? 'Em Disparada' : 'Disparada', () => acao('combate.disparada', { id: p.id }).then(r => aviso(r.texto)),
+      { class: 'pequeno', icone: 'footprints', disabled: (p.marcas || []).some(m => m.disparada) || usado('principal') > 0, title: 'Ação principal: desloca o dobro do deslocamento base neste turno (o contador do mapa mostra o novo limite)' }) : null,
     daVez ? botao((p.marcas || []).some(m => m.defesaTotal) ? 'Em Defesa Total' : 'Defesa Total', () => acao('combate.defesaTotal', { id: p.id }).then(r => aviso(r.texto)),
       { class: 'pequeno', icone: 'shield-check', disabled: (p.marcas || []).some(m => m.defesaTotal) || usado('principal') > 0, title: 'Ação principal: +20% em todas as defesas até o seu próximo turno (não vale contra ataque surpresa)' }) : null);
 }

@@ -873,7 +873,20 @@ function testeCONS(x, sis, nd) {
 }
 // O mesmo ND do teste dos marcadores de vulnerabilidade no descanso longo: 40 + 10 × marcadores (doente: 70 + 10 ×).
 const ndVulnerabilidade = (x, sis) => (qtdCondicao(x, sis, 'doenca') ? 70 : 40) + 10 * qtdCondicao(x, sis, 'vulnerabilidade');
-const ndDistancia = (sis, b) => (sis.combate?.distancia?.base ?? 50) + (sis.combate?.distancia?.porNivel ?? 5) * (b.nivel || 1);
+// Arremesso (livro, Ações): ação principal, ND 70 dentro do alcance (Difícil em ambiente fechado). Errou: o objeto desvia 1,5 m
+// para cada 5 pontos abaixo do ND, numa direção que o mestre escolhe ou sorteia (Arremesso preciso: 1,5 m a cada 10). DS 9 ou 10:
+// o objeto é danificado no lançamento.
+const DIRECOES = ['norte', 'nordeste', 'leste', 'sudeste', 'sul', 'sudoeste', 'oeste', 'noroeste'];
+function desvioArremesso(p, sis, t, nd) {
+  const notas = [];
+  if (nd != null && !t.sucesso) {
+    const passo = p && habilidadeValendo(p, sis, 'Arremesso preciso') ? 10 : 5;
+    const metros = Math.floor(Math.max(0, nd - t.total) / passo) * 1.5;
+    notas.push(metros ? `o objeto desvia ${String(metros).replace('.', ',')} m para o ${DIRECOES[Math.floor(Math.random() * 8)]} (sorteado; o mestre pode escolher)${passo === 10 ? ' — Arremesso preciso: metade' : ''}` : 'o objeto cai quase no alvo');
+  }
+  if (t.ds >= 9) notas.push(`DS ${t.ds}: o objeto foi danificado no lançamento`);
+  return notas.join(' · ') || null;
+}
 
 // Mutação temporária na hora (d100). Com "turnos", some sozinha depois. Perto de um Radiante com Epidemia, a mutação de
 // quem não é mutante se alastra.
@@ -932,6 +945,32 @@ function tropaDeElite(c, sis) {
       if ((x.marcas || []).some(m => m.tropaElite)) continue;
       marcar(x, { nome: `Tropa de elite (${cmd.nome}): +1,5 m, vantagem contra o medo`, tropaElite: true, deslocamento: 1.5, vantagem: 'medo', combate: true, de: cmd.id });
     }
+  }
+}
+
+// Ataque de oportunidade (livro: reação): quem sai da zona de ameaça de um inimigo, ou anda mais de 1 passo dentro dela,
+// pode levar um ataque. O app só AVISA quem controla o inimigo (oferta "Atacar (reação)"); não ataca sozinho (autor, 31/10:
+// o mapa não é obrigatório, o mestre interpreta). Não vale: Movimento Preditivo em Defesa Total. Lembretes: Recuar, Táticas de Esquadrão.
+function avisarOportunidade(c, p, antes, novo) {
+  const s = c.salas.batalha;
+  if (!s.participantes.includes(p.id) || !dePe(p)) return;
+  const sis = sistema(c.sistema);
+  if ((p.marcas || []).some(m => m.defesaTotal) && temHabilidade(p, sis, 'Movimento Preditivo')) return;
+  const lado = ladoNoMapa(p);
+  const passos = Math.max(Math.abs(novo.col - antes.col), Math.abs(novo.lin - antes.lin));
+  for (const e of naBatalha(c).filter(x => x.id !== p.id && ladoDe(x) !== ladoDe(p) && dePe(x) && c.mapa.pecas[x.id])) {
+    const pe = c.mapa.pecas[e.id], le = ladoNoMapa(e);
+    const vao = (x, lx, y, ly) => Math.max(0, y - (x + lx - 1), x - (y + ly - 1));
+    const dist = pos => Math.max(vao(pe.col, le, pos.col, lado), vao(pe.lin, le, pos.lin, lado)) * 1.5;
+    const zona = ameacaNoMapa(e) * 1.5;
+    const estava = dist(antes) <= zona, esta = dist(novo) <= zona;
+    if (!estava || (esta && passos <= 1)) continue;
+    const g = s.combate.gasto?.[e.id];
+    if (g && g.reacaoRodada === s.combate.rodada && (g.reacao || 0) >= 1) continue;
+    s.ofertas = (s.ofertas || []).filter(o => !(o.tipo === 'oportunidade' && o.personagem === e.id && o.alvos[0] === p.id));
+    const extras = [esta ? 'andou mais de 1 passo dentro da zona de ameaça' : 'saiu da zona de ameaça', 'não vale se ele usou Recuar', ...(['Táticas de Esquadrão'].some(n => naBatalha(c).some(x => ladoDe(x) === ladoDe(p) && habilidadeValendo(x, sis, n))) ? ['Táticas de Esquadrão: 1 passo na zona não gera'] : [])];
+    s.ofertas.push({ id: uid(), tipo: 'oportunidade', habilidade: 'Ataque de oportunidade', personagem: e.id, alvos: [p.id], acao: 'reacao',
+      texto: `${p.nome} ${extras[0]} de ${e.nome}: ataque de oportunidade possível (${extras.slice(1).join('; ')}). Acertando, ${p.nome} não se move mais neste turno.` });
   }
 }
 
@@ -1216,9 +1255,9 @@ Object.assign(ESPECIAIS, {
     const b = alvoEscolhido(c, esc, 'Escolha quem está com o item.');
     const it = (b.itens || []).find(i => i.uid === esc.item);
     if (!it) throw erro('Escolha o item.');
-    const t = testar(p, sis, 'esportes.arremessar', ndDistancia(sis, b));
-    const notas = [contaTeste(`Esportes › Arremessar contra a defesa de ${b.nome}`, t)];
-    if (!t.sucesso) return { rotulo: `${hab.nome} em ${it.nome} de ${b.nome}`, notas, sucesso: false };
+    const t = testar(p, sis, 'esportes.arremessar', ndDe(sis, 'Normal'));
+    const notas = [contaTeste('Esportes › Arremessar', t)];
+    if (!t.sucesso) return { rotulo: `${hab.nome} em ${it.nome} de ${b.nome}`, notas: [...notas, desvioArremesso(p, sis, t, t.nd)], sucesso: false };
     const d = rolarDado('1d4');
     it.ipCorroido = (it.ipCorroido || 0) + d.total;
     notas.push(`${it.nome} perde ${d.total} de IP [${d.dados.join(', ')}] (agora: ${textoIp(it) || 'sem IP'})`);
@@ -1236,9 +1275,9 @@ Object.assign(ESPECIAIS, {
   // de onde quebrou faz CONS% Muito Difícil: falhou, perde 1d4 de Sanidade e passa a ver uma Alucinação maligna.
   nevoa(c, p, sis, hab, esc) {
     const b = alvoEscolhido(c, esc, 'Escolha onde o frasco quebra (o alvo).');
-    const ta = testar(p, sis, 'esportes.arremessar', ndDistancia(sis, b));
-    const notas = [contaTeste(`Esportes › Arremessar contra a defesa de ${b.nome}`, ta)];
-    if (!ta.sucesso) { notas.push('o frasco quebrou longe do alvo (o mestre decide onde)'); return { rotulo: `${hab.nome} em ${b.nome}`, notas, sucesso: false }; }
+    const ta = testar(p, sis, 'esportes.arremessar', ndDe(sis, 'Normal'));
+    const notas = [contaTeste('Esportes › Arremessar', ta)];
+    if (!ta.sucesso) { notas.push(desvioArremesso(p, sis, ta, ta.nd)); return { rotulo: `${hab.nome} em ${b.nome}`, notas, sucesso: false }; }
     const afetados = [b, ...pertoDe(c, b, 1.5).filter(y => y.id !== p.id && !y.alucinacao)];
     for (const x of afetados) {
       const t = testeCONS(x, sis, ndDe(sis, 'Muito Difícil'));
@@ -2337,6 +2376,7 @@ export const acoes = {
     // Onde o peão começou o turno (para o contador de espaço no mapa).
     if (vezDele && antes && cb.inicioTurno?.id !== id) cb.inicioTurno = { id, col: antes.col, lin: antes.lin };
     c.mapa.pecas[id] = { ...antes, ...novo };
+    if (cb && antes) avisarOportunidade(c, p, antes, novo);
   },
 
   // Mestre: põe no mapa, no primeiro lugar livre que caiba o tamanho de cada um ("Pôr no mapa", "Pôr os do Campo").
@@ -2606,7 +2646,7 @@ export const acoes = {
   // Rolagens acontecem no servidor para todos verem o mesmo resultado.
   // Rolagens acontecem no servidor para todos verem o mesmo resultado.
   // Teste D-MIL: { acaoRef | acao, mod, nd, metade }. Iniciativa: { tipo: 'iniciativa' }. Livre: { dado: '2d6' }.
-  'rolar'(c, { sala: nome, id, rotulo, tipo, acaoRef, acao, mod, nd, metade, dado, secreta, modo }, ctx) {
+  'rolar'(c, { sala: nome, id, rotulo, tipo, acaoRef, acao, mod, nd, metade, dado, secreta, modo, intuicao }, ctx) {
     const sis = sistema(c.sistema);
     let autor = ctx.mestre ? 'Mestre' : ctx.user.name;
     let p = null;
@@ -2635,7 +2675,8 @@ export const acoes = {
       const ndNum = nd === '' || nd == null ? null : Math.max(0, parseInt(nd, 10) || 0);
       // Vantagem/desvantagem: escolhida no rolador, ou automática por habilidade ligada (ex.: Zona de Abate em Briga › Deslocar).
       const alvosRef = !acaoRef ? [] : acaoRef.startsWith('sub:') ? [acaoRef.slice(4), acaoRef.slice(4).split('.')[0]] : acaoRef.startsWith('per:') ? [acaoRef.slice(4)] : [];
-      const porHabilidade = p && ((alvosRef.length && vantagemPorHabilidade(p, sis, alvosRef))
+      // Teste de Intuição (o rolador já tira os 20%): habilidades que dão vantagem em Intuição (Avaliação de Cenário…).
+      const porHabilidade = p && ((alvosRef.length && vantagemPorHabilidade(p, sis, alvosRef)) || (intuicao && vantagemPorHabilidade(p, sis, ['intuicao']))
         || (acaoRef === 'sub:briga.salvaguardar' && c.salas.batalha.participantes.includes(p.id) && liderancaPara(c, p, sis) === 'bonus'));
       const pedido = ['vantagem', 'desvantagem'].includes(modo) ? modo : null;
       // O humor também entra sozinho (ex.: Atraído → Percepção em desvantagem).
@@ -2653,7 +2694,7 @@ export const acoes = {
       const r = testeDMil(a.valor + modificador + extraMarcas, ndNum, sis, { metade: !!metade, modo: modoFinal });
       // Fora do combate, a desvantagem da mutação vale só para o próximo teste.
       if (porMarca && !c.salas.batalha.combate) p.marcas = p.marcas.filter(m => !m.desvantagem);
-      const notaMut = p ? mutacaoSeMexe(c, p, r.ds) : null;
+      const notaMut = [p ? mutacaoSeMexe(c, p, r.ds) : null, acaoRef === 'sub:esportes.arremessar' ? desvioArremesso(p, sis, r, ndNum) : null].filter(Boolean).join(' · ') || null;
       entrada = { ...base, personagemId: p?.id || null, tipo: 'dmil', rotulo: `${String(rotulo || a.nome).slice(0, 80)}${modoFinal ? ` (${modoFinal}${motivo || porMarca ? ` — ${[motivo, porMarca ? 'mutação descontrolada' : ''].filter(Boolean).join(', ')}` : ''})` : ''}${inspirado ? ` (Inspiração +${inspirado})` : ''}`, acaoNome: a.nome, mod: modificador + extraMarcas, metade: !!metade, ...r, ...(notaMut ? { texto: notaMut } : {}) };
     }
     if (nome && c.salas[nome]) registrar(c.salas[nome].log, entrada);
@@ -2789,6 +2830,7 @@ export const acoes = {
     if (foco && !ctx.mestre) throw erro(`${a.nome} está com o foco preso em ${personagem(c, foco.soAtaca).nome} (${foco.nome}): só pode atacá-lo.`);
     // Padrão de ataque: depois do 3º turno do inimigo, +10% nas defesas contra ele.
     if (s.combate && (s.combate.turnosFeitos?.[a.id] || 0) >= 3 && habilidadeValendo(b, sis, 'Padrão de ataque')) op.defesaExtra = [{ nome: 'Padrão de ataque', valor: 10 }];
+    if (op.oportunidade && (b.marcas || []).some(m => m.disparada) && habilidadeValendo(b, sis, 'Extração de emergência')) (op.defesaExtra ||= []).push({ nome: 'Extração de emergência', valor: 50 });
     // Ataque localizado: o local (cabeça, braço…, ou um item equipado do alvo). Sem localizado, não há local.
     if (!op.localizado) delete op.local;
     else if (String(op.local || '').startsWith('item:') && !(b.itens || []).some(i => i.uid === op.local.slice(5) && i.equipado)) throw erro('Esse item não está equipado no alvo.');
@@ -2947,6 +2989,11 @@ export const acoes = {
       const excesso = gastarAcao(c, a, of.acao);
       registrar(s.log, { autor: a.nome, rotulo: `${a.nome} usa ${of.habilidade}`, texto: `${nomeAcao(of.acao)}${excesso ? ` · atenção: ${excesso}` : ''}` });
       return { texto: `${a.nome} usou ${of.habilidade} (${nomeAcao(of.acao)}).`, excesso };
+    }
+    if (of.tipo === 'oportunidade') {
+      // Melhor arma corpo a corpo de quem ataca (ou desarmado); fora do turno, gasta a reação.
+      const arma = armasDisponiveis(a, sis).filter(x => x.alcance !== 'distancia').sort((x, y) => (y.uid !== 'desarmado') - (x.uid !== 'desarmado'))[0];
+      return acoes['combate.atacar'](c, { atacante: a.id, alvo: b.id, opcoes: { armaUid: arma?.uid || 'desarmado', oportunidade: true } }, ctx);
     }
     if (of.tipo === 'aposToque') {
       const hab = listaHabilidades(a, sis).find(x => x.id === of.habId);
@@ -3126,6 +3173,20 @@ export const acoes = {
     const excesso = gastarAcao(c, p, tipo, { desfazer: !!desfazer });
     if (rotulo && !desfazer) registrar(c.salas.batalha.log, { autor: p.nome, rotulo: String(rotulo).slice(0, 80), texto: `${nomeAcao(tipo)}${excesso ? ` · atenção: ${excesso}` : ''}` });
     return { excesso, gasto: c.salas.batalha.combate.gasto?.[p.id] || {} };
+  },
+
+  // Disparada / Correr (livro): ação principal; desloca o dobro do deslocamento base neste turno (Extração de emergência: +1,5 m).
+  // O app só mostra o novo limite no contador do mapa.
+  'combate.disparada'(c, { id }, ctx) {
+    const p = personagem(c, id);
+    exigirDonoOuMestre(ctx, p);
+    if (!c.salas.batalha.combate) throw erro('Não há combate em andamento.');
+    gastarAcao(c, p, 'principal');
+    marcar(p, { nome: 'Disparada (deslocamento em dobro)', disparada: true, ateMeuTurno: true, de: p.id });
+    const d = derivados(p, sistema(c.sistema));
+    const texto = `ação principal · deslocamento ${String(d.deslocamento).replace('.', ',')} m neste turno`;
+    registrar(c.salas.batalha.log, { autor: p.nome, rotulo: `${p.nome}: Disparada`, texto });
+    return { texto };
   },
 
   // Defesa Total (autor, 30/10): postura em que abre mão de atacar — ação principal, +20% em todas as defesas até o começo

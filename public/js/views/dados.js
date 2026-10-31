@@ -125,7 +125,7 @@ function secaoTeste(p, d, mestre) {
     const dif = sis.teste.dificuldades.find(x => x.nome === s.dif);
     if (opcoesAcao && !s.acao) throw new Error('Escolha o que testar.');
     const mod = s.mod + (s.intuicao ? (sis.teste.intuicao?.mod ?? -20) : 0);
-    await enviar({ acaoRef: opcoesAcao ? s.acao : null, acao: opcoesAcao ? null : (s.acaoLivre ?? 40), rotulo: opcoesAcao ? null : 'Teste', mod, nd: nd(), metade: !!dif?.metade, modo: s.modo || null }, textoResultado);
+    await enviar({ acaoRef: opcoesAcao ? s.acao : null, acao: opcoesAcao ? null : (s.acaoLivre ?? 40), rotulo: opcoesAcao ? null : 'Teste', mod, nd: nd(), metade: !!dif?.metade, modo: s.modo || null, intuicao: !!s.intuicao }, textoResultado);
   }, { class: 'primario jogar', icone: 'dices' });
   // Ordem do esboço do autor: dificuldade (F N D MD), Jogar, perícia e outros modificadores.
   return h('div', { class: 'form' },

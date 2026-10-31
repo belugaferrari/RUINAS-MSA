@@ -496,8 +496,13 @@ Feito no app (MSA e MSS):
   vantagem em Intuição e Armadilhas › Encontrar, +20% contra surpresa na cena), **Extração de emergência** (ligar: +1,5 m), **Predador Invisível**
   (+1 dado no ataque surpresa; com abafador a mais de 9 m o app testa Furtividade contra a maior Percepção passiva + 30), **Tiro Funcional**
   (não letal com armas a distância; −10% em objeto pequeno), **Arremesso preciso** (+10% em Arremessar), **Atirador perspicaz** (+5% por erro no mesmo alvo).
-Perguntas para o autor:
-1. **Arremesso**: o app não tem a regra de desvio do arremesso (onde cai o item ao errar). Qual é? (a vantagem diz "1,5 m para cada 10 pontos").
-2. **Pré-requisitos com nomes que não existem no livro**: "Pilotagem", "Tecnologia", "Construção", "Fazer", "Energia Alta", "Bateria" — qual perícia é cada um?
-3. **Intuição**: não existe subperícia "Intuição" no livro (Avaliação de Cenário e Sensores dão vantagem nela). É alguma subperícia de Sentidos?
-4. **Disparada** e **ataque de oportunidade** ainda não são automáticos (Extração de emergência, Movimento Preditivo, Táticas de Esquadrão).
+Respostas do autor (31/10) e o que foi feito:
+1. **Arremesso** (regra do livro, junto de Ação com auxílio/Ação conjunta): ação principal, ND 70 no alcance (Difícil em ambiente fechado); errou → desvio
+   de 1,5 m a cada 5 pontos abaixo do ND (direção sorteada; o mestre pode escolher); DS 9–10 danifica o objeto. Arremesso preciso: 1,5 m a cada 10.
+   O rolador mostra o desvio. Artefato Corrosivo e Névoa Alucinógena passaram a usar o ND 70 do livro (antes: defesa a distância do alvo).
+2. **Pré-requisitos** com "Pilotagem", "Tecnologia", "Construção", "Fazer", "Energia Alta", "Bateria": a lista de itens ainda está em revisão (o app ignora esses).
+3. **Intuição**: é o teste "no escuro" (−20%), que já existe no rolador (caixa "Intuição"). A vantagem em Intuição das habilidades vale nesse teste.
+4. **Ataque de oportunidade e Disparada**: automatização pronta, mas o app só AVISA (o mapa não é obrigatório; o mestre interpreta):
+   sair da zona de ameaça (ou andar mais de 1 passo dentro dela) gera um aviso para quem controla o inimigo, com "Usar" (reação) ou "Dispensar".
+   Movimento Preditivo em Defesa Total não gera aviso. Disparada: botão (ação principal) que dobra o deslocamento no contador do mapa;
+   Extração de emergência soma +1,5 m e +50% de defesa contra o ataque de oportunidade.
