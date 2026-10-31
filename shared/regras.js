@@ -194,10 +194,50 @@ export function pontosVantagemExtra(ficha, sistema) {
   return Math.min(r.maxPontosPorDefeitos ?? 1, normais * (r.defeitoNormalDaPonto ?? 1));
 }
 
+// Regiões do corpo (livro, Itens › Vestuário e Proteção; autor, 31/10): nunca 2 itens na mesma região. Proteção e
+// vestuário são camadas à parte (a proteção vai por cima da roupa leve): nas regiões com "camadas", 1 de cada.
+export const camadaDoItem = i => (i.tipo === 'defesa' ? 'protecao' : 'vestuario');
+export const SLOTS_ANTIGOS = ['corpo', 'vestimenta', 'joia'];
+const sa = t => String(t || '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+const REGIOES_PELO_NOME = [
+  ['pes', /\bbota|sapato|tenis|calcad|sandalia|pe de pato|chinelo/],
+  ['pernas', /\bcalca|bermuda|\bsaia\b|joelheira|perneira|shorts|cinta-liga/],
+  ['luvas', /\bluva|manopla/],
+  ['bracos', /bracadeira|cotoveleira|ombreira/],
+  ['olhos', /oculos|\blente|visor|monoculo/],
+  ['orelhas', /\bfone|abafador|tampao de ouvido|brinco/],
+  ['boca', /mascara|respirador|snorkel|bocal/],
+  ['cabeca', /capacete|\belmo\b|chapeu|capuz|bandana|coroa|gorro|\bbone\b|tiara|cranio/],
+  ['pescoco', /\bcolar\b|pingente|amuleto|gargantilha|cachecol|cordao/],
+  ['dedos', /\banel\b|\baneis\b/],
+  ['pulsos', /bracelete|pulseira|relogio/],
+  ['tornozelos', /tornozeleira/],
+];
+// Região de um item do catálogo pelo nome e pela subcategoria; o que não se veste (barricada, spray, incenso…) fica sem
+// região (vai na mochila). Itens já com uma região nova (ou Mãos/Costas) ficam como estão.
+export function regiaoDoItem(i) {
+  if (!i.slot || !['cabeca', ...SLOTS_ANTIGOS].includes(i.slot)) return i.slot || null;
+  const n = sa(i.nome), sub = sa(i.subcategoria), cat = sa(i.categoria);
+  for (const [r, re] of REGIOES_PELO_NOME) if (re.test(n)) return r;
+  if (sub === 'pes') return 'pes';
+  if (sub === 'olhos') return 'olhos';
+  if (sub === 'rosto') return 'boca';
+  if (sub === 'cabeca') return 'cabeca';
+  if (sub === 'ombros') return 'bracos';
+  if (i.slot === 'cabeca') return 'cabeca';
+  if (cat === 'escudo') return 'maos';
+  if (i.slot === 'joia') return /mochila|bolsa|alforje|aljava/.test(n) ? 'costas' : /avental/.test(n) ? 'tronco' : null;
+  if (i.tipo === 'defesa') return ['protecao', 'armadura'].includes(cat) ? 'tronco' : null;
+  return 'tronco';
+}
+
 export function slotsOcupados(ficha) {
   const uso = {};
   for (const it of ficha.itens || []) {
-    if (it.equipado && it.slot) uso[it.slot] = (uso[it.slot] || 0) + (it.ocupa ?? 1);
+    if (!it.equipado || !it.slot) continue;
+    uso[it.slot] = (uso[it.slot] || 0) + (it.ocupa ?? 1);
+    const k = `${it.slot}:${camadaDoItem(it)}`;
+    uso[k] = (uso[k] || 0) + (it.ocupa ?? 1);
   }
   return uso;
 }
@@ -206,9 +246,11 @@ export function podeEquipar(ficha, item, sistema) {
   if (!item.slot) return { ok: false, motivo: 'Este item não é equipável.' };
   const slot = sistema.slots.find(s => s.id === item.slot);
   if (!slot) return { ok: false, motivo: `Slot desconhecido: ${item.slot}` };
-  const usado = slotsOcupados(ficha)[item.slot] || 0;
+  const chave = slot.camadas ? `${item.slot}:${camadaDoItem(item)}` : item.slot;
+  const usado = slotsOcupados(ficha)[chave] || 0;
   if (usado + (item.ocupa ?? 1) > slot.capacidade) {
-    return { ok: false, motivo: `Sem espaço em "${slot.nome}" (${usado}/${slot.capacidade}). Desequipe algo antes.` };
+    const camada = slot.camadas ? (camadaDoItem(item) === 'protecao' ? ' — proteção' : ' — vestuário') : '';
+    return { ok: false, motivo: `Já tem um item em "${slot.nome}"${camada}: não dá para usar dois na mesma região. Desequipe o outro antes.` };
   }
   return { ok: true };
 }
@@ -544,7 +586,7 @@ export function derivados(ficha, sistema) {
     carga: (ficha.itens || []).reduce((s, i) => s + (i.peso || 0), 0),
     ...carga,
     ...deslocamento(sistema, condicoes, carga.cargaNivel, ficha.deslocamentoBase ?? null,
-      [...(ficha.marcas || []).filter(m => m.deslocamento || m.disparada), ...(hab.deslocamento ? [{ nome: 'habilidades', deslocamento: hab.deslocamento }] : []),
+      [...(ficha.marcas || []).filter(m => m.deslocamento || m.disparada || m.umPasso), ...(hab.deslocamento ? [{ nome: 'habilidades', deslocamento: hab.deslocamento }] : []),
         // Extração de emergência: +1,5 m quando está em Disparada.
         ...((ficha.marcas || []).some(m => m.disparada) ? listaHabilidades(ficha, sistema).filter(x => x.regra?.deslocamentoNaDisparada).map(x => ({ nome: x.nome, deslocamento: x.regra.deslocamentoNaDisparada })) : [])]),
     limitePericia: limitePericia(nivel, sistema),
@@ -570,6 +612,8 @@ export function deslocamento(sistema, condicoes, cargaNivel, proprio = null, mar
     if (pernas) { m -= 3 * pernas.qtd; motivos.push(`${pernas.nome} −${3 * pernas.qtd} m`); }
     if (cargaNivel === 'sobrecarregado') { m -= 4.5; motivos.push('Sobrecarregado −4,5 m'); }
     // Marcas temporárias que dão deslocamento (remédio da Fitoterapia: +3 m por 5 turnos).
+    // Duas armas no turno (livro): só 1 passo.
+    if (marcas.some(x => x.umPasso)) { m = Math.min(m, 1.5); motivos.push('duas armas: só 1 passo'); }
     // Disparada (livro): desloca o dobro do deslocamento base.
     if (marcas.some(x => x.disparada)) { m += base; motivos.push(`Disparada +${String(base).replace('.', ',')} m`); }
     for (const x of marcas.filter(y => y.deslocamento)) { m += x.deslocamento; motivos.push(`${x.nome} +${String(x.deslocamento).replace('.', ',')} m`); }
@@ -697,17 +741,19 @@ export function gerarEncontro(candidatos, limite, rng = Math.random, maxCriatura
 // Livro: Corte; Perfuração; Concussão; Elétrico; Calor; Energia (Mágico); Radiação; Vibração; Onda de Choque; Ácido;
 // Venenoso; Impacto*; Físico*; A distância*; Elemental*; Químico*; Psíquico. Os com * agrupam outros tipos.
 // O IP "geral" vale contra tudo; o de um tipo só contra aquele dano (e o de um grupo, contra os tipos do grupo).
-export const TIPOS_IP = ['Corte', 'Perfuração', 'Concussão', 'Elétrico', 'Calor', 'Frio', 'Energia', 'Radiação', 'Vibração', 'Onda de Choque',
+export const TIPOS_IP = ['Corte', 'Perfuração', 'Concussão', 'Queda', 'Elétrico', 'Calor', 'Frio', 'Energia', 'Radiação', 'Vibração', 'Onda de Choque',
   'Ácido', 'Venenoso', 'Psíquico', 'Impacto', 'Físico', 'A distância', 'Elemental', 'Químico'];
 export const GRUPOS_IP = {
-  'Físico': ['Corte', 'Perfuração', 'Concussão', 'Impacto', 'Não letal'],
-  'Impacto': ['Concussão', 'Onda de Choque', 'Vibração'],
+  // Livro (Resistência a tipos de dano): Físico = corte, perfuração e concussão; Impacto = concussão e queda;
+  // Elemental = elétrico, calor e frio; Químico = venenoso, ácido e radiação.
+  'Físico': ['Corte', 'Perfuração', 'Concussão'],
+  'Impacto': ['Concussão', 'Queda'],
   'Elemental': ['Elétrico', 'Calor', 'Frio'],
-  'Químico': ['Ácido', 'Venenoso'],
+  'Químico': ['Venenoso', 'Ácido', 'Radiação'],
 };
 const SINONIMOS_IP = {
   corte: 'Corte', laminas: 'Corte', perf: 'Perfuração', perfuracao: 'Perfuração', perfurante: 'Perfuração', mordida: 'Perfuração',
-  concussao: 'Concussão', impacto: 'Impacto', queda: 'Concussão', eletrico: 'Elétrico', eletricidade: 'Elétrico', choque: 'Elétrico',
+  concussao: 'Concussão', impacto: 'Impacto', queda: 'Queda', radioativo: 'Radiação', radioativa: 'Radiação', eletrico: 'Elétrico', eletricidade: 'Elétrico', choque: 'Elétrico',
   calor: 'Calor', fogo: 'Calor', termico: 'Calor', frio: 'Frio', gelo: 'Frio', energia: 'Energia', magico: 'Energia', espectral: 'Energia', mistico: 'Energia',
   radiacao: 'Radiação', vibracao: 'Vibração', 'onda de choque': 'Onda de Choque', explosao: 'Onda de Choque', acido: 'Ácido',
   venenoso: 'Venenoso', veneno: 'Venenoso', toxico: 'Venenoso', psiquico: 'Psíquico', mental: 'Psíquico', fisico: 'Físico',
@@ -844,9 +890,11 @@ export function durabilidadeDe(i) {
   return { tipo: 'normal', atual, max: i.durabilidade, quebrado: atual <= 0, reparavel: !!i.reparavel && atual < i.durabilidade, texto: `${atual}/${i.durabilidade}` };
 }
 
+// Livro (Itens › Ferramental): itens ferramentais nunca precisam de reparo (não perdem durabilidade).
+export const ehFerramental = i => /ferramental/i.test(String(i?.finalidade || '').normalize('NFKD').replace(/[\u0300-\u036f]/g, ''));
 export function desgastarItem(i, ds, { semPrerequisito = false } = {}) {
   const d = durabilidadeDe(i);
-  if (d.tipo !== 'normal' || d.quebrado) return null;
+  if (d.tipo !== 'normal' || d.quebrado || ehFerramental(i)) return null;
   if (!semPrerequisito && !(ds > d.atual)) return null;
   i.durabilidadeAtual = d.atual - 1;
   i.reparavel = true;

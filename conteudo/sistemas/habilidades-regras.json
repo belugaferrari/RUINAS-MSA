@@ -546,7 +546,7 @@
     "arma": {
       "nome": "Muco radioativo",
       "dano": "2d6",
-      "tipoDano": "Radioativo",
+      "tipoDano": "Radiação",
       "pericia": "armas-de-fogo.projeteis",
       "metros": 9,
       "usos": {

@@ -189,7 +189,7 @@ export function kitDeTeste(sistema, ficha, orcamento = ORCAMENTO_KIT_TESTE) {
   // Proteção sem ônus (nada de máscara que tira 30% de Percepção).
   const semOnus = i => !Object.values(i.bonus || {}).some(v => v < 0);
   const protecao = slot => itens.filter(i => i.slot === slot && ['defesa', 'vestimenta'].includes(i.tipo) && /\bIP\b/.test(i.efeitos || '') && semOnus(i));
-  pegar(melhor(protecao('corpo').filter(i => i.preco <= resto - 150), ip));
+  pegar(melhor(protecao('tronco').filter(i => i.preco <= resto - 150), ip));
   pegar(melhor(protecao('cabeca').filter(i => i.preco <= Math.min(orcamento * 0.2, resto - 100)), ip));
   // Consumíveis: curativos, kit médico e comida, enquanto houver dinheiro.
   for (const re of [/bandagem|atadura/i, /kit de primeiros socorros|kit m[ée]dico/i, /^ra[çc][ãa]o (?!canina)|enlatad|carne seca/i, /bandagem|atadura/i]) {

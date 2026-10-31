@@ -506,3 +506,18 @@ Respostas do autor (31/10) e o que foi feito:
    sair da zona de ameaça (ou andar mais de 1 passo dentro dela) gera um aviso para quem controla o inimigo, com "Usar" (reação) ou "Dispensar".
    Movimento Preditivo em Defesa Total não gera aviso. Disparada: botão (ação principal) que dobra o deslocamento no contador do mapa;
    Extração de emergência soma +1,5 m e +50% de defesa contra o ataque de oportunidade.
+
+## 31/10 — Revisão dos capítulos de Itens e Regras (divergências resolvidas pelo autor)
+1. **Pré-requisito**: o app mantém o travamento ao errar sem o pré-requisito e, além disso, aplica a perda de durabilidade normal (DS comparado à durabilidade).
+2. **Radiação = Radioativo** (mesma coisa; o app usa "Radiação", do livro). O Marcador genético entra mesmo quando o ataque erra, se o DS estiver dentro da margem.
+   IP pelos grupos do livro: Físico (corte, perfuração, concussão), Impacto (concussão, queda), Químico (venenoso, ácido, radiação), Elemental.
+3–8. **Segue o livro**:
+   - Regiões do corpo (cabeça, olhos, orelhas, boca, pescoço, tronco, braços, luvas, pulsos, dedos, pernas, pés, tornozelos, mãos, costas):
+     1 vestuário + 1 proteção por região (cabeça, tronco, braços, luvas, pernas, pés). Fichas antigas foram migradas; o que sobrou na região foi para a mochila.
+   - Descanso tira os efeitos do grupo Dano; itens ferramentais não perdem durabilidade.
+   - Duas armas: atacar uma vez com cada mão é ação completa, e só sobra 1 passo de movimento.
+   - Disparada proibida para Exausto, Supercarregado, Manco e concentrado; sobrecarregado testa CONS% Difícil (falhou → Cansado).
+9. **Desvio do arremesso**: fica só no MSS.
+10. **LEMBRETE — Sanidade**: o livro diz "descanso longo recupera 1D6" e também "dormir 8 h recupera 1 ponto". O autor ainda vai equalizar a sanidade; o app não mexeu.
+- **Asfixia**: a tabela do livro é imagem (ilegível). Até o autor mandar a tabela, o app usa a base de 5 turnos.
+- O que está no livro e o app ainda não fazia: o autor autorizou incluir (testes, manobras, queda, visibilidade, custos de movimento no mapa, economia).

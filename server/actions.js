@@ -11,7 +11,7 @@ import { sortearEncontro, cenarioSemIA } from '../shared/encontro.js';
 import { FORMAS_AREA, quadradosDaArea, atingidosPelaArea } from '../shared/area.js';
 import { TIPOS_OBJETO, tipoObjeto, coberturaPeloMapa, foraDaVisaoDosPJs, bloqueadoPorObjeto } from '../shared/objetosMapa.js';
 import { passarNecessidades, comer, beber, dormir, rolarCaos, climaDoDia, descreverRelogio, fimDoCombate } from '../shared/tempo.js';
-import { podeSeduzir, itemAberto, itemVisivel, xpParaSubir, novaFicha, podeEquipar, rolarDado, rolarAtributosCriacao, testeDMil, gerarEncontro, derivados, problemasFicha, LIMITE_SALA, desgastarItem, repararItem, durabilidadeDe, listaHabilidades, vantagemPorHabilidade, temHabilidade, regraDaHabilidade, tipoCriatura, chaveHabilidade, TIPOS_ACAO, nomeAcao, acoesDaHabilidade, dadosDaHabilidade, ehAtaqueEspecial, acaoDoAtaqueEspecial, perderPv, textoPv, duracaoDaHabilidade, podeRepetir, textoDuracao, habilidadeValendo, temItem, tipoDaArma, TIPOS_MUTACAO, mutacaoDaTabela, temMutacaoDescontrolada, condicoesAtivas, textoIp, armaNaCondicao, escolhasPermitidas } from '../shared/regras.js';
+import { podeSeduzir, itemAberto, itemVisivel, xpParaSubir, novaFicha, podeEquipar, rolarDado, rolarAtributosCriacao, testeDMil, gerarEncontro, derivados, problemasFicha, LIMITE_SALA, desgastarItem, repararItem, durabilidadeDe, listaHabilidades, vantagemPorHabilidade, temHabilidade, regraDaHabilidade, tipoCriatura, chaveHabilidade, TIPOS_ACAO, nomeAcao, acoesDaHabilidade, dadosDaHabilidade, ehAtaqueEspecial, acaoDoAtaqueEspecial, perderPv, textoPv, duracaoDaHabilidade, podeRepetir, textoDuracao, habilidadeValendo, temItem, tipoDaArma, TIPOS_MUTACAO, mutacaoDaTabela, temMutacaoDescontrolada, condicoesAtivas, textoIp, armaNaCondicao, escolhasPermitidas, regiaoDoItem, camadaDoItem, SLOTS_ANTIGOS } from '../shared/regras.js';
 
 const GRUPO_ENCONTROS = 'encontros';
 const MAX_LOG = 100;
@@ -248,6 +248,30 @@ export function migrarCampanhas() {
   let mudou = false;
   for (const c of db.campaigns) {
     c.migracoes ||= [];
+    // Regiões do corpo (autor, 31/10): os itens das fichas saem dos espaços antigos (Corpo, Vestimenta, Joias) para a
+    // região do livro; o que não se veste vai para a mochila; dois itens na mesma região (e camada) → o segundo é guardado.
+    if (!c.migracoes.includes('regioes-do-corpo')) {
+      const sis = sistema(c.sistema);
+      for (const p of c.personagens) {
+        const guardados = [];
+        for (const it of p.itens || []) {
+          if (!it.slot || !['cabeca', ...SLOTS_ANTIGOS].includes(it.slot)) continue;
+          it.slot = regiaoDoItem(it);
+          if (!it.slot && it.equipado) { it.equipado = false; guardados.push(it.nome); }
+        }
+        const uso = {};
+        for (const it of (p.itens || []).filter(i => i.equipado && i.slot)) {
+          const def = sis.slots.find(s => s.id === it.slot);
+          if (!def) continue;
+          const k = def.camadas ? `${it.slot}:${camadaDoItem(it)}` : it.slot;
+          uso[k] = (uso[k] || 0) + (it.ocupa ?? 1);
+          if (uso[k] > def.capacidade) { it.equipado = false; delete it.mao; guardados.push(it.nome); }
+        }
+        if (guardados.length) registrar(c.log, { autor: 'App', rotulo: `Regiões do corpo: ${p.nome}`, texto: `guardado na mochila (mesma região ou não se veste): ${guardados.join(', ')}` });
+      }
+      c.migracoes.push('regioes-do-corpo');
+      mudou = true;
+    }
     if (!c.migracoes.includes('pv-for-cons')) {
       const sis = sistema(c.sistema);
       for (const p of c.personagens) {
@@ -1257,7 +1281,7 @@ Object.assign(ESPECIAIS, {
     if (!it) throw erro('Escolha o item.');
     const t = testar(p, sis, 'esportes.arremessar', ndDe(sis, 'Normal'));
     const notas = [contaTeste('Esportes › Arremessar', t)];
-    if (!t.sucesso) return { rotulo: `${hab.nome} em ${it.nome} de ${b.nome}`, notas: [...notas, desvioArremesso(p, sis, t, t.nd)], sucesso: false };
+    if (!t.sucesso) return { rotulo: `${hab.nome} em ${it.nome} de ${b.nome}`, notas: [...notas, idSistema(c.sistema) === 'mss' ? desvioArremesso(p, sis, t, t.nd) : 'errou (o mestre decide onde caiu)'], sucesso: false };
     const d = rolarDado('1d4');
     it.ipCorroido = (it.ipCorroido || 0) + d.total;
     notas.push(`${it.nome} perde ${d.total} de IP [${d.dados.join(', ')}] (agora: ${textoIp(it) || 'sem IP'})`);
@@ -1277,7 +1301,7 @@ Object.assign(ESPECIAIS, {
     const b = alvoEscolhido(c, esc, 'Escolha onde o frasco quebra (o alvo).');
     const ta = testar(p, sis, 'esportes.arremessar', ndDe(sis, 'Normal'));
     const notas = [contaTeste('Esportes › Arremessar', ta)];
-    if (!ta.sucesso) { notas.push(desvioArremesso(p, sis, ta, ta.nd)); return { rotulo: `${hab.nome} em ${b.nome}`, notas, sucesso: false }; }
+    if (!ta.sucesso) { notas.push(idSistema(c.sistema) === 'mss' ? desvioArremesso(p, sis, ta, ta.nd) : 'o frasco quebrou longe do alvo (o mestre decide onde)'); return { rotulo: `${hab.nome} em ${b.nome}`, notas, sucesso: false }; }
     const afetados = [b, ...pertoDe(c, b, 1.5).filter(y => y.id !== p.id && !y.alucinacao)];
     for (const x of afetados) {
       const t = testeCONS(x, sis, ndDe(sis, 'Muito Difícil'));
@@ -1415,7 +1439,7 @@ function depoisDoDano(c, s, a, b, r, pend, defesa, sis, pvAntes) {
     else for (const y of pertoDe(c, b, 9)) {
       const mutado = temMutacao(y);
       const d = rolarDado(mutado ? '2d10+1d10' : '2d10');
-      const ip = ipContra(y, sis, 'Radioativo');
+      const ip = ipContra(y, sis, 'Radiação');
       const dano = Math.max(sis.combate?.danoMinimo ?? 0, d.total - ip);
       if (y.pv) perderPv(y, dano);
       darMarcadores(y, sis, 'genetico', mutado ? 3 : 2);
@@ -1588,6 +1612,8 @@ function resolverPendente(c, s, pend, defesa, sis) {
   const pvAntes = b.pv?.atual ?? 0;
   r.mortoAntes = (b.marcadores || []).includes('Morto');
   const notas = [...notasItem, ...antesDoDano(c, s, a, b, r, sis), ...aplicarAtaque(a, b, r, sis)];
+  // Radiação (livro + autor, 31/10): o Marcador Genético vem mesmo errando, se o DS estiver dentro da margem.
+  if (r.efeitoNoErro) { (b.marcadores ||= []).push(r.efeitoNoErro); notas.push(`${r.efeitoNoErro} (mesmo errando: DS ${r.ds} na margem)`); }
   if (r.semCritico) notas.push(`${b.nome} é imune a acertos críticos (sem o dado extra)`);
   if (r.semCriticoRequisito) notas.push(`sem os pré-requisitos de ${r.arma}: sem dano crítico`);
   if (r.dsVantagem) notas.push('Táticas de Esquadrão: DS com vantagem');
@@ -1703,7 +1729,7 @@ function maosDoAtaque(c, a, op, sis) {
   if (pedeDois && nasMaos.length >= 2) {
     g.segundaMao = { mao: mao === 'habil' ? 'inabil' : 'habil', uid: usada.uid };
     if (!ambi) op.maos = { nome: `dois ataques (mão ${mao === 'habil' ? 'hábil' : 'inábil'})`, valor: cfg.dois?.[mao] ?? (mao === 'habil' ? -20 : -40) };
-    return false;
+    return 'primeiro';
   }
   if (mao === 'inabil' && !ambi) op.maos = { nome: 'mão inábil', valor: cfg.inabil ?? -20 };
   return false;
@@ -2694,7 +2720,8 @@ export const acoes = {
       const r = testeDMil(a.valor + modificador + extraMarcas, ndNum, sis, { metade: !!metade, modo: modoFinal });
       // Fora do combate, a desvantagem da mutação vale só para o próximo teste.
       if (porMarca && !c.salas.batalha.combate) p.marcas = p.marcas.filter(m => !m.desvantagem);
-      const notaMut = [p ? mutacaoSeMexe(c, p, r.ds) : null, acaoRef === 'sub:esportes.arremessar' ? desvioArremesso(p, sis, r, ndNum) : null].filter(Boolean).join(' · ') || null;
+      // Desvio do arremesso: regra do livro do MSS (autor, 31/10: só no MSS).
+      const notaMut = [p ? mutacaoSeMexe(c, p, r.ds) : null, acaoRef === 'sub:esportes.arremessar' && idSistema(c.sistema) === 'mss' ? desvioArremesso(p, sis, r, ndNum) : null].filter(Boolean).join(' · ') || null;
       entrada = { ...base, personagemId: p?.id || null, tipo: 'dmil', rotulo: `${String(rotulo || a.nome).slice(0, 80)}${modoFinal ? ` (${modoFinal}${motivo || porMarca ? ` — ${[motivo, porMarca ? 'mutação descontrolada' : ''].filter(Boolean).join(', ')}` : ''})` : ''}${inspirado ? ` (Inspiração +${inspirado})` : ''}`, acaoNome: a.nome, mod: modificador + extraMarcas, metade: !!metade, ...r, ...(notaMut ? { texto: notaMut } : {}) };
     }
     if (nome && c.salas[nome]) registrar(c.salas[nome].log, entrada);
@@ -2837,9 +2864,11 @@ export const acoes = {
     // Cobertura pelo mapa (ataque a distância, antes de gastar qualquer coisa): parcial = −30%; total = sem linha de tiro.
     if (!op.multiplo) coberturaDoAtaque(c, a, b, op, sis);
     // Mãos: a hábil ataca sem ônus e a inábil com −20%. Dois ataques no turno, um com cada mão ("Dois ataques" no
-    // primeiro): hábil −20% e inábil −40%, e o segundo gasta a ação bônus (autor, 26/10). Ambidestria: sem mão inábil,
+    // primeiro): hábil −20% e inábil −40%, e os dois juntos são uma ação completa com só 1 passo (livro; autor, 31/10). Ambidestria: sem mão inábil,
     // e nos dois ataques só o segundo tem −20%.
-    const segundaMao = maosDoAtaque(c, a, op, sis);
+    // Um ataque com cada mão (livro): ação completa e só 1 passo no turno; o segundo ataque não gasta mais nada.
+    const modoMaos = maosDoAtaque(c, a, op, sis);
+    const segundaMao = modoMaos === true;
     // Civilizados (Encantado): quem ele não atacou precisa passar em WILL% Difícil para atacá-lo.
     const barrado = civilizados(c, a, b, sis);
     if (barrado) return barrado;
@@ -2867,7 +2896,8 @@ export const acoes = {
     // Mira só no ataque a distância (autor, 26/10).
     if (op.mira && armasDisponiveis(a, sis).find(x => x.uid === (op.armaUid || 'desarmado'))?.alcance !== 'distancia') delete op.mira;
     if (op.mira && a.sanidade && a.sanidade.atual < 16) throw erro(`${a.nome} está Instável (SAN abaixo de 16): não pode mirar.`);
-    let excesso = op.extra || op.multiplo ? null : gastarAcao(c, a, segundaMao ? 'bonus' : tipoAcao);
+    let excesso = op.extra || op.multiplo || segundaMao ? null : gastarAcao(c, a, modoMaos === 'primeiro' && !foraDoTurno ? 'completa' : tipoAcao);
+    if (modoMaos === 'primeiro' && !foraDoTurno && !(a.marcas || []).some(m => m.umPasso)) marcar(a, { nome: 'Duas armas: só 1 passo neste turno', umPasso: true, ateMeuTurno: true, de: a.id });
     if (op.mira && !op.multiplo) {
       const m = gastarAcao(c, a, 'movimento');
       if (m) excesso = [excesso, m].filter(Boolean).join('; ');
@@ -3181,10 +3211,23 @@ export const acoes = {
     const p = personagem(c, id);
     exigirDonoOuMestre(ctx, p);
     if (!c.salas.batalha.combate) throw erro('Não há combate em andamento.');
+    const sis = sistema(c.sistema);
+    const d0 = derivados(p, sis);
+    // Livro: Exausto, Supercarregado, Manco e quem está concentrado não correm; usar Acrobacia também impede (o mestre aplica).
+    const impede = [qtdCondicao(p, sis, 'exausto') ? 'está Exausto' : null, d0.cargaNivel === 'supercarregado' ? 'está Supercarregado' : null,
+      (p.defeitos || []).includes('manco') ? 'é Manco' : null, (p.marcas || []).some(m => m.concentrado) ? 'está concentrado' : null].filter(Boolean);
+    if (impede.length) throw erro(`${p.nome} não pode usar Disparada: ${impede.join(', ')}.`);
     gastarAcao(c, p, 'principal');
     marcar(p, { nome: 'Disparada (deslocamento em dobro)', disparada: true, ateMeuTurno: true, de: p.id });
-    const d = derivados(p, sistema(c.sistema));
-    const texto = `ação principal · deslocamento ${String(d.deslocamento).replace('.', ',')} m neste turno`;
+    const notas = [];
+    // Sobrecarregado correndo: CONS% Difícil ou fica Cansado.
+    if (d0.cargaNivel === 'sobrecarregado') {
+      const t = testeContra(d0.percentual.CONS ?? 0, ndDe(sis, 'Difícil'), sis);
+      if (!t.sucesso) { darMarcadores(p, sis, 'cansado', 1); }
+      notas.push(`Sobrecarregado: ${contaTeste('CONS%', t)}${t.sucesso ? '' : ' — ficou Cansado'}`);
+    }
+    const d = derivados(p, sis);
+    const texto = [`ação principal · deslocamento ${String(d.deslocamento).replace('.', ',')} m neste turno`, ...notas].join(' · ');
     registrar(c.salas.batalha.log, { autor: p.nome, rotulo: `${p.nome}: Disparada`, texto });
     return { texto };
   },
@@ -3387,6 +3430,9 @@ export const acoes = {
         for (const k of Object.keys(p.recursos)) if (recarrega.has(k)) delete p.recursos[k];
       }
       if (!interrompido) notas.push(...descansoRelatorio(p, sis, tipo));
+      // Efeitos de dano (Dor, Sangramento, Ferida aberta, Queimadura, membros…) acabam no descanso curto ou longo (livro).
+      const efeitosDano = (sis.condicoes || []).filter(k => k.grupo === 'Dano' && qtdCondicao(p, sis, k.id));
+      if (efeitosDano.length) { for (const k of efeitosDano) tirarMarcadores(p, sis, k.id); notas.push(`efeitos de dano curados: ${efeitosDano.map(k => k.nome).join(', ')}`); }
       sincronizarEfeitos(p, sis);
       notas.push(...lembretesDescanso(p, sis, tipo));
       const usos = p.descansosDoDia?.dia === dia ? p.descansosDoDia : { dia, curto: 0, longo: 0 };

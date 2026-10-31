@@ -60,7 +60,7 @@ test('Muco radioativo: aparece nas armas, gasta a ação principal e 1 dos 3 uso
   comClasse(eu, 'Mutante', 'RADIANTE (a Praga)', 8);
   const muco = C.armasDisponiveis(eu, mss).find(a => a.nome === 'Muco radioativo');
   assert.ok(muco);
-  assert.equal(muco.tipoDano, 'Radioativo');
+  assert.equal(muco.tipoDano, 'Radiação');
   assert.equal(muco.alcance, 'distancia');
   minhaVez(c, eu);
   for (let i = 0; i < 3; i++) {

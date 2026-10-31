@@ -75,7 +75,7 @@ export function armasDisponiveis(p, sistema) {
   // Arma quebrada (durabilidade 0) não ataca até ser reparada.
   // Item travado (Bug na rede) continua equipado, mas não pode ser usado.
   const armas = (p.itens || []).filter(i => i.equipado && i.tipo === 'arma' && i.dano && !i.travado && !(i.durabilidade != null && (i.durabilidadeAtual ?? i.durabilidade) <= 0)).map(i => ({
-    uid: i.uid, nome: i.nome, dano: danoDaArma(i, p), acerto: i.acerto ?? null, pericia: i.pericia || null, tipoDano: i.tipoDano || 'Físico', natural: !!i.natural,
+    uid: i.uid, nome: i.nome, dano: danoDaArma(i, p), acerto: i.acerto ?? null, pericia: i.pericia || null, tipoDano: tipoDanoDoLivro(i.tipoDano) || 'Físico', natural: !!i.natural,
     efeitoDano: i.efeitoDano ?? cfg.chancePorTipo?.[i.tipoDano] ?? cfg.efeitoPadrao, penetracao: i.penetracao || 0, alcance: i.alcance || (i.pericia?.startsWith('armas-de-fogo') ? 'distancia' : 'corpo'),
     // Cadência: quantos disparos (balas e danos) por ataque — da arma ou da subperícia (ex.: Rifle de Assalto 2).
     cadencia: Math.max(1, i.cadencia ?? cfg.cadencia?.[i.pericia] ?? 1),
@@ -97,13 +97,15 @@ function armasDeHabilidade(p, sistema) {
   return listaHabilidades(p, sistema).filter(h => h.regra?.arma && usosArmaRestantes(p, h) > 0).map(h => {
     const a = h.regra.arma;
     return {
-      uid: `hab:${h.id}`, nome: a.nome || h.nome, dano: a.dano, acerto: null, pericia: a.pericia || 'briga.ataque-desarmado', tipoDano: a.tipoDano || 'Físico',
+      uid: `hab:${h.id}`, nome: a.nome || h.nome, dano: a.dano, acerto: null, pericia: a.pericia || 'briga.ataque-desarmado', tipoDano: tipoDanoDoLivro(a.tipoDano) || 'Físico',
       habilidade: h.id, efeitoDano: cfg.chancePorTipo?.[a.tipoDano] ?? cfg.efeitoPadrao, penetracao: 0, cadencia: 1,
       alcance: (a.metros || 1.5) > 1.5 ? 'distancia' : 'corpo', alcanceM: a.metros || 1.5, area: !!a.area, ignoraIp: !!a.ignoraIp,
       contraTipos: a.contraTipos || null, acao: a.acao || 'principal', extraContraMutacao: a.extraContraMutacao || null,
     };
   });
 }
+// "Radioativo" e "Radiação" são o mesmo tipo de dano (autor, 31/10): o app usa o nome do livro.
+export const tipoDanoDoLivro = t => (/radioativ/i.test(String(t || '')) ? 'Radiação' : t);
 // O alvo está com mutação (qualquer uma, ou é Mutante/criatura mutante)?
 export const temMutacao = p => (p?.mutacoes || []).length > 0 || tipoCriatura(p) === 'mutante' || p?.classe === 'mutante';
 
@@ -303,7 +305,11 @@ export function resolverAtaque(atacante, alvo, sistema, op = {}, defesaId = 'nen
   // Sacrifício: perde o D6 atual de vida mesmo errando (abandona a razão no ataque).
   if (op.sacrificio) r.perdaSacrificio = d6Atual(atacante.pv?.atual ?? 0);
   // Ataque em área: quem passa na Evasão recebe só metade do dano.
-  if (!teste.sucesso && !(op.area && defesa.id === 'evasao')) return r;
+  if (!teste.sucesso && !(op.area && defesa.id === 'evasao')) {
+    const ef = cfg.efeitosPorTipo[arma.tipoDano];
+    if (ef === 'Marcador genético' && teste.ds <= (arma.efeitoDano || 0) + bonusHab.margem) r.efeitoNoErro = ef;
+    return r;
+  }
 
   // Penetração ignora até N pontos de IP do alvo.
   r.ip = cfg.ignoramIP.includes(arma.tipoDano) || arma.ignoraIp ? 0 : Math.max(0, ipContra(alvo, sistema, arma.tipoDano, arma.alcance === 'distancia', op.localizado ? op.local : null) - (arma.penetracao || 0));
@@ -357,8 +363,8 @@ export function resolverAtaque(atacante, alvo, sistema, op = {}, defesaId = 'nen
   r.dano = r.disparos.reduce((s, x) => s + x.dano, 0);
   if (!teste.sucesso) { r.dano = Math.floor(r.dano / 2); r.metadeEvasao = true; }
   // Imunidade (dano zero), resistência (metade) e vulnerabilidade (dobro) ao tipo de dano (monstros da planilha).
-  const tipoD = String(arma.tipoDano || '').toLowerCase();
-  const tem2 = lista => (lista || []).some(x => String(x).toLowerCase() === tipoD);
+  const tipoD = String(tipoDanoDoLivro(arma.tipoDano) || '').toLowerCase();
+  const tem2 = lista => (lista || []).some(x => String(tipoDanoDoLivro(x)).toLowerCase() === tipoD);
   // Afinidade principal (1ª afinidade elementar do monstro): recebe metade do dano dos tipos ligados a ela (base.json).
   const afinidade = (sistema.afinidadesElementais || []).find(x => x.nome.toLowerCase() === String(alvo.afinidades?.[0] || '').toLowerCase());
   const danosDaAfinidade = (afinidade ? afinidade.danos : alvo.afinidades?.[0] ? [alvo.afinidades[0]] : []).map(x => String(x).toLowerCase());
@@ -371,6 +377,8 @@ export function resolverAtaque(atacante, alvo, sistema, op = {}, defesaId = 'nen
   const efeito = cfg.efeitosPorTipo[arma.tipoDano];
   // Margem do efeito de dano: a da arma mais a das habilidades (ex.: Ataque Desarmado Treinado +1 na Dor).
   if (efeito && teste.sucesso && teste.ds <= (arma.efeitoDano || 0) + bonusHab.margem) r.efeito = efeito;
+  // Radiação: o Marcador Genético vem mesmo quando o ataque erra, se o DS estiver dentro da margem (autor, 31/10).
+  else if (efeito === 'Marcador genético' && !teste.sucesso && teste.ds <= (arma.efeitoDano || 0) + bonusHab.margem) r.efeitoNoErro = efeito;
   r.especial = especial?.nome || null;
   return r;
 }

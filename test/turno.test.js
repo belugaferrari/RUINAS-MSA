@@ -190,9 +190,11 @@ test('duas armas: hábil sem ônus, inábil −20%; dois ataques (um com cada m�
   assert.equal(mod(ataque('d', { doisAtaques: true })), 'dois ataques (mão hábil) -20');
   const r2 = ataque('e');
   assert.equal(mod(r2), 'dois ataques (mão inábil) -40');
-  assert.ok(!r2.excesso, 'o segundo ataque gasta a ação bônus (sem passar do limite)');
+  // Livro (autor, 31/10): um ataque com cada mão é uma ação completa (principal + movimento) e só 1 passo no turno.
+  assert.ok(!r2.excesso, 'o segundo ataque não gasta mais nada');
   assert.equal(cb.gasto[ids[0]].principal, 1);
-  assert.equal(cb.gasto[ids[0]].bonus, 1);
+  assert.equal(cb.gasto[ids[0]].movimento, 1);
+  assert.ok(!cb.gasto[ids[0]].bonus);
   // Ambidestria: sem mão inábil; nos dois ataques, só o segundo tem −20%.
   bal.vantagens = [mss.vantagens.find(x => x.nome === 'Ambidestria').id];
   novoTurno();

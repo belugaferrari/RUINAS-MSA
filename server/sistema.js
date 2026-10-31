@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { RAIZ, DATA_DIR } from './db.js';
 import { ARQ_MONSTROS } from './monstros.js';
+import { regiaoDoItem } from '../shared/regras.js';
 import { ARQ_HABILIDADES } from './habilidadesPlanilha.js';
 import { ARQ_MUTACOES } from './mutacoesPlanilha.js';
 import { ARQ_PROFISSOES } from './profissoesPlanilha.js';
@@ -108,7 +109,9 @@ export function sistema(id = SISTEMA_PADRAO) {
     armadilhas: arqArmadilhas ? (({ atualizadoEm, arquivo, googleSheets, _fonte, total, ...t }) => t)(ler(arqArmadilhas)) : null,
   };
   // As colunas originais da planilha ("planilha") só servem para exportar de volta: não vão para o navegador.
-  if (arqItens) dados.itens = ler(arqItens).itens.map(({ planilha, ...it }) => it);
+  // Regiões do corpo (autor, 31/10): itens com os espaços antigos (Corpo, Vestimenta, Joias) vão para a região do livro.
+  if (arqItens) dados.itens = ler(arqItens).itens.map(({ planilha, ...it }) => ({ ...it, slot: regiaoDoItem(it) }));
+  else dados.itens = (dados.itens || []).map(it => ({ ...it, slot: regiaoDoItem(it) }));
   // Livro dos Monstros enviado pelo mestre por planilha (sem ele, os exemplos do base.json).
   if (arqMonstros) dados.monstros = ler(arqMonstros).monstros;
   cache.set(id, { assinatura, dados });

@@ -404,7 +404,7 @@ function campoEscolha(p, x, k, esc) {
 }
 
 // Atacar com 2 armas (autor, 28/10): uma arma de uma mão em cada mão; o app faz os dois ataques em seguida — a mão hábil
-// primeiro (−20%) e a inábil depois (−40%, gasta a ação bônus). Com Ambidestria, só o segundo tem −20%.
+// primeiro (−20%) e a inábil depois (−40%); os dois juntos são uma ação completa e só 1 passo no turno (livro). Com Ambidestria, só o segundo tem −20%.
 function duasArmas(p, alvo, b, mestre) {
   const nasMaos = (p.itens || []).filter(i => i.equipado && i.slot === 'maos' && i.tipo === 'arma' && (i.ocupa ?? 1) < 2);
   if (nasMaos.length < 2) return null;
@@ -425,8 +425,8 @@ function duasArmas(p, alvo, b, mestre) {
     for (const r of [r1, r2]) if (r.excesso) aviso(`Atenção: ${r.excesso}.`, 'erro');
   };
   return h('div', { class: 'duas-armas barra' },
-    botao('Atacar com 2 armas', atacar, { class: 'primario', icone: 'swords', disabled: !alvo, title: `${primeira.nome} e depois ${segunda.nome} (${onus}); o segundo ataque gasta a ação bônus` }),
-    h('small', { class: 'dica' }, `${primeira.nome} + ${segunda.nome} · ${onus}; o segundo gasta a ação bônus`));
+    botao('Atacar com 2 armas', atacar, { class: 'primario', icone: 'swords', disabled: !alvo, title: `${primeira.nome} e depois ${segunda.nome} (${onus}); os dois juntos gastam a ação completa e você só anda 1 passo` }),
+    h('small', { class: 'dica' }, `${primeira.nome} + ${segunda.nome} · ${onus}; ação completa, só 1 passo no turno`));
 }
 
 // Começo da descrição, para lembrar do que se trata sem abrir o texto todo.
@@ -481,7 +481,7 @@ function quadroAtaques(p, participantes, mestre) {
     const doisAtaques = !!estado.sel.ataque?.doisAtaques;
     const r = await acao('combate.atacar', { atacante: p.id, alvo, opcoes: { ...opcoesGerais(p, mestre), armaUid: uid } });
     if (estado.sel.ataque) Object.assign(estado.sel.ataque, { sacrificio: false, cargaNucleo: false, investida: null, doisAtaques: false, mira: false });
-    if (doisAtaques) aviso('Agora ataque com a arma da outra mão (gasta a ação bônus).');
+    if (doisAtaques) aviso('Agora ataque com a arma da outra mão (os dois juntos são a ação completa; só 1 passo no turno).');
     if (r.excesso) aviso(`Atenção: ${r.excesso}.`, 'erro');
     if (r.tipo === 'barrado') aviso(r.texto, 'erro');
     else if (r.tipo === 'ataque') aviso(`${r.autor} ${r.rotulo}: ${r.texto}`, r.sucesso ? 'ok' : 'erro');
@@ -707,7 +707,7 @@ function opcoesAtaque(p, mestre, outros = []) {
       tipoCriatura(p) === 'humanoide' ? caixa('sacrificio', 'Sacrifício (+10%, D6 de vida)') : null,
       // Tiro Funcional: pode escolher dano não letal com armas a distância.
       temHabilidade(p, estado.sistema, 'Tiro Funcional') ? caixa('naoLetal', 'Dano não letal (Tiro Funcional, armas a distância)') : null,
-      // Uma arma em cada mão: dois ataques no turno (o segundo, com a outra mão, gasta a ação bônus).
+      // Uma arma em cada mão: dois ataques no turno (os dois são uma ação completa; só 1 passo no turno).
       (p.itens || []).filter(i => i.equipado && i.slot === 'maos' && i.tipo === 'arma' && (i.ocupa ?? 1) < 2).length >= 2
         ? h('span', { title: temHabilidade(p, estado.sistema, 'Ambidestria') ? 'Ambidestria: o primeiro sem ônus, o segundo −20%' : 'Mão hábil −20%, mão inábil −40%' },
           caixa('doisAtaques', 'Dois ataques (um com cada mão)')) : null,

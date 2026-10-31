@@ -565,7 +565,8 @@ export function equipamento(p, mestre, filtro = null) {
   const uso = slotsOcupados(p);
   const itens = (p.itens || []).filter(i => !filtro || filtro(i));
   return h('div', {},
-    filtro ? null : h('div', { class: 'slots' }, sis.slots.map(s => h('span', { class: `selo ${(uso[s.id] || 0) >= s.capacidade ? 'cheio' : ''}` }, `${s.nome} ${uso[s.id] || 0}/${s.capacidade}`)),
+    // Regiões com roupa e proteção (camadas) aceitam um de cada.
+    filtro ? null : h('div', { class: 'slots' }, sis.slots.map(s => { const cap = s.capacidade * (s.camadas ? 2 : 1); return h('span', { class: `selo ${(uso[s.id] || 0) >= cap ? 'cheio' : ''}`, title: s.camadas ? '1 roupa e 1 proteção' : '' }, `${s.nome} ${uso[s.id] || 0}/${cap}`); }),
       h('span', { class: 'espaco' }), botaoExpandir(p)),
     filtro ? null : inventarioExpandido(p, mestre),
     itens.length ? tabela(['Item', 'Slot · mãos', 'Durab.', 'Dano / IP', 'Bônus', 'Venda', ''], itens.map(i => ({

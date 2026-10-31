@@ -367,38 +367,7 @@
   "Rival",
   "Inimigo"
  ],
- "slots": [
-  {
-   "id": "cabeca",
-   "nome": "Cabeça / Capacete",
-   "capacidade": 1
-  },
-  {
-   "id": "corpo",
-   "nome": "Armadura / Corpo",
-   "capacidade": 1
-  },
-  {
-   "id": "vestimenta",
-   "nome": "Vestimenta",
-   "capacidade": 1
-  },
-  {
-   "id": "maos",
-   "nome": "Mãos",
-   "capacidade": 2
-  },
-  {
-   "id": "joia",
-   "nome": "Joias",
-   "capacidade": 4
-  },
-  {
-   "id": "costas",
-   "nome": "Costas / Mochila",
-   "capacidade": 1
-  }
- ],
+ "slots": [{"id": "cabeca", "nome": "Cabeça / Capacete", "capacidade": 1, "camadas": true}, {"id": "olhos", "nome": "Olhos (óculos)", "capacidade": 1}, {"id": "orelhas", "nome": "Orelhas (fones)", "capacidade": 1}, {"id": "boca", "nome": "Boca (bocais, máscaras)", "capacidade": 1}, {"id": "pescoco", "nome": "Pescoço (colares)", "capacidade": 1}, {"id": "tronco", "nome": "Tronco", "capacidade": 1, "camadas": true}, {"id": "bracos", "nome": "Braços", "capacidade": 1, "camadas": true}, {"id": "luvas", "nome": "Luvas (mãos)", "capacidade": 1, "camadas": true}, {"id": "pulsos", "nome": "Pulsos (braceletes)", "capacidade": 1}, {"id": "dedos", "nome": "Dedos (anéis)", "capacidade": 1}, {"id": "pernas", "nome": "Pernas (calças)", "capacidade": 1, "camadas": true}, {"id": "pes", "nome": "Pés (calçados)", "capacidade": 1, "camadas": true}, {"id": "tornozelos", "nome": "Tornozelos (tornozeleiras)", "capacidade": 1}, {"id": "maos", "nome": "Mãos (empunhar)", "capacidade": 2}, {"id": "costas", "nome": "Costas / Mochila", "capacidade": 1}],
  "_avisoItens": "Itens e monstros abaixo ainda são EXEMPLOS (a lista de itens do livro está em revisão).",
  "itens": [
   {
