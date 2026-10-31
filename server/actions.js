@@ -2,7 +2,7 @@ import { db, save, uid } from './db.js';
 import { converterLinha } from './itens.js';
 import { imagemDeLink } from '../shared/imagens.js';
 import { sistema, idSistema } from './sistema.js';
-import { LOCAIS_ATAQUE, resolverAtaque, aplicarAtaque, armasDisponiveis, opcoesDefesa, sobrevida, rolarIniciativa, resolverManipulacao, modHumorTestes, humorDe, espectroDe, humorAparente, empatiaNatural, liberdadeDeHumor, modoRolagem, modoHumorTeste, recursoDe, gastarRecurso, racaDe, distanciaPecas, usosRestantes, gastarUso, testeContra, ipContra, resistenciaManipulacao, chaveUsoArma, temMutacao } from '../shared/combate.js';
+import { LOCAIS_ATAQUE, defesaDoAlvo, resolverAtaque, aplicarAtaque, armasDisponiveis, opcoesDefesa, sobrevida, rolarIniciativa, resolverManipulacao, modHumorTestes, humorDe, espectroDe, humorAparente, empatiaNatural, liberdadeDeHumor, modoRolagem, modoHumorTeste, recursoDe, gastarRecurso, racaDe, distanciaPecas, usosRestantes, gastarUso, testeContra, ipContra, resistenciaManipulacao, chaveUsoArma, temMutacao } from '../shared/combate.js';
 import { sincronizarEfeitos, passarTurnoEfeitos, efeitosAoAgir, cargaNoTurno, descansar, sortearMutacao } from '../shared/efeitos.js';
 import { fichasDeTeste, relatorioFicha, kitDeTeste, periciasDeTeste } from '../shared/fichasTeste.js';
 import { requisitosQueFaltam } from '../shared/requisitos.js';
@@ -11,7 +11,7 @@ import { sortearEncontro, cenarioSemIA } from '../shared/encontro.js';
 import { FORMAS_AREA, quadradosDaArea, atingidosPelaArea } from '../shared/area.js';
 import { TIPOS_OBJETO, tipoObjeto, coberturaPeloMapa, foraDaVisaoDosPJs, bloqueadoPorObjeto } from '../shared/objetosMapa.js';
 import { passarNecessidades, comer, beber, dormir, rolarCaos, climaDoDia, descreverRelogio, fimDoCombate } from '../shared/tempo.js';
-import { podeSeduzir, itemAberto, itemVisivel, xpParaSubir, novaFicha, podeEquipar, rolarDado, rolarAtributosCriacao, testeDMil, gerarEncontro, derivados, problemasFicha, LIMITE_SALA, desgastarItem, repararItem, durabilidadeDe, listaHabilidades, vantagemPorHabilidade, temHabilidade, regraDaHabilidade, tipoCriatura, chaveHabilidade, TIPOS_ACAO, nomeAcao, acoesDaHabilidade, dadosDaHabilidade, ehAtaqueEspecial, acaoDoAtaqueEspecial, perderPv, textoPv, duracaoDaHabilidade, podeRepetir, textoDuracao, habilidadeValendo, temItem, tipoDaArma, TIPOS_MUTACAO, mutacaoDaTabela, temMutacaoDescontrolada, condicoesAtivas, textoIp, armaNaCondicao, escolhasPermitidas, regiaoDoItem, camadaDoItem, SLOTS_ANTIGOS, tipoDoTeste, atributoDoTeste, ehFerramental, valorConcentracao, AURAS_PERICIA, dsParaAura, modAuraItem } from '../shared/regras.js';
+import { podeSeduzir, itemAberto, itemVisivel, xpParaSubir, novaFicha, podeEquipar, rolarDado, rolarAtributosCriacao, testeDMil, gerarEncontro, derivados, problemasFicha, LIMITE_SALA, desgastarItem, repararItem, durabilidadeDe, listaHabilidades, vantagemPorHabilidade, temHabilidade, regraDaHabilidade, tipoCriatura, chaveHabilidade, TIPOS_ACAO, nomeAcao, acoesDaHabilidade, dadosDaHabilidade, ehAtaqueEspecial, acaoDoAtaqueEspecial, perderPv, textoPv, duracaoDaHabilidade, podeRepetir, textoDuracao, habilidadeValendo, temItem, tipoDaArma, TIPOS_MUTACAO, mutacaoDaTabela, temMutacaoDescontrolada, condicoesAtivas, textoIp, armaNaCondicao, escolhasPermitidas, regiaoDoItem, camadaDoItem, SLOTS_ANTIGOS, tipoDoTeste, atributoDoTeste, ehFerramental, concentrado, valorConcentracao, AURAS_PERICIA, dsParaAura, modAuraItem } from '../shared/regras.js';
 
 const GRUPO_ENCONTROS = 'encontros';
 const MAX_LOG = 100;
@@ -417,6 +417,14 @@ function consequenciasDoTeste(c, p, sis, { acaoRef, tipoTeste, valor, item, r })
     }
   }
   return notas;
+}
+
+// Ordem dos tamanhos (livro, Categorias de Tamanho); sem tamanho = médio.
+const ORDEM_TAMANHO = ['minusculo', 'diminuto', 'miudo', 'pequeno', 'medio', 'grande', 'enorme', 'imenso', 'colossal'];
+function passoDeTamanho(p) {
+  const t = String(p?.tamanho || 'medio').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  const i = ORDEM_TAMANHO.findIndex(x => t.startsWith(x));
+  return i < 0 ? 4 : i;
 }
 
 // Valor da ação calculado no servidor a partir da ficha: "sub:<id>", "per:<id>" ou "atr:<sigla>".
@@ -1563,6 +1571,8 @@ function terminarCombatePara(c, p) {
   const sis = sistema(c.sistema);
   encerrarAtivacoes(c, p, sis);
   delete p.emCombate;
+  // Manobras em disputa (Desarmar, Imobilizar) acabam com o combate.
+  if (p.disputa) { delete p.disputa; p.marcadores = (p.marcadores || []).filter(m => m !== 'Imobilizado'); }
   // Relatório (29/10): itens travados destravam, a Moral da Dança zera, o drone hackeado volta, o Cibermédico recomeça.
   for (const it of p.itens || []) delete it.travado;
   if (p.moral?.danca) p.moral.danca = 0;
@@ -1646,6 +1656,8 @@ function resolverPendente(c, s, pend, defesa, sis) {
   if (itemAlvo && r.sucesso) {
     let danoItem = r.dano;
     if (habilidadeValendo(a, sis, 'Destruidor de itens')) { const d = rolarDado('1d6'); danoItem += d.total; notasItem.push(`Destruidor de itens +${d.total}`); }
+    // Vibração (livro): dobro de dano em objetos.
+    if (/vibra/i.test(pend.tipoDano || '')) { danoItem *= 2; notasItem.push('Vibração: dano em dobro no objeto'); }
     notasItem.push(`${danoItem} de dano em ${itemAlvo.nome} (dano em itens: regra a definir — o mestre aplica)`);
     if ((a.marcas || []).some(m => m.item?.uid === itemAlvo.uid) && durabilidadeDe(itemAlvo).tipo === 'normal') {
       itemAlvo.durabilidadeAtual = Math.max(0, (itemAlvo.durabilidadeAtual ?? itemAlvo.durabilidade) - 1);
@@ -1659,6 +1671,14 @@ function resolverPendente(c, s, pend, defesa, sis) {
   const notas = [...notasItem, ...antesDoDano(c, s, a, b, r, sis), ...aplicarAtaque(a, b, r, sis)];
   // Radiação (livro + autor, 31/10): o Marcador Genético vem mesmo errando, se o DS estiver dentro da margem.
   if (r.efeitoNoErro) { (b.marcadores ||= []).push(r.efeitoNoErro); notas.push(`${r.efeitoNoErro} (mesmo errando: DS ${r.ds} na margem)`); }
+  // Investida acertou: o alvo faz FOR% contra FOR% do atacante para não cair.
+  if (r.investida && r.sucesso) {
+    const fa = derivados(a, sis).percentual.FOR ?? 0, fb = derivados(b, sis).percentual.FOR ?? 0;
+    const x = testeDMil(fa, null, sis), y = testeDMil(fb, null, sis);
+    const caiu = y.total < x.total;
+    if (caiu && !(b.marcadores ||= []).includes('Caído')) b.marcadores.push('Caído');
+    notas.push(`Investida: FOR ${y.total} de ${b.nome} contra ${x.total} de ${a.nome} — ${caiu ? `${b.nome} caiu` : `${b.nome} ficou de pé`}`);
+  }
   if (r.semCritico) notas.push(`${b.nome} é imune a acertos críticos (sem o dado extra)`);
   if (r.semCriticoRequisito) notas.push(`sem os pré-requisitos de ${r.arma}: sem dano crítico`);
   if (r.dsVantagem) notas.push('Táticas de Esquadrão: DS com vantagem');
@@ -2717,6 +2737,31 @@ export const acoes = {
   // Rolagens acontecem no servidor para todos verem o mesmo resultado.
   // Rolagens acontecem no servidor para todos verem o mesmo resultado.
   // Teste D-MIL: { acaoRef | acao, mod, nd, metade }. Iniciativa: { tipo: 'iniciativa' }. Livre: { dado: '2d6' }.
+  // Dano por queda (livro): 1d6+1 a cada 3 m. Acrobacia Difícil: até 3 m, nenhum dano; até 9 m, metade.
+  // O IP contra Queda (grupo Impacto) desconta.
+  'dano.queda'(c, { id, metros, acrobacia = true }, ctx) {
+    exigirMestre(ctx);
+    const sis = sistema(c.sistema);
+    const p = personagem(c, id);
+    const m = Math.max(0, Number(String(metros).replace(',', '.')) || 0);
+    const n = Math.floor(m / 3);
+    if (!n) return { texto: `${p.nome} caiu ${String(m).replace('.', ',')} m: menos de 3 m, sem dano.` };
+    const rolagens = Array.from({ length: n }, () => rolarDado('1d6+1').total);
+    let dano = rolagens.reduce((a, b) => a + b, 0);
+    const linhas = [`queda de ${String(m).replace('.', ',')} m: ${n}× (1d6+1) = ${dano}`];
+    if (acrobacia && m <= 9) {
+      const r = acoes.rolar(c, { id: p.id, acaoRef: 'sub:esportes.acrobacia', nd: 100, rotulo: 'Acrobacia (queda)' }, ctx);
+      linhas.push(`Acrobacia ${r.total} contra ND 100 — ${r.sucesso ? (m <= 3 ? 'sem dano' : 'metade do dano') : 'falhou'}`);
+      if (r.sucesso) dano = m <= 3 ? 0 : Math.floor(dano / 2);
+    }
+    const ip = dano ? ipContra(p, sis, 'Queda') : 0;
+    if (ip) { dano = Math.max(0, dano - ip); linhas.push(`IP contra queda ${ip}`); }
+    const notas = dano ? aplicarAtaque(p, p, { sucesso: true, dano, efeito: null }, sis) : [];
+    linhas.push(`${p.nome} toma ${dano} de dano${notas.length ? ` (${notas.join(', ')})` : ''}`);
+    registrar(c.log, { autor: p.nome, rotulo: 'Queda', texto: linhas.join(' · ') });
+    return { texto: linhas.join(' · '), dano };
+  },
+
   // Aura de Perícias equipadas escolhida pelo dono depois do teste bem-sucedido (dura até o item perder 1 de durabilidade).
   'item.aura'(c, { id, uid: uidItem, aura }, ctx) {
     const p = personagem(c, id);
@@ -3003,6 +3048,11 @@ export const acoes = {
     // primeiro): hábil −20% e inábil −40%, e os dois juntos são uma ação completa com só 1 passo (livro; autor, 31/10). Ambidestria: sem mão inábil,
     // e nos dois ataques só o segundo tem −20%.
     // Um ataque com cada mão (livro): ação completa e só 1 passo no turno; o segundo ataque não gasta mais nada.
+    // Manobra em disputa (livro): imobilizando ou imobilizado, ninguém ataca (só quem imobilizou, depois que o alvo
+    // ficou Imobilizado, ataca o alvo); na disputa de Desarmar, a arma disputada não ataca.
+    if (a.disputa?.tipo === 'imobilizar' && !(a.disputa.papel === 'autor' && a.disputa.com === b.id && (b.marcadores || []).includes('Imobilizado')))
+      throw erro(`${a.nome} está numa disputa de Imobilizar: não pode atacar (solte ou vença a disputa).`);
+    if (a.disputa?.tipo === 'desarmar' && a.disputa.item === (op.armaUid || 'desarmado')) throw erro('Essa arma está em disputa (Desarmar): não ataca até a disputa acabar.');
     const modoMaos = maosDoAtaque(c, a, op, sis);
     const segundaMao = modoMaos === true;
     // Civilizados (Encantado): quem ele não atacou precisa passar em WILL% Difícil para atacá-lo.
@@ -3066,7 +3116,17 @@ export const acoes = {
     if (op.danoLivre) {
       try { rolarDado(op.danoLivre); } catch { throw erro(`Dano inválido: ${op.danoLivre}`); }
     }
-    if (op.investida != null && !temHabilidade(a, sis, 'Maquina Implacavel')) delete op.investida;
+    // Investida (livro): corpo a corpo depois de 6 m em linha reta. Com o mapa, o app só avisa se andou menos.
+    if (op.investida != null && arma.alcance !== 'corpo') delete op.investida;
+    // A exposição da Investida anterior acaba no próximo ataque; uma nova Investida expõe de novo.
+    a.marcas = (a.marcas || []).filter(m => !m.investida);
+    if (op.investida != null && !op.multiplo) {
+      const ini = cbA?.inicioTurno?.id === a.id ? cbA.inicioTurno : null;
+      const pos = c.mapa?.pecas?.[a.id];
+      const andou = ini && pos ? Math.max(Math.abs(pos.col - ini.col), Math.abs(pos.lin - ini.lin)) * 1.5 : null;
+      if (andou != null && andou < 6) excesso = [excesso, `Investida pede 6 m em linha reta antes do ataque (andou ${String(andou).replace('.', ',')} m)`].filter(Boolean).join('; ');
+      marcar(a, { nome: `Investida de ${a.nome} (ataques contra com vantagem)`, investida: true, vantagemContraMim: true, combate: true, de: a.id });
+    }
     // Carga do Núcleo: +2d6 elétrico neste ataque (gasta 1 carga; com coração humano, 1d6 de dano em quem usa).
     if (op.cargaNucleo) {
       try { gastarRecurso(a, sis, 'nucleo', 1); } catch (e) { throw erro(e.message); }
@@ -3079,6 +3139,136 @@ export const acoes = {
     (s.pendentes ||= []).push(pend);
     registrar(s.log, { autor: a.nome, rotulo: `${a.nome} ataca ${b.nome} com ${arma.nome}${op.area ? ' (área)' : ''}`, texto: `aguardando a defesa de ${b.nome}` });
     return { ...pend, excesso };
+  },
+
+  // Manobras de Briga (livro): Deslocar, Desarmar e Imobilizar. 1ª fase contra a defesa do alvo (a melhor dele contra
+  // ataque desarmado); Desarmar e Imobilizar deixam os dois em disputa. 2ª fase (outro turno): contra FOR% + 70 do alvo.
+  // Quem foi pego tenta, no turno dele, ficar com a arma (Desarmar) ou se soltar (Imobilizar). Concentrado não faz manobra.
+  'combate.manobra'(c, { id, alvo, tipo, item: itemUid, junto = false }, ctx) {
+    const sis = sistema(c.sistema);
+    exigirModulo(sis, 'combate');
+    const s = c.salas.batalha;
+    const a = personagem(c, id);
+    exigirDonoOuMestre(ctx, a);
+    const MAN = { deslocar: ['briga.deslocar', 'Deslocar'], desarmar: ['briga.desarmar', 'Desarmar'], imobilizar: ['briga.agarrar-imobilizar', 'Imobilizar'] };
+    if (!MAN[tipo]) throw erro('Manobra desconhecida.');
+    const [sub, nomeM] = MAN[tipo];
+    const disputa = a.disputa?.tipo === tipo ? a.disputa : null;
+    const b = personagem(c, disputa ? disputa.com : alvo);
+    if (a.id === b.id) throw erro('Escolha outro alvo.');
+    if (!s.participantes.includes(a.id) || !s.participantes.includes(b.id)) throw erro('Os dois precisam estar no Campo de Batalha.');
+    if (concentrado(a)) throw erro(`${a.nome} está concentrado: não pode fazer manobras.`);
+    if (a.disputa && !disputa) throw erro(`${a.nome} já está numa disputa (${a.disputa.tipo === 'imobilizar' ? 'Imobilizar' : 'Desarmar'}). Solte antes.`);
+    const da = derivados(a, sis), db = derivados(b, sis);
+    const valor = k => da.subpericias[k] ?? 0;
+    const linhas = [];
+    let excesso = null;
+    const contra = (va, vb) => { const x = testeDMil(va, null, sis), y = testeDMil(vb, null, sis); return { x, y, venceu: x.total > y.total }; };
+    const fimDaDisputa = () => { delete a.disputa; delete b.disputa; for (const p of [a, b]) p.marcadores = (p.marcadores || []).filter(m => m !== 'Imobilizado'); };
+    if (!disputa) {
+      excesso = gastarAcao(c, a, 'principal');
+      const dist = distanciaPecas(c, a.id, b.id);
+      if (dist != null && dist > ameacaNoMapa(a) * 1.5) excesso = [excesso, `${b.nome} está fora da área de ameaça (${String(dist).replace('.', ',')} m)`].filter(Boolean).join('; ');
+      let alvoItem = null;
+      if (tipo === 'desarmar') {
+        if ((a.itens || []).some(i => i.equipado && i.slot === 'maos' && i.tipo === 'arma')) throw erro(`${a.nome} precisa estar desarmado para Desarmar.`);
+        alvoItem = (b.itens || []).find(i => i.equipado && i.slot === 'maos' && (itemUid ? i.uid === itemUid : i.tipo === 'arma'));
+        if (!alvoItem) throw erro(`${b.nome} não tem arma (ou objeto) na mão.`);
+      }
+      if (tipo === 'imobilizar' && passoDeTamanho(b) > passoDeTamanho(a)) throw erro(`${a.nome} só imobiliza alguém do mesmo tamanho ou menor.`);
+      const desarmado = armasDisponiveis(a, sis).find(x => x.uid === 'desarmado');
+      const melhor = opcoesDefesa(b, desarmado, sis).reduce((m, o) => (o.valor > m.valor ? o : m));
+      const def = defesaDoAlvo(b, desarmado, sis, { escolha: melhor.id, atacante: a });
+      const r = testeDMil(valor(sub), def.total, sis);
+      linhas.push(`${nomeM}: ${r.total} contra a defesa ${def.total} de ${b.nome} (${melhor.nome}) — ${r.sucesso ? 'passou' : 'falhou'}`);
+      if (r.sucesso && tipo === 'deslocar') {
+        perderPv(b, 1);
+        const pa = c.mapa?.pecas?.[a.id], pb = c.mapa?.pecas?.[b.id];
+        if (pa && pb) {
+          const dc = Math.sign(pb.col - pa.col), dl = Math.sign(pb.lin - pa.lin);
+          c.mapa.pecas[b.id] = { ...pb, col: pb.col + dc, lin: pb.lin + dl };
+          if (junto) c.mapa.pecas[a.id] = { ...pa, col: pa.col + dc, lin: pa.lin + dl };
+        }
+        linhas.push(`${b.nome} toma 1 de dano e é empurrado 1,5 m${junto ? ` (${a.nome} vai junto)` : ''} — sem ataque de oportunidade`);
+      } else if (r.sucesso) {
+        a.disputa = { tipo, com: b.id, papel: 'autor', ...(alvoItem ? { item: alvoItem.uid } : {}) };
+        b.disputa = { tipo, com: a.id, papel: 'alvo', ...(alvoItem ? { item: alvoItem.uid } : {}) };
+        linhas.push(tipo === 'desarmar' ? `${alvoItem.nome} em disputa: ninguém ataca com ela nem se move sem soltá-la; no próximo turno, Desarmar contra FOR% + 70`
+          : `${a.nome} e ${b.nome} em disputa: nenhum dos dois se move, usa armas ou ataca; no próximo turno, Imobilizar contra FOR% + 70`);
+      }
+    } else if (disputa.papel === 'autor') {
+      if (tipo === 'imobilizar' && (b.marcadores || []).includes('Imobilizado')) throw erro(`${b.nome} já está imobilizado: ataque-o ou desloque os dois 1,5 m.`);
+      excesso = gastarAcao(c, a, 'principal');
+      const nd = (db.percentual.FOR ?? 0) + 70;
+      const r = testeDMil(valor(sub), nd, sis);
+      linhas.push(`${nomeM}: ${r.total} contra FOR% + 70 de ${b.nome} (${nd}) — ${r.sucesso ? 'passou' : 'falhou; continua em disputa'}`);
+      if (r.sucesso && tipo === 'desarmar') {
+        const it = (b.itens || []).find(i => i.uid === disputa.item);
+        if (it) { it.equipado = false; it.noChao = true; }
+        fimDaDisputa();
+        linhas.push(`${it?.nome || 'a arma'} cai no chão`);
+      } else if (r.sucesso) {
+        (b.marcadores ||= []).push('Imobilizado');
+        linhas.push(`${b.nome} está Imobilizado: não ataca e os ataques contra ele têm vantagem; ${a.nome} pode atacá-lo ou deslocar os dois 1,5 m por turno`);
+      }
+    } else {
+      // Quem foi pego reage no próprio turno.
+      const autor = b;
+      const dAutor = derivados(autor, sis);
+      excesso = gastarAcao(c, a, 'principal');
+      if (tipo === 'desarmar') {
+        const nd = (dAutor.percentual.FOR ?? 0) + 70;
+        const r = testeDMil(valor(sub), nd, sis);
+        linhas.push(`${a.nome} disputa a arma: Desarmar ${r.total} contra FOR% + 70 de ${autor.nome} (${nd}) — ${r.sucesso ? 'fica com a arma' : 'continua em disputa'}`);
+        if (r.sucesso) fimDaDisputa();
+      } else {
+        const preso = (a.marcadores || []).includes('Imobilizado');
+        const meu = preso ? da.atributos.FOR ?? 0 : Math.max(da.percentual.FOR ?? 0, valor(sub));
+        const t = contra(meu, dAutor.subpericias[sub] ?? 0);
+        linhas.push(`${a.nome} tenta se soltar: ${preso ? 'FOR (pura)' : 'FOR% ou Imobilizar'} ${t.x.total} contra Imobilizar ${t.y.total} de ${autor.nome} — ${t.venceu ? (preso ? 'volta à disputa' : 'se soltou') : 'não conseguiu'}`);
+        if (t.venceu && preso) a.marcadores = a.marcadores.filter(m => m !== 'Imobilizado');
+        else if (t.venceu) fimDaDisputa();
+      }
+    }
+    registrar(s.log, { autor: a.nome, rotulo: `Manobra — ${nomeM}`, texto: linhas.join(' · ') });
+    return { texto: linhas.join(' · '), excesso };
+  },
+
+  // Solta a disputa (a arma ou o alvo): os dois ficam livres.
+  'combate.soltar'(c, { id }, ctx) {
+    const a = personagem(c, id);
+    exigirDonoOuMestre(ctx, a);
+    if (!a.disputa) throw erro(`${a.nome} não está em disputa.`);
+    const b = c.personagens.find(p => p.id === a.disputa.com);
+    for (const p of [a, b].filter(Boolean)) { delete p.disputa; p.marcadores = (p.marcadores || []).filter(m => m !== 'Imobilizado'); }
+    registrar(c.salas.batalha.log, { autor: a.nome, rotulo: 'Soltou', texto: `${a.nome} soltou a disputa${b ? ` com ${b.nome}` : ''}` });
+  },
+
+  // Entrepor (Salvaguardar, livro): pular na frente do ataque que vai num aliado. Ação completa (pode antecipar o turno);
+  // teste Normal de Briga › Salvaguardar. Passou: o ataque vai em quem se entrepôs, com vantagem.
+  'combate.entrepor'(c, { id, pendente }, ctx) {
+    const sis = sistema(c.sistema);
+    exigirModulo(sis, 'combate');
+    const s = c.salas.batalha;
+    const p = personagem(c, id);
+    exigirDonoOuMestre(ctx, p);
+    const pend = (s.pendentes || []).find(x => x.id === pendente);
+    if (!pend) throw erro('Esse ataque já foi resolvido.');
+    if (pend.alvo === p.id || pend.atacante === p.id) throw erro('Escolha o ataque contra um aliado.');
+    if (!s.participantes.includes(p.id)) throw erro(`${p.nome} precisa estar no Campo de Batalha.`);
+    const g = s.combate?.gasto?.[p.id];
+    if (g && (g.principal || g.movimento)) throw erro(`${p.nome} já agiu neste turno: não pode se entrepor.`);
+    const excesso = gastarAcao(c, p, 'completa');
+    const r = testeDMil(derivados(p, sis).subpericias['briga.salvaguardar'] ?? 0, 70, sis);
+    const aliado = personagem(c, pend.alvo);
+    let texto = `Salvaguardar ${r.total} contra ND 70 — `;
+    if (r.sucesso) {
+      pend.alvo = p.id;
+      pend.opcoes = { ...pend.opcoes, vantagem: true };
+      texto += `${p.nome} se entrepõe: o ataque vai nele, com vantagem (${aliado.nome} fica livre)`;
+    } else texto += `${p.nome} não chegou a tempo`;
+    registrar(s.log, { autor: p.nome, rotulo: 'Entrepor', texto });
+    return { texto, sucesso: r.sucesso, excesso };
   },
 
   // Ataque contra vários alvos (em área ou não): um ataque só (uma ação, uma munição), resolvido contra cada alvo,

@@ -536,3 +536,17 @@ Respostas do autor (31/10) e o que foi feito:
   (o livro não diz o efeito de Cego; o mestre aplica).
 - **Auxílio**: ajudante com 10% ou mais na mesma perícia dá vantagem. **Conjunta**: joga o maior, com vantagem. Suporte Especializado: +10% e sem erro crítico.
 - **Sanidade**: Jogar e Produzir artes rolam o teste Normal (30 min; Desenho 15 min; vício em jogos 1 h); cada forma só faz efeito uma vez por dia.
+
+## 31/10 — Combate pelo livro (Bloco 3, combate automático do MSS)
+- **Investida** (todos): caixa nas opções do ataque corpo a corpo. Teste de Briga › Investida, +1d4 de dano; o alvo testa FOR% contra FOR%
+  (dados dos dois; empate fica de pé) para não ficar Caído; ataques contra quem investiu com vantagem até o próximo ataque dele.
+  Com o mapa, o app avisa se andou menos de 6 m. Máquina Implacável soma +1 passo e +1 por quadrado.
+- **Manobras** (Campo de Batalha › Desarmado › Manobras): Deslocar (1 de dano e empurra 1,5 m para longe), Desarmar e Imobilizar (disputa;
+  2ª fase contra FOR% + 70; quem foi pego reage no turno dele; botão Soltar). *Interpretação*: "contra a defesa do alvo" = a melhor defesa dele
+  contra ataque desarmado. Concentrado não faz manobra. Só imobiliza quem for do mesmo tamanho ou menor.
+- **Entrepor**: botão no ataque que aguarda defesa; ação completa, Briga › Salvaguardar Normal; passou → o ataque vai em quem se entrepôs, com vantagem.
+  Contra tiro (que resolve na hora) não dá tempo. Evadir, Segurar/Escorar e Avivar: teste Normal no rolador.
+- **5 PV ou menos**: WILL% Difícil contra o Medo (falhou → humor Amedrontado). Monstros não fazem.
+- **Dano não letal**: desmaia e acorda com 1 PV depois de 2d4 turnos (não perde PV pela sobrevida).
+- **Vibração**: dobro de dano em objeto (ataque localizado num item). **Queda**: rolador › Rápidos (mestre). **Combate montado**: desvantagem.
+- **Asfixia**: aguardando a tabela do autor (por enquanto 5 turnos).

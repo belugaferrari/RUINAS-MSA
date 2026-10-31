@@ -227,14 +227,15 @@ export function resolverAtaque(atacante, alvo, sistema, op = {}, defesaId = 'nen
     rolarDado(op.danoLivre); // valida a expressão
     arma = { ...arma, nome: `${arma.nome} (dano ${op.danoLivre})`, dano: op.danoLivre };
   }
-  // Máquina Implacável na Investida: dano +1 passo e +1 por quadrado avançado (só corpo a corpo).
-  const investida = op.investida != null && op.investida !== false && arma.alcance === 'corpo' && temHabilidade(atacante, sistema, 'Maquina Implacavel')
-    ? Math.max(0, parseInt(op.investida, 10) || 0) : null;
+  // Investida (livro, manobras de Briga): corpo a corpo depois de 6 m em linha reta; o teste é Briga › Investida, +1d4 de dano.
+  // Máquina Implacável na Investida: dano +1 passo e +1 por quadrado avançado.
+  const investidaGeral = op.investida != null && op.investida !== false && arma.alcance === 'corpo';
+  const investida = investidaGeral && temHabilidade(atacante, sistema, 'Maquina Implacavel') ? Math.max(0, parseInt(op.investida, 10) || 0) : null;
   if (investida != null) arma = { ...arma, dano: subirPassos(arma.dano, 1) };
   const da = derivados(atacante, sistema);
   // Ataque inesperado: no ataque surpresa, o dano sobe 1 passo para cada ponto de MOD CAR.
   if (op.surpresa && (da.mod.CAR || 0) > 0 && habilidadeValendo(atacante, sistema, 'Ataque inesperado')) arma = { ...arma, dano: subirPassos(arma.dano, da.mod.CAR), inesperado: da.mod.CAR };
-  const pericia = arma.pericia || 'briga.ataque-desarmado';
+  const pericia = investidaGeral && !arma.acerto ? 'briga.investida' : arma.pericia || 'briga.ataque-desarmado';
   const mods = [];
   const add = (nome, valor) => valor && mods.push({ nome, valor });
   // Tiro Funcional: tiro num objeto pequeno (ataque localizado num item) com só −10%.
@@ -281,6 +282,8 @@ export function resolverAtaque(atacante, alvo, sistema, op = {}, defesaId = 'nen
   if (op.elevado) motivosV.push('terreno elevado');
   if (arma.alcance === 'corpo' && tem(alvo, 'Caído')) motivosV.push('alvo caído');
   if (tem(alvo, 'Aturdido') || tem(alvo, 'Imobilizado')) motivosV.push('alvo aturdido/imobilizado');
+  // Quem fez Investida fica exposto: ataques contra ele com vantagem até o próximo ataque dele. Quem se entrepôs também.
+  for (const m of alvo.marcas || []) if (m.vantagemContraMim) motivosV.push(m.nome);
   if (hA?.vantagemAtaque) motivosV.push(hA.nome);
   if (vantagemPorHabilidade(atacante, sistema, ['ataque', pericia], [alvo])) motivosV.push('habilidade');
   if (op.desvantagem) motivosD.push('mestre');
@@ -288,6 +291,8 @@ export function resolverAtaque(atacante, alvo, sistema, op = {}, defesaId = 'nen
   if (tem(atacante, 'Aturdido')) motivosD.push('atacante aturdido');
   if (hA?.desvantagemAtaque) motivosD.push(hA.nome);
   if ((atacante.marcas || []).some(m => m.desvantagem)) motivosD.push('mutação descontrolada');
+  // Combate montado (livro): desvantagem; Montaria Mutante ignora com arma de alcance ou a distância.
+  if (op.montado && !(temHabilidade(atacante, sistema, 'Montaria Mutante') && (arma.alcance === 'distancia' || (Number(arma.alcanceM) || 0) > 1.5))) motivosD.push('combate montado');
   if (op.lideranca === 'caido') motivosD.push('o líder (Liderança inspiradora) caiu');
   // Alvo com habilidade que põe quem o ataca em desvantagem (Imunidade Diplomática, em cidade).
   for (const x of listaHabilidades(alvo, sistema)) if (x.regra?.desvantagemContraMim && habilidadeValendo(alvo, sistema, x.nome)) motivosD.push(`${x.nome} de ${alvo.nome}`);
@@ -301,6 +306,7 @@ export function resolverAtaque(atacante, alvo, sistema, op = {}, defesaId = 'nen
     // Tiro Funcional: pode escolher dano não letal com armas a distância.
     naoLetal: arma.tipoDano === 'Não letal' || (!!op.naoLetal && arma.alcance === 'distancia' && !!habilidadeValendo(atacante, sistema, 'Tiro Funcional')),
     ...(faltam.length ? { semPrerequisito: faltam, travaSeErrar: !mestreArmas } : {}), ...(op.dsVantagem ? { dsVantagem: true } : {}),
+    ...(investidaGeral ? { investida: true } : {}),
   };
   // Sacrifício: perde o D6 atual de vida mesmo errando (abandona a razão no ataque).
   if (op.sacrificio) r.perdaSacrificio = d6Atual(atacante.pv?.atual ?? 0);
@@ -352,7 +358,8 @@ export function resolverAtaque(atacante, alvo, sistema, op = {}, defesaId = 'nen
       for (const m of atacante.marcas || []) if (m.dano && (!m.contra || m.contra === alvo.id)) rolar(m.nome, m.dano);
       // Marcas do alvo que aumentam o dano físico que ele toma (Pragas: +1).
       if (/f[ií]sic|corte|cortante|perfura|concuss|cin[eé]tic/i.test(arma.tipoDano || 'Físico')) for (const m of alvo.marcas || []) if (m.danoFisicoRecebido) doDisparo.push({ nome: m.nome, total: m.danoFisicoRecebido });
-      if (investida) doDisparo.push({ nome: `Investida (${investida} quadrado${investida > 1 ? 's' : ''})`, total: investida });
+      if (investidaGeral) rolar('Investida', '1d4');
+      if (investida) doDisparo.push({ nome: `Máquina Implacável (${investida} quadrado${investida > 1 ? 's' : ''})`, total: investida });
     }
     const bruto = doDisparo.reduce((s, p) => s + p.total, 0);
     r.disparos.push({ bruto, dano: Math.max(cfg.danoMinimo, bruto - r.ip) });
@@ -452,12 +459,45 @@ export function aplicarAtaque(atacante, alvo, r, sistema = null) {
   if (r.efeito && imuneA(alvo, sistema, r.efeito)) notas.push(`imune a ${r.efeito}`);
   else if (r.efeito) { marcar(r.efeito); notas.push(r.efeito); }
   if (antes < 0 && !r.naoLetal) { marcar('Morto'); notas.push('morto (dano com PV negativo)'); }
-  else if (alvo.pv.atual <= 0 && !(alvo.pvTemp > 0) && antes + tempAntes > 0) { marcar('Desmaiado'); notas.push(r.naoLetal ? 'desmaiado (não letal)' : 'desmaiado'); }
+  else if (alvo.pv.atual <= 0 && !(alvo.pvTemp > 0) && antes + tempAntes > 0) {
+    marcar('Desmaiado');
+    // Dano não letal (livro, Dor): não morre; desmaia e acorda com 1 PV depois de 2d4 turnos.
+    if (r.naoLetal) {
+      const t = rolarDado('2d4').total;
+      alvo.marcas = (alvo.marcas || []).filter(m => !m.acordaNaoLetal);
+      alvo.marcas.push({ id: `nl${Date.now().toString(36)}`, nome: `Desmaiado (não letal): acorda com 1 PV em ${t} turnos`, acordaNaoLetal: t });
+      notas.push(`desmaiado (não letal): acorda com 1 PV em ${t} turnos`);
+    } else notas.push('desmaiado');
+  }
+  // 5 PV ou menos (livro): iminência da morte — teste Difícil de WILL% para resistir ao Medo. Monstro não faz.
+  if (sistema && alvo.sanidade && antes > 5 && alvo.pv.atual > 0 && alvo.pv.atual <= 5) notas.push(testeDeMedo(alvo, sistema));
   return notas;
 }
 
+// Teste contra o Medo (5 PV ou menos): WILL% Difícil (ND 100). Falhou → humor Amedrontado (ou o mestre aplica).
+// Vantagem contra o medo (Tropa de elite) e imunidade a medo valem.
+export function testeDeMedo(p, sistema, rng = Math.random) {
+  const imune = imuneA(p, sistema, 'medo') || (derivados(p, sistema).habilidades.imunidades || []).some(x => /medo/i.test(x));
+  if (imune) return `${p.nome} está com 5 PV ou menos, mas é imune a medo`;
+  const modo = vantagemPorHabilidade(p, sistema, ['medo']) ? 'vantagem' : null;
+  const t = testeContra(derivados(p, sistema).percentual.WILL ?? 0, 100, sistema, { modo, rng });
+  const amedrontado = !t.sucesso && (sistema.social?.humores || []).some(h => h.id === 'amedrontado');
+  if (amedrontado) p.humor = 'amedrontado';
+  return `5 PV ou menos — Medo: WILL ${t.total} contra ND 100${modo ? ' (vantagem)' : ''} — ${t.sucesso ? 'resistiu' : amedrontado ? 'ficou Amedrontado' : 'não resistiu (o mestre aplica o medo)'}`;
+}
+
 // Sobrevida: no turno de quem está abaixo de 0 PV (e não estabilizado), perde 1 PV; morre ao passar do limite da CONS.
+// Desmaiado por dano não letal: não perde PV; conta os turnos e acorda com 1 PV.
 export function sobrevida(p, sistema) {
+  const nl = (p.marcas || []).find(m => m.acordaNaoLetal);
+  if (nl) {
+    nl.acordaNaoLetal -= 1;
+    if (nl.acordaNaoLetal > 0) { nl.nome = `Desmaiado (não letal): acorda com 1 PV em ${nl.acordaNaoLetal} turno${nl.acordaNaoLetal > 1 ? 's' : ''}`; return null; }
+    p.marcas = p.marcas.filter(m => m !== nl);
+    p.pv.atual = Math.max(p.pv.atual, 1);
+    p.marcadores = (p.marcadores || []).filter(m => m !== 'Desmaiado');
+    return `${p.nome} acordou com ${p.pv.atual} PV (dano não letal).`;
+  }
   if (!p.pv || p.pv.atual >= 0 || tem(p, 'Morto') || tem(p, 'Estabilizado')) return null;
   p.pv.atual -= 1;
   const cons = derivados(p, sistema).atributos.CONS ?? 10;

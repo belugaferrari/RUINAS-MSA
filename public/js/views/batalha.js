@@ -526,6 +526,19 @@ function quadroAtaques(p, participantes, mestre) {
         h('ul', {}, subs(per).map(s => linhaSub(s.id, s.nome)))));
   };
   const MANOBRAS = ['briga.desarmar', 'briga.agarrar-imobilizar', 'briga.deslocar', 'briga.investida'];
+  // No combate automático, Deslocar, Desarmar e Imobilizar são feitas pelo app (contra a defesa do alvo); a Investida
+  // é uma caixa nas opções do ataque.
+  const MAN_AUTO = { 'briga.deslocar': 'deslocar', 'briga.desarmar': 'desarmar', 'briga.agarrar-imobilizar': 'imobilizar' };
+  const linhaManobra = x => (auto && MAN_AUTO[x.id]
+    ? h('li', { class: 'ataque-linha' }, h('span', { class: 'ataque-nome' }, x.nome, h('small', {}, ` ${pct(x.id)}`)),
+      dado(`${p.nome}: ${x.nome} em ${b?.nome || 'o alvo'}`, async () => {
+        if (!alvo) throw new Error('Escolha o alvo.');
+        const r = await acao('combate.manobra', { id: p.id, alvo, tipo: MAN_AUTO[x.id] });
+        aviso(r.texto);
+        if (r.excesso) aviso(`Atenção: ${r.excesso}.`, 'erro');
+      }, { disabled: !alvo || !!p.disputa }))
+    : auto && x.id === 'briga.investida' ? h('li', { class: 'ataque-linha' }, h('span', { class: 'ataque-nome' }, x.nome, h('small', {}, ` ${pct(x.id)} · marque "Investida" nas opções do ataque`)))
+      : linhaSub(x.id, x.nome));
   const outrasArmas = armas.filter(i => !/^(arma-branca|armas-de-fogo)\./.test(i.pericia || ''));
   return [
     acoesDoTurno(p),
@@ -541,7 +554,8 @@ function quadroAtaques(p, participantes, mestre) {
           auto ? dado(`${p.nome} ataca ${b?.nome || 'o alvo'} desarmado`, () => atacar('desarmado'), { disabled: !alvo }) : dado('Testar ataque desarmado', () => testar('sub:briga.ataque-desarmado'))),
         h('details', { open: !!estado.sel.abreManobras, ontoggle: e => { estado.sel.abreManobras = e.target.open; } },
           h('summary', {}, 'Manobras'),
-          h('ul', {}, MANOBRAS.map(id => subs('briga').find(s => s.id === id)).filter(Boolean).map(s => linhaSub(s.id, s.nome))))),
+          h('ul', {}, MANOBRAS.map(id => subs('briga').find(s => s.id === id)).filter(Boolean).map(s => linhaManobra(s)))),
+        auto ? disputaView(p) : null),
       grupo('Armas brancas', 'arma-branca', i => i.pericia?.startsWith('arma-branca.')),
       grupo('Armas de fogo', 'armas-de-fogo', i => i.pericia?.startsWith('armas-de-fogo.')),
       // Ataques com a "arma" da própria habilidade (Muco radioativo, Jato ácido, Sobrecarga Neural): usos por descanso.
@@ -567,6 +581,19 @@ function quadroAtaques(p, participantes, mestre) {
       outrasArmas.length ? h('li', { class: 'ataque-grupo' }, h('div', { class: 'ataque-cabeca' }, h('strong', {}, 'Outras')), h('ul', {}, outrasArmas.map(linhaArma))) : null),
     auto ? opcoesAtaque(p, mestre, outros) : null,
   ];
+}
+
+// Manobra em disputa (Desarmar, Imobilizar): continuar a disputa (2ª fase, ou tentar se soltar) ou soltar.
+function disputaView(p) {
+  const d = p.disputa;
+  if (!d) return null;
+  const outro = personagemPorId(d.com);
+  const nome = d.tipo === 'imobilizar' ? 'Imobilizar' : 'Desarmar';
+  const preso = (p.marcadores || []).includes('Imobilizado');
+  const texto = d.papel === 'autor' ? `${nome} contra FOR% + 70 de ${outro?.nome}` : d.tipo === 'imobilizar' ? (preso ? 'Tentar voltar à disputa (FOR pura)' : 'Tentar se soltar') : 'Disputar a arma';
+  return h('div', { class: 'barra disputa' }, icone('swords'), h('small', {}, ` Em disputa (${nome}) com ${outro?.nome || '?'}`),
+    botao(texto, () => acao('combate.manobra', { id: p.id, tipo: d.tipo }).then(r => { aviso(r.texto); if (r.excesso) aviso(`Atenção: ${r.excesso}.`, 'erro'); }), { class: 'pequeno primario', icone: 'dices' }),
+    botao('Soltar', () => acao('combate.soltar', { id: p.id }), { class: 'pequeno', icone: 'x' }));
 }
 
 // Economia do turno do personagem: o que já gastou (principal, movimento, bônus; reação por rodada). Clicar marca ou
@@ -713,10 +740,13 @@ function opcoesAtaque(p, mestre, outros = []) {
           caixa('doisAtaques', 'Dois ataques (um com cada mão)')) : null,
       // Núcleo energético: +2d6 elétrico neste ataque (gasta 1 carga). Máquina Implacável: Investida com dano maior.
       nucleo && nucleo.restantes > 0 ? caixa('cargaNucleo', `Carga do Núcleo (+2d6 elétrico · restam ${nucleo.restantes})`) : null,
-      temHabilidade(p, estado.sistema, 'Maquina Implacavel') ? h('label', { class: 'linha', title: 'Máquina Implacável: dano +1 passo e +1 por quadrado avançado' },
-        h('input', { type: 'checkbox', checked: sel.investida != null, onchange: e => { sel.investida = e.target.checked ? 1 : null; render(); } }), 'Investida',
-        sel.investida != null ? h('input', { type: 'number', class: 'curto', min: 0, value: sel.investida, 'aria-label': 'Quadrados avançados', onchange: e => { sel.investida = Math.max(0, parseInt(e.target.value, 10) || 0); } }) : null,
-        sel.investida != null ? h('small', {}, ' quadrados') : null) : null,
+      // Investida (livro): corpo a corpo depois de 6 m em linha reta; teste de Briga › Investida, +1d4 de dano, o alvo testa FOR
+      // para não cair e os ataques contra você têm vantagem até o seu próximo ataque. Máquina Implacável: +1 passo e +1 por quadrado.
+      h('label', { class: 'linha', title: `Corpo a corpo depois de 6 m em linha reta: Briga › Investida, +1d4 de dano, o alvo testa FOR contra FOR para não cair; ataques contra você com vantagem até o seu próximo ataque${temHabilidade(p, estado.sistema, 'Maquina Implacavel') ? '. Máquina Implacável: dano +1 passo e +1 por quadrado avançado' : ''}` },
+        h('input', { type: 'checkbox', checked: sel.investida != null, onchange: e => { sel.investida = e.target.checked ? 4 : null; render(); } }), 'Investida',
+        sel.investida != null && temHabilidade(p, estado.sistema, 'Maquina Implacavel') ? h('input', { type: 'number', class: 'curto', min: 0, value: sel.investida, 'aria-label': 'Quadrados avançados', onchange: e => { sel.investida = Math.max(0, parseInt(e.target.value, 10) || 0); } }) : null,
+        sel.investida != null && temHabilidade(p, estado.sistema, 'Maquina Implacavel') ? h('small', {}, ' quadrados') : null),
+      caixa('montado', 'Montado (desvantagem; Montaria Mutante ignora com arma de alcance ou a distância)'),
       mestre ? caixa('ignorarCoberturaMapa', 'Ignorar a cobertura do mapa', true) : null,
       mestre ? caixa('vantagem', 'Vantagem') : null,
       mestre ? caixa('desvantagem', 'Desvantagem') : null,

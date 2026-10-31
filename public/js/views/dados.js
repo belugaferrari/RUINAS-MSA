@@ -197,7 +197,18 @@ function secaoRapidos(p) {
       p ? botao('Comer', () => acao('necessidade.comer', { id: p.id }).then(() => aviso(`${p.nome} comeu.`)), { icone: 'utensils', title: 'Zera as horas sem comer e tira a Fome' }) : null,
       p ? botao('Beber', () => acao('necessidade.beber', { id: p.id }).then(() => aviso(`${p.nome} bebeu.`)), { icone: 'cup-soda', title: 'A Sede acaba na hora' }) : null),
     p ? testesComuns(p) : null,
+    p && estado.campanha.papel === 'mestre' ? queda(p) : null,
     ultimo());
+}
+
+// Dano por queda (livro): 1d6+1 a cada 3 m; Acrobacia Difícil zera até 3 m e corta pela metade até 9 m; IP contra Queda desconta.
+function queda(p) {
+  const s = cfg();
+  return h('div', { class: 'barra' },
+    h('label', { class: 'linha' }, 'Queda (m)', h('input', { type: 'number', class: 'curto', min: 0, step: 1.5, value: s.quedaM ?? 3, onchange: e => { s.quedaM = Number(e.target.value) || 0; } })),
+    h('label', { class: 'linha' }, h('input', { type: 'checkbox', checked: s.quedaAcro !== false, onchange: e => { s.quedaAcro = e.target.checked; } }), 'Acrobacia'),
+    botao('Aplicar queda', () => acao('dano.queda', { id: p.id, metros: s.quedaM ?? 3, acrobacia: s.quedaAcro !== false }).then(r => aviso(r.texto)),
+      { class: 'pequeno', icone: 'arrow-down', title: '1d6+1 a cada 3 m; Acrobacia Difícil: até 3 m sem dano, até 9 m metade' }));
 }
 
 // Testes comuns de exploração e sobrevivência: um clique rola a subperícia com a dificuldade escolhida em "Teste".

@@ -36,7 +36,7 @@ test('sem item, falhou e DS maior que a dezena da ação: mental → Confuso (de
   const r = comDados([D100(10), D10(9)], () => executar(c, 'rolar', { id: eu.id, acaoRef: 'per:ciencia', nd: 100 }, ctxM));
   assert.equal(r.sucesso, false);
   assert.ok(eu.marcadores.includes('Confuso'), r.texto);
-  const r2 = executar(c, 'rolar', { id: eu.id, acaoRef: 'atr:INT', nd: 50 }, ctxM);
+  const r2 = comDados(0.99, () => executar(c, 'rolar', { id: eu.id, acaoRef: 'atr:INT', nd: 50 }, ctxM));
   assert.equal(r2.modo, 'desvantagem');
   assert.ok(!eu.marcadores.includes('Confuso'));
 });

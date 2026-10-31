@@ -107,8 +107,22 @@ export function pendentesView(mestre, participantes = []) {
         escolhe ? h('div', { class: 'barra' }, h('span', { class: 'dica' }, 'Defender com:'), botoes)
           : pd.alvo === noPainel ? h('p', { class: 'dica' }, `Escolha a defesa no quadro de ${b?.nome}, acima.`)
             : h('p', { class: 'dica' }, `Aguardando ${b?.nome || 'o alvo'} escolher a defesa…`),
+        entrepor(pd, mestre, participantes),
         podeCancelar ? botao('Cancelar ataque', () => acao('combate.cancelar', { id: pd.id }), { class: 'pequeno perigo', icone: 'square-x' }) : null);
     }));
+}
+
+// Entrepor (Salvaguardar, livro): um aliado pula na frente do ataque. Ação completa; teste Normal de Briga › Salvaguardar;
+// passou → o ataque vai nele, com vantagem.
+function entrepor(pd, mestre, participantes) {
+  const quem = participantes.filter(x => x.id !== pd.alvo && x.id !== pd.atacante && x.atributos && meuOuMestre(x, mestre) && x.pv?.atual > 0);
+  if (!quem.length) return null;
+  const sel = (estado.sel.entrepor ||= {});
+  if (!quem.some(x => x.id === sel[pd.id])) sel[pd.id] = quem[0].id;
+  return h('div', { class: 'barra' },
+    quem.length > 1 ? selecao(quem.map(x => ({ valor: x.id, rotulo: x.nome })), sel[pd.id], v => { sel[pd.id] = v; }, { 'aria-label': 'Quem se entrepõe' }) : null,
+    botao(quem.length > 1 ? 'Entrepor' : `${quem[0].nome} se entrepõe`, () => acao('combate.entrepor', { id: sel[pd.id], pendente: pd.id }).then(r => aviso(r.texto, r.sucesso ? 'ok' : 'erro')),
+      { class: 'pequeno', icone: 'shield-half', title: 'Ação completa (antecipa o turno): teste Normal de Briga › Salvaguardar; passou, o ataque vai em quem se entrepôs, com vantagem' }));
 }
 
 // Controle de turnos (topo do Campo de Batalha): rodada e turno, quem age agora, quem é o próximo e a ordem de
@@ -334,6 +348,7 @@ export function opcoesGerais(p, mestre) {
   if (sel.cargaNucleo) op.cargaNucleo = true;
   if (sel.naoLetal) op.naoLetal = true;
   if (sel.investida != null) op.investida = sel.investida;
+  if (sel.montado) op.montado = true;
   // Ataque localizado: onde mira (parte do corpo ou "item:<uid>" de um item equipado do alvo).
   if (sel.localizado && sel.local) op.local = sel.local;
   if (mestre) Object.assign(op, { vantagem: sel.vantagem, desvantagem: sel.desvantagem, mod: sel.mod, danoLivre: sel.danoLivre || null, ignorarCoberturaMapa: !!sel.ignorarCoberturaMapa });
