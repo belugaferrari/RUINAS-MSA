@@ -898,6 +898,8 @@ export function desgastarItem(i, ds, { semPrerequisito = false } = {}) {
   if (!semPrerequisito && !(ds > d.atual)) return null;
   i.durabilidadeAtual = d.atual - 1;
   i.reparavel = true;
+  // A aura do item (Perícias equipadas, Criação e manutenção) dura até ele perder 1 de durabilidade.
+  delete i.aura;
   return i.durabilidadeAtual <= 0 ? `${i.nome} quebrou (durabilidade 0)` : `${i.nome} perdeu 1 de durabilidade (DS ${ds} > ${d.atual}): ${i.durabilidadeAtual}/${i.durabilidade}`;
 }
 
@@ -915,6 +917,7 @@ export function repararItem(i) {
 // dos PV normais até 0; depois, dos temporários; o que ainda sobrar volta aos normais (abaixo de 0).
 export function perderPv(p, n) {
   if (!p?.pv || !(n > 0)) return 0;
+  perderConcentracao(p);
   const normais = Math.max(0, Math.min(n, p.pv.atual));
   const temp = Math.min(p.pvTemp || 0, n - normais);
   if (temp) p.pvTemp -= temp;
@@ -940,3 +943,57 @@ export function duracaoDaHabilidade(hab) {
 export const podeRepetir = hab => !!hab?.regra?.repetir
   || (/(mais de uma vez|quantas vezes quiser|várias vezes|acumul)/i.test(hab?.descricao || '') && !/não[^.]{0,40}(mais de uma vez|acumul)/i.test(hab?.descricao || ''));
 export const textoDuracao = d => d?.turnos ? `por ${d.turnos} turnos` : d === 'combate' ? 'até o fim do combate' : d === 'descanso' ? 'até o próximo descanso' : '';
+
+// ---------- Testes fora do combate (livro, capítulo de regras) ----------
+const ATR_MENTAIS = ['INT', 'PER', 'CAR', 'WILL'];
+// Subperícias de corpo em movimento mesmo numa perícia mental (exemplos do livro: furtividade e camuflagem).
+const SUBS_DE_MOVIMENTO = ['espionagem.furtividade', 'espionagem.camuflagem', 'espionagem.escapismo', 'espionagem.furtar'];
+// O teste é de movimento ou mental? (DS sem item: movimento danifica uma roupa; mental deixa Confuso.)
+export function tipoDoTeste(ref, sistema) {
+  const [tipo, id] = String(ref || '').split(/:(.*)/s);
+  if (ref === 'conc') return 'mental';
+  if (tipo === 'atr') return ATR_MENTAIS.includes(id) ? 'mental' : 'movimento';
+  if (tipo === 'sub' && SUBS_DE_MOVIMENTO.includes(id)) return 'movimento';
+  const per = (sistema.pericias || []).find(x => x.id === (tipo === 'sub' ? id.split('.')[0] : id));
+  if (!per) return null;
+  return ATR_MENTAIS.includes(per.atributo) ? 'mental' : 'movimento';
+}
+// Atributo de que o teste depende ("atr:PER" → PER; perícia/subperícia → o atributo da perícia; Concentração → mental).
+export function atributoDoTeste(ref, sistema) {
+  const [tipo, id] = String(ref || '').split(/:(.*)/s);
+  if (tipo === 'atr') return id;
+  if (tipo !== 'sub' && tipo !== 'per') return null;
+  return (sistema.pericias || []).find(x => x.id === (tipo === 'sub' ? id.split('.')[0] : id))?.atributo || null;
+}
+
+// Concentração: soma dos atributos mentais (INT, CAR, PER, WILL); teste Difícil (ND 100); Foco absoluto: Normal (ND 70).
+// Abalado (ou pior): −10%.
+export function valorConcentracao(ficha, sistema) {
+  const d = derivados(ficha, sistema);
+  const base = ATR_MENTAIS.reduce((s, k) => s + (d.atributos[k] || 0), 0);
+  const abalado = d.estadoSanidade && d.estadoSanidade !== 'Lúcido';
+  return { valor: base - (abalado ? 10 : 0), base, abalado, nd: temHabilidade(ficha, sistema, 'Foco absoluto') ? 70 : 100 };
+}
+export const concentrado = p => (p?.marcas || []).some(m => m.concentrado);
+// Dano quebra a concentração; quem perde a concentração faz o próximo teste 30% mais difícil.
+export function perderConcentracao(p) {
+  if (!concentrado(p)) return false;
+  p.marcas = p.marcas.filter(m => !m.concentrado);
+  p.marcas.push({ id: `pc${Date.now().toString(36)}`, nome: 'Perdeu a concentração (−30% no próximo teste)', testes: -30, proximoTeste: true });
+  return true;
+}
+
+// Perícias equipadas (livro): sucesso no teste com o item e DS "bem-sucedido" → escolhe uma aura, que dura até o item
+// perder 1 de durabilidade (não acumula). O DS bem-sucedido segue a conta de Criação e manutenção: DS igual a 1, +1 a cada 30%.
+export const AURAS_PERICIA = [
+  { id: 'familiaridade', nome: 'Familiaridade', texto: '+5 nos testes com o item' },
+  { id: 'detalhe', nome: 'Detalhe único', texto: 'outra pessoa que usar o item tem −10% nos testes' },
+  { id: 'cuidadoso', nome: 'Cuidadoso', texto: 'quando o DS indicar perda de durabilidade, rerola o DS uma vez e fica com o segundo' },
+];
+export const dsParaAura = valor => 1 + Math.floor(Math.max(0, valor || 0) / 30);
+export function modAuraItem(item, quemUsa) {
+  if (!item?.aura) return 0;
+  if (item.aura.id === 'familiaridade' && (!item.aura.dono || item.aura.dono === quemUsa)) return 5;
+  if (item.aura.id === 'detalhe' && item.aura.dono && item.aura.dono !== quemUsa) return -10;
+  return 0;
+}

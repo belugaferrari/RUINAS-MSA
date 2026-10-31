@@ -11,7 +11,7 @@ import { sortearEncontro, cenarioSemIA } from '../shared/encontro.js';
 import { FORMAS_AREA, quadradosDaArea, atingidosPelaArea } from '../shared/area.js';
 import { TIPOS_OBJETO, tipoObjeto, coberturaPeloMapa, foraDaVisaoDosPJs, bloqueadoPorObjeto } from '../shared/objetosMapa.js';
 import { passarNecessidades, comer, beber, dormir, rolarCaos, climaDoDia, descreverRelogio, fimDoCombate } from '../shared/tempo.js';
-import { podeSeduzir, itemAberto, itemVisivel, xpParaSubir, novaFicha, podeEquipar, rolarDado, rolarAtributosCriacao, testeDMil, gerarEncontro, derivados, problemasFicha, LIMITE_SALA, desgastarItem, repararItem, durabilidadeDe, listaHabilidades, vantagemPorHabilidade, temHabilidade, regraDaHabilidade, tipoCriatura, chaveHabilidade, TIPOS_ACAO, nomeAcao, acoesDaHabilidade, dadosDaHabilidade, ehAtaqueEspecial, acaoDoAtaqueEspecial, perderPv, textoPv, duracaoDaHabilidade, podeRepetir, textoDuracao, habilidadeValendo, temItem, tipoDaArma, TIPOS_MUTACAO, mutacaoDaTabela, temMutacaoDescontrolada, condicoesAtivas, textoIp, armaNaCondicao, escolhasPermitidas, regiaoDoItem, camadaDoItem, SLOTS_ANTIGOS } from '../shared/regras.js';
+import { podeSeduzir, itemAberto, itemVisivel, xpParaSubir, novaFicha, podeEquipar, rolarDado, rolarAtributosCriacao, testeDMil, gerarEncontro, derivados, problemasFicha, LIMITE_SALA, desgastarItem, repararItem, durabilidadeDe, listaHabilidades, vantagemPorHabilidade, temHabilidade, regraDaHabilidade, tipoCriatura, chaveHabilidade, TIPOS_ACAO, nomeAcao, acoesDaHabilidade, dadosDaHabilidade, ehAtaqueEspecial, acaoDoAtaqueEspecial, perderPv, textoPv, duracaoDaHabilidade, podeRepetir, textoDuracao, habilidadeValendo, temItem, tipoDaArma, TIPOS_MUTACAO, mutacaoDaTabela, temMutacaoDescontrolada, condicoesAtivas, textoIp, armaNaCondicao, escolhasPermitidas, regiaoDoItem, camadaDoItem, SLOTS_ANTIGOS, tipoDoTeste, atributoDoTeste, ehFerramental, valorConcentracao, AURAS_PERICIA, dsParaAura, modAuraItem } from '../shared/regras.js';
 
 const GRUPO_ENCONTROS = 'encontros';
 const MAX_LOG = 100;
@@ -375,6 +375,50 @@ function validarCriacao(c, p, sis) {
   p.marcadores = [];
 }
 
+// O que o resultado do teste causa (livro, capítulo de regras):
+// - Concentração: passou → fica concentrado (até tomar dano ou o mestre tirar).
+// - Com item: falhou → DS maior que a durabilidade tira 1 (Cuidadoso rerola o DS uma vez); passou com DS bem-sucedido
+//   (1, +1 a cada 30%) → o dono escolhe uma aura de Perícias equipadas.
+// - Sem item: falhou e o DS passou da dezena da ação → movimento danifica uma roupa aleatória; mental deixa Confuso.
+function consequenciasDoTeste(c, p, sis, { acaoRef, tipoTeste, valor, item, r }) {
+  const notas = [];
+  if (acaoRef === 'conc' && r.sucesso) {
+    p.marcas = (p.marcas || []).filter(m => !m.concentrado);
+    marcar(p, { nome: 'Concentrado', concentrado: true });
+    notas.push('concentrado (dano quebra a concentração)');
+  }
+  if (r.sucesso == null) return notas;
+  if (item) {
+    if (r.sucesso === false) {
+      let ds = r.ds;
+      const d = durabilidadeDe(item);
+      if (item.aura?.id === 'cuidadoso' && d.tipo === 'normal' && ds > d.atual) {
+        ds = rolarDado('1d10').total;
+        notas.push(`Cuidadoso: DS rerolado (${r.ds} → ${ds})`);
+      }
+      const nota = desgastarItem(item, ds);
+      if (nota) notas.push(nota);
+    } else if (r.ds <= dsParaAura(valor)) {
+      p.auraPendente = { uid: item.uid, em: Date.now() };
+      r.aura = true;
+      notas.push(`DS ${r.ds} bem-sucedido: escolha uma aura para ${item.nome}`);
+    }
+    return notas;
+  }
+  if (r.sucesso === false && acaoRef && r.ds > Math.floor(valor / 10)) {
+    if (tipoTeste === 'mental') {
+      if (!(p.marcadores ||= []).includes('Confuso')) p.marcadores.push('Confuso');
+      notas.push(`DS ${r.ds} maior que a dezena da ação: Confuso (desvantagem no próximo teste mental)`);
+    } else if (tipoTeste === 'movimento') {
+      const roupas = (p.itens || []).filter(i => i.equipado && i.tipo === 'vestimenta' && durabilidadeDe(i).tipo === 'normal' && !durabilidadeDe(i).quebrado && !ehFerramental(i));
+      const roupa = roupas[Math.floor(Math.random() * roupas.length)];
+      if (roupa) desgastarItem(roupa, 0, { semPrerequisito: true });
+      notas.push(`DS ${r.ds} maior que a dezena da ação: ${roupa ? `${roupa.nome} danificada (${roupa.durabilidadeAtual}/${roupa.durabilidade})` : 'danificaria uma roupa, mas nenhuma roupa vestida tem durabilidade'}`);
+    }
+  }
+  return notas;
+}
+
 // Valor da ação calculado no servidor a partir da ficha: "sub:<id>", "per:<id>" ou "atr:<sigla>".
 function valorAcao(p, ref, sis) {
   const d = derivados(p, sis);
@@ -385,6 +429,7 @@ function valorAcao(p, ref, sis) {
   }
   if (tipo === 'per' && id in d.pericias) return { valor: d.pericias[id], nome: sis.pericias.find(x => x.id === id).nome };
   if (tipo === 'atr' && id in d.percentual) return { valor: d.percentual[id], nome: `${sis.atributos.find(a => a.sigla === id).nome}%` };
+  if (ref === 'conc') { const k = valorConcentracao(p, sis); return { valor: k.valor, nome: `Concentração${k.abalado ? ' (abalado −10%)' : ''}`, nd: k.nd }; }
   throw erro('Escolha o que vai testar.');
 }
 
@@ -2672,7 +2717,52 @@ export const acoes = {
   // Rolagens acontecem no servidor para todos verem o mesmo resultado.
   // Rolagens acontecem no servidor para todos verem o mesmo resultado.
   // Teste D-MIL: { acaoRef | acao, mod, nd, metade }. Iniciativa: { tipo: 'iniciativa' }. Livre: { dado: '2d6' }.
-  'rolar'(c, { sala: nome, id, rotulo, tipo, acaoRef, acao, mod, nd, metade, dado, secreta, modo, intuicao }, ctx) {
+  // Aura de Perícias equipadas escolhida pelo dono depois do teste bem-sucedido (dura até o item perder 1 de durabilidade).
+  'item.aura'(c, { id, uid: uidItem, aura }, ctx) {
+    const p = personagem(c, id);
+    exigirDonoOuMestre(ctx, p);
+    const it = (p.itens || []).find(i => i.uid === uidItem);
+    if (!it) throw erro('Item não encontrado.');
+    if (p.auraPendente?.uid !== uidItem) throw erro('Esse item não tem aura para escolher agora.');
+    const op = AURAS_PERICIA.find(x => x.id === aura);
+    if (!op) throw erro('Aura desconhecida.');
+    it.aura = { id: op.id, nome: op.nome, texto: op.texto, dono: p.id };
+    delete p.auraPendente;
+    return { texto: `${it.nome}: ${op.nome} — ${op.texto} (até perder 1 de durabilidade)` };
+  },
+
+  // Recuperar Sanidade (livro): cada forma só faz efeito uma vez por dia (relógio da campanha). Jogar e produzir artes
+  // pedem 30 min e um teste Normal da perícia (Vício em jogos: 1 hora; Desenho: 15 min).
+  'sanidade.recuperar'(c, { id, forma, acaoRef }, ctx) {
+    const p = personagem(c, id);
+    exigirDonoOuMestre(ctx, p);
+    const sis = sistema(c.sistema);
+    const f = (sis.sanidade?.recuperacoes || []).find(x => x.id === forma);
+    if (!f) throw erro('Forma de recuperar Sanidade desconhecida.');
+    if (!p.sanidade) throw erro(`${p.nome} não tem Sanidade.`);
+    const dia = Math.floor((c.relogio?.horas || 0) / 24);
+    const usos = p.sanidadeDoDia?.dia === dia ? p.sanidadeDoDia : { dia, formas: [] };
+    if (usos.formas.includes(f.id)) throw erro(`${p.nome} já recuperou Sanidade com "${f.nome}" hoje.`);
+    const linhas = [];
+    if (f.pericia) {
+      const ref = String(acaoRef || '').match(new RegExp(`^(per:${f.pericia}|sub:${f.pericia}\\.[\\w-]+)$`)) ? acaoRef : `per:${f.pericia}`;
+      const vicio = f.pericia === 'jogos' && (p.marcadores || []).some(m => /v[ií]cio.*jogo/i.test(m));
+      const tempo = ref === 'sub:arte.desenho' ? '15 min' : vicio ? '1 hora (vício em jogos)' : '30 min';
+      const r = acoes.rolar(c, { id: p.id, acaoRef: ref, nd: 70, rotulo: `${f.nome.replace(/\s*\(.*/, '')} — recuperar Sanidade (${tempo})` }, ctx);
+      linhas.push(`${r.rotulo}: ${r.total} contra ND 70 — ${r.sucesso ? 'passou' : 'não passou'}`);
+      if (!r.sucesso) return { linhas, recuperou: 0 };
+    }
+    const n = rolarDado(f.dado).total;
+    const antes = p.sanidade.atual;
+    p.sanidade.atual = Math.min(p.sanidade.max, antes + n);
+    usos.formas.push(f.id);
+    p.sanidadeDoDia = usos;
+    linhas.push(`${p.nome} recuperou ${p.sanidade.atual - antes} de Sanidade (${f.dado}: ${n}) — ${antes} → ${p.sanidade.atual}`);
+    registrar(c.log, { autor: p.nome, rotulo: `Sanidade — ${f.nome}`, texto: linhas.at(-1) });
+    return { linhas, recuperou: p.sanidade.atual - antes };
+  },
+
+  'rolar'(c, { sala: nome, id, rotulo, tipo, acaoRef, acao, mod, nd, metade, dado, secreta, modo, intuicao, itemUid, luz, ajudante, ajuda }, ctx) {
     const sis = sistema(c.sistema);
     let autor = ctx.mestre ? 'Mestre' : ctx.user.name;
     let p = null;
@@ -2695,34 +2785,80 @@ export const acoes = {
       const r = rolarDado(dado);
       entrada = { ...base, rotulo: String(rotulo || dado).slice(0, 80), dado: r.expr, dados: r.dados, mod: r.mod, componentes: [], total: r.total };
     } else {
-      const a = acaoRef && p ? valorAcao(p, acaoRef, sis) : { valor: parseInt(acao, 10) || 0, nome: String(rotulo || 'Teste').slice(0, 80) };
+      let a = acaoRef && p ? valorAcao(p, acaoRef, sis) : { valor: parseInt(acao, 10) || 0, nome: String(rotulo || 'Teste').slice(0, 80) };
+      const notas = [];
+      // Ação conjunta (livro): só o maior joga o D-MIL, com vantagem. Ação com auxílio: o ajudante com 10% ou mais
+      // na mesma perícia dá vantagem. Suporte Especializado do ajudante: +10% e sem erro crítico.
+      const aj = ajudante && p && acaoRef ? personagem(c, ajudante) : null;
+      let porAjuda = false, suporte = false;
+      if (aj) {
+        if (aj.id === p.id) throw erro('Escolha outro personagem para ajudar.');
+        const va = valorAcao(aj, acaoRef, sis);
+        if (ajuda === 'conjunta') {
+          porAjuda = true;
+          if (va.valor > a.valor) { notas.push(`ação conjunta: ${aj.nome} (${va.valor}%) joga no lugar de ${p.nome} (${a.valor}%)`); a = { ...a, valor: va.valor }; }
+          else notas.push(`ação conjunta com ${aj.nome}: joga ${p.nome}, o maior`);
+        } else {
+          porAjuda = va.valor >= a.valor + 10;
+          notas.push(porAjuda ? `auxílio de ${aj.nome} (${va.valor}%): vantagem` : `auxílio de ${aj.nome} sem efeito (precisa de 10% a mais: ${va.valor}% contra ${a.valor}%)`);
+        }
+        suporte = !!temHabilidade(aj, sis, 'Suporte Especializado');
+        if (suporte) notas.push('Suporte Especializado: +10% e sem erro crítico');
+      }
+      // Item usado no teste (Perícias equipadas): a aura do item entra no valor.
+      const item = itemUid && p ? (p.itens || []).find(i => i.uid === itemUid) : null;
+      if (itemUid && p && !item) throw erro('Esse item não está na ficha.');
+      const modItem = item ? modAuraItem(item, p.id) : 0;
+      if (modItem) notas.push(`${item.nome}: ${item.aura.nome} ${modItem > 0 ? '+' : ''}${modItem}%`);
       // No sistema com módulo social, o humor do personagem entra no modificador (ex.: Apático −5%).
-      const modificador = Math.max(-100, Math.min(100, parseInt(mod, 10) || 0)) + (p ? modHumorTestes(p, sis) : 0);
-      const ndNum = nd === '' || nd == null ? null : Math.max(0, parseInt(nd, 10) || 0);
+      const modificador = Math.max(-100, Math.min(100, parseInt(mod, 10) || 0)) + (p ? modHumorTestes(p, sis) : 0) + modItem + (suporte ? 10 : 0);
+      // Concentração: o ND é o do livro (Difícil; com Foco absoluto, Normal).
+      const ndNum = a.nd != null ? a.nd : nd === '' || nd == null ? null : Math.max(0, parseInt(nd, 10) || 0);
       // Vantagem/desvantagem: escolhida no rolador, ou automática por habilidade ligada (ex.: Zona de Abate em Briga › Deslocar).
       const alvosRef = !acaoRef ? [] : acaoRef.startsWith('sub:') ? [acaoRef.slice(4), acaoRef.slice(4).split('.')[0]] : acaoRef.startsWith('per:') ? [acaoRef.slice(4)] : [];
       // Teste de Intuição (o rolador já tira os 20%): habilidades que dão vantagem em Intuição (Avaliação de Cenário…).
+      if (acaoRef === 'conc') alvosRef.push('concentracao');
       const porHabilidade = p && ((alvosRef.length && vantagemPorHabilidade(p, sis, alvosRef)) || (intuicao && vantagemPorHabilidade(p, sis, ['intuicao']))
         || (acaoRef === 'sub:briga.salvaguardar' && c.salas.batalha.participantes.includes(p.id) && liderancaPara(c, p, sis) === 'bonus'));
       const pedido = ['vantagem', 'desvantagem'].includes(modo) ? modo : null;
       // O humor também entra sozinho (ex.: Atraído → Percepção em desvantagem).
       const pelHumor = p ? modoHumorTeste(p, sis, acaoRef) : { vantagem: false, desvantagem: false };
       // Pragas: desvantagem nos testes de Percepção (perícias e atributo PER).
-      const atrRef = !acaoRef ? null : acaoRef.startsWith('atr:') ? acaoRef.slice(4) : sis.pericias.find(x => x.id === acaoRef.slice(4).split('.')[0])?.atributo;
+      const atrRef = atributoDoTeste(acaoRef, sis);
+      const tipoTeste = acaoRef ? tipoDoTeste(acaoRef, sis) : null;
       const porMarca = p && (p.marcas || []).some(m => m.desvantagem || (m.desvantagemAtributo && m.desvantagemAtributo === atrRef));
-      const modoFinal = modoRolagem(pedido === 'vantagem' || porHabilidade || pelHumor.vantagem, pedido === 'desvantagem' || pelHumor.desvantagem || porMarca);
-      const motivo = [porHabilidade && modoFinal === 'vantagem' ? 'habilidade' : null, (pelHumor.vantagem || pelHumor.desvantagem) && modoFinal ? `humor ${pelHumor.humor}` : null].filter(Boolean).join(', ');
+      // Confuso: desvantagem no próximo teste mental (e sai depois dele).
+      const confuso = p && tipoTeste === 'mental' && (p.marcadores || []).includes('Confuso');
+      // Visibilidade (livro): Percepção em desvantagem na penumbra (Sentidos Ferais ignora) e no escuro total (quem não tem
+      // Sentidos Ferais é considerado Cego — o resto do efeito o mestre aplica).
+      const ferais = p && temHabilidade(p, sis, 'Sentidos Ferais');
+      const pelaLuz = atrRef === 'PER' && (luz === 'escuro' || (luz === 'penumbra' && !ferais));
+      if (luz === 'escuro' && p && !ferais) notas.push('escuro total: Cego');
+      // Concentração: Missão dada dá vantagem em combate.
+      const porMissao = acaoRef === 'conc' && p && c.salas.batalha.combate && c.salas.batalha.participantes.includes(p.id) && temHabilidade(p, sis, 'Missão dada');
+      const modoFinal = modoRolagem(pedido === 'vantagem' || porHabilidade || pelHumor.vantagem || porAjuda || porMissao, pedido === 'desvantagem' || pelHumor.desvantagem || porMarca || confuso || pelaLuz);
+      const motivo = [(porHabilidade || porMissao) && modoFinal === 'vantagem' ? 'habilidade' : null, (pelHumor.vantagem || pelHumor.desvantagem) && modoFinal ? `humor ${pelHumor.humor}` : null,
+        porAjuda && modoFinal === 'vantagem' ? (ajuda === 'conjunta' ? 'ação conjunta' : 'auxílio') : null, confuso && modoFinal === 'desvantagem' ? 'Confuso' : null,
+        pelaLuz && modoFinal === 'desvantagem' ? luz : null].filter(Boolean).join(', ');
       // Marcas: −15% das Bugigangas (até o fim do turno) e a Inspiração (+1d20 no resultado; gasta-se neste teste).
       let extraMarcas = p ? (p.marcas || []).filter(m => m.testes && !m.contra).reduce((s, m) => s + m.testes, 0) : 0;
       let inspirado = null;
       const insp = p && (p.marcas || []).find(m => m.d20);
       if (insp) { inspirado = rolarDado('1d20').total; extraMarcas += inspirado; p.marcas = p.marcas.filter(m => m !== insp); }
-      const r = testeDMil(a.valor + modificador + extraMarcas, ndNum, sis, { metade: !!metade, modo: modoFinal });
+      const r = testeDMil(a.valor + modificador + extraMarcas, ndNum, sis, { metade: !!metade && a.nd == null, modo: modoFinal });
+      if (suporte && r.critico === 'erro') { r.critico = null; r.sucesso = ndNum == null ? null : r.total >= ndNum; }
       // Fora do combate, a desvantagem da mutação vale só para o próximo teste.
       if (porMarca && !c.salas.batalha.combate) p.marcas = p.marcas.filter(m => !m.desvantagem);
+      if (p) {
+        // Marcas de um teste só (perdeu a concentração: −30%) e o Confuso saem depois deste teste.
+        if ((p.marcas || []).some(m => m.proximoTeste)) p.marcas = p.marcas.filter(m => !m.proximoTeste);
+        if (confuso) p.marcadores = p.marcadores.filter(m => m !== 'Confuso');
+        notas.push(...consequenciasDoTeste(c, p, sis, { acaoRef, tipoTeste, valor: a.valor, item, r }));
+      }
       // Desvio do arremesso: regra do livro do MSS (autor, 31/10: só no MSS).
-      const notaMut = [p ? mutacaoSeMexe(c, p, r.ds) : null, acaoRef === 'sub:esportes.arremessar' && idSistema(c.sistema) === 'mss' ? desvioArremesso(p, sis, r, ndNum) : null].filter(Boolean).join(' · ') || null;
-      entrada = { ...base, personagemId: p?.id || null, tipo: 'dmil', rotulo: `${String(rotulo || a.nome).slice(0, 80)}${modoFinal ? ` (${modoFinal}${motivo || porMarca ? ` — ${[motivo, porMarca ? 'mutação descontrolada' : ''].filter(Boolean).join(', ')}` : ''})` : ''}${inspirado ? ` (Inspiração +${inspirado})` : ''}`, acaoNome: a.nome, mod: modificador + extraMarcas, metade: !!metade, ...r, ...(notaMut ? { texto: notaMut } : {}) };
+      const notaMut = [...notas, p ? mutacaoSeMexe(c, p, r.ds) : null, acaoRef === 'sub:esportes.arremessar' && idSistema(c.sistema) === 'mss' ? desvioArremesso(p, sis, r, ndNum) : null].filter(Boolean).join(' · ') || null;
+      entrada = { ...base, personagemId: p?.id || null, tipo: 'dmil', rotulo: `${String(rotulo || a.nome).slice(0, 80)}${modoFinal ? ` (${modoFinal}${motivo || porMarca ? ` — ${[motivo, porMarca ? 'mutação descontrolada' : ''].filter(Boolean).join(', ')}` : ''})` : ''}${inspirado ? ` (Inspiração +${inspirado})` : ''}`, acaoNome: a.nome, mod: modificador + extraMarcas, metade: !!metade, ...r, ...(notaMut ? { texto: notaMut } : {}),
+        ...(r.aura ? { aura: { uid: item.uid, item: item.nome, opcoes: AURAS_PERICIA } } : {}) };
     }
     if (nome && c.salas[nome]) registrar(c.salas[nome].log, entrada);
     else registrar(c.log, entrada);

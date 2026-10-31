@@ -521,3 +521,18 @@ Respostas do autor (31/10) e o que foi feito:
 10. **LEMBRETE — Sanidade**: o livro diz "descanso longo recupera 1D6" e também "dormir 8 h recupera 1 ponto". O autor ainda vai equalizar a sanidade; o app não mexeu.
 - **Asfixia**: a tabela do livro é imagem (ilegível). Até o autor mandar a tabela, o app usa a base de 5 turnos.
 - O que está no livro e o app ainda não fazia: o autor autorizou incluir (testes, manobras, queda, visibilidade, custos de movimento no mapa, economia).
+
+## 31/10 — Testes pelo livro (Bloco 2)
+- **Rolador › Outros modificadores**: item usado no teste, luz (normal/penumbra/escuro) e ajuda de outro personagem (auxílio ou conjunta).
+- **Com item**: falhou → DS maior que a durabilidade tira 1. Passou com DS "bem-sucedido" → o dono escolhe a aura de Perícias equipadas
+  (Familiaridade +5; Detalhe único −10% para outra pessoa; Cuidadoso rerola o DS da durabilidade). A aura some quando o item perde 1 de durabilidade.
+  *Interpretação a confirmar*: "sucesso no DS" usa a mesma conta de Criação e manutenção (DS igual a 1, +1 a cada 30% da ação).
+- **Sem item**: falhou e DS maior que a dezena da ação → teste mental (INT, PER, CAR, WILL) deixa **Confuso**; teste de movimento danifica uma roupa vestida
+  aleatória. *Interpretação a confirmar*: "movimento" = perícias de FOR, CONS, AGI, DES, mais Furtividade, Camuflagem, Escapismo e Furtar.
+- **Confuso**: desvantagem no próximo teste mental, e sai depois dele.
+- **Concentração** (opção no rolador): INT+CAR+PER+WILL, ND 100 (Foco absoluto: 70); Abalado ou pior −10%; Missão dada: vantagem em combate.
+  Passou → marca "Concentrado". Tomar dano quebra. *Interpretação a confirmar*: "testes 30% mais difíceis" = −30% só no próximo teste.
+- **Visibilidade**: penumbra → Percepção em desvantagem (Sentidos Ferais ignora); escuro total → Percepção em desvantagem e aviso "Cego"
+  (o livro não diz o efeito de Cego; o mestre aplica).
+- **Auxílio**: ajudante com 10% ou mais na mesma perícia dá vantagem. **Conjunta**: joga o maior, com vantagem. Suporte Especializado: +10% e sem erro crítico.
+- **Sanidade**: Jogar e Produzir artes rolam o teste Normal (30 min; Desenho 15 min; vício em jogos 1 h); cada forma só faz efeito uma vez por dia.

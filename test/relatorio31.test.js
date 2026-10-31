@@ -49,8 +49,8 @@ test('arremesso (livro): errou com ND → desvio de 1,5 m a cada 5 pontos; DS 9�
 test('Intuição: a vantagem da Avaliação de Cenário vale no teste com a caixa "Intuição" do rolador', () => {
   const { c, ps: [eu] } = campo(['Eu']);
   eu.marcas = [{ id: 'x', nome: 'Avaliação de Cenário', vantagem: ['armadilhas.encontrar', 'intuicao'], cena: true }];
-  const sem = executar(c, 'rolar', { id: eu.id, acaoRef: 'per:sentidos', nd: 70 }, ctxM);
-  const com = executar(c, 'rolar', { id: eu.id, acaoRef: 'per:sentidos', nd: 70, intuicao: true }, ctxM);
+  const sem = executar(c, 'rolar', { id: eu.id, acaoRef: 'per:sentidos' }, ctxM);
+  const com = executar(c, 'rolar', { id: eu.id, acaoRef: 'per:sentidos', intuicao: true }, ctxM);
   assert.ok(!sem.modo);
   assert.equal(com.modo, 'vantagem');
 });

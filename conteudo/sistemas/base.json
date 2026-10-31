@@ -207,22 +207,29 @@
   ],
   "recuperacoes": [
    {
+    "id": "dormir",
     "nome": "Dormir 8h seguidas",
     "dado": "1"
    },
    {
+    "id": "jogar",
+    "pericia": "jogos",
     "nome": "Jogar (perícia, 30 min, teste Normal)",
     "dado": "1d4"
    },
    {
+    "id": "consumir-artes",
     "nome": "Consumir artes",
     "dado": "1"
    },
    {
+    "id": "produzir-artes",
+    "pericia": "arte",
     "nome": "Produzir artes (perícia, 30 min, teste Normal)",
     "dado": "1d4"
    },
    {
+    "id": "drogas",
     "nome": "Consumir psicoativos [Drogas]",
     "dado": "1d6"
    }

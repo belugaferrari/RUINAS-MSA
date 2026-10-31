@@ -110,7 +110,7 @@ test('Intuir humor: falhou → o aparente; passou → o real; a frase é igual e
 test('humor nos testes: Atraído rola Percepção em desvantagem (2d100 e 2 DS, fica com o menor)', () => {
   const { c, lia } = montar();
   lia.humor = 'atraido';
-  const r = executar(c, 'rolar', { id: lia.id, acaoRef: 'atr:PER', nd: 70 }, ctxM);
+  const r = executar(c, 'rolar', { id: lia.id, acaoRef: 'atr:PER' }, ctxM);
   assert.equal(r.modo, 'desvantagem');
   assert.equal(r.dados.length, 2);
   assert.equal(r.dsDados.length, 2);
@@ -120,7 +120,7 @@ test('humor nos testes: Atraído rola Percepção em desvantagem (2d100 e 2 DS, 
   const outro = executar(c, 'rolar', { id: lia.id, acaoRef: 'atr:FOR', nd: 70 }, ctxM);
   assert.ok(!outro.modo);
   lia.humor = 'amedrontado';
-  const v = executar(c, 'rolar', { id: lia.id, acaoRef: 'atr:PER', nd: 70, modo: '' }, ctxM);
+  const v = executar(c, 'rolar', { id: lia.id, acaoRef: 'atr:PER', modo: '' }, ctxM);
   assert.equal(v.modo, 'vantagem');
   assert.equal(v.ds, Math.max(...v.dsDados));
 });

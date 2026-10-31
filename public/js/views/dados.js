@@ -2,7 +2,7 @@ import { abrirDescanso } from './descanso.js';
 import { h, botao, selecao, aviso, icone, titulo, formatarData } from '../ui.js';
 import { estado, render, personagemPorId, meusPersonagens } from '../estado.js';
 import { acao } from '../api.js';
-import { derivados, ndPorNivel, subpericiasDe } from '/shared/regras.js';
+import { derivados, ndPorNivel, subpericiasDe, valorConcentracao } from '/shared/regras.js';
 import { linhaRolagem } from './ficha.js';
 
 // Painel de dados da lateral direita, sempre à mão durante a sessão.
@@ -104,8 +104,10 @@ function secaoTeste(p, d, mestre) {
     { valor: 'livre', rotulo: 'ND livre…' },
     { valor: 'sem', rotulo: 'Especial (só o número)' },
   ];
+  const conc = d ? valorConcentracao(p, sis) : null;
   const opcoesAcao = d ? [{ valor: '', rotulo: 'O que testar…' },
     ...sis.atributos.map(a => ({ valor: `atr:${a.sigla}`, rotulo: `${a.nome}% (${d.percentual[a.sigla]})` })),
+    { valor: 'conc', rotulo: `Concentração (${conc.valor}) · ND ${conc.nd}` },
     ...sis.pericias.flatMap(x => [{ valor: `per:${x.id}`, rotulo: `${x.nome} (${d.pericias[x.id]})` },
       ...subpericiasDe(x, p, sis).map(sub => ({ valor: `sub:${sub.id}`, rotulo: `· ${x.nome} › ${sub.nome} (${d.subpericias[sub.id]})` }))])] : null;
 
@@ -125,7 +127,8 @@ function secaoTeste(p, d, mestre) {
     const dif = sis.teste.dificuldades.find(x => x.nome === s.dif);
     if (opcoesAcao && !s.acao) throw new Error('Escolha o que testar.');
     const mod = s.mod + (s.intuicao ? (sis.teste.intuicao?.mod ?? -20) : 0);
-    await enviar({ acaoRef: opcoesAcao ? s.acao : null, acao: opcoesAcao ? null : (s.acaoLivre ?? 40), rotulo: opcoesAcao ? null : 'Teste', mod, nd: nd(), metade: !!dif?.metade, modo: s.modo || null, intuicao: !!s.intuicao }, textoResultado);
+    await enviar({ acaoRef: opcoesAcao ? s.acao : null, acao: opcoesAcao ? null : (s.acaoLivre ?? 40), rotulo: opcoesAcao ? null : 'Teste', mod, nd: nd(), metade: !!dif?.metade, modo: s.modo || null, intuicao: !!s.intuicao,
+      ...(p ? { itemUid: s.itemUid || null, luz: s.luz || null, ajudante: s.ajudante || null, ajuda: s.ajuda || 'auxilio' } : {}) }, textoResultado);
   }, { class: 'primario jogar', icone: 'dices' });
   // Ordem do esboço do autor: dificuldade (F N D MD), Jogar, perícia e outros modificadores.
   return h('div', { class: 'form' },
@@ -153,9 +156,28 @@ function secaoTeste(p, d, mestre) {
         h('label', { class: 'linha', title: sis.teste.intuicao?.descricao }, h('input', { type: 'checkbox', checked: s.intuicao, onchange: e => { s.intuicao = e.target.checked; } }), `Intuição (${sis.teste.intuicao?.mod ?? -20}%)`)),
       // Vantagem: rola 2d100 e fica com o maior; desvantagem, com o menor. Habilidade ligada que dá vantagem nesse teste entra sozinha.
       selecao([{ valor: '', rotulo: 'Rolagem normal' }, { valor: 'vantagem', rotulo: 'Com vantagem (2d100, o maior)' }, { valor: 'desvantagem', rotulo: 'Com desvantagem (2d100, o menor)' }],
-        s.modo || '', v => { s.modo = v || null; }, { 'aria-label': 'Vantagem ou desvantagem' })),
+        s.modo || '', v => { s.modo = v || null; }, { 'aria-label': 'Vantagem ou desvantagem' }),
+      p ? opcoesDoLivro(p, mestre) : null),
     h('p', { class: 'dica' }, sis.teste.descricao),
     ultimo());
+}
+
+// Opções do livro para o teste: item usado (durabilidade e auras de Perícias equipadas), luz (penumbra/escuro)
+// e ajuda de outro personagem (ação com auxílio ou ação conjunta).
+function opcoesDoLivro(p, mestre) {
+  const s = cfg();
+  const c = estado.campanha;
+  const itens = (p.itens || []).filter(i => !i.sucata);
+  if (s.itemUid && !itens.some(i => i.uid === s.itemUid)) s.itemUid = '';
+  const outros = c.personagens.filter(x => x.id !== p.id && x.atributos && (mestre || x.tipo === 'pj'));
+  return h('div', { class: 'form' },
+    selecao([{ valor: '', rotulo: 'Sem item (DS contra a dezena da ação)' }, ...itens.map(i => ({ valor: i.uid, rotulo: `Com ${i.nome}${i.durabilidade != null ? ` (${i.durabilidadeAtual ?? i.durabilidade}/${i.durabilidade})` : ''}${i.aura ? ` · ${i.aura.nome}` : ''}` }))],
+      s.itemUid || '', v => { s.itemUid = v; }, { 'aria-label': 'Item usado no teste', title: 'Falhou: DS maior que a durabilidade tira 1. Sem item: DS maior que a dezena da ação danifica uma roupa (movimento) ou deixa Confuso (mental).' }),
+    selecao([{ valor: '', rotulo: 'Luz normal' }, { valor: 'penumbra', rotulo: 'Penumbra (Percepção em desvantagem)' }, { valor: 'escuro', rotulo: 'Escuro total (Cego; Percepção em desvantagem)' }],
+      s.luz || '', v => { s.luz = v; }, { 'aria-label': 'Luz' }),
+    outros.length ? h('div', { class: 'barra' },
+      selecao([{ valor: '', rotulo: 'Sem ajuda' }, ...outros.map(x => ({ valor: x.id, rotulo: `Ajuda de ${x.nome}` }))], s.ajudante || '', v => { s.ajudante = v; render(); }, { 'aria-label': 'Quem ajuda' }),
+      s.ajudante ? selecao([{ valor: 'auxilio', rotulo: 'Auxílio (10% a mais → vantagem)' }, { valor: 'conjunta', rotulo: 'Conjunta (o maior joga, com vantagem)' }], s.ajuda || 'auxilio', v => { s.ajuda = v; }, { 'aria-label': 'Tipo de ajuda' }) : null) : null);
 }
 
 function secaoRapidos(p) {
@@ -243,6 +265,12 @@ function secaoSanidade(p) {
     await acao('personagem.atualizar', { id: p.id, patch: { sanidade: { ...san, atual } } });
     aviso(`${p.nome}: Sanidade ${san.atual} → ${atual}`);
   };
+  // Recuperação: o app confere "uma vez por dia" e, em Jogar/Produzir artes, rola o teste Normal da perícia
+  // (a subperícia escolhida em "Teste", se for dessa perícia).
+  const recuperar = x => botao(`${x.nome} (${x.dado})`, async () => {
+    const r = await acao('sanidade.recuperar', { id: p.id, forma: x.id, acaoRef: s.acao || null });
+    aviso(r.linhas.join(' · '), r.recuperou ? 'ok' : 'erro');
+  }, { class: 'pequeno', icone: 'plus' });
   const linha = (x, sinal) => botao(`${x.nome} (${x.dado})`, async () => {
     const r = await enviar({ dado: x.dado, rotulo: `${sinal < 0 ? 'Perda' : 'Recuperação'} de Sanidade — ${x.nome}` }, rr => `${rr.rotulo}: ${rr.total}`);
     s.sanPendente = { r, sinal };
@@ -252,7 +280,7 @@ function secaoSanidade(p) {
   return h('div', { class: 'form' },
     p ? h('p', { class: 'meta' }, icone('brain'), ` ${p.nome}: Sanidade ${p.sanidade?.atual ?? '—'} / ${p.sanidade?.max ?? '—'}`) : h('p', { class: 'dica' }, 'Escolha um personagem para aplicar o resultado na ficha.'),
     h('strong', {}, 'Perda'), h('div', { class: 'grade-botoes' }, sis.sanidade.perdas.map(x => linha(x, -1))),
-    h('strong', {}, 'Recuperação'), h('div', { class: 'grade-botoes' }, sis.sanidade.recuperacoes.map(x => linha(x, 1))),
+    h('strong', {}, 'Recuperação'), h('div', { class: 'grade-botoes' }, sis.sanidade.recuperacoes.map(x => (p && x.id ? recuperar(x) : linha(x, 1)))),
     h('p', { class: 'dica' }, sis.sanidade.notaRecuperacao),
     pend && p ? h('div', { class: 'cartao-mini' }, `${pend.r.rotulo}: ${pend.r.total}`,
       botao(`Aplicar ${pend.sinal < 0 ? '−' : '+'}${pend.r.total} em ${p.nome}`, async () => { await aplicar(pend.r, pend.sinal); s.sanPendente = null; render(); }, { class: 'pequeno primario', icone: 'check' })) : null);
@@ -284,12 +312,19 @@ function secaoAtributos() {
 
 function ultimo() {
   const r = cfg().ultimo;
-  return r ? h('div', { class: 'cartao-mini ultimo-resultado' }, linhaRolagem(r)) : null;
+  if (!r) return null;
+  // Teste com item bem-sucedido e DS bom: o dono escolhe a aura (Perícias equipadas).
+  const aura = r.aura && r.personagemId ? h('div', { class: 'barra' }, h('small', {}, `Aura para ${r.aura.item}:`),
+    r.aura.opcoes.map(o => botao(o.nome, async () => {
+      const x = await acao('item.aura', { id: r.personagemId, uid: r.aura.uid, aura: o.id });
+      aviso(x.texto); cfg().ultimo = { ...r, aura: null }; render();
+    }, { class: 'pequeno', title: o.texto }))) : null;
+  return h('div', { class: 'cartao-mini ultimo-resultado' }, linhaRolagem(r), aura);
 }
 
 function historico() {
   const c = estado.campanha;
-  const todas = [...(c.log || []), ...Object.values(c.salas || {}).flatMap(s => s.log || [])].filter(e => !e.texto).sort((a, b) => b.em - a.em).slice(0, 15);
+  const todas = [...(c.log || []), ...Object.values(c.salas || {}).flatMap(s => s.log || [])].filter(e => !e.texto || e.tipo === 'dmil').sort((a, b) => b.em - a.em).slice(0, 15);
   return h('details', { class: 'historico-dados', open: estado.sel.histAberto !== false, ontoggle: e => { estado.sel.histAberto = e.target.open; } },
     h('summary', {}, icone('scroll'), ' Últimas rolagens'),
     todas.length ? h('ol', { class: 'log' }, todas.map(e => h('li', {}, h('small', {}, formatarData(e.em)), ' ', linhaRolagem(e)))) : h('p', { class: 'dica' }, 'Nenhuma rolagem ainda.'));
