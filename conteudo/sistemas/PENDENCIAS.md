@@ -563,3 +563,13 @@ Respostas do autor (31/10) e o que foi feito:
   O personagem olha para onde andou; ao terminar o turno, o app pergunta para onde ele está olhando.
 - **5 mapas de teste**: botão "Criar 5 mapas de teste" (Vila; Floresta a oeste; Praia a leste; Ruínas ao norte; Caverna pela escada das Ruínas).
 - A confirmar: luz (penumbra/escuro) ainda não reduz o alcance da visão no mapa; Sentidos Ferais e afins também não.
+
+## 01/11 — NPC escondido (ghost) e teste para achá-lo
+- O mestre põe um NPC **já escondido** no Campo de Batalha ("+ colocar escondido (ghost)…"), ou esconde/revela pelo menu "⋯".
+  Ele entra na iniciativa, mas jogadores e Suporte não veem: nem na lista, nem na ordem, nem no mapa, nem no registro.
+  Na vez dele, os jogadores veem só "Aguardando…".
+- **Teste para achar** (autor): Camuflagem ou Furtividade do escondido (a maior) contra a Percepção passiva (Sentidos + 50) de cada PJ.
+  Uma rolagem do escondido contra a passiva de cada um. Falhou para todos → silencioso (só o mestre vê). Algum PJ achou → aparece para todos.
+  O app testa sozinho a cada nova rodada; o mestre também testa quando quiser ("Testar se é achado").
+  Com a fog pessoal ligada, só testam os PJs que estão com ele no cone de visão.
+- *A confirmar*: atacar do esconderijo revela o NPC e o ataque é surpresa (vantagem). Andar no mapa não revela.

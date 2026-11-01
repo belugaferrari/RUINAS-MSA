@@ -57,13 +57,13 @@ export function palcoCombate() {
   const doTurno = ultimo && (!cb.turnoDesde || ultimo.em >= cb.turnoDesde) ? ultimo : null;
   return h('section', { class: 'palco-combate', 'aria-live': 'polite', 'aria-label': 'O que está acontecendo no combate' },
     h('div', { class: 'palco-vez' },
-      rosto(atual, 'grande'),
-      h('div', {}, h('small', {}, `Rodada ${cb.rodada} · vez de`), h('strong', {}, atual?.nome || '—'))),
+      atual ? rosto(atual, 'grande') : null,
+      h('div', {}, h('small', {}, `Rodada ${cb.rodada}${atual ? ' · vez de' : ''}`), h('strong', {}, atual?.nome || 'Aguardando…'))),
     h('div', { class: 'palco-acao' },
       pend ? cenaAtaque({ atacanteId: pend.atacante, alvoId: pend.alvo, arma: pend.arma, armaTipo: pend.armaTipo }, null)
         : doTurno?.tipo === 'ataque' ? cenaAtaque(doTurno, doTurno)
           : doTurno ? cenaTeste(doTurno)
-            : h('p', { class: 'palco-espera' }, icone('hourglass'), ` Aguardando a ação de ${atual?.nome || '…'}`)),
+            : h('p', { class: 'palco-espera' }, icone('hourglass'), atual ? ` Aguardando a ação de ${atual.nome}` : ' Aguardando…')),
     h('button', { type: 'button', class: 'palco-som so-icone', onclick: alternarSom, title: somDesligado() ? 'Ligar o som das armas neste aparelho' : 'Desligar o som das armas neste aparelho',
       'aria-label': somDesligado() ? 'Ligar o som' : 'Desligar o som', 'aria-pressed': !somDesligado() }, icone(somDesligado() ? 'volume-x' : 'volume-2')));
 }

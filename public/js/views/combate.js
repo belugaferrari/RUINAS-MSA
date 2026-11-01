@@ -160,7 +160,9 @@ export function controleTurnos(participantes, mestre) {
   return h('section', { class: 'bloco controle-turnos' },
     h('div', { class: 'barra' },
       titulo('Turnos', 'hourglass', 'h3'),
-      h('div', { class: 'turno-cartao agora' }, h('small', {}, 'Agindo agora'), rosto(atual), h('strong', {}, atual?.nome || '—'), h('span', { class: 'ini' }, `ini ${cb.ordem[cb.vez]?.ini ?? '—'}`)),
+      // Sem ninguém visível agindo (vez de um escondido, para quem não o vê): só "aguardando", sem pista.
+      atual ? h('div', { class: 'turno-cartao agora' }, h('small', {}, 'Agindo agora'), rosto(atual), h('strong', {}, atual.nome), h('span', { class: 'ini' }, `ini ${cb.ordem[cb.vez]?.ini ?? '—'}`))
+        : h('div', { class: 'turno-cartao agora' }, h('small', {}, 'Agindo agora'), h('strong', {}, 'Aguardando…')),
       proximo ? h('div', { class: 'turno-cartao proximo' }, h('small', {}, 'Próximo'), rosto(proximo), h('strong', {}, proximo.nome)) : null,
       h('span', { class: 'espaco' }),
       podePassar ? botao('Próximo turno', passarTurno, { class: 'primario', icone: 'skip-forward', title: atual ? `Termina o turno de ${atual.nome}` : 'Próximo turno' }) : null,

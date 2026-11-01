@@ -87,7 +87,14 @@ function adicionar(nome, s, mestre) {
   const grupos = Object.fromEntries((c.grupos || []).map(g => [g.id, g.nome]));
   const opcoes = [{ valor: '', rotulo: mestre ? '+ colocar na sala…' : '+ entrar com…' },
     ...candidatos.map(p => ({ valor: p.id, rotulo: p.tipo === 'pj' ? `${p.nome} (PJ${p.dono ? ` de ${p.dono}` : ''})` : `${p.nome} (NPC · ${grupos[p.grupoId] || ''})` }))];
-  return selecao(opcoes, '', v => v && acao('sala.adicionar', { sala: nome, id: v }).catch(e => aviso(e.message, 'erro')));
+  const normal = selecao(opcoes, '', v => v && acao('sala.adicionar', { sala: nome, id: v }).catch(e => aviso(e.message, 'erro')));
+  // Campo de Batalha: o mestre também põe um NPC já escondido (ghost) — entra na iniciativa, mas os jogadores não sabem.
+  const npcs = candidatos.filter(p => p.tipo !== 'pj');
+  if (nome !== 'batalha' || !npcs.length) return normal;
+  return h('div', { class: 'barra' }, normal,
+    selecao([{ valor: '', rotulo: '+ colocar escondido (ghost)…' }, ...npcs.map(p => ({ valor: p.id, rotulo: `${p.nome} (NPC · ${grupos[p.grupoId] || ''})` }))], '',
+      v => v && acao('sala.adicionar', { sala: nome, id: v, escondido: true }).then(() => aviso('Entrou escondido: conta na iniciativa, mas os jogadores não veem.')).catch(e => aviso(e.message, 'erro')),
+      { 'aria-label': 'Colocar NPC escondido', title: 'Entra na ordem de iniciativa sem os jogadores saberem. A cada rodada o app testa (em silêncio) se algum PJ o acha.' }));
 }
 
 function cartaoParticipante(nome, s, p, i, total, mestre, participantes) {
@@ -142,6 +149,11 @@ function linhaCampo(s, p, i, total, mestre, meu, veStats, marcavel, alvo) {
     mestre ? botao('', () => acao('sala.ordenar', { sala: 'batalha', id: p.id, direcao: -1 }), { class: 'pequeno', icone: 'chevron-up', disabled: i === 0, title: `Subir ${p.nome} na lista` }) : null,
     mestre ? botao('', () => acao('sala.ordenar', { sala: 'batalha', id: p.id, direcao: 1 }), { class: 'pequeno', icone: 'chevron-down', disabled: i === total - 1, title: `Descer ${p.nome} na lista` }) : null,
     mestre || meu ? botao('Tirar', () => acao('sala.remover', { sala: 'batalha', id: p.id }), { class: 'pequeno perigo', icone: 'log-out', title: `Tirar ${p.nome} da sala` }) : null,
+    // NPC escondido (ghost): revelar, esconder e testar se algum PJ o acha (falha silenciosa: só o mestre vê).
+    mestre && p.tipo !== 'pj' ? botao(p.escondido ? 'Revelar' : 'Esconder', () => acao('personagem.esconder', { id: p.id, escondido: !p.escondido }),
+      { class: 'pequeno', icone: p.escondido ? 'eye' : 'ghost', title: p.escondido ? `${p.nome} aparece para todos` : `${p.nome} some para os jogadores (continua na iniciativa)` }) : null,
+    mestre && p.escondido ? botao('Testar se é achado', () => acao('esconder.procurar', { id: p.id }).then(r => aviso(r.achado ? `${r.por} encontrou ${p.nome}! ${r.texto}` : `Ninguém viu ${p.nome} (só você sabe). ${r.texto}`, r.achado ? 'erro' : 'ok')),
+      { class: 'pequeno', icone: 'search', title: 'Camuflagem ou Furtividade dele (a maior) contra a Percepção passiva de cada PJ que poderia vê-lo' }) : null,
     mestre ? seletorEstagio(p) : null,
     mestre ? ajustesMestre(p, 'batalha') : null,
   ].filter(Boolean);
@@ -157,7 +169,8 @@ function linhaCampo(s, p, i, total, mestre, meu, veStats, marcavel, alvo) {
         h('small', { class: 'meta' }, p.tipo === 'pj' ? `PJ${p.dono ? ` · ${p.dono}` : ''}` : 'NPC'),
         p.monstro?.estagio != null && mestre ? h('span', { class: 'selo', title: 'Estágio do monstro' }, p.monstro.nomeEstagio || `Estágio ${p.monstro.estagio}`) : null,
         s.ativo === p.id ? h('span', { class: 'selo ok' }, mestre ? 'acionado' : 'em cena') : null,
-        semPv ? h('span', { class: 'selo perigo' }, 'fora de combate') : null),
+        semPv ? h('span', { class: 'selo perigo' }, 'fora de combate') : null,
+        mestre && p.escondido ? h('span', { class: 'selo', title: 'Os jogadores não sabem que ele está aqui' }, icone('ghost'), ' escondido') : null),
       veStats && p.pv ? h('div', { class: 'linha-stats' },
         barraPv(p),
         h('span', { class: 'meta icones-meta' },

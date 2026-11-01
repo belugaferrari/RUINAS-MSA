@@ -106,12 +106,14 @@ export function visaoPara(c, user, area) {
     };
   }
   const meus = new Set(c.personagens.filter(p => p.donoId === user.id).map(p => p.id));
-  const emSala = new Set([...c.salas.social.participantes, ...c.salas.batalha.participantes, ...Object.keys(mapa.pecas)]);
+  // NPC escondido (ghost): some da lista, da ordem de iniciativa e do registro para os jogadores.
+  const ocultos = escondidos(c);
+  const emSala = new Set([...c.salas.social.participantes, ...c.salas.batalha.participantes, ...Object.keys(mapa.pecas)].filter(id => !ocultos.has(id)));
   const conhecidos = new Set();
   for (const id of meus) for (const alvo of Object.keys(c.relacoes[id] || {})) conhecidos.add(alvo);
 
   const personagens = c.personagens
-    .filter(p => meus.has(p.id) || p.tipo === 'pj' || emSala.has(p.id) || conhecidos.has(p.id))
+    .filter(p => !ocultos.has(p.id) && (meus.has(p.id) || p.tipo === 'pj' || emSala.has(p.id) || conhecidos.has(p.id)))
     .map(p => (meus.has(p.id) ? { ...comDono(p), humorOpcoes: [] } : fichaPublica(p, sistema(c.sistema))));
 
   return {
@@ -123,10 +125,30 @@ export function visaoPara(c, user, area) {
     relacoes: Object.fromEntries([...meus].map(id => [id, c.relacoes[id] || {}])),
     imagens: c.imagens.filter(i => i.mostrando),
     mapa,
-    salas: Object.fromEntries(Object.entries(c.salas).map(([k, s]) => [k, { ...s, log: s.log.filter(e => !e.secreta && (!e.privadoPara || e.privadoPara === user.id)) }])),
-    log: c.log.filter(e => !e.secreta),
+    salas: Object.fromEntries(Object.entries(c.salas).map(([k, s]) => [k, semEscondidos(c, ocultos, { ...s, log: s.log.filter(e => !e.secreta && (!e.privadoPara || e.privadoPara === user.id)) })])),
+    log: c.log.filter(e => !e.secreta && !mencionaEscondido(c, ocultos, e)),
     confrontos: (c.confrontos || []).filter(x => !x.secreto),
   };
+}
+
+// A sala sem os escondidos: participantes, quem está acionado, ordem de iniciativa (na vez de um escondido, ninguém
+// aparece agindo) e o registro que fala deles.
+function mencionaEscondido(c, ocultos, e) {
+  if (!ocultos.size) return false;
+  if ([e.personagemId, e.atacanteId, e.alvoId].some(id => id && ocultos.has(id))) return true;
+  const txt = `${e.autor || ''} ${e.rotulo || ''} ${e.texto || ''}`;
+  return c.personagens.some(p => ocultos.has(p.id) && new RegExp(`(^|[^\\p{L}])${p.nome.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}($|[^\\p{L}])`, 'u').test(txt));
+}
+function semEscondidos(c, ocultos, s) {
+  if (!ocultos.size) return s;
+  const fora = { ...s, participantes: (s.participantes || []).filter(id => !ocultos.has(id)), ativo: ocultos.has(s.ativo) ? null : s.ativo,
+    log: (s.log || []).filter(e => !mencionaEscondido(c, ocultos, e)), pendentes: (s.pendentes || []).filter(x => !ocultos.has(x.atacante) && !ocultos.has(x.alvo)) };
+  if (s.combate) {
+    const atual = s.combate.ordem[s.combate.vez]?.id;
+    const ordem = s.combate.ordem.filter(o => !ocultos.has(o.id));
+    fora.combate = { ...s.combate, ordem, vez: ordem.findIndex(o => o.id === atual), gasto: Object.fromEntries(Object.entries(s.combate.gasto || {}).filter(([id]) => !ocultos.has(id))), turnosFeitos: undefined, inicioTurno: ocultos.has(s.combate.inicioTurno?.id) ? null : s.combate.inicioTurno };
+  }
+  return fora;
 }
 
 export const podeSuporte = (c, user) => c.mestreId === user.id || (c.suportes || []).includes(user.id);
@@ -664,7 +686,7 @@ function entrarNoCombate(c, s, p) {
   motivarNoCombate(c, p, sis);
   ordenarIniciativa(s.combate);
   s.combate.vez = Math.max(0, s.combate.ordem.findIndex(o => o.id === atual));
-  registrar(s.log, { autor: p.nome, rotulo: `${p.nome} entrou no combate`, texto: `iniciativa ${r.total}` });
+  registrar(s.log, { autor: p.nome, rotulo: `${p.nome} entrou no combate${p.escondido ? ' (escondido)' : ''}`, texto: `iniciativa ${r.total}`, ...(p.escondido ? { secreta: true } : {}) });
 }
 
 // Fim do combate para um personagem: as Necessidades voltam e ele faz o teste de CONS difícil (livro).
@@ -823,6 +845,57 @@ const nomeSubDe = (sis, id) => { const p = sis.pericias.find(x => id.startsWith(
 // Lado no combate: os personagens-jogador e os companheiros deles de um lado; os outros NPCs do outro.
 const ladoDe = p => (p.tipo === 'pj' || p.companheiroDe ? 'pj' : 'npc');
 const aliadosNoCampo = (c, p) => c.salas.batalha.participantes.map(id => c.personagens.find(x => x.id === id)).filter(x => x && x.id !== p.id && ladoDe(x) === ladoDe(p));
+// ---------- NPC escondido (ghost) ----------
+const escondidos = c => new Set(c.personagens.filter(p => p.escondido).map(p => p.id));
+function revelarEscondido(c, p, texto) {
+  if (!p.escondido) return;
+  delete p.escondido;
+  const x = ondeEsta(c, p.id)?.x;
+  if (x) x.oculto = false;
+  registrar(c.salas.batalha.log, { autor: p.nome, rotulo: 'Encontrado', texto });
+}
+// PJs que podem achar o escondido: os do Campo de Batalha (ou, sem combate, os que estão no mapa). Com a fog pessoal,
+// só quem tem o escondido no cone de visão agora.
+function quemProcura(c, p) {
+  const s = c.salas.batalha;
+  const pjs = c.personagens.filter(x => x.tipo === 'pj' && x.atributos && !(x.pv && x.pv.atual <= 0)
+    && (s.participantes.includes(x.id) || ondeEsta(c, x.id)));
+  const onde = ondeEsta(c, p.id);
+  if (!onde || !c.mapa?.fog?.pessoal) return pjs;
+  const partes = mundoDe(c);
+  const parte = partes.find(x => x.mapa === onde.mapa);
+  if (!parte) return [];
+  const vis = visaoDosPJs(partes, c.personagens, { fogPessoal: true, alcance: c.mapa.fog?.alcance });
+  const peca = { col: onde.x.col + parte.dc, lin: onde.x.lin + parte.dl };
+  return pjs.filter(x => vis[x.id] && pecaNoConjunto(vis[x.id], peca, ladoNoMapa(p)));
+}
+function procurarEscondido(c, p) {
+  if (!p.escondido) throw erro(`${p.nome} não está escondido.`);
+  const sis = sistema(c.sistema);
+  const d = derivados(p, sis);
+  const sub = (d.subpericias['espionagem.camuflagem'] ?? 0) >= (d.subpericias['espionagem.furtividade'] ?? 0) ? 'espionagem.camuflagem' : 'espionagem.furtividade';
+  const nomeSub = sub.endsWith('camuflagem') ? 'Camuflagem' : 'Furtividade';
+  const pjs = quemProcura(c, p);
+  if (!pjs.length) {
+    registrar(c.salas.batalha.log, { autor: p.nome, rotulo: 'Escondido', texto: 'nenhum PJ em condição de vê-lo (fora da visão)', secreta: true });
+    return { achado: false, texto: `${p.nome}: nenhum PJ em condição de vê-lo.` };
+  }
+  // Uma rolagem do escondido contra a passiva de cada um.
+  const t = testar(p, sis, sub, 0);
+  const linhas = [];
+  let quem = null;
+  for (const x of pjs) {
+    const passiva = (derivados(x, sis).pericias.sentidos ?? 0) + (sis.teste.passiva?.soma ?? 50);
+    const escapou = t.critico === 'acerto' || (t.critico !== 'erro' && t.total >= passiva);
+    linhas.push(`${x.nome} (passiva ${passiva}): ${escapou ? 'não viu' : 'viu'}`);
+    if (!escapou && !quem) quem = x;
+  }
+  const texto = `${nomeSub} ${t.total} (d100 ${t.dp} + ${t.acao})${t.critico ? `, crítico de ${t.critico}` : ''} — ${linhas.join(' · ')}`;
+  registrar(c.salas.batalha.log, { autor: p.nome, rotulo: 'Escondido — teste', texto, secreta: true });
+  if (quem) revelarEscondido(c, p, `${quem.nome} encontrou ${p.nome}!`);
+  return { achado: !!quem, por: quem?.nome || null, texto };
+}
+
 const contaTeste = (nome, t) => `${nome} ${t.total} (d100 ${t.dp} + ${t.acao}) contra ${t.nd}: ${t.sucesso ? 'passou' : 'falhou'}`;
 function testar(p, sis, sub, nd, extra = {}) {
   const d = derivados(p, sis);
@@ -1720,8 +1793,12 @@ function iniciarCombate(c) {
   s.ativo = s.combate.ordem[0].id;
   const pos0 = c.mapa?.pecas?.[s.ativo];
   s.combate.inicioTurno = pos0 ? { id: s.ativo, col: pos0.col, lin: pos0.lin } : null;
-  const nomes = s.combate.ordem.map(o => `${c.personagens.find(p => p.id === o.id).nome} ${o.ini}`);
-  registrar(s.log, { autor: 'Mestre', rotulo: 'Combate iniciado — iniciativa', texto: nomes.join(' · ') });
+  const nome = o => c.personagens.find(p => p.id === o.id);
+  const nomes = s.combate.ordem.map(o => `${nome(o).nome} ${o.ini}${nome(o).escondido ? ' (escondido)' : ''}`);
+  if (s.combate.ordem.some(o => nome(o).escondido)) {
+    registrar(s.log, { autor: 'Mestre', rotulo: 'Combate iniciado — iniciativa', texto: s.combate.ordem.filter(o => !nome(o).escondido).map(o => `${nome(o).nome} ${o.ini}`).join(' · ') });
+    registrar(s.log, { autor: 'Mestre', rotulo: 'Iniciativa completa (com os escondidos)', texto: nomes.join(' · '), secreta: true });
+  } else registrar(s.log, { autor: 'Mestre', rotulo: 'Combate iniciado — iniciativa', texto: nomes.join(' · ') });
 }
 
 // O sistema força a iniciativa: com dois ou mais no Campo de Batalha o combate começa sozinho,
@@ -2961,15 +3038,41 @@ export const acoes = {
     c.imagens = c.imagens.filter(i => i.id !== id);
   },
 
-  'sala.adicionar'(c, { sala: nome, id }, ctx) {
+  'sala.adicionar'(c, { sala: nome, id, escondido = false }, ctx) {
     const s = sala(c, nome);
     const p = personagem(c, id);
     if (!ctx.mestre) exigirDonoOuMestre(ctx, p);
     if (s.participantes.includes(id)) return;
     if (s.participantes.length >= LIMITE_SALA) throw erro(`A sala já tem ${LIMITE_SALA} integrantes.`);
+    // NPC que entra escondido (ghost, autor 01/11): conta na iniciativa, mas jogadores e Suporte não sabem que está ali.
+    if (escondido && nome === 'batalha') {
+      if (!ctx.mestre) throw erro('Só o mestre põe alguém escondido.');
+      if (p.tipo === 'pj') throw erro('Só NPC entra escondido.');
+      p.escondido = true;
+    }
     s.participantes.push(id);
     if (nome === 'social' && s.testaram) s.testaram = s.testaram.filter(x => x !== id);
-    if (nome === 'batalha') { porNoMapa(c, p); garantirCombate(c); }
+    if (nome === 'batalha') { porNoMapa(c, p); if (p.escondido) { const x = ondeEsta(c, p.id)?.x; if (x) x.oculto = true; } garantirCombate(c); }
+  },
+
+  // Esconder ou revelar um NPC no Campo de Batalha (mestre). Revelado, ele aparece para todos.
+  'personagem.esconder'(c, { id, escondido }, ctx) {
+    exigirMestre(ctx);
+    const p = personagem(c, id);
+    if (p.tipo === 'pj') throw erro('Só NPC fica escondido.');
+    if (escondido) {
+      p.escondido = true;
+      const x = ondeEsta(c, p.id)?.x;
+      if (x) x.oculto = true;
+      registrar(c.salas.batalha.log, { autor: 'Mestre', rotulo: 'Escondido', texto: `${p.nome} está escondido (os jogadores não veem)`, secreta: true });
+    } else revelarEscondido(c, p, `${p.nome} aparece!`);
+  },
+
+  // Teste para achar o escondido (autor, 01/11): Camuflagem ou Furtividade dele (a maior) contra a Percepção passiva
+  // (Sentidos + 50) de cada PJ que poderia vê-lo. Falhou para todos → silencioso (só o mestre vê). Alguém achou → aparece.
+  'esconder.procurar'(c, { id }, ctx) {
+    exigirMestre(ctx);
+    return procurarEscondido(c, personagem(c, id));
   },
 
   'sala.remover'(c, { sala: nome, id }, ctx) {
@@ -3231,6 +3334,8 @@ export const acoes = {
       cb.vez = 0;
       cb.rodada++;
       registrar(s.log, { autor: 'Mestre', rotulo: `Rodada ${cb.rodada}`, texto: 'nova rodada' });
+      // A cada rodada, quem está escondido no campo pode ser achado por acaso (teste silencioso).
+      for (const x of c.personagens.filter(y => y.escondido && s.participantes.includes(y.id))) procurarEscondido(c, x);
     }
     const p = c.personagens.find(x => x.id === cb.ordem[cb.vez].id);
     s.ativo = p.id;
@@ -3411,6 +3516,8 @@ export const acoes = {
       try { gastarRecurso(a, sis, 'nucleo', 1); } catch (e) { throw erro(e.message); }
       registrar(s.log, { autor: a.nome, rotulo: 'Carga do Núcleo', texto: `+2d6 elétrico no ataque${cargaNoCoracao(a)}` });
     }
+    // Atacar do esconderijo: o alvo não sabia dele (ataque surpresa, com vantagem) e ele aparece.
+    if (a.escondido) { op.surpresa = true; revelarEscondido(c, a, `${a.nome} sai do esconderijo e ataca ${b.nome} de surpresa!`); }
     const pend = { id: uid(), atacante: a.id, alvo: b.id, opcoes: op, arma: arma.nome, habilidade: arma.habilidade || null, alcance: arma.alcance, area: !!op.area, em: Date.now(), municao: itemArma?.capacidade ? itemArma.uid : null,
       armaTipo: tipoDaArma(arma), tipoDano: arma.tipoDano || null, natural: !!arma.natural };
     // Contra tiro, ou com o alvo pego de surpresa, não há defesa a escolher: resolve na hora.
