@@ -9,7 +9,7 @@ import { DATA_DIR } from './db.js';
 
 const ARQ = path.join(DATA_DIR, 'ia.json');
 export const PROVEDORES = ['nenhum', 'gemini', 'ollama', 'claude'];
-const PADRAO = { provedor: 'nenhum', gemini: { chave: '', modelo: 'gemini-2.5-flash' }, ollama: { url: 'http://localhost:11434', modelo: 'llama3.1', modeloVisao: 'llama3.2-vision' }, claude: { chave: '', modelo: 'claude-opus-5-5' } };
+const PADRAO = { provedor: 'nenhum', gemini: { chave: '', modelo: 'gemini-2.5-flash', modeloImagem: 'gemini-2.5-flash-image' }, ollama: { url: 'http://localhost:11434', modelo: 'llama3.1', modeloVisao: 'llama3.2-vision' }, claude: { chave: '', modelo: 'claude-opus-5-5' } };
 
 export function lerConfigIA() {
   try {
@@ -23,7 +23,7 @@ export function configPublica() {
   const c = lerConfigIA();
   return {
     provedor: c.provedor,
-    gemini: { modelo: c.gemini.modelo, temChave: !!c.gemini.chave },
+    gemini: { modelo: c.gemini.modelo, modeloImagem: c.gemini.modeloImagem, temChave: !!c.gemini.chave },
     ollama: { url: c.ollama.url, modelo: c.ollama.modelo, modeloVisao: c.ollama.modeloVisao },
     claude: { modelo: c.claude.modelo, temChave: !!c.claude.chave },
   };
@@ -43,6 +43,7 @@ export function salvarConfigIA(novo = {}) {
     if (!/^https?:\/\//i.test(txt(novo.ollama.url))) throw new Error('Endereço do Ollama inválido (ex.: http://localhost:11434).');
     c.ollama.url = txt(novo.ollama.url).replace(/\/+$/, '');
   }
+  if (txt(novo.gemini?.modeloImagem, 80)) c.gemini.modeloImagem = txt(novo.gemini.modeloImagem, 80);
   if (txt(novo.ollama?.modelo, 80)) c.ollama.modelo = txt(novo.ollama.modelo, 80);
   if (txt(novo.ollama?.modeloVisao, 80)) c.ollama.modeloVisao = txt(novo.ollama.modeloVisao, 80);
   fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -187,4 +188,27 @@ export async function lerImagemJson(sistemaTxt, pedido, imagem, esquema) {
     }
   }
   throw new Error('Nenhuma IA configurada (aba Campanha > Inteligência artificial).');
+}
+
+// ---------- Gerar imagem (só o Gemini gera imagens) ----------
+// Extensão de mapa (autor, 01/11): o Gemini recebe o mapa atual e pinta a continuação. Devolve { buffer, mime }.
+export const podeGerarImagem = () => { const c = lerConfigIA(); return c.provedor === 'gemini' && !!c.gemini.chave; };
+export async function gerarImagem(pedido, imagem) {
+  const c = lerConfigIA();
+  if (c.provedor !== 'gemini') throw new Error('Gerar imagem só funciona com o Gemini (aba Campanha > Inteligência artificial). Use o modo "desenho do app".');
+  if (!c.gemini.chave) throw new Error('Falta a chave do Gemini (aba Campanha > Inteligência artificial).');
+  if (imagem && (!imagem.data || !MIMES.includes(imagem.mime))) throw new Error('Imagem do mapa inválida (use PNG, JPG ou WEBP).');
+  const partes = [...(imagem ? [{ inline_data: { mime_type: imagem.mime, data: imagem.data } }] : []), { text: pedido }];
+  const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(c.gemini.modeloImagem || 'gemini-2.5-flash-image')}:generateContent`, {
+    method: 'POST', signal: AbortSignal.timeout(TEMPO * 3),
+    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': c.gemini.chave },
+    body: JSON.stringify({ contents: [{ role: 'user', parts: partes }], generationConfig: { responseModalities: ['IMAGE', 'TEXT'] } }),
+  });
+  const d = await r.json().catch(() => ({}));
+  if (r.status === 429) throw new Error('A cota do Gemini para imagens acabou por agora. Tente mais tarde ou use o modo "desenho do app".');
+  if (!r.ok) throw new Error(`O Gemini recusou o pedido de imagem: ${d.error?.message || r.status}`);
+  const parte = (d.candidates?.[0]?.content?.parts || []).find(p => p.inlineData?.data || p.inline_data?.data);
+  const dados = parte?.inlineData || parte?.inline_data;
+  if (!dados) throw new Error('O Gemini não devolveu imagem. Tente de novo (ou mude as diretrizes).');
+  return { buffer: Buffer.from(dados.data, 'base64'), mime: dados.mimeType || dados.mime_type || 'image/png' };
 }

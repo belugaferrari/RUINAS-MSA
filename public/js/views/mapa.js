@@ -204,6 +204,7 @@ export function mapaView() {
           (mapa.marcas || []).length ? h('small', { class: 'dica' }, `${mapa.marcas.length} marcação(ões) secreta(s) — os jogadores e o Suporte não veem.`) : null) : null,
         mestre && mapa.midia ? porObjeto() : null,
         mestre && mapa.midia ? lerMapaIA(mapa) : null,
+        mestre && mapa.midia && !vendoMundo ? estenderComIA(mapa) : null,
         // Modo fantasma: esconde dos jogadores os NPCs fora da visão de todos os PJs (os nublados), ou mostra todos.
         mestre && mapa.midia ? h('div', { class: 'barra' },
           botao(`Modo fantasma${foraDaVisao.size ? ` (${foraDaVisao.size} fora da visão)` : ''}`, () => acao('mapa.fantasmas', { ocultar: true }).then(r => aviso(r.ids.length ? `${r.ids.length} NPC(s) invisíveis para os jogadores.` : 'Nenhum NPC fora da visão dos PJs.')),
@@ -345,6 +346,49 @@ const girarMapa = () => (estado.sel.mapaGirar ?? emPe());
 // Saiu da tela cheia do navegador (Esc, voltar do celular): sai do modo do mapa também; girou o aparelho: redesenha.
 document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && estado.sel.mapaCheia) sairTelaCheia(); });
 window.addEventListener('resize', () => { if (estado.sel.mapaCheia && estado.sel.mapaGirar == null) render(); });
+
+// ---------- Estender o mapa com IA (autor, 01/11) ----------
+// A IA vê o mapa atual e as diretrizes do mestre e cria o mapa vizinho no lado escolhido (ligado como vizinho).
+function estenderComIA(mapa) {
+  const cfg = estado.sel.iaConfig;
+  if (cfg === undefined && !estado.sel.iaPedido) {
+    estado.sel.iaPedido = true;
+    get('/api/ia').then(r => { estado.sel.iaConfig = r; render(); }).catch(() => { estado.sel.iaConfig = null; });
+  }
+  const temIA = cfg && cfg.provedor !== 'nenhum';
+  const gemini = cfg?.provedor === 'gemini' && cfg.gemini?.temChave;
+  const livres = ['norte', 'sul', 'leste', 'oeste'].filter(l => !mapa.vizinhos?.[l]);
+  const f = (estado.sel.extensaoIA ||= { lado: '', diretrizes: '', modo: 'desenho' });
+  if (!livres.includes(f.lado)) f.lado = livres[0] || '';
+  if (f.modo === 'imagem' && !gemini) f.modo = 'desenho';
+  const criando = !!estado.sel.criandoExtensao;
+  const criar = async () => {
+    if (!f.lado) throw new Error('Este mapa já tem vizinhos nos quatro lados.');
+    const { imagem } = imagemDoMapaParaIA(mapa);
+    estado.sel.criandoExtensao = true; render();
+    try {
+      const r = await post(`/api/campanhas/${estado.campanha.id}/mapa/estender`, { lado: f.lado, diretrizes: f.diretrizes, modo: f.modo, imagem });
+      aviso(`Extensão criada ao ${f.lado}: ${r.nome}${r.objetos ? ` (${r.objetos} objetos)` : ''}. Arraste o mapa para ver.`);
+      if (r.descricao) janela(r.nome, h('p', {}, r.descricao), [['Fechar', () => true]]);
+      f.diretrizes = '';
+    } finally { estado.sel.criandoExtensao = false; render(); }
+  };
+  return h('details', { class: 'bloco estender-ia', open: !!estado.sel.abreExtensao, ontoggle: e => { estado.sel.abreExtensao = e.target.open; } },
+    h('summary', {}, icone('sparkles'), ' Estender o mapa com IA'),
+    !temIA ? h('p', { class: 'dica' }, 'Configure uma IA na aba Campanha (Gemini é grátis; com ele dá até para gerar a imagem).') : null,
+    h('div', { class: 'form' },
+      h('div', { class: 'barra' },
+        h('label', { class: 'linha' }, 'Lado', selecao(livres.length ? livres.map(l => ({ valor: l, rotulo: { norte: '↑ Norte', sul: '↓ Sul', leste: '→ Leste', oeste: '← Oeste' }[l] })) : [{ valor: '', rotulo: 'sem lado livre' }],
+          f.lado, v => { f.lado = v; }, { 'aria-label': 'Lado da extensão' })),
+        h('label', { class: 'linha' }, 'Modo', selecao([{ valor: 'desenho', rotulo: 'Desenho do app (qualquer IA; já cria paredes, árvores, água…)' },
+          ...(gemini ? [{ valor: 'imagem', rotulo: 'Imagem pintada pelo Gemini (mesmo estilo; objetos depois com "Ler o mapa")' }] : [])], f.modo, v => { f.modo = v; }, { 'aria-label': 'Modo da extensão' }))),
+      h('label', {}, 'Diretrizes do cenário',
+        h('textarea', { rows: 3, placeholder: 'Ex.: estrada de terra continua até um posto de gasolina abandonado; mato alto dos lados; um carro capotado no meio do caminho.',
+          oninput: e => { f.diretrizes = e.target.value; } }, f.diretrizes)),
+      h('div', { class: 'barra' },
+        botao(criando ? 'Criando… (pode levar até 1 minuto)' : 'Criar a extensão', criar, { class: 'primario', icone: 'sparkles', disabled: !temIA || criando || !f.lado }),
+        h('small', { class: 'dica' }, 'O mapa novo tem o mesmo tamanho de grade, fica ligado como vizinho e herda a fog deste (começa sem nada explorado).'))));
+}
 
 // ---------- Ler o mapa com IA (parte B) ----------
 // A tela reduz a imagem do mapa (até 1600 px, JPEG) e manda para a IA configurada na aba Campanha; a IA devolve os

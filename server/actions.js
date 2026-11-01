@@ -211,6 +211,25 @@ function ativarMapa(c, id) {
   if (c.salas?.batalha?.combate) c.salas.batalha.combate.inicioTurno = null;
   return novo;
 }
+// Extensão do mapa (autor, 01/11): mapa novo, feito pela IA, ligado como vizinho do ativo no lado escolhido.
+// A imagem já foi salva (url). Herda a fog do ativo (e começa sem nada explorado).
+export function criarExtensao(c, { lado, nome, url, titulo, colunas, linhas, objetos = [], descricao = '', fonte = '' }) {
+  if (!LADOS.includes(lado)) throw erro('Lado inválido.');
+  const a = garantirMapas(c);
+  if (a.vizinhos?.[lado]) throw erro(`O mapa ${a.nome} já tem vizinho ao ${lado}. Desligue antes (Vizinhos).`);
+  const img = { id: uid(), titulo: String(titulo || nome).slice(0, 120), url, tipo: 'imagem', categoria: 'Mapas', mostrando: false };
+  c.imagens.push(img);
+  const m = novoMapa(String(nome || `${a.nome} — ${lado}`).slice(0, 60));
+  Object.assign(m, { imagemId: img.id, grade: { colunas, ox: 0, oy: 0, visivel: a.grade?.visivel !== false, proporcao: linhas / colunas },
+    objetos: objetos.map(o => ({ id: uid(), ...o })), fog: { ...(a.fog || {}) }, explorado: [], descricao: String(descricao).slice(0, 600) });
+  c.mapas.push(m);
+  a.vizinhos ||= {};
+  a.vizinhos[lado] = m.id;
+  m.vizinhos = { [OPOSTO[lado]]: a.id };
+  registrar(c.log, { autor: 'Mestre', rotulo: 'Extensão do mapa', texto: `${m.nome} (${lado} de ${a.nome})${fonte ? ` — ${fonte}` : ''}`, secreta: true });
+  return m;
+}
+
 // Atravessa a passagem: o peão vai para o quadrado de chegada no mapa de destino (o primeiro livre perto dele).
 // Se nenhum PJ ficar no mundo que todos veem (ativo e vizinhos), o destino vira o mapa ativo.
 function atravessar(c, p, origem, ps) {

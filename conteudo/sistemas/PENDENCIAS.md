@@ -638,3 +638,12 @@ Respostas do autor (31/10) e o que foi feito:
 - **Para a planilha**: conteudo/planilhas/municoes/01-municao-de-cada-item.csv (coluna "App: munição (tipo)" de cada item) e
   02-municoes-novas.csv (as 7 munições novas, nas colunas da planilha).
 - "Receita: Pólvora Sem Fumaça" está como munição, mas é receita: sugiro mudar a categoria na planilha.
+
+## 01/11 — Estender o mapa com IA
+- Aba Mapa (mestre) › "Estender o mapa com IA": escolhe o lado livre, escreve as diretrizes e o modo. A IA recebe a imagem do mapa atual.
+  - **Desenho do app** (qualquer IA: Gemini, Claude ou Ollama com modelo de visão): a IA devolve o plano (piso, terrenos, caminhos que
+    continuam os do mapa atual, objetos) e o app desenha a imagem e cria os objetos de regra (paredes, árvores, mato, água… — fog e cobertura funcionam).
+  - **Imagem pintada pelo Gemini** (só com Gemini): pinta a continuação no mesmo estilo; os objetos depois com "Ler o mapa com IA".
+    Modelo de imagem padrão: gemini-2.5-flash-image. *Não testado com o Gemini de verdade aqui (sem chave)* — se der erro, me mande a mensagem.
+- O mapa novo tem o mesmo tamanho de grade, nasce ligado como vizinho e herda a fog do atual (começa sem nada explorado). A descrição do
+  lugar escrita pela IA aparece para o mestre.

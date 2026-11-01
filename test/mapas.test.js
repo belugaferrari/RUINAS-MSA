@@ -133,3 +133,30 @@ test('clima no mapa: o mestre escolhe o efeito, a intensidade e o vento', () => 
   assert.equal(visaoPara(c, jogador, 'jogador').mapa.clima.efeito, 'neve');
   assert.throws(() => executar(c, 'mapa.clima', { efeito: 'meteoro' }, ctxM), /desconhecido/);
 });
+
+const D = await import('../shared/desenhoMapa.js');
+const { criarExtensao } = await import('../server/actions.js');
+
+test('extensão com IA: o plano é conferido contra a grade, vira SVG e objetos de regra; o mapa novo nasce vizinho', () => {
+  const plano = D.planoValido({
+    nome: 'Posto abandonado', descricao: 'Um posto.', piso: 'terra',
+    terrenos: [{ tipo: 'agua', caixa: [0, 0, 2, 1] }, { tipo: 'lava', caixa: [1, 1, 2, 2] }],
+    caminhos: [{ tipo: 'rio', largura: 1, pontos: [[5, 0], [5, 3]] }, { tipo: 'asfalto', largura: 2, pontos: [[0, 7], [23, 7]] }],
+    objetos: [{ tipo: 'parede', nome: 'Muro', col: 10, lin: 2, l: 5, a: 1 }, { tipo: 'dragao', col: 1, lin: 1 }, { tipo: 'arvore', col: 99, lin: 99 }],
+  }, 24, 16);
+  assert.equal(plano.terrenos.length, 1, 'tipo de terreno inválido fica de fora');
+  assert.ok(plano.objetos.some(o => o.tipo === 'parede' && o.l === 5));
+  assert.ok(!plano.objetos.some(o => o.tipo === 'dragao'));
+  assert.ok(plano.objetos.some(o => o.tipo === 'arvore' && o.col === 23 && o.lin === 15), 'fora da grade é trazido para dentro');
+  assert.ok(plano.objetos.filter(o => o.tipo === 'agua').length >= 5, 'água do terreno e do rio viram objetos');
+  const svg = D.svgDoPlano(plano, 24, 16);
+  assert.match(svg, /^<svg[^>]+width="1536" height="1024"/);
+  const { c } = campo();
+  const m = criarExtensao(c, { lado: 'sul', nome: plano.nome, url: '/uploads/x.svg', colunas: 24, linhas: 16, objetos: plano.objetos, descricao: plano.descricao });
+  assert.equal(c.mapa.vizinhos.sul, m.id);
+  assert.equal(m.vizinhos.norte, c.mapa.id);
+  assert.equal(m.fog.absoluta, true);
+  assert.ok(m.objetos.length > 3);
+  assert.throws(() => criarExtensao(c, { lado: 'sul', nome: 'X', url: '/x', colunas: 24, linhas: 16 }), /já tem vizinho/);
+  assert.match(D.pedidoExtensao({ lado: 'leste', diretrizes: 'posto', colunasAtual: 24, linhasAtual: 16, colunas: 24, linhas: 16 }), /borda esquerda \(oeste\)/);
+});

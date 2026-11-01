@@ -74,7 +74,7 @@ test('IA: a chave fica no PC e não volta ao navegador; Gemini e Ollama com resp
   assert.equal(lerConfigIA().provedor, 'nenhum');
   await assert.rejects(gerarTexto('s', 'p'), /Nenhuma IA/);
   salvarConfigIA({ provedor: 'gemini', gemini: { chave: 'AIza-segredo' } });
-  assert.deepEqual(configPublica().gemini, { modelo: 'gemini-2.5-flash', temChave: true });
+  assert.deepEqual(configPublica().gemini, { modelo: 'gemini-2.5-flash', modeloImagem: 'gemini-2.5-flash-image', temChave: true });
   assert.ok(!JSON.stringify(configPublica()).includes('segredo'));
   salvarConfigIA({ gemini: { chave: '' } });
   assert.equal(lerConfigIA().gemini.chave, 'AIza-segredo', 'chave em branco mantém a salva');

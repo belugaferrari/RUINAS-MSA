@@ -9,7 +9,7 @@ import { db, save, flush, uid, RAIZ, UPLOADS } from './db.js';
 import { execSync } from 'node:child_process';
 import { registrar, entrar, usuarioDoToken, sair } from './auth.js';
 import { sistema, listaSistemas, CONTEUDO } from './sistema.js';
-import { novaCampanha, resumoCampanha, visaoPara, entrarNaCampanha, executar, acoes, migrarCampanhas, podeSuporte } from './actions.js';
+import { novaCampanha, resumoCampanha, visaoPara, entrarNaCampanha, executar, acoes, migrarCampanhas, podeSuporte, criarExtensao } from './actions.js';
 
 // Catálogo do mestre lido de novo quando a leitura da planilha muda (28/10: bônus com %, IP por tipo).
 try { reconverterCatalogos(sistema('mss')); } catch (e) { console.log(`Catálogo de itens: ${e.message}`); }
@@ -22,7 +22,9 @@ import { planilhaProfissoes, lerPlanilhaProfissoes, catalogoProfissoes, salvarCa
 import { planilhaArmadilhas, lerPlanilhaArmadilhas, catalogoArmadilhas, salvarCatalogoArmadilhas, voltarArmadilhasPadrao } from './armadilhasPlanilha.js';
 import { planilhaAprimoramentos, lerPlanilhaAprimoramentos, catalogoAprimoramentos, salvarCatalogoAprimoramentos, voltarAprimoramentosPadrao } from './aprimoramentosPlanilha.js';
 import { planilhaCiberneticos, lerPlanilhaCiberneticos, catalogoCiberneticos, salvarCatalogoCiberneticos, voltarCiberneticosPadrao } from './ciberneticosPlanilha.js';
-import { configPublica, salvarConfigIA, gerarTexto, lerImagemJson } from './ia.js';
+import { configPublica, salvarConfigIA, gerarTexto, lerImagemJson, gerarImagem } from './ia.js';
+import { planoValido, svgDoPlano, pedidoExtensao, ESQUEMA_EXTENSAO, pedidoImagemExtensao } from '../shared/desenhoMapa.js';
+import { linhasDoMapa, colunasDoMapa } from '../shared/visao.js';
 import { objetosDaIA, PEDIDO_MAPA_IA, ESQUEMA_MAPA_IA } from '../shared/objetosMapa.js';
 import { SISTEMA_IA, pedidoIA } from '../shared/encontro.js';
 import { catalogoItens, origemCatalogo, lerPlanilhaItens, planilhaDoCatalogo, salvarCatalogoMestre, voltarCatalogoPadrao, reconverterCatalogos, linkGoogleItens } from './itens.js';
@@ -144,6 +146,44 @@ app.post('/api/campanhas/:id/mapa/ler', rota(async req => {
   const { dados, fonte } = await lerImagemJson('Você identifica objetos em mapas de RPG vistos de cima e responde só com JSON.', PEDIDO_MAPA_IA, { data: String(imagem.data), mime: String(imagem.mime) }, ESQUEMA_MAPA_IA);
   const objetos = objetosDaIA(dados?.objetos, c.mapa.grade, asp);
   return { objetos, fonte, lidos: Array.isArray(dados?.objetos) ? dados.objetos.length : 0 };
+}));
+
+// Extensão do mapa com IA (autor, 01/11): a IA vê o mapa atual (a imagem que a tela do mestre manda) e as diretrizes,
+// e cria o mapa vizinho no lado escolhido. Modo "desenho": a IA planeja (piso, caminhos, objetos) e o app desenha —
+// funciona com qualquer IA e já cria os objetos de regra. Modo "imagem": o Gemini pinta a continuação.
+app.post('/api/campanhas/:id/mapa/estender', rota(async req => {
+  const c = campanhaDoMestre(req);
+  const a = c.mapa;
+  if (!a?.imagemId) throw new Error('Abra um mapa com imagem primeiro.');
+  const { lado, diretrizes, modo, imagem } = req.body || {};
+  if (!['norte', 'sul', 'leste', 'oeste'].includes(lado)) throw new Error('Escolha o lado da extensão.');
+  if (a.vizinhos?.[lado]) throw new Error(`Este mapa já tem vizinho ao ${lado}.`);
+  if (!imagem?.data || String(imagem.data).length > 2_700_000) throw new Error('Imagem do mapa grande demais para a IA.');
+  const img = { data: String(imagem.data), mime: String(imagem.mime) };
+  const colunasAtual = colunasDoMapa(a), linhasAtual = linhasDoMapa(a);
+  // Mesmo tamanho do mapa atual (a borda comum casa quadrado a quadrado).
+  const colunas = colunasAtual, linhas = linhasAtual;
+  let url, plano = null, fonte;
+  if (modo === 'imagem') {
+    const r = await gerarImagem(pedidoImagemExtensao({ lado, diretrizes }), img);
+    const ext = { 'image/png': '.png', 'image/jpeg': '.jpg', 'image/webp': '.webp' }[r.mime] || '.png';
+    const nome = `${uid()}${uid()}${ext}`;
+    fs.writeFileSync(path.join(UPLOADS, nome), r.buffer);
+    url = `/uploads/${nome}`;
+    fonte = 'imagem do Gemini';
+  } else {
+    const r = await lerImagemJson('Você desenha mapas de RPG vistos de cima, em grade, e responde só com JSON.', pedidoExtensao({ lado, diretrizes, colunasAtual, linhasAtual, colunas, linhas }), img, ESQUEMA_EXTENSAO);
+    plano = planoValido(r.dados, colunas, linhas);
+    const nome = `${uid()}${uid()}.svg`;
+    fs.writeFileSync(path.join(UPLOADS, nome), svgDoPlano(plano, colunas, linhas, Date.now() % 100000));
+    url = `/uploads/${nome}`;
+    fonte = r.fonte;
+  }
+  const nomeMapa = plano?.nome || `${a.nome} — ${lado}`;
+  const m = criarExtensao(c, { lado, nome: nomeMapa, url, titulo: nomeMapa, colunas, linhas, objetos: plano?.objetos || [], descricao: plano?.descricao || String(diretrizes || '').slice(0, 300), fonte });
+  save();
+  transmitir(c);
+  return { id: m.id, nome: m.nome, descricao: m.descricao, objetos: m.objetos.length, fonte };
 }));
 
 // Imagem de um monstro do Livro dos Monstros (só o mestre). A alternativa é colar um link (ação monstro.imagem).
