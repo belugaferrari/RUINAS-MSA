@@ -8,6 +8,8 @@ import { fichasDeTeste, relatorioFicha, kitDeTeste, periciasDeTeste } from '../s
 import { requisitosQueFaltam } from '../shared/requisitos.js';
 import { monstroNoEstagio, textoDeslocamentos, textoND, ladoNoMapa, ameacaNoMapa } from '../shared/monstros.js';
 import { sortearEncontro, cenarioSemIA } from '../shared/encontro.js';
+import { MAPAS_TESTE } from '../shared/mapasTeste.js';
+import { partesDoMundo, parteNoQuadrado, visaoDosPJs, porMapa, pecaNoConjunto, objetoNoConjunto, direcaoDoMovimento, LADOS, OPOSTO, linhasDoMapa, colunasDoMapa, DIRECOES as DIRECOES_OLHAR } from '../shared/visao.js';
 import { FORMAS_AREA, quadradosDaArea, atingidosPelaArea } from '../shared/area.js';
 import { TIPOS_OBJETO, tipoObjeto, coberturaPeloMapa, foraDaVisaoDosPJs, bloqueadoPorObjeto } from '../shared/objetosMapa.js';
 import { passarNecessidades, comer, beber, dormir, rolarCaos, climaDoDia, descreverRelogio, fimDoCombate } from '../shared/tempo.js';
@@ -89,7 +91,7 @@ function efeitosPublicos(p, sis) {
 // O que cada pessoa enxerga da campanha. O mestre vê tudo; o jogador só o que é dele ou público.
 export function visaoPara(c, user, area) {
   const comDono = p => ({ ...p, dono: nomeUsuario(p.donoId) });
-  const mapa = mapaPublico(c, area);
+  const mapa = mapaPublico(c, area, user);
   if (area === 'mestre') {
     return { ...c, mapa, sistema: idSistema(c.sistema), personagens: c.personagens.map(comDono), jogadoresNomes: c.jogadores.map(nomeUsuario),
       suportesNomes: (c.suportes || []).map(id => ({ id, nome: nomeUsuario(id) })), papel: 'mestre' };
@@ -150,8 +152,82 @@ export function entrarNaCampanha(c, user, area) {
 // ---------- Mapa ----------
 // Imagem, GIF ou vídeo escolhido pelo mestre, com a grade de 1,5 m por quadrado por cima e os peões dos personagens.
 // grade.colunas = quantos quadrados cabem na largura do mapa (o mestre aumenta/diminui); ox/oy deslocam a grade (fração de quadrado).
-function novoMapa() {
-  return { imagemId: null, grade: { colunas: 20, ox: 0, oy: 0, visivel: true }, pecas: {} };
+function novoMapa(nome = 'Mapa 1') {
+  return { id: uid(), nome, imagemId: null, grade: { colunas: 20, ox: 0, oy: 0, visivel: true }, pecas: {}, vizinhos: {}, passagens: [], explorado: [], fog: { absoluta: false, pessoal: false } };
+}
+
+// ---------- Vários mapas (autor, 01/11) ----------
+// c.mapa é o mapa ativo (o que todos veem); c.mapas guarda os outros. Cada mapa tem vizinhos (norte, sul, leste, oeste),
+// que aparecem colados nas bordas do ativo, e passagens (um quadrado que leva a outro mapa).
+function garantirMapas(c) {
+  c.mapa ||= novoMapa();
+  c.mapa.id ||= uid();
+  c.mapa.nome ||= 'Mapa 1';
+  c.mapas ||= [];
+  return c.mapa;
+}
+const todosMapas = c => [garantirMapas(c), ...c.mapas];
+const mapaPorId = (c, id) => todosMapas(c).find(m => m.id === id) || null;
+const mundoDe = c => partesDoMundo(garantirMapas(c), id => mapaPorId(c, id));
+// Em que mapa está o peão do personagem.
+function ondeEsta(c, pid) {
+  for (const m of todosMapas(c)) if (m.pecas?.[pid]) return { mapa: m, x: m.pecas[pid] };
+  return null;
+}
+// Troca o mapa ativo (o atual vai para a lista).
+function ativarMapa(c, id) {
+  const atual = garantirMapas(c);
+  if (atual.id === id) return atual;
+  const i = c.mapas.findIndex(m => m.id === id);
+  if (i < 0) throw erro('Mapa não encontrado.');
+  const [novo] = c.mapas.splice(i, 1);
+  c.mapas.push(atual);
+  c.mapa = novo;
+  if (c.salas?.batalha?.combate) c.salas.batalha.combate.inicioTurno = null;
+  return novo;
+}
+// Atravessa a passagem: o peão vai para o quadrado de chegada no mapa de destino (o primeiro livre perto dele).
+// Se nenhum PJ ficar no mundo que todos veem (ativo e vizinhos), o destino vira o mapa ativo.
+function atravessar(c, p, origem, ps) {
+  const dest = mapaPorId(c, ps.para);
+  if (!dest) throw erro('O mapa de destino não existe mais.');
+  delete origem.pecas[p.id];
+  const lado = ladoNoMapa(p);
+  let pos = { col: ps.destino?.col || 0, lin: ps.destino?.lin || 0 };
+  const ocupado = (col, lin) => Object.entries(dest.pecas || {}).some(([id, x]) => id !== p.id && Math.abs(x.col - col) < lado && Math.abs(x.lin - lin) < lado)
+    || bloqueadoPorObjeto(dest.objetos, col, lin, lado);
+  for (let r = 0; r < 6 && ocupado(pos.col, pos.lin); r++) {
+    const livre = [];
+    for (let dc = -r - 1; dc <= r + 1; dc++) for (let dl = -r - 1; dl <= r + 1; dl++) if (pos.col + dc >= 0 && pos.lin + dl >= 0 && !ocupado(pos.col + dc, pos.lin + dl)) livre.push({ col: pos.col + dc, lin: pos.lin + dl });
+    if (livre.length) { pos = livre[0]; break; }
+  }
+  (dest.pecas ||= {})[p.id] = { col: pos.col, lin: pos.lin };
+  const noMundo = new Set(mundoDe(c).map(x => x.mapa));
+  let trocou = false;
+  if (!noMundo.has(dest) && p.tipo === 'pj' && ![...noMundo].some(m => Object.keys(m.pecas || {}).some(id => c.personagens.find(x => x.id === id)?.tipo === 'pj'))) {
+    ativarMapa(c, dest.id);
+    trocou = true;
+  }
+  const texto = `${p.nome} usou ${ps.nome || 'a passagem'} e foi para ${dest.nome}${trocou ? ' (o mapa mudou para todos)' : ''}.`;
+  registrar(c.log, { autor: p.nome, rotulo: 'Passagem', texto });
+  return { atravessou: dest.nome, trocou, texto };
+}
+
+// Fog absoluta: o que os PJs veem agora entra no "explorado" de cada mapa do mundo (ativo e vizinhos).
+function explorarMapas(c) {
+  if (!c.mapa) return;
+  const partes = mundoDe(c);
+  if (!partes.some(p => p.mapa.fog?.absoluta)) return;
+  const vis = visaoDosPJs(partes, c.personagens, { fogPessoal: !!c.mapa.fog?.pessoal, alcance: c.mapa.fog?.alcance });
+  const uniao = new Set(Object.values(vis).flatMap(x => [...x]));
+  for (const [id, ks] of Object.entries(porMapa(partes, uniao))) {
+    const m = mapaPorId(c, id);
+    if (!m?.fog?.absoluta) continue;
+    const conj = new Set(m.explorado || []);
+    const antes = conj.size;
+    for (const k of ks) conj.add(k);
+    if (conj.size !== antes) m.explorado = [...conj];
+  }
 }
 
 // Primeiro lugar livre no mapa para um peão de lado×lado quadrados (criatura grande ocupa 2×2 ou 3×3), linha a linha.
@@ -179,14 +255,44 @@ function porNoMapa(c, p) {
 }
 
 // Só o mestre vê as marcações secretas (armadilhas…) e os peões ocultos (NPC fantasma); jogadores e Suporte não recebem nada deles.
-function mapaPublico(c, area) {
-  c.mapa ||= novoMapa();
+// O mapa como cada um vê: o ativo (campos de sempre) e os vizinhos em "vizinhos" (com dc/dl em quadrados).
+// Fog: o mestre vê tudo (com a camada da fog meio transparente); jogador e Suporte só o que os PJs já viram (absoluta)
+// e, com a fog pessoal, os NPCs só aparecem no que os PJs enxergam agora (o jogador: o que os personagens DELE enxergam).
+function mapaPublico(c, area, user = null) {
+  garantirMapas(c);
   const mestre = area === 'mestre';
-  const img = c.imagens.find(i => i.id === c.mapa.imagemId);
-  const vivos = Object.fromEntries(Object.entries(c.mapa.pecas)
-    .filter(([id, x]) => c.personagens.some(p => p.id === id) && (mestre || !x.oculto)));
-  // Objetos no mapa (armadilhas, coberturas, objetos…): os ocultos só o mestre vê.
-  return { ...c.mapa, pecas: vivos, marcas: mestre ? (c.mapa.marcas || []) : [], objetos: (c.mapa.objetos || []).filter(o => mestre || !o.oculto), midia: img ? { url: img.url, tipo: img.tipo || 'imagem', titulo: img.titulo } : null };
+  const partes = mundoDe(c);
+  const pessoal = !!c.mapa.fog?.pessoal;
+  const temFog = partes.some(p => p.mapa.fog?.absoluta) || pessoal;
+  const vis = temFog ? visaoDosPJs(partes, c.personagens, { fogPessoal: pessoal, alcance: c.mapa.fog?.alcance }) : {};
+  const meus = area === 'jogador' && user ? new Set(c.personagens.filter(p => p.donoId === user.id).map(p => p.id)) : null;
+  const vendo = new Set(Object.entries(vis).filter(([id]) => !meus || meus.has(id)).flatMap(([, x]) => [...x]));
+  const visPorMapa = porMapa(partes, vendo);
+  const publico = parte => {
+    const m = parte.mapa;
+    const img = c.imagens.find(i => i.id === m.imagemId);
+    const absoluta = !!m.fog?.absoluta;
+    const visivel = new Set(visPorMapa[m.id] || []);
+    const conhecido = absoluta ? new Set([...(m.explorado || []), ...visivel]) : null;
+    const agora = pessoal ? visivel : conhecido;
+    const tipo = id => c.personagens.find(p => p.id === id)?.tipo;
+    const lado = id => ladoNoMapa(c.personagens.find(p => p.id === id));
+    const pecas = Object.fromEntries(Object.entries(m.pecas || {}).filter(([id, x]) => c.personagens.some(p => p.id === id)
+      && (mestre || (!x.oculto && (tipo(id) === 'pj' || !agora || pecaNoConjunto(agora, x, lado(id)))))));
+    const objetos = (m.objetos || []).filter(o => mestre || (!o.oculto && (!conhecido || objetoNoConjunto(conhecido, o))));
+    const passagens = (m.passagens || []).filter(x => mestre || ((!x.oculta) && (!conhecido || conhecido.has(`${x.col}:${x.lin}`))))
+      .map(x => ({ ...x, paraNome: mapaPorId(c, x.para)?.nome || '?' }));
+    return {
+      ...m, pecas, objetos, passagens, marcas: mestre ? (m.marcas || []) : [], explorado: undefined,
+      midia: img ? { url: img.url, tipo: img.tipo || 'imagem', titulo: img.titulo } : null,
+      fog: { absoluta, pessoal, alcance: c.mapa.fog?.alcance || null, explorado: absoluta ? (m.explorado || []) : [], visivel: temFog ? [...visivel] : [] },
+    };
+  };
+  const ativo = publico(partes[0]);
+  ativo.vizinhosLista = partes.slice(1).map(p => ({ ...publico(p), lado: p.lado, dc: p.dc, dl: p.dl }));
+  ativo.vizinhosNomes = Object.fromEntries(LADOS.map(l => [l, c.mapa.vizinhos?.[l] ? mapaPorId(c, c.mapa.vizinhos[l])?.nome || null : null]));
+  if (mestre) ativo.mapas = todosMapas(c).map(m => ({ id: m.id, nome: m.nome, ativo: m === c.mapa, pecas: Object.keys(m.pecas || {}).length }));
+  return ativo;
 }
 
 // ---------- utilitários ----------
@@ -2435,10 +2541,12 @@ export const acoes = {
     c.mapa.imagemId = imagemId || null;
   },
 
-  'mapa.grade'(c, { colunas, ox, oy, visivel }, ctx) {
+  'mapa.grade'(c, { colunas, ox, oy, visivel, proporcao }, ctx) {
     exigirMestre(ctx);
     c.mapa ||= novoMapa();
     const g = c.mapa.grade;
+    // Proporção altura/largura da imagem (a tela do mestre manda ao carregar): diz quantas linhas a grade tem.
+    if (proporcao !== undefined && Number(proporcao) > 0) g.proporcao = Math.max(0.05, Math.min(20, Number(proporcao)));
     if (colunas !== undefined) g.colunas = Math.max(2, Math.min(200, parseInt(colunas, 10) || 20));
     const frac = v => Math.max(0, Math.min(0.99, Number(v) || 0));
     if (ox !== undefined) g.ox = frac(ox);
@@ -2446,7 +2554,9 @@ export const acoes = {
     if (visivel !== undefined) g.visivel = !!visivel;
   },
 
-  // Mestre e Suporte colocam e movem os peões (col/lin = quadrado da grade).
+  // Mestre e Suporte colocam e movem os peões (col/lin = quadrado da grade). Coordenadas do mundo: o mapa ativo começa
+  // em 0,0; passar da borda leva o peão para o mapa vizinho daquele lado (autor, 01/11). Parar numa passagem leva o
+  // peão para o mapa de destino dela.
   'mapa.mover'(c, { id, col, lin }, ctx) {
     const p = personagem(c, id);
     // O jogador move o peão do próprio personagem (ou de um companheiro dele) na vez dele no Campo de Batalha (autor, 29/10).
@@ -2456,18 +2566,187 @@ export const acoes = {
       if (p.donoId !== ctx.user.id) throw erro('Você só move o seu personagem.');
       if (!vezDele) throw erro(`Só na vez de ${p.nome} no Campo de Batalha.`);
     }
-    c.mapa ||= novoMapa();
-    const antes = c.mapa.pecas[id];
+    garantirMapas(c);
+    const partes = mundoDe(c);
+    const onde = ondeEsta(c, id);
     // O Suporte não enxerga peões ocultos, então também não mexe neles.
-    if (antes?.oculto && !ctx.mestre) throw erro('Personagem não encontrado no mapa.');
-    const novo = { col: Math.max(0, Math.min(999, parseInt(col, 10) || 0)), lin: Math.max(0, Math.min(999, parseInt(lin, 10) || 0)) };
+    if (onde?.x.oculto && !ctx.mestre) throw erro('Personagem não encontrado no mapa.');
+    const alvo = { col: Math.max(-999, Math.min(999, parseInt(col, 10) || 0)), lin: Math.max(-999, Math.min(999, parseInt(lin, 10) || 0)) };
+    const parte = parteNoQuadrado(partes, alvo.col, alvo.lin);
+    if (!parte) throw erro('Fora do mapa.');
+    const m = parte.mapa;
+    const novo = { col: alvo.col - parte.dc, lin: alvo.lin - parte.dl };
     // Obstáculo (parede, árvore, veículo…) não deixa o peão entrar no quadrado.
-    const bloq = bloqueadoPorObjeto(c.mapa.objetos, novo.col, novo.lin, ladoNoMapa(personagem(c, id)));
+    const bloq = bloqueadoPorObjeto(m.objetos, novo.col, novo.lin, ladoNoMapa(p));
     if (bloq) throw erro(`${bloq.nome || tipoObjeto(bloq.tipo).nome} bloqueia esse quadrado.`);
+    const antes = onde?.x;
+    // De onde saiu, no mundo (para a direção do olhar).
+    const parteAntes = onde && partes.find(x => x.mapa === onde.mapa);
+    const deMundo = parteAntes ? { col: antes.col + parteAntes.dc, lin: antes.lin + parteAntes.dl } : null;
     // Onde o peão começou o turno (para o contador de espaço no mapa).
-    if (vezDele && antes && cb.inicioTurno?.id !== id) cb.inicioTurno = { id, col: antes.col, lin: antes.lin };
-    c.mapa.pecas[id] = { ...antes, ...novo };
-    if (cb && antes) avisarOportunidade(c, p, antes, novo);
+    if (vezDele && antes && onde.mapa === c.mapa && m === c.mapa && cb.inicioTurno?.id !== id) cb.inicioTurno = { id, col: antes.col, lin: antes.lin };
+    if (onde && onde.mapa !== m) delete onde.mapa.pecas[id];
+    // Olha para onde andou (o jogador pode virar depois, e escolhe no fim do turno).
+    const olhar = deMundo ? direcaoDoMovimento(deMundo, alvo) : null;
+    (m.pecas ||= {})[id] = { ...antes, ...novo, ...(olhar != null ? { olhar } : {}) };
+    if (cb && antes && onde.mapa === c.mapa && m === c.mapa) avisarOportunidade(c, p, antes, novo);
+    // Passagem no quadrado (ou em algum quadrado que o peão ocupa): leva para o destino.
+    const lado = ladoNoMapa(p);
+    const passagem = (m.passagens || []).find(x => x.col >= novo.col && x.col < novo.col + lado && x.lin >= novo.lin && x.lin < novo.lin + lado);
+    if (passagem) return atravessar(c, p, m, passagem);
+    if (m !== c.mapa && parte.lado) return { mudouDeMapa: m.nome, texto: `${p.nome} entrou em ${m.nome} (${parte.lado}).` };
+    return {};
+  },
+
+  // Passagem (autor, 01/11): o mestre põe num quadrado do mapa ativo um link para outro mapa (e o quadrado de chegada).
+  'mapa.passagem'(c, { col, lin, para, destCol, destLin, nome, oculta = false }, ctx) {
+    exigirMestre(ctx);
+    garantirMapas(c);
+    const dest = mapaPorId(c, para);
+    if (!dest) throw erro('Escolha o mapa de destino.');
+    const q = v => Math.max(0, Math.min(999, parseInt(v, 10) || 0));
+    (c.mapa.passagens ||= []).push({ id: uid(), col: q(col), lin: q(lin), para: dest.id, destino: { col: q(destCol), lin: q(destLin) }, nome: nomeStr(nome).slice(0, 60) || `Para ${dest.nome}`, oculta: !!oculta });
+  },
+  'mapa.passagemRemover'(c, { id }, ctx) {
+    exigirMestre(ctx);
+    garantirMapas(c);
+    c.mapa.passagens = (c.mapa.passagens || []).filter(x => x.id !== id);
+  },
+  // Usar a passagem sem andar até ela (botão na passagem): leva o peão escolhido.
+  'mapa.atravessar'(c, { id, passagem }, ctx) {
+    exigirMestre(ctx);
+    const p = personagem(c, id);
+    const onde = ondeEsta(c, id);
+    if (!onde) throw erro(`${p.nome} não está no mapa.`);
+    const ps = (onde.mapa.passagens || []).find(x => x.id === passagem);
+    if (!ps) throw erro('Passagem não encontrada nesse mapa.');
+    return atravessar(c, p, onde.mapa, ps);
+  },
+
+  // Mapas da campanha: criar, abrir (vira o ativo para todos), renomear, apagar.
+  'mapa.criar'(c, { nome, imagemId }, ctx) {
+    exigirMestre(ctx);
+    garantirMapas(c);
+    if (imagemId && !c.imagens.some(i => i.id === imagemId)) throw erro('Imagem não encontrada.');
+    const m = novoMapa(nomeStr(nome).slice(0, 60) || `Mapa ${todosMapas(c).length + 1}`);
+    m.imagemId = imagemId || null;
+    c.mapas.push(m);
+    return { id: m.id };
+  },
+  'mapa.abrir'(c, { id }, ctx) {
+    exigirMestre(ctx);
+    const m = ativarMapa(c, id);
+    registrar(c.log, { autor: 'Mestre', rotulo: 'Mapa', texto: `agora no mapa ${m.nome}` });
+  },
+  'mapa.renomear'(c, { id, nome }, ctx) {
+    exigirMestre(ctx);
+    const m = mapaPorId(c, id || garantirMapas(c).id);
+    if (!m) throw erro('Mapa não encontrado.');
+    m.nome = nomeStr(nome).slice(0, 60) || m.nome;
+  },
+  'mapa.apagar'(c, { id }, ctx) {
+    exigirMestre(ctx);
+    garantirMapas(c);
+    if (c.mapa.id === id) throw erro('Abra outro mapa antes de apagar este.');
+    const m = mapaPorId(c, id);
+    if (!m) return;
+    c.mapas = c.mapas.filter(x => x !== m);
+    for (const x of todosMapas(c)) {
+      for (const l of LADOS) if (x.vizinhos?.[l] === id) delete x.vizinhos[l];
+      x.passagens = (x.passagens || []).filter(ps => ps.para !== id);
+    }
+  },
+  // Vizinho do mapa ativo num lado (e o ativo vira o vizinho do lado oposto dele). Sem id: desliga.
+  'mapa.vizinho'(c, { lado, id }, ctx) {
+    exigirMestre(ctx);
+    if (!LADOS.includes(lado)) throw erro('Lado inválido.');
+    const a = garantirMapas(c);
+    a.vizinhos ||= {};
+    const velho = a.vizinhos[lado] && mapaPorId(c, a.vizinhos[lado]);
+    if (velho?.vizinhos?.[OPOSTO[lado]] === a.id) delete velho.vizinhos[OPOSTO[lado]];
+    if (!id) { delete a.vizinhos[lado]; return; }
+    const v = mapaPorId(c, id);
+    if (!v || v === a) throw erro('Escolha outro mapa.');
+    a.vizinhos[lado] = v.id;
+    v.vizinhos ||= {};
+    const antigo = v.vizinhos[OPOSTO[lado]] && mapaPorId(c, v.vizinhos[OPOSTO[lado]]);
+    if (antigo && antigo !== a && antigo.vizinhos?.[lado] === v.id) delete antigo.vizinhos[lado];
+    v.vizinhos[OPOSTO[lado]] = a.id;
+  },
+
+  // Fog do mapa ativo: absoluta (o não visto fica preto) e pessoal (cone de visão de cada PJ); alcance em quadrados.
+  'mapa.fog'(c, { absoluta, pessoal, alcance }, ctx) {
+    exigirMestre(ctx);
+    const m = garantirMapas(c);
+    m.fog ||= { absoluta: false, pessoal: false };
+    if (absoluta !== undefined) m.fog.absoluta = !!absoluta;
+    if (pessoal !== undefined) m.fog.pessoal = !!pessoal;
+    if (alcance !== undefined) m.fog.alcance = Math.max(1, Math.min(100, parseInt(alcance, 10) || 16));
+  },
+  // Pincel da fog absoluta (mapa ativo): revelar ou cobrir quadrados; "tudo" revela ou cobre o mapa inteiro.
+  'mapa.revelar'(c, { quadrados, revelar = true, tudo = false }, ctx) {
+    exigirMestre(ctx);
+    const m = garantirMapas(c);
+    if (tudo) {
+      if (!revelar) { m.explorado = []; return; }
+      const ks = [];
+      for (let i = 0; i < colunasDoMapa(m); i++) for (let j = 0; j < linhasDoMapa(m); j++) ks.push(`${i}:${j}`);
+      m.explorado = ks;
+      return;
+    }
+    const conj = new Set(m.explorado || []);
+    for (const q of [].concat(quadrados || []).slice(0, 2000)) {
+      const k = `${parseInt(q.col, 10) || 0}:${parseInt(q.lin, 10) || 0}`;
+      if (revelar) conj.add(k); else conj.delete(k);
+    }
+    m.explorado = [...conj];
+  },
+  // Para onde o personagem olha (graus: 0 = norte, 90 = leste…). Dono, mestre ou Suporte.
+  'mapa.olhar'(c, { id, direcao }, ctx) {
+    const p = personagem(c, id);
+    if (!ctx.mestre && !ctx.suporte && p.donoId !== ctx.user.id) throw erro('Você só vira o seu personagem.');
+    const onde = ondeEsta(c, id);
+    if (!onde) throw erro(`${p.nome} não está no mapa.`);
+    const g = ((Math.round((parseInt(direcao, 10) || 0) / 45) * 45) % 360 + 360) % 360;
+    onde.x.olhar = g;
+    return { texto: `${p.nome} olha para ${DIRECOES_OLHAR.find(d => d.g === g)?.nome || g}` };
+  },
+  // Campo de visão do personagem (graus; padrão 90) — habilidade ou vantagem pode aumentar. Só o mestre.
+  'mapa.campoVisao'(c, { id, graus }, ctx) {
+    exigirMestre(ctx);
+    const p = personagem(c, id);
+    const n = parseInt(graus, 10);
+    if (!n || n === 90) delete p.campoVisao; else p.campoVisao = Math.max(10, Math.min(360, n));
+  },
+
+  // Mapas de teste (autor, 01/11): 5 mapas ligados (vila no meio; floresta a oeste, praia a leste, ruínas ao norte;
+  // caverna pela passagem das ruínas), com paredes e árvores para testar a fog.
+  'mapa.exemplos'(c, d, ctx) {
+    exigirMestre(ctx);
+    garantirMapas(c);
+    const ids = {};
+    for (const ex of MAPAS_TESTE) {
+      let img = c.imagens.find(i => i.url === ex.url);
+      if (!img) { img = { id: uid(), titulo: ex.nome, url: ex.url, tipo: 'imagem', categoria: 'Mapas', mostrando: false }; c.imagens.push(img); }
+      const m = novoMapa(ex.nome);
+      Object.assign(m, { imagemId: img.id, grade: { colunas: ex.colunas, ox: 0, oy: 0, visivel: true, proporcao: ex.linhas / ex.colunas },
+        objetos: ex.objetos.map(o => ({ id: uid(), ...o })), fog: { absoluta: true, pessoal: true } });
+      c.mapas.push(m);
+      ids[ex.chave] = m;
+    }
+    const liga = (a, lado, b) => { ids[a].vizinhos[lado] = ids[b].id; ids[b].vizinhos[OPOSTO[lado]] = ids[a].id; };
+    liga('vila', 'oeste', 'floresta');
+    liga('vila', 'leste', 'praia');
+    liga('vila', 'norte', 'ruinas');
+    ids.ruinas.passagens.push({ id: uid(), col: 12, lin: 4, para: ids.caverna.id, destino: { col: 3, lin: 9 }, nome: 'Escada para a caverna' });
+    ids.caverna.passagens.push({ id: uid(), col: 2, lin: 9, para: ids.ruinas.id, destino: { col: 12, lin: 5 }, nome: 'Subida para as ruínas' });
+    // Se o mapa ativo está vazio (sem imagem e sem peões), a vila vira o ativo.
+    if (!c.mapa.imagemId && !Object.keys(c.mapa.pecas || {}).length) {
+      const vazio = c.mapa;
+      ativarMapa(c, ids.vila.id);
+      c.mapas = c.mapas.filter(m => m !== vazio);
+    }
+    return { mapas: MAPAS_TESTE.map(x => x.nome) };
   },
 
   // Mestre: põe no mapa, no primeiro lugar livre que caiba o tamanho de cada um ("Pôr no mapa", "Pôr os do Campo").
@@ -2483,7 +2762,7 @@ export const acoes = {
   // NPC fantasma: o peão some para jogadores e Suporte (o mestre continua vendo, meio transparente).
   'mapa.ocultar'(c, { id, oculto }, ctx) {
     exigirMestre(ctx);
-    const x = c.mapa?.pecas?.[id];
+    const x = ondeEsta(c, id)?.x;
     if (!x) throw erro('Esse personagem não está no mapa.');
     x.oculto = !!oculto;
   },
@@ -2634,7 +2913,7 @@ export const acoes = {
 
   'mapa.tirar'(c, { id }, ctx) {
     if (!ctx.mestre && !ctx.suporte) throw erro('Só o mestre ou o Suporte mexem no mapa.');
-    if (c.mapa) delete c.mapa.pecas[id];
+    for (const m of todosMapas(c)) if (m.pecas) delete m.pecas[id];
   },
 
   'mapa.limpar'(c, d, ctx) {
@@ -4261,6 +4540,7 @@ export function executar(c, tipo, dados, ctx) {
   let r;
   try {
     r = fn(c, dados || {}, ctx);
+    if (tipo.startsWith('mapa.') || tipo.startsWith('combate.') || tipo.startsWith('sala.')) explorarMapas(c);
   } catch (e) {
     restaurar(c, antes);
     throw e;

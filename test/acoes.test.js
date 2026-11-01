@@ -220,7 +220,7 @@ test('mapa e Suporte: mestre escolhe e ajusta, Suporte move peões e mostra só 
   entrarNaCampanha(c, sup, 'suporte');
   const ctxS = { user: sup, mestre: false, suporte: true };
   executar(c, 'mapa.mover', { id, col: 5, lin: 6 }, ctxS);
-  assert.deepEqual(c.mapa.pecas[id], { col: 5, lin: 6 });
+  assert.deepEqual([c.mapa.pecas[id].col, c.mapa.pecas[id].lin], [5, 6]);
   assert.throws(() => executar(c, 'imagem.mostrar', { id: 'i2', mostrando: true }, ctxS), /mestre/);
   executar(c, 'imagem.suporte', { id: 'i2', liberada: true }, ctxM);
   executar(c, 'imagem.mostrar', { id: 'i2', mostrando: true }, ctxS);

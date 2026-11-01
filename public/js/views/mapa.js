@@ -10,6 +10,7 @@ import { acao, get, post } from '../api.js';
 import { derivados } from '/shared/regras.js';
 import { restricaoMovimento } from '/shared/efeitos.js';
 import { categoriaDaImagem } from '/shared/imagens.js';
+import { camadaFog, vizinhosEls, passagemEl, setaOlhar, escolherOlhar, ligarPan, panDoMapa, setasVizinhos, controlesMundo, pincelFog, terminarPincel } from './mapaMundo.js';
 
 export const METROS_POR_QUADRADO = 1.5;
 
@@ -54,6 +55,8 @@ export function mapaView() {
   const mapa = c.mapa || { grade: { colunas: 20, ox: 0, oy: 0, visivel: true }, pecas: {} };
   const g = mapa.grade;
   const pecas = Object.entries(mapa.pecas || {}).map(([id, pos]) => ({ p: personagemPorId(id), ...pos })).filter(x => x.p);
+  // Na lista ao lado também os peões dos mapas vizinhos.
+  const pecasVizinhas = (mapa.vizinhosLista || []).flatMap(v => Object.entries(v.pecas || {}).map(([id, pos]) => ({ p: personagemPorId(id), ...pos, ondeNome: v.nome }))).filter(x => x.p);
   const sel = estado.sel.mapaSel;
   // Modos de clique no mapa: mestre põe objeto; jogador arma uma armadilha do inventário.
   const pondo = estado.sel.mapaObjeto;
@@ -68,18 +71,45 @@ export function mapaView() {
   const clicavel = mover || !!minhaVez || !!armando || !!area;
   // Mestre: NPCs fora da visão de todos os PJs ficam nublados (lembrete do Esconder-se / modo fantasma).
   const foraDaVisao = new Set(mestre ? foraDaVisaoDosPJs({ mapa, personagens: c.personagens }) : []);
+  // Mapas ligados (01/11): vizinhos nas bordas, vista arrastável, fog e passagens.
+  const comVizinhos = !!(mapa.vizinhosLista || []).length;
+  const pan = panDoMapa(mapa);
+  const pincel = mestre ? estado.sel.mapaFogPincel : null;
+  const pondoPassagem = mestre ? estado.sel.mapaPassagem : null;
+  // A tela do mestre conta ao servidor a proporção da imagem (quantas linhas a grade tem: fog e bordas dependem disso).
+  if (mestre && mapa.midia) {
+    const asp = aspectos.get(`${mapa.midia.tipo}:${mapa.midia.url}`);
+    const prop = asp ? 1 / asp : null;
+    const chave = `${mapa.id}:${prop?.toFixed(3)}`;
+    if (prop && Math.abs((g.proporcao || 0) - prop) > 0.005 && estado.sel.proporcaoEnviada !== chave) {
+      estado.sel.proporcaoEnviada = chave;
+      acao('mapa.grade', { proporcao: prop }).catch(() => {});
+    }
+  }
+  const desenharPeao = x => peao(x, g, podeMover(x.p.id), sel || minhaVez, foraDaVisao.has(x.p.id));
   const quadro = mapa.midia ? h('div', {
-    class: `mapa-quadro ${g.visivel ? 'com-grade' : ''} ${clicavel ? 'movel' : ''}`,
-    style: { '--cols': g.colunas, '--ox': g.ox, '--oy': g.oy, '--aspecto': aspectos.get(`${mapa.midia.tipo}:${mapa.midia.url}`) || 1.5 },
+    class: `mapa-quadro ${g.visivel ? 'com-grade' : ''} ${clicavel || pincel || pondoPassagem ? 'movel' : ''} ${comVizinhos ? 'com-vizinhos' : ''}`,
+    style: { '--cols': g.colunas, '--ox': g.ox, '--oy': g.oy, '--aox': g.ox, '--aoy': g.oy, '--aspecto': aspectos.get(`${mapa.midia.tipo}:${mapa.midia.url}`) || 1.5,
+      ...(comVizinhos && (pan.x || pan.y) ? { transform: `translate(${pan.x}px, ${pan.y}px)` } : {}) },
     // Com um peão escolhido, clicar num quadrado leva ele para lá.
     // No modo "marcar" (só o mestre), clicar num quadrado cria uma marcação secreta.
     // Ataque em área: a área segue o ponteiro (desenhada direto, sem redesenhar a tela) e o clique fixa.
     onpointermove: area ? e => desenharArea(e.currentTarget, area, pontoDoMapa(e.currentTarget, g, e.clientX, e.clientY), mapa)
-      : mestre && pondo && tipoObjeto(pondo.tipo).pintar ? e => pintarArrastando(e, g, pondo) : null,
-    onpointerdown: mestre && pondo && tipoObjeto(pondo.tipo).pintar ? e => { if (!e.target.closest('.peao')) pintura = { tipo: pondo.tipo, quadrados: new Map() }; pintarArrastando(e, g, pondo); } : null,
-    onpointerup: mestre && pondo && tipoObjeto(pondo.tipo).pintar ? () => terminarPintura() : null,
-    onpointerleave: mestre && pondo && tipoObjeto(pondo.tipo).pintar ? () => terminarPintura() : null,
-    onclick: clicavel ? async e => {
+      : pincel ? e => pincelFog(e, quadradoDoPonto(e.currentTarget, g, e.clientX, e.clientY), pincel)
+        : mestre && pondo && tipoObjeto(pondo.tipo).pintar ? e => pintarArrastando(e, g, pondo) : null,
+    onpointerdown: pincel ? e => pincelFog(e, quadradoDoPonto(e.currentTarget, g, e.clientX, e.clientY), pincel)
+      : mestre && pondo && tipoObjeto(pondo.tipo).pintar ? e => { if (!e.target.closest('.peao')) pintura = { tipo: pondo.tipo, quadrados: new Map() }; pintarArrastando(e, g, pondo); } : null,
+    onpointerup: pincel ? () => terminarPincel(pincel) : mestre && pondo && tipoObjeto(pondo.tipo).pintar ? () => terminarPintura() : null,
+    onpointerleave: pincel ? () => terminarPincel(pincel) : mestre && pondo && tipoObjeto(pondo.tipo).pintar ? () => terminarPintura() : null,
+    onclick: clicavel || pondoPassagem ? async e => {
+      // Arrastou a vista (para ver os vizinhos): não é clique.
+      if (e.currentTarget.dataset.panou) return;
+      if (pondoPassagem) {
+        const { col, lin } = quadradoDoPonto(e.currentTarget, g, e.clientX, e.clientY);
+        await acao('mapa.passagem', { col, lin, ...pondoPassagem }).then(() => aviso('Passagem posta.')).catch(err => aviso(err.message, 'erro'));
+        estado.sel.mapaPassagem = null; render();
+        return;
+      }
       if (area) {
         estado.sel.areaPonto = pontoDoMapa(e.currentTarget, g, e.clientX, e.clientY);
         render();
@@ -117,8 +147,11 @@ export function mapaView() {
     h('div', { class: 'mapa-grade', 'aria-hidden': 'true' }),
     mestre ? (mapa.marcas || []).map(marca) : null,
     (mapa.objetos || []).map(o => objetoMapa(o, mestre)),
+    (mapa.passagens || []).map(ps => passagemEl(ps, mestre)),
+    camadaFog(mapa, mestre),
     marcaInicioTurno(cb, mapa),
-    pecas.map(x => peao(x, g, podeMover(x.p.id), sel || minhaVez, foraDaVisao.has(x.p.id))),
+    pecas.map(desenharPeao),
+    vizinhosEls(mapa, mestre, desenharPeao),
     // Proposta da IA (só o mestre): contornos tracejados dos objetos marcados, ainda não aceitos.
     mestre && estado.sel.propostaIA ? estado.sel.propostaIA.objetos.filter(o => o.marcado).map(o => h('span', { class: `objeto-mapa proposta obj-${o.tipo}`, style: { '--col': o.col, '--lin': o.lin, '--l': o.l, '--a': o.a }, title: `${o.nome} (proposta da IA)` }, icone(tipoObjeto(o.tipo).icone || 'box'))) : null,
     area ? h('div', { class: 'area-camada', 'aria-hidden': 'true' }, area && estado.sel.areaPonto ? quadradosAreaEls(area, estado.sel.areaPonto, mapa) : null) : null) : vazio(mestre ? 'Escolha o mapa abaixo (envie imagens, GIFs ou vídeos na aba Imagens).' : 'O mestre ainda não escolheu um mapa.', 'map');
@@ -130,6 +163,7 @@ export function mapaView() {
       contadorTurno(cb, mapa, minhaVez)) : contadorTurno(cb, mapa, null),
     area ? painelArea(area, mapa) : estado.sel.areaAtaque ? h('div', { class: 'bloco aviso-revisar' }, `Para o ataque em área, ${personagemPorId(estado.sel.areaAtaque.atacante)?.nome || 'o atacante'} precisa estar no mapa.`,
       botao('Cancelar', () => { estado.sel.areaAtaque = null; render(); }, { class: 'pequeno' })) : null,
+    mestre ? controlesMundo(mapa) : null,
     mestre ? controlesMestre(mapa) : null,
     h('div', { class: 'mapa-grade-tela' },
       // Girar: na tela inteira (deita o mapa quando o aparelho está em pé) e também na tela normal (autor, 24/10).
@@ -142,7 +176,8 @@ export function mapaView() {
               botao('Tela inteira', entrarTelaCheia, { class: 'pequeno', icone: 'maximize-2', title: 'Mapa em tela inteira, na horizontal' })]) : null,
         // Na tela inteira o resto da página some: o contador de deslocamento do turno fica por cima do mapa (autor, 29/10).
         estado.sel.mapaCheia && mapa.midia ? h('div', { class: 'mapa-contador-cheia' }, contadorTurno(cb, mapa, minhaVez)) : null,
-        h('div', { class: 'mapa-rolagem', style: mapa.midia ? { '--aspecto': aspectos.get(`${mapa.midia.tipo}:${mapa.midia.url}`) || 1.5 } : null }, quadro),
+        rolagemDoMapa(h('div', { class: `mapa-rolagem ${comVizinhos ? 'com-vizinhos' : ''}`, style: mapa.midia ? { '--aspecto': aspectos.get(`${mapa.midia.tipo}:${mapa.midia.url}`) || 1.5 } : null }, quadro), mapa),
+        mapa.midia ? setasVizinhos(mapa) : null,
         mover && mapa.midia ? h('p', { class: 'dica' }, icone('info'), ' Arraste os peões, ou escolha um na lista e clique no quadrado de destino. Cada quadrado = 1,5 m.') : null,
         mestre && mapa.midia ? h('div', { class: 'barra' },
           botao(estado.sel.mapaMarcar ? 'Marcando: clique no mapa (clique aqui para parar)' : 'Marcação secreta', () => { estado.sel.mapaMarcar = !estado.sel.mapaMarcar; render(); },
@@ -159,13 +194,19 @@ export function mapaView() {
         !mestre && mapa.midia ? armarArmadilha() : null),
       h('aside', { class: 'bloco mapa-lado' },
         titulo('No mapa', 'users', 'h3'),
-        pecas.length ? h('ul', { class: 'mapa-lista' }, pecas.map(x => h('li', { class: sel === x.p.id ? 'escolhido' : '' },
+        pecas.length + pecasVizinhas.length ? h('ul', { class: 'mapa-lista' }, [...pecas, ...pecasVizinhas].map(x => h('li', { class: sel === x.p.id ? 'escolhido' : '' },
           h('button', { type: 'button', class: 'link', disabled: !mover, 'aria-pressed': sel === x.p.id, title: mover ? `Escolher ${x.p.nome} para mover` : x.p.nome,
             onclick: () => { estado.sel.mapaSel = sel === x.p.id ? null : x.p.id; render(); } },
             h('span', { class: `rosto-mini ${x.p.tipo} ${x.p.semPv || (x.p.pv && x.p.pv.atual <= 0) ? 'sem-pv' : ''}` }, x.p.foto ? h('img', { src: x.p.foto, alt: '' }) : x.p.nome.slice(0, 1)),
-            h('span', {}, x.p.nome)),
+            h('span', {}, x.p.nome, x.ondeNome ? h('small', { class: 'dica' }, ` (${x.ondeNome})`) : null)),
           mestre && x.p.tipo !== 'pj' ? botao('', () => acao('mapa.ocultar', { id: x.p.id, oculto: !x.oculto }), { class: `pequeno ${x.oculto ? 'primario' : ''}`, icone: x.oculto ? 'eye-off' : 'eye',
             'aria-pressed': !!x.oculto, title: x.oculto ? `${x.p.nome} está invisível para os jogadores (fantasma). Clique para mostrar` : `Deixar ${x.p.nome} invisível para os jogadores (fantasma)` }) : null,
+          // Para onde olha (fog pessoal): quem move ou o dono do personagem escolhe; o mestre muda o campo de visão.
+          mover || x.p.donoId === estado.usuario?.id ? botao('', () => escolherOlhar(x.p.id, { manter: false }), { class: 'pequeno', icone: 'compass', title: `Para onde ${x.p.nome} olha` }) : null,
+          mestre ? botao(x.p.campoVisao ? `${x.p.campoVisao}°` : '', async () => {
+            const n = await pedirTexto(`Campo de visão de ${x.p.nome}`, 'Graus (padrão 90; uma vantagem pode aumentar)', String(x.p.campoVisao || 90));
+            if (n) acao('mapa.campoVisao', { id: x.p.id, graus: n }).catch(err => aviso(err.message, 'erro'));
+          }, { class: 'pequeno', icone: x.p.campoVisao ? null : 'scan-eye', title: `Campo de visão de ${x.p.nome}: ${x.p.campoVisao || 90}°` }) : null,
           mover ? botao('', () => acao('mapa.tirar', { id: x.p.id }), { class: 'x', icone: 'x', title: `Tirar ${x.p.nome} do mapa` }) : null)))
           : vazio('Ninguém no mapa.', 'users'),
         mestre ? colocarNoMapa(mapa) : null)));
@@ -427,9 +468,10 @@ function quadradoDoPonto(quadro, g, x, y) {
   const lx = girado ? y - r.top : x - r.left;
   const ly = girado ? r.right - x : y - r.top;
   const cel = largura / g.colunas;
+  // Sem limite em 0: além da borda é o mapa vizinho (o servidor diz se existe).
   return {
-    col: Math.max(0, Math.floor(lx / cel - g.ox)),
-    lin: Math.max(0, Math.floor(ly / cel - g.oy)),
+    col: Math.floor(lx / cel - g.ox),
+    lin: Math.floor(ly / cel - g.oy),
   };
 }
 
@@ -455,6 +497,7 @@ function peao(x, g, mover, sel, nublado = false) {
       render();
     } : null,
   }, mov.nivel ? h('span', { class: 'peao-restricao', 'aria-hidden': 'true' }, h('span', { class: 'cadeado' }, icone(mov.nivel === 'preso' ? 'lock' : 'footprints'))) : null,
+    setaOlhar(x),
     h('span', { class: 'rosto' }, p.foto ? h('img', { src: p.foto, alt: '', draggable: 'false' }) : p.nome.slice(0, 1)),
     h('small', { class: 'peao-nome' }, p.nome));
   if (mover) arrastavel(el, p, g, ladoNoMapa(p));
@@ -523,7 +566,7 @@ function arrastavel(el, p, g, lado = 1) {
     // Criatura grande: o ponteiro fica no meio dela; o canto (col, lin) é o quadrado de cima à esquerda.
     const q = quadradoDoPonto(quadro, g, e.clientX, e.clientY);
     const meio = Math.floor((lado - 1) / 2);
-    const col = Math.max(0, q.col - meio), lin = Math.max(0, q.lin - meio);
+    const col = q.col - meio, lin = q.lin - meio;
     el.dataset.arrastou = '1';
     acao('mapa.mover', { id: p.id, col, lin }).catch(err => aviso(err.message, 'erro'));
   };
@@ -565,4 +608,10 @@ function colocarNoMapa(mapa) {
     fora.length ? selecao([{ valor: '', rotulo: '+ pôr no mapa…' }, ...fora.map(p => ({ valor: p.id, rotulo: `${p.nome}${p.tipo === 'npc' ? ' (NPC)' : ''}` }))], '',
       v => v && por(v).catch(e => aviso(e.message, 'erro')), { 'aria-label': 'Pôr personagem no mapa' }) : null,
     doCampo.length ? botao(`Pôr os ${doCampo.length} do Campo de Batalha`, () => por(doCampo), { class: 'pequeno', icone: 'swords' }) : null);
+}
+
+// A vista do mapa com vizinhos se arrasta (pan); sem vizinhos, nada muda.
+function rolagemDoMapa(el, mapa) {
+  ligarPan(el, mapa);
+  return el;
 }

@@ -1537,3 +1537,42 @@ input.largo { flex: 1 1 20em; min-width: 0; }
 .item-combate { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem; padding: .25rem .4rem; border-radius: 6px; border: 1px solid var(--borda, #444); }
 .item-combate.equipado { border-color: var(--ouro, #c9a14a); }
 .item-combate-nome { font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
+
+/* ===================== Mapas ligados e fog (01/11) ===================== */
+/* Com vizinhos, o quadro deixa os vizinhos aparecerem fora dele; a vista recorta e se arrasta (transform). */
+.mapa-rolagem.com-vizinhos { overflow: hidden; background: #000; }
+.mapa-quadro.com-vizinhos { overflow: visible; border-radius: 0; }
+.mapa-vizinho { position: absolute; --ox: var(--vox); --oy: var(--voy);
+  left: calc((var(--dc) + var(--aox) - var(--vox)) * var(--cel)); top: calc((var(--dl) + var(--aoy) - var(--voy)) * var(--cel));
+  width: calc(var(--vcols) * var(--cel)); min-height: calc(var(--vlins) * var(--cel)); background: #0b0907; }
+.mapa-vizinho .mapa-midia { width: 100%; }
+.mapa-vizinho.com-grade .mapa-grade { opacity: .6;
+  background-image: linear-gradient(to right, rgba(255, 255, 255, .3) 1px, transparent 1px), linear-gradient(to bottom, rgba(255, 255, 255, .3) 1px, transparent 1px);
+  background-size: var(--cel) var(--cel); background-position: calc(var(--ox) * var(--cel)) calc(var(--oy) * var(--cel)); }
+.mapa-vizinho-vazio { height: calc(var(--vlins) * var(--cel)); display: grid; place-items: center; color: #8a7a60; }
+.mapa-vizinho-nome { position: absolute; top: .4em; left: 50%; transform: translateX(-50%); background: #000b; color: var(--ouro); padding: .1em .6em; border-radius: 999px; font-size: .85em; pointer-events: none; z-index: 3; }
+.objeto-mapa.estatico { pointer-events: none; }
+.setas-vizinhos { display: flex; flex-wrap: wrap; gap: .3em; justify-content: center; }
+/* Fog: 1 pixel por quadrado, esticado sobre a grade (com 1 quadrado de borda). */
+.mapa-fog { position: absolute; left: calc((var(--ox) - 1) * var(--cel)); top: calc((var(--oy) - 1) * var(--cel));
+  width: calc(var(--fc) * var(--cel)); height: calc(var(--fl) * var(--cel)); image-rendering: pixelated; pointer-events: none; z-index: 1;
+  filter: blur(calc(var(--cel) * .12)); }
+.fog-pincel { position: absolute; left: calc((var(--col) + var(--ox)) * var(--cel)); top: calc((var(--lin) + var(--oy)) * var(--cel)); width: var(--cel); height: var(--cel); pointer-events: none; z-index: 3; }
+.fog-pincel.revelar { background: rgba(255, 230, 150, .35); }
+.fog-pincel.cobrir { background: rgba(0, 0, 0, .6); }
+/* Passagem: porta dourada no quadrado; leva a outro mapa. */
+.passagem-mapa { position: absolute; left: calc((var(--col) + var(--ox)) * var(--cel)); top: calc((var(--lin) + var(--oy)) * var(--cel)); width: var(--cel); height: var(--cel);
+  min-width: 0; min-height: 0; padding: 0; border: 2px solid var(--ouro); border-radius: 6px; background: rgba(30, 22, 10, .55); color: var(--ouro); display: grid; place-items: center; z-index: 2;
+  box-shadow: 0 0 calc(var(--cel) * .25) rgba(212, 162, 76, .7); }
+.passagem-mapa svg { width: 60%; height: 60%; }
+.passagem-mapa.oculta { opacity: .5; border-style: dashed; }
+/* Para onde o peão olha: um triângulo na borda, girado. */
+.peao-olhar { position: absolute; inset: 0; transform: rotate(var(--olhar)); pointer-events: none; z-index: 1; }
+.peao-olhar::before { content: ''; position: absolute; left: 50%; top: -14%; transform: translateX(-50%);
+  border-left: calc(var(--cel) * .14) solid transparent; border-right: calc(var(--cel) * .14) solid transparent; border-bottom: calc(var(--cel) * .2) solid var(--ouro); filter: drop-shadow(0 0 2px #000); }
+/* Rosa dos ventos (escolher a direção do olhar). */
+.rosa-olhar { display: grid; grid-template-columns: repeat(3, 3.2em); grid-template-rows: repeat(3, 3.2em); gap: .3em; justify-content: center; margin: .5em auto; }
+.rosa-dir { font-size: 1.5em; padding: 0; min-width: 0; }
+.rosa-dir.ativa { background: var(--ouro); color: #1a120a; }
+.rosa-centro { display: grid; place-items: center; border-radius: 50%; border: 2px solid #5b8bd0; font-weight: 800; }
+.mapa-mundo-controles .barra { flex-wrap: wrap; }

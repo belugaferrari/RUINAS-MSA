@@ -550,3 +550,16 @@ Respostas do autor (31/10) e o que foi feito:
 - **Dano não letal**: desmaia e acorda com 1 PV depois de 2d4 turnos (não perde PV pela sobrevida).
 - **Vibração**: dobro de dano em objeto (ataque localizado num item). **Queda**: rolador › Rápidos (mestre). **Combate montado**: desvantagem.
 - **Asfixia**: aguardando a tabela do autor (por enquanto 5 turnos).
+
+## 01/11 — Mapas ligados e fogs
+- **Vários mapas** por campanha (aba Mapa › mestre): criar, abrir (vira o mapa de todos), renomear, apagar.
+- **Vizinhos** (norte, sul, leste, oeste): aparecem colados nas bordas, na mesma escala; arraste o fundo do mapa (ou use as setas) para ver.
+  Levar um peão além da borda o coloca no vizinho. Só os vizinhos diretos aparecem (não o vizinho do vizinho).
+- **Passagens**: quadrado com uma porta dourada que leva a outro mapa (e ao quadrado de chegada). O peão que para nela atravessa;
+  se nenhum PJ ficar no mapa à vista, o mapa de destino vira o de todos.
+- **Fog absoluta**: o que nenhum PJ viu fica preto para jogadores e Suporte (o mestre vê meio transparente); pincel para revelar/cobrir.
+- **Fog pessoal**: cone de 90° (campo de visão ajustável por personagem) para onde olha, até o alcance (padrão 16 quadrados = 24 m);
+  paredes, árvores, mato alto e portas fechadas cortam a visão. O jogador vê o que os personagens DELE veem; NPCs fora disso somem.
+  O personagem olha para onde andou; ao terminar o turno, o app pergunta para onde ele está olhando.
+- **5 mapas de teste**: botão "Criar 5 mapas de teste" (Vila; Floresta a oeste; Praia a leste; Ruínas ao norte; Caverna pela escada das Ruínas).
+- A confirmar: luz (penumbra/escuro) ainda não reduz o alcance da visão no mapa; Sentidos Ferais e afins também não.

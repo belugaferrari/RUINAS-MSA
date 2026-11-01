@@ -7,6 +7,19 @@ import { derivados, tipoCriatura } from '/shared/regras.js';
 import { armasDisponiveis, opcoesDefesa, defesaDoAlvo, ipDe, resistenciaManipulacao, liberdadeDeHumor } from '/shared/combate.js';
 import { prepararTeste } from './dados.js';
 import { controladoNaSala } from './batalha.js';
+import { escolherOlhar, acharPeca } from './mapaMundo.js';
+
+// Fim do turno com a fog pessoal ligada (autor, 01/11): antes de passar, define para onde o personagem da vez olha.
+async function passarTurno() {
+  const c = estado.campanha;
+  const cb = c.salas.batalha.combate;
+  const id = cb?.ordem?.[cb.vez]?.id;
+  if (c.mapa?.fog?.pessoal && id && acharPeca(id)) {
+    const r = await escolherOlhar(id, { titulo: `Fim do turno: para onde ${personagemPorId(id)?.nome || 'o personagem'} está olhando?` });
+    if (r === null) return;
+  }
+  return acao('combate.proximo');
+}
 
 const meuOuMestre = (p, mestre) => mestre || p.donoId === estado.usuario.id;
 const opcoesPersonagens = lista => lista.map(p => ({ valor: p.id, rotulo: p.nome }));
@@ -150,7 +163,7 @@ export function controleTurnos(participantes, mestre) {
       h('div', { class: 'turno-cartao agora' }, h('small', {}, 'Agindo agora'), rosto(atual), h('strong', {}, atual?.nome || '—'), h('span', { class: 'ini' }, `ini ${cb.ordem[cb.vez]?.ini ?? '—'}`)),
       proximo ? h('div', { class: 'turno-cartao proximo' }, h('small', {}, 'Próximo'), rosto(proximo), h('strong', {}, proximo.nome)) : null,
       h('span', { class: 'espaco' }),
-      podePassar ? botao('Próximo turno', () => acao('combate.proximo'), { class: 'primario', icone: 'skip-forward', title: atual ? `Termina o turno de ${atual.nome}` : 'Próximo turno' }) : null,
+      podePassar ? botao('Próximo turno', passarTurno, { class: 'primario', icone: 'skip-forward', title: atual ? `Termina o turno de ${atual.nome}` : 'Próximo turno' }) : null,
       mestre ? botao('Rolar iniciativa de novo', async () => { if (await confirmar('Rolar a iniciativa de todos de novo? A rodada volta para 1.')) await acao('combate.iniciar'); }, { class: 'pequeno', icone: 'dices' }) : null,
       mestre ? botao('Encerrar combate', () => acao('combate.encerrar'), { class: 'pequeno perigo', icone: 'square-x' }) : null),
     mestre ? h('details', { class: 'editar-ordem', open: !!estado.sel.editarOrdem, ontoggle: e => { estado.sel.editarOrdem = e.target.open; } },
@@ -177,7 +190,7 @@ export function ordemView(cb, mestre) {
       h('span', { class: 'selo cheio' }, `Rodada ${cb.rodada} · Turno ${cb.turno || 1}`),
       h('strong', {}, atual ? `Vez de ${atual.nome}` : ''),
       h('span', { class: 'espaco' }),
-      podePassar ? botao('Próximo turno', () => acao('combate.proximo'), { class: 'primario', icone: 'skip-forward' }) : null,
+      podePassar ? botao('Próximo turno', passarTurno, { class: 'primario', icone: 'skip-forward' }) : null,
       mestre ? botao('Encerrar', () => acao('combate.encerrar'), { class: 'perigo', icone: 'square-x' }) : null),
     // A ordem aparece na barra de avatares; aqui fica só para o mestre mexer (subir, descer, mudar a iniciativa).
     !mestre ? null : h('ol', { class: 'ordem-iniciativa' }, cb.ordem.map((o, i) => {
