@@ -13,7 +13,7 @@ import { partesDoMundo, parteNoQuadrado, visaoDosPJs, porMapa, pecaNoConjunto, o
 import { FORMAS_AREA, quadradosDaArea, atingidosPelaArea } from '../shared/area.js';
 import { TIPOS_OBJETO, tipoObjeto, coberturaPeloMapa, foraDaVisaoDosPJs, bloqueadoPorObjeto } from '../shared/objetosMapa.js';
 import { passarNecessidades, comer, beber, dormir, rolarCaos, climaDoDia, descreverRelogio, fimDoCombate } from '../shared/tempo.js';
-import { podeSeduzir, itemAberto, itemVisivel, xpParaSubir, novaFicha, podeEquipar, rolarDado, rolarAtributosCriacao, testeDMil, gerarEncontro, derivados, problemasFicha, LIMITE_SALA, desgastarItem, repararItem, durabilidadeDe, listaHabilidades, vantagemPorHabilidade, temHabilidade, regraDaHabilidade, tipoCriatura, chaveHabilidade, TIPOS_ACAO, nomeAcao, acoesDaHabilidade, dadosDaHabilidade, ehAtaqueEspecial, acaoDoAtaqueEspecial, perderPv, textoPv, duracaoDaHabilidade, podeRepetir, textoDuracao, habilidadeValendo, temItem, tipoDaArma, TIPOS_MUTACAO, mutacaoDaTabela, temMutacaoDescontrolada, condicoesAtivas, textoIp, armaNaCondicao, escolhasPermitidas, regiaoDoItem, camadaDoItem, SLOTS_ANTIGOS, tipoDoTeste, atributoDoTeste, ehFerramental, concentrado, valorConcentracao, AURAS_PERICIA, AURAS_CRIACAO, dsParaAura, modAuraItem, bonusNegociacao, precosComerciante, SUB_NEGOCIACAO, PESOS_ENCONTRO } from '../shared/regras.js';
+import { podeSeduzir, itemAberto, itemVisivel, xpParaSubir, novaFicha, podeEquipar, rolarDado, rolarAtributosCriacao, testeDMil, gerarEncontro, derivados, problemasFicha, LIMITE_SALA, desgastarItem, repararItem, durabilidadeDe, listaHabilidades, vantagemPorHabilidade, temHabilidade, regraDaHabilidade, tipoCriatura, chaveHabilidade, TIPOS_ACAO, nomeAcao, acoesDaHabilidade, dadosDaHabilidade, ehAtaqueEspecial, acaoDoAtaqueEspecial, perderPv, textoPv, duracaoDaHabilidade, podeRepetir, textoDuracao, habilidadeValendo, temItem, tipoDaArma, TIPOS_MUTACAO, mutacaoDaTabela, temMutacaoDescontrolada, condicoesAtivas, textoIp, armaNaCondicao, escolhasPermitidas, regiaoDoItem, camadaDoItem, SLOTS_ANTIGOS, tipoDoTeste, atributoDoTeste, ehFerramental, concentrado, valorConcentracao, AURAS_PERICIA, AURAS_CRIACAO, dsParaAura, modAuraItem, municoesDaArma, balasDaArma, gastarBalas, chaveMunicao, ocupaMaos, bonusNegociacao, precosComerciante, SUB_NEGOCIACAO, PESOS_ENCONTRO } from '../shared/regras.js';
 
 const GRUPO_ENCONTROS = 'encontros';
 const MAX_LOG = 100;
@@ -453,6 +453,20 @@ export function migrarCampanhas() {
         if (guardados.length) registrar(c.log, { autor: 'App', rotulo: `Regiões do corpo: ${p.nome}`, texto: `guardado na mochila (mesma região ou não se veste): ${guardados.join(', ')}` });
       }
       c.migracoes.push('regioes-do-corpo');
+      mudou = true;
+    }
+    // Maestria 2 = duas mãos (autor, 01/11): as armas que já estão nas fichas passam a ocupar as duas mãos; se a outra
+    // mão estava ocupada, o item dela vai para a mochila.
+    if (!c.migracoes.includes('maestria-duas-maos')) {
+      for (const p of c.personagens) {
+        for (const it of p.itens || []) {
+          if (it.slot !== 'maos' || ocupaMaos(it) === (it.ocupa ?? 1)) continue;
+          it.ocupa = ocupaMaos(it);
+          if (it.equipado) for (const o of p.itens) if (o !== it && o.equipado && o.slot === 'maos') { o.equipado = false; delete o.mao; }
+          delete it.mao;
+        }
+      }
+      c.migracoes.push('maestria-duas-maos');
       mudou = true;
     }
     if (!c.migracoes.includes('pv-for-cons')) {
@@ -2568,6 +2582,7 @@ export const acoes = {
     const it = p.itens.find(i => i.uid === itemUid);
     if (!it) throw erro('Item não encontrado.');
     if (!equipar) { it.equipado = false; delete it.mao; return; }
+    delete it.noChao;
     if (sai !== undefined && it.slot === 'maos') {
       const fora = (p.itens || []).filter(i => i !== it && i.equipado && i.slot === 'maos' && (i.uid === sai || (it.ocupa ?? 1) >= 2 || (i.ocupa ?? 1) >= 2));
       for (const i of fora) { i.equipado = false; delete i.mao; }
@@ -2586,6 +2601,28 @@ export const acoes = {
     // Pré-requisitos (autor, 30/10): equipa, mas avisa — sem eles a arma fica 30% mais difícil, sem crítico, e trava se errar.
     const faltam = requisitosQueFaltam(p, sistema(c.sistema), it);
     if (faltam.length) return { aviso: `${p.nome} não atende aos pré-requisitos de ${it.nome} (${faltam.join(', ')}): ${it.tipo === 'arma' ? 'ataques com −30% (Mestre de Armas: −15% nas armas de fogo), sem dano crítico e a arma trava se errar' : 'o mestre aplica a penalidade'}.` };
+  },
+
+  // Arremessar (autor, 01/11): o teste de Esportes › Arremessar (ND 70; no MSS, com o desvio do livro) e o item sai da
+  // mão — fica "no chão" (continua no inventário até alguém recolher; equipar de novo é recolher).
+  'item.arremessar'(c, { id, uid: itemUid, nd = 70, sala: nomeSala }, ctx) {
+    const p = personagem(c, id);
+    exigirDonoOuMestre(ctx, p);
+    const it = (p.itens || []).find(i => i.uid === itemUid);
+    if (!it) throw erro('Item não encontrado.');
+    if (!it.equipado) throw erro(`${it.nome} não está na mão.`);
+    const r = acoes.rolar(c, { id: p.id, acaoRef: 'sub:esportes.arremessar', nd, rotulo: `Arremessar ${it.nome}`, sala: nomeSala || (c.salas.batalha.participantes.includes(p.id) ? 'batalha' : null) }, ctx);
+    it.equipado = false; delete it.mao; it.noChao = true;
+    return { ...r, texto: [r.texto, `${it.nome} saiu da mão (está no chão)`].filter(Boolean).join(' · ') };
+  },
+  // Qual munição a arma usa primeiro (quando há mais de um tipo que serve: comum, ácida…).
+  'item.municaoEscolher'(c, { id, uid: itemUid, municaoUid }, ctx) {
+    const p = personagem(c, id);
+    exigirDonoOuMestre(ctx, p);
+    const it = (p.itens || []).find(i => i.uid === itemUid);
+    if (!it) throw erro('Item não encontrado.');
+    if (municaoUid && !municoesDaArma(p, it).some(m => m.uid === municaoUid)) throw erro('Essa munição não serve nessa arma.');
+    it.municaoUid = municaoUid || null;
   },
 
   // Comprar do comerciante (livro): preço base com a negociação — passiva (1/4 de Negociação com comerciantes, até 25%)
@@ -3687,6 +3724,15 @@ export const acoes = {
       if ((itemArma.carregada || 0) < 1) throw erro(`${itemArma.nome} está sem munição. Recarregue antes de atirar.`);
       op.disparos = Math.min(op.disparos, itemArma.carregada);
       itemArma.carregada -= op.disparos;
+    } else if (itemArma?.municao && arma.alcance === 'distancia' && !op.multiplo && !['-', 'fazer'].includes(chaveMunicao(itemArma.municao))) {
+      // Munição própria do tipo da arma (autor, 01/11): cada ataque gasta as balas da cadência, do inventário.
+      const tem = balasDaArma(a, itemArma);
+      if (tem < 1) throw erro(`${a.nome} está sem munição de ${itemArma.municao} para ${itemArma.nome}.`);
+      op.disparos = Math.min(op.disparos, tem);
+      const g = gastarBalas(a, itemArma, op.disparos);
+      // Munição especial (Bala Ácida "+1d4" Ácido…): o dano extra entra no ataque.
+      if (g.municao?.dano) op.municaoExtra = { nome: g.municao.nome, dano: g.municao.dano };
+      excesso = [excesso, `${g.gastas} bala${g.gastas > 1 ? 's' : ''} de ${itemArma.municao} (restam ${balasDaArma(a, itemArma)})`].filter(Boolean).join('; ');
     }
     if (op.danoLivre) {
       try { rolarDado(op.danoLivre); } catch { throw erro(`Dano inválido: ${op.danoLivre}`); }

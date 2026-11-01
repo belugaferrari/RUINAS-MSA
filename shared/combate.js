@@ -75,7 +75,7 @@ export function armasDisponiveis(p, sistema) {
   // Arma quebrada (durabilidade 0) não ataca até ser reparada.
   // Item travado (Bug na rede) continua equipado, mas não pode ser usado.
   const armas = (p.itens || []).filter(i => i.equipado && i.tipo === 'arma' && i.dano && !i.travado && !(i.durabilidade != null && (i.durabilidadeAtual ?? i.durabilidade) <= 0)).map(i => ({
-    uid: i.uid, nome: i.nome, dano: danoDaArma(i, p), acerto: i.acerto ?? null, pericia: i.pericia || null, tipoDano: tipoDanoDoLivro(i.tipoDano) || 'Físico', natural: !!i.natural,
+    uid: i.uid, nome: i.nome, dano: danoDaArma(i, p), acerto: i.acerto ?? null, pericia: i.natural ? 'briga.ataque-desarmado' : i.pericia || null, tipoDano: tipoDanoDoLivro(i.tipoDano) || 'Físico', natural: !!i.natural,
     efeitoDano: i.efeitoDano ?? cfg.chancePorTipo?.[i.tipoDano] ?? cfg.efeitoPadrao, penetracao: i.penetracao || 0, alcance: i.alcance || (i.pericia?.startsWith('armas-de-fogo') ? 'distancia' : 'corpo'),
     // Cadência: quantos disparos (balas e danos) por ataque — da arma ou da subperícia (ex.: Rifle de Assalto 2).
     cadencia: Math.max(1, i.cadencia ?? cfg.cadencia?.[i.pericia] ?? 1),
@@ -353,6 +353,7 @@ export function resolverAtaque(atacante, alvo, sistema, op = {}, defesaId = 'nen
         else doDisparo.push({ nome: parte.nome, total: parte.fixo });
       }
       if (op.cargaNucleo) rolar('Carga do Núcleo (elétrico)', '2d6');
+      if (op.municaoExtra?.dano) rolar(op.municaoExtra.nome, op.municaoExtra.dano);
       // Muco radioativo: +1d6 se o alvo estiver com mutação.
       if (arma.extraContraMutacao && temMutacao(alvo)) rolar(`${arma.nome} (alvo com mutação)`, arma.extraContraMutacao);
       // Diagnóstico Letal: +1d6 contra quem está com efeito negativo (mental, físico, mobilidade).

@@ -1032,3 +1032,41 @@ export const PESOS_ENCONTRO = {
   medio: { Mundano: 10, Comum: 40, Incomum: 30, Raro: 17, 'Raríssimo': 3 },
   complexo: { Comum: 15, Incomum: 30, Raro: 35, 'Raríssimo': 15, 'Lendário': 5 },
 };
+
+// ---------- Munição (autor, 01/11) ----------
+// Cada arma a distância usa a munição do tipo dela (campo "municao": pistolas, rifle de assalto, arco, projéteis…).
+// A munição é um item do inventário: "(cx)" com "Caixa c/ N" vale N balas por caixa; "(un)" vale 1. O ataque gasta
+// tantas balas quanto a cadência. Depois de aberta, a caixa guarda as balas restantes (campo "balas").
+const semAcentoMun = s => String(s || '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+export const chaveMunicao = s => semAcentoMun(s).replace(/eis\b/g, 'il').replace(/s\b/g, '').replace(/\s+/g, ' ');
+export function balasDe(item) {
+  if (item.balas != null) return Math.max(0, item.balas);
+  const porCaixa = parseInt(/c\/\s*(\d+)/i.exec(`${item.descricao || ''} ${item.nome || ''}`)?.[1], 10);
+  return (item.quantidade || 1) * (/\(cx\)/i.test(item.nome || '') || porCaixa ? (porCaixa || 10) : 1);
+}
+// Munições do inventário que servem na arma (a escolhida primeiro).
+export function municoesDaArma(ficha, arma) {
+  if (!arma?.municao || ['-', 'fazer'].includes(chaveMunicao(arma.municao))) return [];
+  const k = chaveMunicao(arma.municao);
+  const lista = (ficha.itens || []).filter(i => i.tipo === 'municao' && chaveMunicao(i.municao) === k && balasDe(i) > 0);
+  return lista.sort((a, b) => (b.uid === arma.municaoUid) - (a.uid === arma.municaoUid));
+}
+export const balasDaArma = (ficha, arma) => municoesDaArma(ficha, arma).reduce((s, i) => s + balasDe(i), 0);
+// Gasta até n balas (da munição escolhida, depois das outras do mesmo tipo). Caixa vazia sai do inventário.
+export function gastarBalas(ficha, arma, n) {
+  let falta = n;
+  const usadas = [];
+  for (const cx of municoesDaArma(ficha, arma)) {
+    if (!falta) break;
+    const tem = balasDe(cx);
+    const tira = Math.min(tem, falta);
+    cx.balas = tem - tira;
+    delete cx.quantidade;
+    falta -= tira;
+    usadas.push(cx);
+  }
+  ficha.itens = (ficha.itens || []).filter(i => !(i.tipo === 'municao' && i.balas === 0));
+  return { gastas: n - falta, municao: usadas[0] || null };
+}
+// Maestria 2 = arma de duas mãos: ocupa as duas mãos.
+export const ocupaMaos = i => (i?.slot === 'maos' ? Math.max(i.ocupa ?? 1, String(i.maestria) === '2' ? 2 : 1) : (i?.ocupa ?? 1));

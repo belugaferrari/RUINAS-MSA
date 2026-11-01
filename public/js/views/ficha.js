@@ -3,7 +3,7 @@ import { h, campo, botao, selecao, aviso, confirmar, pedirTexto, formatarData, v
 import { efeitosIcones } from './efeitos.js';
 import { estado, render } from '../estado.js';
 import { acao, enviarArquivo } from '../api.js';
-import { tipoDaArma, textoIp, textoBonus, GENEROS, ATRACOES, atracaoDe, durabilidadeDe, derivados, slotsOcupados, ganhosDeClasse, pontosGastos, pontosPericiaTotal, vantagensDisponiveis, acharVantagem, xpParaSubir, subpericiasDe, bonusNegociacao, precosComerciante } from '/shared/regras.js';
+import { tipoDaArma, textoIp, textoBonus, GENEROS, ATRACOES, atracaoDe, durabilidadeDe, derivados, slotsOcupados, ganhosDeClasse, pontosGastos, pontosPericiaTotal, vantagensDisponiveis, acharVantagem, xpParaSubir, subpericiasDe, bonusNegociacao, precosComerciante, balasDe, balasDaArma, chaveMunicao } from '/shared/regras.js';
 import { painelPericias } from './pericias.js';
 import { bonecoView } from './boneco.js';
 import { escolherAvatar } from './avatares.js';
@@ -573,6 +573,7 @@ export function equipamento(p, mestre, filtro = null) {
       class: i.equipado ? 'equipado' : null,
       celulas: [
         h('span', { class: 'item-nome' }, icone(iconeItem(i)), i.nome, i.equipado ? h('span', { class: 'selo ok' }, 'equipado') : null,
+          i.noChao ? h('span', { class: 'selo perigo', title: 'Foi arremessado: equipar de novo é recolher' }, 'no chão') : null,
           // Bug na rede: travado = continua equipado, mas não pode ser usado (até o fim do combate; o mestre destrava).
           i.travado ? h('span', { class: 'selo perigo', title: `Travado por ${i.travado.nome}: equipado, mas não pode ser usado` }, icone('lock'), ' Travado') : null,
           i.travado && mestre ? botao('Destravar', () => acao('item.destravar', { id: p.id, uid: i.uid }), { class: 'pequeno' }) : null),
@@ -612,7 +613,12 @@ function municaoView(p, i, mestre) {
       botao('Recarregar', () => acao('item.recarregar', { id: p.id, uid: i.uid }).then(r => aviso(`${i.nome}: +${r.colocou} (${r.carregada}/${i.capacidade})`)),
         { class: 'pequeno', icone: 'refresh-cw', disabled: (i.carregada || 0) >= i.capacidade }));
   }
-  if (i.tipo === 'municao') return h('span', { class: 'selo' }, `${i.quantidade || 0} balas (${i.municao})`);
+  if (i.tipo === 'municao') return h('span', { class: 'selo' }, `${balasDe(i)} balas (${i.municao})`);
+  // Arma que usa munição do inventário (autor, 01/11): quantas balas do tipo dela o personagem tem.
+  if (i.tipo === 'arma' && i.municao && !['-', 'fazer'].includes(chaveMunicao(i.municao))) {
+    const n = balasDaArma(p, i);
+    return h('span', { class: `selo ${n ? '' : 'perigo'}`, title: 'Cada ataque a distância gasta a cadência' }, `munição: ${n} (${i.municao})`);
+  }
   return null;
 }
 

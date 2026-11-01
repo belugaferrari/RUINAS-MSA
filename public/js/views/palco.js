@@ -1,7 +1,7 @@
 // Palco do combate (autor, 28/10): logo abaixo da faixa de turnos, todos veem de quem é a vez e o que está acontecendo —
 // quem ataca, com que arma e quem é o alvo (ou o teste que está fazendo). Acertou: "ACERTO!" com o dano bruto subindo
 // como um "hit point" de jogo, e o som da arma (gerado no navegador, sem arquivos). Cada aparelho pode desligar o som.
-import { h, icone } from '../ui.js';
+import { h, icone, janela } from '../ui.js';
 import { estado, render, personagemPorId } from '../estado.js';
 import { ICONE_ARMA } from './fx.js';
 
@@ -58,7 +58,8 @@ export function palcoCombate() {
   return h('section', { class: 'palco-combate', 'aria-live': 'polite', 'aria-label': 'O que está acontecendo no combate' },
     // Retrato de quem está na vez (autor, 01/11): a imagem de corpo inteiro ou a foto. O escondido nunca aparece
     // (para os jogadores, a vez dele chega sem ninguém).
-    atual && (atual.imagemCorpo || atual.foto) ? h('figure', { class: `palco-retrato ${atual.tipo === 'pj' ? 'pj' : 'npc'}`, 'data-pid': atual.id },
+    atual && (atual.imagemCorpo || atual.foto) ? h('figure', { class: `palco-retrato ${atual.tipo === 'pj' ? 'pj' : 'npc'}`, 'data-pid': atual.id, title: 'Clique para ampliar', role: 'button', tabindex: 0,
+      onclick: () => janela(atual.nome, h('img', { src: atual.imagemCorpo || atual.foto, alt: `Retrato de ${atual.nome}`, class: 'retrato-ampliado' }), [['Fechar', () => true]]) },
       h('img', { src: atual.imagemCorpo || atual.foto, alt: `Retrato de ${atual.nome}`, class: atual.imagemCorpo ? 'corpo' : 'foto' }),
       h('figcaption', {}, atual.nome)) : null,
     h('div', { class: 'palco-vez' },

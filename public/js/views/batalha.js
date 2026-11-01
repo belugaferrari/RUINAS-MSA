@@ -4,7 +4,7 @@
 import { h, botao, selecao, aviso, icone, titulo, vazio, pedirTexto, confirmar } from '../ui.js';
 import { estado, render, personagemPorId } from '../estado.js';
 import { acao, ataqueDaTela } from '../api.js';
-import { derivados, listaHabilidades, efeitosHabilidade, modoHabilidade, temHabilidade, tipoCriatura, chaveHabilidade, GRUPOS_IP, acoesDaHabilidade, nomeAcao, dadosDaHabilidade, ehAtaqueEspecial, TIPOS_ACAO, acaoDoAtaqueEspecial, podeRepetir, duracaoDaHabilidade, textoDuracao, durabilidadeDe, textoIp, escolhasPermitidas } from '/shared/regras.js';
+import { derivados, listaHabilidades, efeitosHabilidade, modoHabilidade, temHabilidade, tipoCriatura, chaveHabilidade, GRUPOS_IP, acoesDaHabilidade, nomeAcao, dadosDaHabilidade, ehAtaqueEspecial, TIPOS_ACAO, acaoDoAtaqueEspecial, podeRepetir, duracaoDaHabilidade, textoDuracao, durabilidadeDe, textoIp, escolhasPermitidas, municoesDaArma, balasDaArma, balasDe, chaveMunicao, ocupaMaos } from '/shared/regras.js';
 import { armasDisponiveis, ipDe, opcoesDefesa, defesaDoAlvo, danoDaArma, recursoDe, LOCAIS_ATAQUE } from '/shared/combate.js';
 import { trilhaCompacta, escolherCondicao, cargaView, iconeItem } from './ficha.js';
 import { painelSlot, naMao, maoHabil } from './boneco.js';
@@ -552,7 +552,18 @@ function quadroAtaques(p, participantes, mestre) {
   const MAN_AUTO_C = { 'briga.deslocar': 'deslocar', 'briga.desarmar': 'desarmar', 'briga.agarrar-imobilizar': 'imobilizar' };
   const cartaoDesarmado = () => {
     const brigas = subs('briga');
-    const escolhida = brigas.some(x => x.id === estado.sel[`briga:${p.id}`]) ? estado.sel[`briga:${p.id}`] : 'briga.ataque-desarmado';
+    // Armas naturais (garras, presas, chifres…): mudam o dano e o efeito, mas o ataque é desarmado (autor, 01/11).
+    const naturais = (auto ? automaticas : (p.itens || []).filter(i => i.equipado && i.tipo === 'arma')).filter(a => a.natural);
+    const sel = estado.sel[`briga:${p.id}`];
+    const nat = naturais.find(a => `nat:${a.uid}` === sel);
+    if (nat) {
+      const efeito = sis.combate?.efeitosPorTipo?.[nat.tipoDano];
+      return cartao({ chave: 'desarmado', titulo: 'Desarmado', sub: 'natural', icone: 'paw-print', nome: nat.nome, pctTexto: `acerto ${nat.acerto != null ? `${nat.acerto}%` : pct('briga.ataque-desarmado')}`,
+        onclick: () => (auto ? atacar(nat.uid) : testar('sub:briga.ataque-desarmado')), disabled: auto && !alvo && !estado.sel.ataque?.varios,
+        extra: h('small', {}, icone('swords'), ` ${nat.dano || ''}${nat.tipoDano ? ` ${nat.tipoDano}` : ''}${efeito ? ` · ${efeito}` : ''}`),
+        lista: listaDesarmado(brigas, naturais, sel) });
+    }
+    const escolhida = brigas.some(x => x.id === sel) ? sel : 'briga.ataque-desarmado';
     const nomeSub = brigas.find(x => x.id === escolhida)?.nome || 'Ataque desarmado';
     const usar = async () => {
       if (escolhida === 'briga.ataque-desarmado') return auto ? atacar('desarmado') : testar('sub:briga.ataque-desarmado');
@@ -567,8 +578,12 @@ function quadroAtaques(p, participantes, mestre) {
     };
     return cartao({ chave: 'desarmado', titulo: 'Desarmado', icone: 'hand-fist', nome: nomeSub, pctTexto: `acerto ${pct(escolhida)}`, onclick: usar,
       disabled: auto && ['briga.ataque-desarmado', 'briga.investida', ...Object.keys(MAN_AUTO_C)].includes(escolhida) && !alvo,
-      lista: selecao(brigas.map(x => ({ valor: x.id, rotulo: `${x.nome} (${pct(x.id)})` })), escolhida, v => { estado.sel[`briga:${p.id}`] = v; render(); }, { 'aria-label': 'Trocar o ataque desarmado por outra subperícia de Briga' }) });
+      lista: listaDesarmado(brigas, naturais, escolhida) });
   };
+  const listaDesarmado = (brigas, naturais, atual) => selecao([
+    ...brigas.map(x => ({ valor: x.id, rotulo: `${x.nome} (${pct(x.id)})` })),
+    ...naturais.map(a => ({ valor: `nat:${a.uid}`, rotulo: `Natural: ${a.nome} (${a.dano || ''}${a.tipoDano ? ` ${a.tipoDano}` : ''})` }))],
+  atual, v => { estado.sel[`briga:${p.id}`] = v; render(); }, { 'aria-label': 'Trocar o ataque desarmado por outra subperícia de Briga ou por uma arma natural' });
   // 2 e 3. Mãos: a arma (ou objeto) equipado, com o % da subperícia dele; a lista equipa outro item nessa mão.
   const paraMao = (p.itens || []).filter(i => i.slot === 'maos' && !i.sucata);
   const cartaoMao = n => {
@@ -577,13 +592,17 @@ function quadroAtaques(p, participantes, mestre) {
     const ambi = temHabilidade(p, sis, 'Ambidestria');
     const tit = n === 0 ? 'Mão direita' : 'Mão esquerda';
     const arma = it && automaticas.find(a => a.uid === it.uid);
-    const semBala = it?.capacidade && (it.carregada || 0) <= 0;
+    // Munição própria do tipo da arma (do inventário); a escolhida é gasta primeiro.
+    const usaMunicao = it?.municao && !['-', 'fazer'].includes(chaveMunicao(it.municao)) && !it.capacidade;
+    const municoes = usaMunicao ? municoesDaArma(p, it) : [];
+    const balas = usaMunicao ? balasDaArma(p, it) : null;
+    const semBala = (it?.capacidade && (it.carregada || 0) <= 0) || (usaMunicao && balas <= 0);
     const ref = it?.pericia ? `sub:${it.pericia}` : null;
     const usar = () => (auto && arma ? atacar(it.uid) : ref ? testar(ref) : null);
     const minhas = it ? (it.melhorias || []).filter(m => !m.dono || m.dono === p.id) : [];
     const podeMelhorar = it ? melhoradoras.filter(x => String(it.pericia || '').startsWith(x.regra.melhoria.armas) && !minhas.some(m => m.id === x.regra.melhoria.id && m.nivel >= (x.vezes || 1))) : [];
     const opcoes = [{ valor: '', rotulo: it ? 'Trocar o item desta mão…' : 'Equipar nesta mão…' },
-      ...paraMao.filter(i => i !== it).map(i => ({ valor: i.uid, rotulo: `${i.nome}${(i.ocupa ?? 1) >= 2 ? ' (duas mãos)' : ''}${i.equipado ? ' (na outra mão)' : ''}` })),
+      ...paraMao.filter(i => i !== it).map(i => ({ valor: i.uid, rotulo: `${i.nome}${ocupaMaos(i) >= 2 ? ' (duas mãos)' : ''}${i.equipado ? ' (na outra mão)' : i.noChao ? ' (no chão)' : ''}` })),
       ...(it ? [{ valor: '-', rotulo: `Guardar ${it.nome}` }] : [])];
     return cartao({
       chave: `mao${n}`, titulo: tit, sub: ambi ? 'ambidestro' : habil ? 'hábil' : 'inábil', classe: `${habil || ambi ? 'habil' : 'inabil'} ${it ? '' : 'vazia'}`,
@@ -594,6 +613,10 @@ function quadroAtaques(p, participantes, mestre) {
         it.dano ? h('small', {}, icone('swords'), ` ${danoDaArma(it, p)}${it.tipoDano ? ` ${it.tipoDano}` : ''}`) : null,
         minhas.map(m => h('span', { class: 'selo ok', title: `+${m.nivel} passo(s) na progressão de dano` }, `${m.nome} ${m.nivel}`)),
         it.capacidade ? h('span', { class: `selo ${semBala ? 'perigo' : ''}` }, `${it.carregada || 0}/${it.capacidade}`) : null,
+        usaMunicao ? h('span', { class: `selo ${balas ? '' : 'perigo'}`, title: `Munição de ${it.municao}: cada ataque gasta a cadência` }, icone('target'), ` ${balas} ${balas === 1 ? 'bala' : 'balas'}`) : null,
+        municoes.length > 1 ? selecao(municoes.map(m => ({ valor: m.uid, rotulo: `${m.nome} (${balasDe(m)})` })), it.municaoUid && municoes.some(m => m.uid === it.municaoUid) ? it.municaoUid : municoes[0].uid,
+          v => acao('item.municaoEscolher', { id: p.id, uid: it.uid, municaoUid: v }).catch(e => aviso(e.message, 'erro')), { 'aria-label': `Munição de ${it.nome}` }) : null,
+        usaMunicao && !balas ? h('small', { class: 'perigo' }, `sem munição de ${it.municao}`) : null,
         it.capacidade ? botao('', () => acao('item.recarregar', { id: p.id, uid: it.uid }), { class: 'pequeno', icone: 'refresh-cw', title: `Recarregar ${it.nome}`, disabled: (it.carregada || 0) >= it.capacidade }) : null,
         podeMelhorar.map(x => botao(x.regra.melhoria.id === 'afiada' ? 'Afiar' : 'Aperfeiçoar', async () => {
           if (!(await confirmar(`${p.nome} passa ${x.regra.melhoria.horas || 2} h treinando com ${it.nome}. Ela fica ${x.regra.melhoria.nome} ${x.vezes || 1} (só para ${p.nome}).`))) return;
@@ -618,7 +641,10 @@ function quadroAtaques(p, participantes, mestre) {
       ...paraMao.filter(i => !i.equipado).map(i => ({ valor: `+${i.uid}`, rotulo: `Equipar e arremessar ${i.nome}` }))];
     return cartao({
       chave: 'arremesso', titulo: 'Arremessar', icone: 'move-right', nome: it ? it.nome : 'Nada na mão', pctTexto: `chance ${pct('esportes.arremessar')}`,
-      onclick: () => testar('sub:esportes.arremessar'), disabled: !it,
+      onclick: async () => {
+        const r = await acao('item.arremessar', { id: p.id, uid: it.uid });
+        aviso(`${r.rotulo}: ${r.total}${r.nd != null ? (r.sucesso ? ' — acertou o ponto' : ' — errou') : ''}${r.texto ? ` · ${r.texto}` : ''}`, r.sucesso ? 'ok' : 'erro');
+      }, disabled: !it,
       extra: h('small', { class: 'dica', title: 'Ação principal; ND 70 dentro do alcance (em ambiente fechado, Difícil). Errou: desvia 1,5 m a cada 5 pontos (MSS).' }, 'ND 70'),
       lista: opcoes.length ? selecao(opcoes, estado.sel[chave] || '', v => {
         if (v.startsWith('+')) { acao('item.equipar', { id: p.id, uid: v.slice(1), equipar: true }).then(r => { estado.sel[chave] = v.slice(1); if (r?.aviso) aviso(r.aviso, 'erro'); }).catch(e => aviso(e.message, 'erro')); return; }
