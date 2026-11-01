@@ -580,3 +580,9 @@ Respostas do autor (31/10) e o que foi feito:
 1. **Clima no mapa**: efeito sobreposto e indicativo (chuva, neve, vento, névoa…), sem alterar a imagem do mapa.
 2. **Mapa continental (geolocalização)**: mapa grande, arrastável, sem combate; fog inicial que os personagens vão abrindo com o avanço
    da campanha; o jogador vê onde está ("geolocalização") e põe pins com comentários próprios.
+
+## 01/11 — Custos de movimento no contador do mapa (Bloco 4)
+- Livro (Movimentação): caído = 4,5 m por quadrado; terreno acidentado (objeto "terreno difícil") = o dobro; atravessar um aliado = +1,5 m.
+  Explorador dos Ermos e Tropa de elite ignoram o acidentado natural (mato, água, entulho; mesa e caixote continuam pesando).
+- O contador soma o caminho feito no turno (cada arrasto/clique é um trecho em linha reta) e avisa se passou do deslocamento. Só avisa: não impede.
+- Levantar do Caído é a ação de movimento completa (o mestre/jogador marca a ação; Cair para Cima isenta) — o app não desconta sozinho.

@@ -530,9 +530,13 @@ function contadorTurno(cb, mapa, minhaVez) {
   const max = d?.deslocamentoQuadrados ?? null;
   const q = a?.quadrados || 0;
   const m = n => `${String(n * METROS_POR_QUADRADO).replace('.', ',')} m`;
-  const passou = max != null && q > max;
-  return h('span', { class: `contador-turno ${passou ? 'passou' : ''}`, role: 'status', 'aria-live': 'polite' },
-    icone('footprints'), h('strong', {}, ` ${p.nome}`), ` andou ${q} quadrado${q === 1 ? '' : 's'} (${m(q)})`,
+  // Metros gastos pelo caminho (caído 4,5 m por quadrado, terreno acidentado em dobro, atravessar aliado +1,5 m — livro).
+  const gastos = cb.andado?.id === id ? cb.andado.metros : q * METROS_POR_QUADRADO;
+  const extra = gastos > q * METROS_POR_QUADRADO + 0.01;
+  const passou = max != null && gastos > max * METROS_POR_QUADRADO + 0.01;
+  return h('span', { class: `contador-turno ${passou ? 'passou' : ''}`, role: 'status', 'aria-live': 'polite',
+    title: 'Caído: 4,5 m por quadrado. Terreno acidentado: o dobro. Atravessar um aliado: +1,5 m.' },
+    icone('footprints'), h('strong', {}, ` ${p.nome}`), ` andou ${q} quadrado${q === 1 ? '' : 's'} (${extra ? `gastou ${String(gastos).replace('.', ',')} m` : m(q)})`,
     max != null ? ` de ${max} (${m(max)})` : '', passou ? ' — passou do deslocamento' : '',
     minhaVez ? h('small', { class: 'dica' }, ' · sua vez: arraste o peão ou clique no quadrado') : null);
 }

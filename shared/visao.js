@@ -129,3 +129,29 @@ export function objetoNoConjunto(conj, o) {
   for (let i = 0; i < l; i++) for (let j = 0; j < a; j++) if (conj.has(`${o.col + i}:${o.lin + j}`)) return true;
   return false;
 }
+
+// ---------- Custo do movimento (livro, Movimentação) ----------
+// Cada quadrado custa 1,5 m; caído, 4,5 m. Terreno acidentado (objeto "terreno difícil") custa o dobro — o natural
+// (mato, água, entulho) não pesa para quem ignora terreno natural (Explorador dos Ermos, Tropa de elite). Atravessar um
+// aliado: +1,5 m (o quadrado de chegada não conta). Anda pela reta do trecho, um quadrado por passo (diagonal = 1).
+const NATURAIS = new Set(['arbusto', 'agua', 'entulho']);
+export function custoDoTrecho(mapa, de, para, { caido = false, ignoraNatural = false, aliados = new Set() } = {}) {
+  const dificeis = new Map();
+  for (const o of mapa?.objetos || []) {
+    const r = regrasObjeto(o);
+    if (!r.dificil) continue;
+    const { l, a } = tamanhoObjeto(o);
+    for (let i = 0; i < l; i++) for (let j = 0; j < a; j++) dificeis.set(`${o.col + i}:${o.lin + j}`, NATURAIS.has(o.tipo));
+  }
+  const passos = Math.max(Math.abs(para.col - de.col), Math.abs(para.lin - de.lin));
+  let metros = 0;
+  for (let n = 1; n <= passos; n++) {
+    const col = Math.round(de.col + ((para.col - de.col) * n) / passos), lin = Math.round(de.lin + ((para.lin - de.lin) * n) / passos);
+    const k = `${col}:${lin}`;
+    let m = caido ? 4.5 : 1.5;
+    if (dificeis.has(k) && !(ignoraNatural && dificeis.get(k))) m *= 2;
+    if (n < passos && aliados.has(k)) m += 1.5;
+    metros += m;
+  }
+  return metros;
+}

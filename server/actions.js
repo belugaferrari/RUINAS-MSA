@@ -9,7 +9,7 @@ import { requisitosQueFaltam } from '../shared/requisitos.js';
 import { monstroNoEstagio, textoDeslocamentos, textoND, ladoNoMapa, ameacaNoMapa } from '../shared/monstros.js';
 import { sortearEncontro, cenarioSemIA } from '../shared/encontro.js';
 import { MAPAS_TESTE } from '../shared/mapasTeste.js';
-import { partesDoMundo, parteNoQuadrado, visaoDosPJs, porMapa, pecaNoConjunto, objetoNoConjunto, direcaoDoMovimento, LADOS, OPOSTO, linhasDoMapa, colunasDoMapa, DIRECOES as DIRECOES_OLHAR } from '../shared/visao.js';
+import { partesDoMundo, parteNoQuadrado, visaoDosPJs, porMapa, pecaNoConjunto, objetoNoConjunto, direcaoDoMovimento, custoDoTrecho, LADOS, OPOSTO, linhasDoMapa, colunasDoMapa, DIRECOES as DIRECOES_OLHAR } from '../shared/visao.js';
 import { FORMAS_AREA, quadradosDaArea, atingidosPelaArea } from '../shared/area.js';
 import { TIPOS_OBJETO, tipoObjeto, coberturaPeloMapa, foraDaVisaoDosPJs, bloqueadoPorObjeto } from '../shared/objetosMapa.js';
 import { passarNecessidades, comer, beber, dormir, rolarCaos, climaDoDia, descreverRelogio, fimDoCombate } from '../shared/tempo.js';
@@ -148,7 +148,7 @@ function semEscondidos(c, ocultos, s) {
     const ordem = s.combate.ordem.filter(o => !ocultos.has(o.id));
     // Contador de turnos sem as vezes dos escondidos (senão o número pula e entrega que há mais alguém).
     const vistosAteAgora = s.combate.ordem.slice(0, s.combate.vez + 1).filter(o => !ocultos.has(o.id)).length;
-    fora.combate = { ...s.combate, ordem, vez: ordem.findIndex(o => o.id === atual), turno: (s.combate.rodada - 1) * ordem.length + Math.max(1, vistosAteAgora), gasto: Object.fromEntries(Object.entries(s.combate.gasto || {}).filter(([id]) => !ocultos.has(id))), turnosFeitos: undefined, inicioTurno: ocultos.has(s.combate.inicioTurno?.id) ? null : s.combate.inicioTurno };
+    fora.combate = { ...s.combate, ordem, vez: ordem.findIndex(o => o.id === atual), turno: (s.combate.rodada - 1) * ordem.length + Math.max(1, vistosAteAgora), gasto: Object.fromEntries(Object.entries(s.combate.gasto || {}).filter(([id]) => !ocultos.has(id))), turnosFeitos: undefined, andado: ocultos.has(s.combate.andado?.id) ? null : s.combate.andado, inicioTurno: ocultos.has(s.combate.inicioTurno?.id) ? null : s.combate.inicioTurno };
   }
   return fora;
 }
@@ -2665,7 +2665,22 @@ export const acoes = {
     const parteAntes = onde && partes.find(x => x.mapa === onde.mapa);
     const deMundo = parteAntes ? { col: antes.col + parteAntes.dc, lin: antes.lin + parteAntes.dl } : null;
     // Onde o peão começou o turno (para o contador de espaço no mapa).
-    if (vezDele && antes && onde.mapa === c.mapa && m === c.mapa && cb.inicioTurno?.id !== id) cb.inicioTurno = { id, col: antes.col, lin: antes.lin };
+    if (vezDele && antes && onde.mapa === c.mapa && m === c.mapa && cb.inicioTurno?.id !== id) { cb.inicioTurno = { id, col: antes.col, lin: antes.lin }; cb.andado = null; }
+    // Metros gastos no turno pelo caminho feito (caído, terreno acidentado, atravessar aliado — livro).
+    if (vezDele && antes && onde.mapa === m) {
+      const sis = sistema(c.sistema);
+      const ladoDe = x => (x?.tipo === 'pj' ? 'pj' : 'npc');
+      const aliados = new Set();
+      for (const [oid, x] of Object.entries(m.pecas || {})) {
+        const o = c.personagens.find(y => y.id === oid);
+        if (oid === id || !o || ladoDe(o) !== ladoDe(p)) continue;
+        const l = ladoNoMapa(o);
+        for (let i = 0; i < l; i++) for (let j = 0; j < l; j++) aliados.add(`${x.col + i}:${x.lin + j}`);
+      }
+      const ignoraNatural = !!(temHabilidade(p, sis, 'Explorador dos Ermos') || (p.marcas || []).some(x => x.tropaElite));
+      const metros = custoDoTrecho(m, antes, novo, { caido: (p.marcadores || []).includes('Caído'), ignoraNatural, aliados });
+      cb.andado = { id, metros: Math.round(((cb.andado?.id === id ? cb.andado.metros : 0) + metros) * 10) / 10 };
+    }
     if (onde && onde.mapa !== m) delete onde.mapa.pecas[id];
     // Olha para onde andou (o jogador pode virar depois, e escolhe no fim do turno).
     const olhar = deMundo ? direcaoDoMovimento(deMundo, alvo) : null;
@@ -3346,6 +3361,7 @@ export const acoes = {
     // Começo do turno: guarda onde o peão está (contador de espaço andado no mapa).
     const pos = c.mapa?.pecas?.[p.id];
     cb.inicioTurno = pos ? { id: p.id, col: pos.col, lin: pos.lin } : null;
+    cb.andado = null;
     // Começo do turno: a Defesa Total do turno anterior acaba; a Tropa de elite acompanha quem está de pé.
     p.marcas = (p.marcas || []).filter(m => !m.ateMeuTurno);
     tropaDeElite(c, sis);
