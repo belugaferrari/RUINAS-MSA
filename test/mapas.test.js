@@ -28,7 +28,7 @@ const porNome = (c, nome) => [c.mapa, ...c.mapas].find(m => m.nome === nome);
 test('mapas de teste: 5 mapas, a vila vira o ativo, com vizinhos nos três lados e passagens ruínas ↔ caverna', () => {
   const { c } = campo();
   assert.equal(c.mapa.nome, 'Teste — Vila');
-  assert.equal([c.mapa, ...c.mapas].length, 5);
+  assert.equal([c.mapa, ...c.mapas].length, 6, '5 + o mapa do mundo');
   const v = visaoPara(c, mestre, 'mestre').mapa;
   assert.deepEqual(v.vizinhosLista.map(x => [x.lado, x.dc, x.dl]).sort(), [['leste', 24, 0], ['norte', 0, -14], ['oeste', -20, 0]]);
   assert.equal(porNome(c, 'Teste — Ruínas').passagens[0].paraNome, undefined);
@@ -104,4 +104,32 @@ test('visão: a parede esconde o que está atrás dela', () => {
   assert.ok(vis.has('5:5'), 'vê a parede');
   assert.ok(!vis.has('7:5'), 'não vê atrás');
   assert.ok(vis.has('3:5'));
+});
+
+test('mapa do mundo (continental): todos recebem; fog abre em volta do PJ; pins só do dono e do mestre; só o mestre move o grupo', () => {
+  const { c, pj } = campo();
+  const ana2 = { id: 'k', name: 'Bia' };
+  const vj = visaoPara(c, jogador, 'jogador');
+  assert.ok(vj.continental, 'a jogadora abre o mapa do mundo');
+  assert.equal(vj.continental.fog.explorado.length, 0, 'começa todo coberto');
+  const mundo = [c.mapa, ...c.mapas].find(m => m.continental);
+  executar(c, 'mapa.mover', { id: pj, col: 14, lin: 12, mapaId: mundo.id }, ctxM);
+  assert.ok(mundo.explorado.includes('14:12') && mundo.explorado.includes('16:12') && !mundo.explorado.includes('30:30'));
+  executar(c, 'mapa.mover', { id: pj, col: 34, lin: 12, mapaId: mundo.id }, ctxM);
+  assert.ok(mundo.explorado.includes('24:12'), 'abriu o caminho entre os dois pontos');
+  assert.throws(() => executar(c, 'mapa.mover', { id: pj, col: 15, lin: 12, mapaId: mundo.id }, { user: jogador, mestre: false }), /mestre/);
+  executar(c, 'mapa.pin', { x: 14.5, y: 12.5, texto: 'Acampamento' }, { user: jogador, mestre: false });
+  executar(c, 'mapa.pin', { x: 20, y: 20, texto: 'Segredo do mestre' }, ctxM);
+  assert.deepEqual(visaoPara(c, jogador, 'jogador').continental.pins.map(p => p.texto), ['Acampamento']);
+  assert.equal(visaoPara(c, ana2, 'jogador').continental.pins.length, 0);
+  assert.equal(visaoPara(c, mestre, 'mestre').continental.pins.length, 2);
+  assert.throws(() => executar(c, 'mapa.pinEditar', { id: mundo.pins[0].id, remover: true }, { user: ana2, mestre: false }), /não é seu/);
+});
+
+test('clima no mapa: o mestre escolhe o efeito, a intensidade e o vento', () => {
+  const { c } = campo();
+  executar(c, 'mapa.clima', { efeito: 'neve', intensidade: 3, vento: 95 }, ctxM);
+  assert.deepEqual(c.mapa.clima, { efeito: 'neve', intensidade: 3, vento: 90 });
+  assert.equal(visaoPara(c, jogador, 'jogador').mapa.clima.efeito, 'neve');
+  assert.throws(() => executar(c, 'mapa.clima', { efeito: 'meteoro' }, ctxM), /desconhecido/);
 });

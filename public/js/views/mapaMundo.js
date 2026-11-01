@@ -7,6 +7,7 @@ import { acao } from '../api.js';
 import { DIRECOES, LADOS, linhasDoMapa, colunasDoMapa } from '/shared/visao.js';
 import { ladoNoMapa } from '/shared/monstros.js';
 import { tipoObjeto, regrasObjeto, tamanhoObjeto } from '/shared/objetosMapa.js';
+import { EFEITOS_CLIMA, sugestaoDoClima } from './climaMapa.js';
 
 const NOME_LADO = { norte: 'Norte', sul: 'Sul', leste: 'Leste', oeste: 'Oeste' };
 
@@ -128,7 +129,7 @@ export function panDoMapa(mapa) {
   return pan;
 }
 export function ligarPan(rolagem, mapa) {
-  if (!(mapa.vizinhosLista || []).length) return;
+  if (!(mapa.vizinhosLista || []).length && !mapa.continental) return;
   const pan = panDoMapa(mapa);
   const quadro = rolagem.querySelector('.mapa-quadro');
   let ini = null;
@@ -186,7 +187,7 @@ export function controlesMundo(mapa) {
         v => v && acao('mapa.abrir', { id: v }), { 'aria-label': 'Abrir outro mapa' }),
       botao('Novo mapa', async () => { const n = await pedirTexto('Novo mapa', 'Nome do mapa (a imagem você escolhe depois de abrir)'); if (n) acao('mapa.criar', { nome: n }).then(() => aviso(`Mapa "${n}" criado. Abra-o na lista para escolher a imagem.`)); }, { class: 'pequeno', icone: 'plus' }),
       outros.length ? selecao([{ valor: '', rotulo: 'Apagar mapa…' }, ...outros.map(m => ({ valor: m.id, rotulo: m.nome }))], '', v => v && acao('mapa.apagar', { id: v }), { 'aria-label': 'Apagar mapa' }) : null,
-      botao('Criar 5 mapas de teste', () => acao('mapa.exemplos').then(r => aviso(`Criados: ${r.mapas.join(', ')}.`)), { class: 'pequeno', icone: 'sparkles', title: 'Vila no meio; Floresta a oeste, Praia a leste, Ruínas ao norte; Caverna pela escada das Ruínas. Com fog ligada.' })),
+      botao('Criar mapas de teste (5 + mundo)', () => acao('mapa.exemplos').then(r => aviso(`Criados: ${r.mapas.join(', ')}.`)), { class: 'pequeno', icone: 'sparkles', title: 'Vila no meio; Floresta a oeste, Praia a leste, Ruínas ao norte; Caverna pela escada das Ruínas. Com fog ligada.' })),
     h('div', { class: 'barra' },
       h('small', {}, 'Vizinhos (continuam pela borda):'),
       LADOS.map(lado => h('label', { class: 'linha' }, NOME_LADO[lado],
@@ -202,6 +203,8 @@ export function controlesMundo(mapa) {
       botao(pondoPassagem ? 'Clique no quadrado da passagem (clique aqui para parar)' : 'Pôr passagem', () => { estado.sel.mapaPassagem = pondoPassagem ? null : { ...destino }; estado.sel.mapaObjeto = null; estado.sel.mapaFogPincel = null; render(); },
         { class: `pequeno ${pondoPassagem ? 'primario' : ''}`, icone: 'door-open', disabled: !destino.para && !pondoPassagem })),
     h('div', { class: 'barra' },
+      h('label', { class: 'linha', title: 'Mapa grande, sem combate: fog inicial que se abre em volta dos PJs, pins dos jogadores; todos abrem pelo botão "Mapa do mundo"' },
+        h('input', { type: 'checkbox', checked: !!mapa.continental, onchange: e => acao('mapa.continental', { continental: e.target.checked }) }), 'Mapa continental (mapa do mundo)'),
       h('label', { class: 'linha', title: 'O que nenhum personagem jogador viu fica preto para os jogadores' }, h('input', { type: 'checkbox', checked: !!f.absoluta, onchange: e => acao('mapa.fog', { absoluta: e.target.checked }) }), 'Fog absoluta'),
       h('label', { class: 'linha', title: 'Cada personagem vê um cone (90°) para onde olha; o resto do que já viu fica escurecido' }, h('input', { type: 'checkbox', checked: !!f.pessoal, onchange: e => acao('mapa.fog', { pessoal: e.target.checked }) }), 'Fog pessoal'),
       h('label', { class: 'linha', title: 'Até onde a vista alcança (em quadrados de 1,5 m)' }, 'Alcance',
@@ -211,7 +214,22 @@ export function controlesMundo(mapa) {
         botao(pincel === 'cobrir' ? 'Cobrindo: arraste no mapa (parar)' : 'Cobrir (pincel)', () => { estado.sel.mapaFogPincel = pincel === 'cobrir' ? null : 'cobrir'; estado.sel.mapaObjeto = null; render(); }, { class: `pequeno ${pincel === 'cobrir' ? 'primario' : ''}`, icone: 'eye-off' }),
         botao('Revelar tudo', () => acao('mapa.revelar', { tudo: true }), { class: 'pequeno' }),
         botao('Cobrir tudo', () => acao('mapa.revelar', { tudo: true, revelar: false }), { class: 'pequeno perigo' })] : null),
+    climaDoMapa(mapa),
     h('p', { class: 'dica' }, 'Arraste o fundo do mapa (ou use as setas) para ver os vizinhos; um peão levado além da borda entra no vizinho. A fog aparece meio transparente para você; os jogadores veem preta.'));
+}
+
+// Clima no mapa: efeito, intensidade e para onde o vento sopra. O clima do dia (aba Tempo) vira sugestão.
+function climaDoMapa(mapa) {
+  const cl = mapa.clima || {};
+  const dia = estado.campanha.clima;
+  const sug = sugestaoDoClima(dia);
+  return h('div', { class: 'barra' },
+    h('small', {}, icone('cloud-rain'), ' Clima no mapa:'),
+    selecao(EFEITOS_CLIMA.map(e => ({ valor: e.id, rotulo: e.nome })), cl.efeito || '', v => acao('mapa.clima', { efeito: v }), { 'aria-label': 'Efeito de clima no mapa' }),
+    cl.efeito ? selecao([1, 2, 3].map(n => ({ valor: String(n), rotulo: ['', 'fraco', 'médio', 'forte'][n] })), String(cl.intensidade || 2), v => acao('mapa.clima', { intensidade: v }), { 'aria-label': 'Intensidade' }) : null,
+    cl.efeito && cl.efeito !== 'calor' ? selecao(DIRECOES.map(d => ({ valor: String(d.g), rotulo: `vento ${d.seta} ${d.nome.toLowerCase()}` })), String(cl.vento ?? 135), v => acao('mapa.clima', { vento: v }), { 'aria-label': 'Para onde o vento sopra' }) : null,
+    dia ? h('small', { class: 'dica' }, `Clima do dia: ${dia.nome}${sug && sug !== cl.efeito ? ` (sugestão: ${EFEITOS_CLIMA.find(e => e.id === sug).nome.toLowerCase()})` : ''}`) : null,
+    sug && sug !== cl.efeito ? botao('Usar a sugestão', () => acao('mapa.clima', { efeito: sug }), { class: 'pequeno' }) : null);
 }
 
 // Pincel da fog: arrastar pelo mapa revela ou cobre quadrados (o servidor recebe ao soltar).

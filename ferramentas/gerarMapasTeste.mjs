@@ -20,6 +20,7 @@ const FUNDOS = {
   praia: { base: '#d9c08a', pontos: ['#cdb47e', '#e3cc98', '#c4aa74'] },
   ruinas: { base: '#7b7a70', pontos: ['#6d6c63', '#8a897e', '#6a7a4a'] },
   caverna: { base: '#3a332c', pontos: ['#322b25', '#453d34', '#2b2520'] },
+  continente: { base: '#1d4a66', pontos: ['#1a4560', '#22547a', '#18405a'] },
 };
 
 function svgDoMapa(m, n) {
@@ -38,6 +39,17 @@ function svgDoMapa(m, n) {
   }
   if (m.fundo === 'floresta') el.push(`<rect x="${12 * Q}" y="${7 * Q}" width="${W - 12 * Q}" height="${2 * Q}" fill="#7c6a48" opacity="0.6"/>`);
   if (m.fundo === 'praia') el.push(`<rect x="0" y="${7 * Q}" width="${8 * Q}" height="${2 * Q}" fill="#b89f6c" opacity="0.7"/>`);
+  // Continente: ilhas de contorno irregular, com o nome de cada uma.
+  for (const ilha of m.ilhas || []) {
+    const pts = [];
+    for (let a = 0; a < 24; a++) {
+      const ang = (a / 24) * Math.PI * 2, rr = ilha.r * Q * (0.75 + rnd() * 0.45);
+      pts.push(`${(ilha.x * Q + Math.cos(ang) * rr).toFixed(0)},${(ilha.y * Q + Math.sin(ang) * rr * 0.8).toFixed(0)}`);
+    }
+    el.push(`<polygon points="${pts.join(' ')}" fill="#d8c48c" stroke="#efe2b0" stroke-width="10" opacity="0.95"/>`);
+    el.push(`<polygon points="${pts.join(' ')}" fill="#6f8a45" transform="translate(${ilha.x * Q * 0.12} ${ilha.y * Q * 0.12}) scale(0.88)" opacity="0.9"/>`);
+    el.push(`<text x="${ilha.x * Q}" y="${ilha.y * Q}" font-family="Georgia, serif" font-size="${Q * 1.1}" fill="#2a1d0e" text-anchor="middle" stroke="#f5ecd0" stroke-width="6" paint-order="stroke">${ilha.nome}</text>`);
+  }
   if (m.fundo === 'ruinas') el.push(`<rect x="${11 * Q}" y="${8 * Q}" width="${2 * Q}" height="${H - 8 * Q}" fill="#9a9480" opacity="0.6"/>`);
   for (const o of m.objetos) {
     const x = o.col * Q, y = o.lin * Q, w = (o.l || 1) * Q, h = (o.a || 1) * Q;

@@ -9,7 +9,7 @@ import { requisitosQueFaltam } from '../shared/requisitos.js';
 import { monstroNoEstagio, textoDeslocamentos, textoND, ladoNoMapa, ameacaNoMapa } from '../shared/monstros.js';
 import { sortearEncontro, cenarioSemIA } from '../shared/encontro.js';
 import { MAPAS_TESTE } from '../shared/mapasTeste.js';
-import { partesDoMundo, parteNoQuadrado, visaoDosPJs, porMapa, pecaNoConjunto, objetoNoConjunto, direcaoDoMovimento, custoDoTrecho, LADOS, OPOSTO, linhasDoMapa, colunasDoMapa, DIRECOES as DIRECOES_OLHAR } from '../shared/visao.js';
+import { partesDoMundo, parteNoQuadrado, visaoDosPJs, porMapa, pecaNoConjunto, objetoNoConjunto, direcaoDoMovimento, custoDoTrecho, quadradosVisiveis, LADOS, OPOSTO, linhasDoMapa, colunasDoMapa, DIRECOES as DIRECOES_OLHAR } from '../shared/visao.js';
 import { FORMAS_AREA, quadradosDaArea, atingidosPelaArea } from '../shared/area.js';
 import { TIPOS_OBJETO, tipoObjeto, coberturaPeloMapa, foraDaVisaoDosPJs, bloqueadoPorObjeto } from '../shared/objetosMapa.js';
 import { passarNecessidades, comer, beber, dormir, rolarCaos, climaDoDia, descreverRelogio, fimDoCombate } from '../shared/tempo.js';
@@ -93,14 +93,14 @@ export function visaoPara(c, user, area) {
   const comDono = p => ({ ...p, dono: nomeUsuario(p.donoId) });
   const mapa = mapaPublico(c, area, user);
   if (area === 'mestre') {
-    return { ...c, mapa, sistema: idSistema(c.sistema), personagens: c.personagens.map(comDono), jogadoresNomes: c.jogadores.map(nomeUsuario),
+    return { ...c, mapa, continental: continentalPublico(c, 'mestre', user), sistema: idSistema(c.sistema), personagens: c.personagens.map(comDono), jogadoresNomes: c.jogadores.map(nomeUsuario),
       suportesNomes: (c.suportes || []).map(id => ({ id, nome: nomeUsuario(id) })), papel: 'mestre' };
   }
   // Suporte: só o que ele apresenta — o mapa (com os personagens que estão nele) e as imagens liberadas pelo mestre.
   if (area === 'suporte') {
     const noMapa = new Set(Object.keys(mapa.pecas));
     return {
-      id: c.id, nome: c.nome, sistema: idSistema(c.sistema), aberta: c.aberta, papel: 'suporte', mapa,
+      id: c.id, nome: c.nome, sistema: idSistema(c.sistema), aberta: c.aberta, papel: 'suporte', mapa, continental: continentalPublico(c, 'suporte', user),
       personagens: c.personagens.filter(p => noMapa.has(p.id)).map(p => fichaPublica(p, sistema(c.sistema))),
       imagens: c.imagens.filter(i => i.suporte), salas: { social: { participantes: [], log: [] }, batalha: { participantes: [], log: [] } }, log: [], relacoes: {},
     };
@@ -125,6 +125,7 @@ export function visaoPara(c, user, area) {
     relacoes: Object.fromEntries([...meus].map(id => [id, c.relacoes[id] || {}])),
     imagens: c.imagens.filter(i => i.mostrando),
     mapa,
+    continental: continentalPublico(c, 'jogador', user),
     salas: Object.fromEntries(Object.entries(c.salas).map(([k, s]) => [k, semEscondidos(c, ocultos, { ...s, log: s.log.filter(e => !e.secreta && (!e.privadoPara || e.privadoPara === user.id)) })])),
     log: c.log.filter(e => !e.secreta && !mencionaEscondido(c, ocultos, e)),
     confrontos: (c.confrontos || []).filter(x => !x.secreto),
@@ -235,6 +236,58 @@ function atravessar(c, p, origem, ps) {
   const texto = `${p.nome} usou ${ps.nome || 'a passagem'} e foi para ${dest.nome}${trocou ? ' (o mapa mudou para todos)' : ''}.`;
   registrar(c.log, { autor: p.nome, rotulo: 'Passagem', texto });
   return { atravessou: dest.nome, trocou, texto };
+}
+
+// ---------- Mapa continental (autor, 01/11) ----------
+// Um mapa marcado como continental: grande, sem combate, com fog inicial que se abre em volta dos peões dos PJs
+// (a "geolocalização" do grupo) e pins com comentários (cada pin só para quem pôs e para o mestre).
+function moverNoMapaAvulso(c, p, m, col, lin, ctx) {
+  if (!m) throw erro('Mapa não encontrado.');
+  if (!ctx.mestre && !ctx.suporte) throw erro('Só o mestre move o grupo no mapa continental.');
+  const novo = { col: Math.max(0, Math.min(colunasDoMapa(m) - 1, parseInt(col, 10) || 0)), lin: Math.max(0, Math.min(linhasDoMapa(m) - 1, parseInt(lin, 10) || 0)) };
+  for (const x of todosMapas(c)) if (x !== m && x.continental) delete x.pecas?.[p.id];
+  const antes = m.pecas?.[p.id];
+  (m.pecas ||= {})[p.id] = { ...(antes || {}), ...novo };
+  explorarAvulso(c, m);
+  // O grupo viu o caminho todo: a fog se abre pela reta entre o ponto de saída e o de chegada.
+  if (antes && p.tipo === 'pj' && m.fog?.absoluta) {
+    const partes = [{ mapa: m, dc: 0, dl: 0, lado: null }];
+    const passos = Math.max(Math.abs(novo.col - antes.col), Math.abs(novo.lin - antes.lin));
+    const conj = new Set(m.explorado || []);
+    for (let n = 1; n < passos; n++) {
+      const ponto = { col: Math.round(antes.col + ((novo.col - antes.col) * n) / passos), lin: Math.round(antes.lin + ((novo.lin - antes.lin) * n) / passos) };
+      for (const k of quadradosVisiveis(partes, ponto, 1, { alcance: p.alcanceVisao || m.fog.alcance || 3 })) conj.add(k);
+    }
+    m.explorado = [...conj];
+  }
+  return {};
+}
+function explorarAvulso(c, m) {
+  if (!m?.fog?.absoluta) return;
+  const partes = [{ mapa: m, dc: 0, dl: 0, lado: null }];
+  const vis = visaoDosPJs(partes, c.personagens, { fogPessoal: false, alcance: m.fog.alcance });
+  const conj = new Set(m.explorado || []);
+  const antes = conj.size;
+  for (const x of Object.values(vis)) for (const k of x) conj.add(k);
+  if (conj.size !== antes) m.explorado = [...conj];
+}
+// O mapa continental como cada um vê (pins: só os seus; o mestre vê todos).
+function continentalPublico(c, area, user) {
+  const m = todosMapas(c).find(x => x.continental);
+  if (!m) return null;
+  const mestre = area === 'mestre';
+  const img = c.imagens.find(i => i.id === m.imagemId);
+  const conhecido = m.fog?.absoluta ? new Set(m.explorado || []) : null;
+  const tipo = id => c.personagens.find(p => p.id === id)?.tipo;
+  return {
+    id: m.id, nome: m.nome, continental: true, ativo: m === c.mapa, grade: m.grade, imagemId: m.imagemId,
+    midia: img ? { url: img.url, tipo: img.tipo || 'imagem', titulo: img.titulo } : null,
+    pecas: Object.fromEntries(Object.entries(m.pecas || {}).filter(([id, x]) => mestre || (!x.oculto && (tipo(id) === 'pj' || !conhecido || pecaNoConjunto(conhecido, x))))),
+    objetos: mestre ? (m.objetos || []) : (m.objetos || []).filter(o => !o.oculto && (!conhecido || objetoNoConjunto(conhecido, o))),
+    passagens: [], marcas: [],
+    pins: (m.pins || []).filter(x => mestre || x.dono === user?.id),
+    fog: { absoluta: !!m.fog?.absoluta, pessoal: false, alcance: m.fog?.alcance || null, explorado: m.fog?.absoluta ? (m.explorado || []) : [], visivel: [] },
+  };
 }
 
 // Fog absoluta: o que os PJs veem agora entra no "explorado" de cada mapa do mundo (ativo e vizinhos).
@@ -2704,8 +2757,10 @@ export const acoes = {
   // Mestre e Suporte colocam e movem os peões (col/lin = quadrado da grade). Coordenadas do mundo: o mapa ativo começa
   // em 0,0; passar da borda leva o peão para o mapa vizinho daquele lado (autor, 01/11). Parar numa passagem leva o
   // peão para o mapa de destino dela.
-  'mapa.mover'(c, { id, col, lin }, ctx) {
+  'mapa.mover'(c, { id, col, lin, mapaId }, ctx) {
     const p = personagem(c, id);
+    // Mapa continental aberto à parte (fora do mapa ativo e dos vizinhos): só o mestre e o Suporte movem o grupo.
+    if (mapaId && !mundoDe(c).some(x => x.mapa.id === mapaId)) return moverNoMapaAvulso(c, p, mapaPorId(c, mapaId), col, lin, ctx);
     // O jogador move o peão do próprio personagem (ou de um companheiro dele) na vez dele no Campo de Batalha (autor, 29/10).
     const cb = c.salas.batalha.combate;
     const vezDele = cb && cb.ordem[cb.vez]?.id === id;
@@ -2845,6 +2900,48 @@ export const acoes = {
     if (pessoal !== undefined) m.fog.pessoal = !!pessoal;
     if (alcance !== undefined) m.fog.alcance = Math.max(1, Math.min(100, parseInt(alcance, 10) || 16));
   },
+  // Marca (ou desmarca) o mapa ativo como o mapa continental da campanha: só um por campanha; começa coberto pela fog,
+  // sem grade, e a vista alcança 3 quadrados em volta de cada PJ.
+  'mapa.continental'(c, { continental }, ctx) {
+    exigirMestre(ctx);
+    const m = garantirMapas(c);
+    if (!continental) { delete m.continental; return; }
+    for (const x of todosMapas(c)) delete x.continental;
+    m.continental = true;
+    m.fog = { ...(m.fog || {}), absoluta: true, pessoal: false, alcance: m.fog?.alcance && m.fog.alcance <= 10 ? m.fog.alcance : 3 };
+    m.grade.visivel = false;
+  },
+  // Pins do mapa continental: qualquer um põe; o texto é de quem pôs; só ele e o mestre veem.
+  'mapa.pin'(c, { x, y, texto, cor }, ctx) {
+    const m = todosMapas(c).find(z => z.continental);
+    if (!m) throw erro('A campanha ainda não tem mapa continental.');
+    const t = String(texto || '').trim().slice(0, 500);
+    if (!t) throw erro('Escreva o comentário do pin.');
+    const num = v => Math.max(0, Math.min(5000, Number(v) || 0));
+    (m.pins ||= []).push({ id: uid(), dono: ctx.user.id, autor: ctx.mestre ? 'Mestre' : ctx.user.name, x: num(x), y: num(y), texto: t, cor: /^#[0-9a-f]{6}$/i.test(cor || '') ? cor : null, em: Date.now() });
+  },
+  'mapa.pinEditar'(c, { id, texto, remover = false }, ctx) {
+    const m = todosMapas(c).find(z => z.continental);
+    const pin = (m?.pins || []).find(x => x.id === id);
+    if (!pin) throw erro('Pin não encontrado.');
+    if (!ctx.mestre && pin.dono !== ctx.user.id) throw erro('Esse pin não é seu.');
+    if (remover) { m.pins = m.pins.filter(x => x !== pin); return; }
+    const t = String(texto || '').trim().slice(0, 500);
+    if (t) pin.texto = t;
+  },
+
+  // Clima no mapa ativo (autor, 01/11): efeito por cima da vista, sem mudar a imagem. vento = para onde sopra (graus).
+  'mapa.clima'(c, { efeito, intensidade, vento }, ctx) {
+    exigirMestre(ctx);
+    const m = garantirMapas(c);
+    const ok = ['', 'chuva', 'tempestade', 'neve', 'vento', 'nevoa', 'calor', 'cinzas'];
+    if (efeito !== undefined && !ok.includes(efeito || '')) throw erro('Efeito de clima desconhecido.');
+    m.clima = { ...(m.clima || { intensidade: 2, vento: 135 }) };
+    if (efeito !== undefined) m.clima.efeito = efeito || '';
+    if (intensidade !== undefined) m.clima.intensidade = Math.max(1, Math.min(3, parseInt(intensidade, 10) || 2));
+    if (vento !== undefined) m.clima.vento = ((Math.round((parseInt(vento, 10) || 0) / 45) * 45) % 360 + 360) % 360;
+  },
+
   // Pincel da fog absoluta (mapa ativo): revelar ou cobrir quadrados; "tudo" revela ou cobre o mapa inteiro.
   'mapa.revelar'(c, { quadrados, revelar = true, tudo = false }, ctx) {
     exigirMestre(ctx);
@@ -2891,8 +2988,9 @@ export const acoes = {
       let img = c.imagens.find(i => i.url === ex.url);
       if (!img) { img = { id: uid(), titulo: ex.nome, url: ex.url, tipo: 'imagem', categoria: 'Mapas', mostrando: false }; c.imagens.push(img); }
       const m = novoMapa(ex.nome);
-      Object.assign(m, { imagemId: img.id, grade: { colunas: ex.colunas, ox: 0, oy: 0, visivel: true, proporcao: ex.linhas / ex.colunas },
-        objetos: ex.objetos.map(o => ({ id: uid(), ...o })), fog: { absoluta: true, pessoal: true } });
+      Object.assign(m, { imagemId: img.id, grade: { colunas: ex.colunas, ox: 0, oy: 0, visivel: !ex.continental, proporcao: ex.linhas / ex.colunas },
+        objetos: ex.objetos.map(o => ({ id: uid(), ...o })), fog: ex.continental ? { absoluta: true, pessoal: false, alcance: 3 } : { absoluta: true, pessoal: true } });
+      if (ex.continental && !todosMapas(c).some(x => x.continental)) m.continental = true;
       c.mapas.push(m);
       ids[ex.chave] = m;
     }

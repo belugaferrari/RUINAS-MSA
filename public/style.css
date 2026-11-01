@@ -1576,3 +1576,13 @@ input.largo { flex: 1 1 20em; min-width: 0; }
 .rosa-dir.ativa { background: var(--ouro); color: #1a120a; }
 .rosa-centro { display: grid; place-items: center; border-radius: 50%; border: 2px solid #5b8bd0; font-weight: 800; }
 .mapa-mundo-controles .barra { flex-wrap: wrap; }
+/* Clima no mapa: por cima da vista, sem pegar cliques. */
+.mapa-rolagem { position: relative; }
+.mapa-clima { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 4; }
+/* Mapa do mundo: pins (alfinetes) por ponto, não por quadrado. */
+.pin-mapa { position: absolute; left: calc((var(--px) + var(--ox)) * var(--cel)); top: calc((var(--py) + var(--oy)) * var(--cel)); transform: translate(-50%, -100%);
+  width: max(22px, calc(var(--cel) * .9)); height: max(22px, calc(var(--cel) * .9)); min-width: 0; min-height: 0; padding: 0; border: 0; background: none;
+  color: var(--cor-pin, #e05a4a); z-index: 3; display: grid; place-items: center; filter: drop-shadow(0 2px 2px #000a); }
+.pin-mapa svg { width: 100%; height: 100%; fill: #fff3; }
+.pin-mapa.meu { color: var(--cor-pin, var(--ouro)); }
+.mapa-mundo-barra { flex-wrap: wrap; }

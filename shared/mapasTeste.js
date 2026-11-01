@@ -66,6 +66,15 @@ export const MAPAS_TESTE = [
       { tipo: 'bau', nome: 'Baú antigo', col: 15, lin: 4 },
     ],
   },
+  // Mapa do mundo (continental): arquipélago grande, sem grade e sem combate; a fog se abre em volta dos PJs.
+  {
+    chave: 'continente', nome: 'Teste — Ilhas das Ruínas (mundo)', url: '/img/mapas-teste/continente.svg', colunas: 60, linhas: 40, fundo: 'continente', continental: true,
+    objetos: [],
+    ilhas: [
+      { nome: 'Ilha da Vila', x: 14, y: 12, r: 8 }, { nome: 'Ruínas do Norte', x: 30, y: 7, r: 6 }, { nome: 'Maré Morta', x: 44, y: 18, r: 9 },
+      { nome: 'Recife das Cinzas', x: 20, y: 30, r: 7 }, { nome: 'Bunker Afundado', x: 50, y: 33, r: 5 }, { nome: 'Farol Partido', x: 34, y: 25, r: 3 },
+    ],
+  },
 ];
 // Onde ficam as passagens (desenhadas como escadas na imagem).
 export const PASSAGENS_TESTE = { ruinas: [{ col: 12, lin: 4 }], caverna: [{ col: 2, lin: 9 }] };

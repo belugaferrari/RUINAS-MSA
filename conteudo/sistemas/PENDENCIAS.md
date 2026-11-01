@@ -597,3 +597,12 @@ Respostas do autor (31/10) e o que foi feito:
   médio: até Raríssimo; complexo: até Lendário). O livro só diz que cenário mais complexo dá item melhor.
 - **Criação e manutenção**: reparo bem-sucedido com DS igual a 1 (+1 a cada 30%) → aura Sortudo (rerola o próximo erro com a arma),
   Melhorado (+5% nos testes com o item) ou Afiado (+1 de dano). Some quando o item perde 1 de durabilidade.
+
+## 01/11 — Clima no mapa e mapa do mundo (feitos)
+- **Clima no mapa** (mestre, aba Mapa): chuva, tempestade (com raios), neve, vento, névoa, calor intenso, cinzas/areia; intensidade
+  (fraco/médio/forte) e direção do vento. É uma camada animada por cima da vista; não muda a imagem. O clima do dia vira sugestão.
+  Com "reduzir movimento" no sistema do aparelho, o efeito fica parado.
+- **Mapa do mundo (continental)**: o mestre marca um mapa como continental (só um por campanha). Todos abrem pelo botão "Mapa do mundo",
+  mesmo com outro mapa ativo. Começa coberto; a fog se abre em volta dos peões dos PJs (alcance 3 quadrados) e pelo caminho quando o
+  mestre arrasta o grupo. Zoom (− / +), arrastar o fundo e "Onde estou". Pins com comentário: só quem pôs e o mestre veem.
+  Mapa de teste: "Teste — Ilhas das Ruínas (mundo)" (botão "Criar mapas de teste").
