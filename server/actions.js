@@ -146,7 +146,9 @@ function semEscondidos(c, ocultos, s) {
   if (s.combate) {
     const atual = s.combate.ordem[s.combate.vez]?.id;
     const ordem = s.combate.ordem.filter(o => !ocultos.has(o.id));
-    fora.combate = { ...s.combate, ordem, vez: ordem.findIndex(o => o.id === atual), gasto: Object.fromEntries(Object.entries(s.combate.gasto || {}).filter(([id]) => !ocultos.has(id))), turnosFeitos: undefined, inicioTurno: ocultos.has(s.combate.inicioTurno?.id) ? null : s.combate.inicioTurno };
+    // Contador de turnos sem as vezes dos escondidos (senão o número pula e entrega que há mais alguém).
+    const vistosAteAgora = s.combate.ordem.slice(0, s.combate.vez + 1).filter(o => !ocultos.has(o.id)).length;
+    fora.combate = { ...s.combate, ordem, vez: ordem.findIndex(o => o.id === atual), turno: (s.combate.rodada - 1) * ordem.length + Math.max(1, vistosAteAgora), gasto: Object.fromEntries(Object.entries(s.combate.gasto || {}).filter(([id]) => !ocultos.has(id))), turnosFeitos: undefined, inicioTurno: ocultos.has(s.combate.inicioTurno?.id) ? null : s.combate.inicioTurno };
   }
   return fora;
 }
@@ -1806,7 +1808,9 @@ function iniciarCombate(c) {
 function garantirCombate(c) {
   const s = c.salas.batalha;
   if (!s.combate) {
-    if (s.participantes.length >= 2) iniciarCombate(c);
+    // Escondido não conta para o combate começar sozinho (senão os jogadores veem o combate começar "do nada").
+    // Quando começa, ele entra na iniciativa junto com os outros.
+    if (s.participantes.filter(id => !c.personagens.find(p => p.id === id)?.escondido).length >= 2) iniciarCombate(c);
     return;
   }
   for (const id of s.participantes) {

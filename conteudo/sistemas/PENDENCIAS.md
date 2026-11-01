@@ -573,3 +573,10 @@ Respostas do autor (31/10) e o que foi feito:
   O app testa sozinho a cada nova rodada; o mestre também testa quando quiser ("Testar se é achado").
   Com a fog pessoal ligada, só testam os PJs que estão com ele no cone de visão.
 - *A confirmar*: atacar do esconderijo revela o NPC e o ataque é surpresa (vantagem). Andar no mapa não revela.
+- (01/11) "Entrar escondido" = nenhum jogador percebe que o mestre pôs o NPC no Campo de Batalha. Fechadas as pistas: o contador de
+  turnos dos jogadores não conta a vez dele, e com só 1 PJ + o escondido o combate não começa sozinho.
+
+## AFAZERES do Mapa (autor, 01/11) — depois do que já foi pedido
+1. **Clima no mapa**: efeito sobreposto e indicativo (chuva, neve, vento, névoa…), sem alterar a imagem do mapa.
+2. **Mapa continental (geolocalização)**: mapa grande, arrastável, sem combate; fog inicial que os personagens vão abrindo com o avanço
+   da campanha; o jogador vê onde está ("geolocalização") e põe pins com comentários próprios.

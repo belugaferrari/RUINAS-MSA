@@ -89,3 +89,18 @@ test('esconder e revelar pelo mestre', () => {
   executar(c, 'personagem.esconder', { id: bruto.id, escondido: false }, ctxM);
   assert.ok(visaoPara(c, ana, 'jogador').salas.batalha.participantes.includes(bruto.id));
 });
+
+test('sem pistas: o contador de turnos não conta a vez do escondido; com 1 PJ e o escondido, o combate não começa sozinho', () => {
+  const { c, lobo } = campo();
+  const cb = c.salas.batalha.combate;
+  cb.vez = cb.ordem.length - 1;
+  const v = visaoPara(c, ana, 'jogador').salas.batalha.combate;
+  assert.equal(v.turno, 2, 'só as 2 vezes visíveis');
+  const c2 = novaCampanha(mestre, { nome: 'T2', maxJogadores: 2, nivel: 1, sistema: 'mss' });
+  const [a, b] = ['Lia', 'Lobo'].map(nome => executar(c2, 'personagem.criar', { tipo: 'npc', grupoId: 'encontros', ficha: { nome } }, ctxM).id);
+  c2.personagens.find(p => p.id === a).tipo = 'pj';
+  executar(c2, 'sala.adicionar', { sala: 'batalha', id: a }, ctxM);
+  executar(c2, 'sala.adicionar', { sala: 'batalha', id: b, escondido: true }, ctxM);
+  assert.ok(!c2.salas.batalha.combate);
+  assert.ok(lobo);
+});
