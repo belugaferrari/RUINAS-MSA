@@ -2,7 +2,7 @@ import { h, botao, selecao, aviso, vazio, icone, titulo, tabela, abas, seloRevis
 import { ICONE_TIPO, iconeItem } from './ficha.js';
 import { estado, render, personagemPorId, meusPersonagens } from '../estado.js';
 import { acao, get, post, enviarArquivo, baixarArquivo } from '../api.js';
-import { itemVisivel, itemAberto, textoIp, textoBonus } from '/shared/regras.js';
+import { itemVisivel, itemAberto, textoIp, textoBonus, bonusNegociacao, precosComerciante, MOEDAS } from '/shared/regras.js';
 import { imagemDeLink } from '/shared/imagens.js';
 import { buscarMonstros, monstroNoEstagio, textoDeslocamentos, textoND, periciasAcimaDoLimite } from '/shared/monstros.js';
 import { marked } from '/vendor/marked.js';
@@ -679,7 +679,12 @@ export function lojaView({ titulo: tituloLoja = 'Loja', tipos = null } = {}) {
     compradores.length ? h('div', { class: 'barra' },
       h('span', {}, icone('user'), mestre ? ' Comprar/dar para:' : ' Comprar para:'),
       selecao(compradores.map(p => ({ valor: p.id, rotulo: p.nome })), compradorId, v => { estado.sel.comprador = v; render(); }),
-      comprador ? h('span', { class: 'selo moeda' }, icone('coins'), `${comprador.dinheiro ?? 0}`) : null) : null,
+      comprador ? h('span', { class: 'selo moeda' }, icone('coins'), `${comprador.dinheiro ?? 0}`) : null,
+      // Negociação com comerciante (livro): passiva = 1/4 da subperícia (até 25%); ativa = teste Normal (±25%).
+      comprador?.atributos ? h('small', { class: 'dica' }, `negociação passiva ${bonusNegociacao(comprador, estado.sistema)}%`) : null,
+      comprador ? h('label', { class: 'linha', title: 'Teste Normal de Negociação com comerciantes: passou, 25% mais barato; falhou, 25% mais caro' },
+        h('input', { type: 'checkbox', checked: !!estado.sel.negociarAtivo, onchange: e => { estado.sel.negociarAtivo = e.target.checked; } }), 'negociar (teste)') : null) : null,
+    moedasMetalicas(),
     mestre && !tipos ? catalogoMestre() : null,
     mestre ? h('label', { class: 'linha' }, h('input', { type: 'checkbox', checked: !!c.itensRarosVisiveis, onchange: e => acao('campanha.atualizar', { itensRarosVisiveis: e.target.checked }) }),
       'Jogadores veem todos os itens (sem isso, só Mundanos, Comuns, Incomuns e os que você liberar)') : null,
@@ -688,13 +693,14 @@ export function lojaView({ titulo: tituloLoja = 'Loja', tipos = null } = {}) {
       h('span', { class: 'item-nome', title: [i.descricao, i.aparencia, i.efeitos, i.observacoes, i.requisitos ? `Requisitos: ${i.requisitos}` : ''].filter(Boolean).join(' · ') },
         icone(iconeItem(i)), i.nome, i.raridade ? h('small', { class: 'selo' }, i.raridade) : null, seloRevisao(i.revisao)),
       TIPOS[i.tipo] || i.tipo, [slotNome(i.slot), i.ocupa > 1 ? ` (${i.ocupa})` : ''],
-      h('span', { class: 'moeda' }, icone('coins'), i.preco), i.venda, i.durabilidade, i.peso,
+      h('span', { class: 'moeda', title: 'Preço do comerciante com a sua negociação passiva' }, icone('coins'), comprador?.atributos ? precosComerciante(i, bonusNegociacao(comprador, estado.sistema)).compra : i.preco),
+      comprador?.atributos ? precosComerciante(i, bonusNegociacao(comprador, estado.sistema)).venda : i.venda, i.durabilidade, i.peso,
       [i.dano ? `${i.dano}${i.tipoDano ? ` ${i.tipoDano}` : ''}` : i.danoTexto, textoIp(i)].filter(Boolean).join(' · ') || '—',
       textoBonus(i, estado.sistema) || '—',
       [
         podeComprar ? botao('Comprar', async () => {
-          await acao('item.comprar', { id: comprador.id, itemId: i.id });
-          aviso(`${i.nome} comprado para ${comprador.nome}.`);
+          const r = await acao('item.comprar', { id: comprador.id, itemId: i.id, negociar: !!estado.sel.negociarAtivo });
+          aviso(r.texto);
         }, { class: 'pequeno primario', icone: 'coins' }) : null,
         mestre && !itemAberto(i) ? botao(liberado(i) ? 'Esconder' : 'Liberar', () => acao('item.liberar', { itemId: i.id, liberar: !liberado(i) }),
           { class: `pequeno ${liberado(i) ? 'perigo' : ''}`, icone: liberado(i) ? 'eye-off' : 'eye', title: liberado(i) ? `Esconder ${i.nome} dos jogadores` : `Mostrar ${i.nome} aos jogadores` }) : null,
@@ -705,6 +711,18 @@ export function lojaView({ titulo: tituloLoja = 'Loja', tipos = null } = {}) {
       ],
     ])) : vazio('Nenhum item encontrado.', 'search'),
     todos.length > itens.length ? botao(`Mostrar mais ${Math.min(POR_PAGINA, todos.length - itens.length)}`, () => { estado.sel.lojaLimite = limite + POR_PAGINA; render(); }, { icone: 'chevron-down' }) : null);
+}
+
+// Moedas metálicas (livro): conversão para créditos e as faixas de preço para o mestre.
+function moedasMetalicas() {
+  const q = (estado.sel.moedas ||= {});
+  const total = MOEDAS.reduce((s, m) => s + (q[m.id] || 0) * m.valor, 0);
+  return h('details', { class: 'moedas-metalicas' },
+    h('summary', {}, icone('coins'), ' Moedas metálicas e escambo'),
+    h('div', { class: 'barra' }, MOEDAS.map(m => h('label', { class: 'linha', title: `${m.nome}: ${m.valor} crédito${m.valor > 1 ? 's' : ''}` }, `${m.nome} (${m.valor})`,
+      h('input', { type: 'number', class: 'curto', min: 0, value: q[m.id] || 0, onchange: e => { q[m.id] = Math.max(0, parseInt(e.target.value, 10) || 0); render(); } })))),
+    h('p', {}, h('strong', {}, `= ${total} créditos`), ' · cada 100 moedas pesam 1 kg (o mestre pode ignorar).'),
+    h('p', { class: 'dica' }, 'Faixas de preço (livro): pessoas comuns 50%–200% do preço base; comerciante vende por 75%–150% e compra por 50%–75%. A loja usa o preço base com a negociação.'));
 }
 
 // Catálogo de itens editável por planilha (só o mestre): baixar, enviar de volta ou voltar ao padrão.

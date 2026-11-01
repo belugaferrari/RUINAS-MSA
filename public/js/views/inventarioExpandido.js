@@ -4,7 +4,7 @@
 import { h, botao, icone, confirmar, aviso, pedirTexto, janela } from '../ui.js';
 import { estado, render } from '../estado.js';
 import { acao } from '../api.js';
-import { derivados, slotsOcupados, durabilidadeDe, textoIp, textoBonus } from '/shared/regras.js';
+import { derivados, slotsOcupados, durabilidadeDe, textoIp, textoBonus, bonusNegociacao, precosComerciante } from '/shared/regras.js';
 import { ICONE_TIPO, iconeItem, cargaView } from './ficha.js';
 import { maoDoItem } from './boneco.js';
 
@@ -121,7 +121,7 @@ export function cartaoItem(p, i, mestre) {
     h('footer', { class: 'barra' },
       i.slot ? botao(i.equipado ? 'Desequipar' : 'Equipar', () => acao('item.equipar', { id: p.id, uid: i.uid, equipar: !i.equipado }).then(r => r?.aviso && aviso(r.aviso, 'erro')), { class: i.equipado ? 'pequeno' : 'primario pequeno', icone: i.equipado ? 'x' : 'shirt' }) : null,
       (mestre || estado.campanha.lojaAberta) ? botao('Vender', async () => {
-        if (await confirmar(`Vender ${i.nome} por ${i.venda ?? 0}?`)) await acao('item.vender', { id: p.id, uid: i.uid });
+        if (await confirmar(`Vender ${i.nome} por ${precosComerciante(i, p.atributos ? bonusNegociacao(p, estado.sistema) : 0).venda} créditos?`)) aviso((await acao('item.vender', { id: p.id, uid: i.uid })).texto);
       }, { class: 'pequeno', icone: 'coins' }) : null,
       botaoDar(p, i),
       botao('Descartar', async () => {

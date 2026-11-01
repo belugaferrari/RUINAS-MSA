@@ -3,7 +3,7 @@ import { h, campo, botao, selecao, aviso, confirmar, pedirTexto, formatarData, v
 import { efeitosIcones } from './efeitos.js';
 import { estado, render } from '../estado.js';
 import { acao, enviarArquivo } from '../api.js';
-import { tipoDaArma, textoIp, textoBonus, GENEROS, ATRACOES, atracaoDe, durabilidadeDe, derivados, slotsOcupados, ganhosDeClasse, pontosGastos, pontosPericiaTotal, vantagensDisponiveis, acharVantagem, xpParaSubir, subpericiasDe } from '/shared/regras.js';
+import { tipoDaArma, textoIp, textoBonus, GENEROS, ATRACOES, atracaoDe, durabilidadeDe, derivados, slotsOcupados, ganhosDeClasse, pontosGastos, pontosPericiaTotal, vantagensDisponiveis, acharVantagem, xpParaSubir, subpericiasDe, bonusNegociacao, precosComerciante } from '/shared/regras.js';
 import { painelPericias } from './pericias.js';
 import { bonecoView } from './boneco.js';
 import { escolherAvatar } from './avatares.js';
@@ -588,7 +588,7 @@ export function equipamento(p, mestre, filtro = null) {
           i.remedio ? botao('Usar', () => acao('remedio.usar', { id: p.id, uid: i.uid }).then(r => aviso(r.texto)), { class: 'pequeno primario', icone: 'heart' }) : null,
           i.slot ? botao(i.equipado ? 'Desequipar' : 'Equipar', () => acao('item.equipar', { id: p.id, uid: i.uid, equipar: !i.equipado }).then(r => r?.aviso && aviso(r.aviso, 'erro')), { class: i.equipado ? 'pequeno' : 'primario pequeno', icone: i.equipado ? 'x' : 'shirt' }) : null,
           (mestre || estado.campanha.lojaAberta) ? botao('Vender', async () => {
-            if (await confirmar(`Vender ${i.nome} por ${i.venda ?? 0}?`)) await acao('item.vender', { id: p.id, uid: i.uid });
+            if (await confirmar(`Vender ${i.nome} por ${precosComerciante(i, p.atributos ? bonusNegociacao(p, estado.sistema) : 0).venda} créditos?`)) aviso((await acao('item.vender', { id: p.id, uid: i.uid })).texto);
           }, { class: 'pequeno', icone: 'coins' }) : null,
           botaoDar(p, i),
           botao('', async () => {

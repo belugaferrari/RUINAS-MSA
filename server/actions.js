@@ -13,7 +13,7 @@ import { partesDoMundo, parteNoQuadrado, visaoDosPJs, porMapa, pecaNoConjunto, o
 import { FORMAS_AREA, quadradosDaArea, atingidosPelaArea } from '../shared/area.js';
 import { TIPOS_OBJETO, tipoObjeto, coberturaPeloMapa, foraDaVisaoDosPJs, bloqueadoPorObjeto } from '../shared/objetosMapa.js';
 import { passarNecessidades, comer, beber, dormir, rolarCaos, climaDoDia, descreverRelogio, fimDoCombate } from '../shared/tempo.js';
-import { podeSeduzir, itemAberto, itemVisivel, xpParaSubir, novaFicha, podeEquipar, rolarDado, rolarAtributosCriacao, testeDMil, gerarEncontro, derivados, problemasFicha, LIMITE_SALA, desgastarItem, repararItem, durabilidadeDe, listaHabilidades, vantagemPorHabilidade, temHabilidade, regraDaHabilidade, tipoCriatura, chaveHabilidade, TIPOS_ACAO, nomeAcao, acoesDaHabilidade, dadosDaHabilidade, ehAtaqueEspecial, acaoDoAtaqueEspecial, perderPv, textoPv, duracaoDaHabilidade, podeRepetir, textoDuracao, habilidadeValendo, temItem, tipoDaArma, TIPOS_MUTACAO, mutacaoDaTabela, temMutacaoDescontrolada, condicoesAtivas, textoIp, armaNaCondicao, escolhasPermitidas, regiaoDoItem, camadaDoItem, SLOTS_ANTIGOS, tipoDoTeste, atributoDoTeste, ehFerramental, concentrado, valorConcentracao, AURAS_PERICIA, dsParaAura, modAuraItem } from '../shared/regras.js';
+import { podeSeduzir, itemAberto, itemVisivel, xpParaSubir, novaFicha, podeEquipar, rolarDado, rolarAtributosCriacao, testeDMil, gerarEncontro, derivados, problemasFicha, LIMITE_SALA, desgastarItem, repararItem, durabilidadeDe, listaHabilidades, vantagemPorHabilidade, temHabilidade, regraDaHabilidade, tipoCriatura, chaveHabilidade, TIPOS_ACAO, nomeAcao, acoesDaHabilidade, dadosDaHabilidade, ehAtaqueEspecial, acaoDoAtaqueEspecial, perderPv, textoPv, duracaoDaHabilidade, podeRepetir, textoDuracao, habilidadeValendo, temItem, tipoDaArma, TIPOS_MUTACAO, mutacaoDaTabela, temMutacaoDescontrolada, condicoesAtivas, textoIp, armaNaCondicao, escolhasPermitidas, regiaoDoItem, camadaDoItem, SLOTS_ANTIGOS, tipoDoTeste, atributoDoTeste, ehFerramental, concentrado, valorConcentracao, AURAS_PERICIA, AURAS_CRIACAO, dsParaAura, modAuraItem, bonusNegociacao, precosComerciante, SUB_NEGOCIACAO, PESOS_ENCONTRO } from '../shared/regras.js';
 
 const GRUPO_ENCONTROS = 'encontros';
 const MAX_LOG = 100;
@@ -118,7 +118,7 @@ export function visaoPara(c, user, area) {
 
   return {
     id: c.id, nome: c.nome, nivel: c.nivel, padraoMSA: c.padraoMSA, pontos: c.pontos, aberta: c.aberta, sistema: idSistema(c.sistema),
-    lojaAberta: c.lojaAberta, dadosNaTela: c.dadosNaTela !== false, itensRarosVisiveis: !!c.itensRarosVisiveis, itensLiberados: c.itensLiberados || [], maxJogadores: c.maxJogadores, papel: 'jogador',
+    lojaAberta: c.lojaAberta, emRuina: !!c.emRuina, pedidosItem: (c.pedidosItem || []).filter(x => meus.has(x.personagem)), dadosNaTela: c.dadosNaTela !== false, itensRarosVisiveis: !!c.itensRarosVisiveis, itensLiberados: c.itensLiberados || [], maxJogadores: c.maxJogadores, papel: 'jogador',
     lore: c.lore,
     relogio: c.relogio || { horas: 0 }, clima: c.clima || null,
     personagens,
@@ -847,6 +847,13 @@ const nomeSubDe = (sis, id) => { const p = sis.pericias.find(x => id.startsWith(
 // Lado no combate: os personagens-jogador e os companheiros deles de um lado; os outros NPCs do outro.
 const ladoDe = p => (p.tipo === 'pj' || p.companheiroDe ? 'pj' : 'npc');
 const aliadosNoCampo = (c, p) => c.salas.batalha.participantes.map(id => c.personagens.find(x => x.id === id)).filter(x => x && x.id !== p.id && ladoDe(x) === ladoDe(p));
+// Negociação com comerciante: passiva (1/4 da subperícia, até 25%) ou ativa (teste Normal: ganha ou perde 25%).
+function negociacao(p, sis, ativa) {
+  if (!ativa) { const b = bonusNegociacao(p, sis); return { b, texto: b ? `negociação ${b}%` : '' }; }
+  const t = testar(p, sis, SUB_NEGOCIACAO, 70);
+  return { b: t.sucesso ? 25 : -25, texto: `negociou: ${t.total} contra 70 — ${t.sucesso ? '25% melhor' : '25% pior'}` };
+}
+
 // ---------- NPC escondido (ghost) ----------
 const escondidos = c => new Set(c.personagens.filter(p => p.escondido).map(p => p.id));
 function revelarEscondido(c, p, texto) {
@@ -1866,6 +1873,7 @@ function resolverPendente(c, s, pend, defesa, sis) {
     if (caiu && !(b.marcadores ||= []).includes('Caído')) b.marcadores.push('Caído');
     notas.push(`Investida: FOR ${y.total} de ${b.nome} contra ${x.total} de ${a.nome} — ${caiu ? `${b.nome} caiu` : `${b.nome} ficou de pé`}`);
   }
+  if (r.sortudo) notas.push('Sortudo: o erro foi rerolado (a aura se gastou)');
   if (r.semCritico) notas.push(`${b.nome} é imune a acertos críticos (sem o dado extra)`);
   if (r.semCriticoRequisito) notas.push(`sem os pré-requisitos de ${r.arma}: sem dano crítico`);
   if (r.dsVantagem) notas.push('Táticas de Esquadrão: DS com vantagem');
@@ -2469,8 +2477,12 @@ export const acoes = {
         texto = `${it.nome} virou SUCATA (${t.critico === 'erro' ? 'erro crítico' : '3 falhas seguidas'})`;
       } else texto = `falhou (${it.falhasReparo}ª falha seguida; na 3ª o item vira sucata)`;
     }
-    const entrada = { tipo: 'dmil', autor: p.nome, rotulo: `Reparar ${it.nome} (${nomeSub})${modo ? ' (vantagem)' : ''}`, acaoNome: nomeSub, mod: restaurador ? 10 : 0, ...t,
-      texto: `${texto}${kit ? '' : ' · sem kit de reparo no inventário (o mestre decide)'}` };
+    // Criação e manutenção (livro): reparo bem-sucedido com DS igual a 1 (+1 a cada 30%) → o dono escolhe uma aura.
+    const aura = t.sucesso && t.ds <= dsParaAura(d.subpericias[sub] ?? 0);
+    if (aura) p.auraPendente = { uid: it.uid, tipo: 'criacao', em: Date.now() };
+    const entrada = { tipo: 'dmil', autor: p.nome, personagemId: p.id, rotulo: `Reparar ${it.nome} (${nomeSub})${modo ? ' (vantagem)' : ''}`, acaoNome: nomeSub, mod: restaurador ? 10 : 0, ...t,
+      texto: `${texto}${aura ? ` · DS ${t.ds}: escolha uma aura (Sortudo, Melhorado ou Afiado)` : ''}${kit ? '' : ' · sem kit de reparo no inventário (o mestre decide)'}`,
+      ...(aura ? { aura: { uid: it.uid, item: it.nome, opcoes: AURAS_CRIACAO } } : {}) };
     registrar(c.log, entrada);
     return entrada;
   },
@@ -2516,15 +2528,23 @@ export const acoes = {
     if (faltam.length) return { aviso: `${p.nome} não atende aos pré-requisitos de ${it.nome} (${faltam.join(', ')}): ${it.tipo === 'arma' ? 'ataques com −30% (Mestre de Armas: −15% nas armas de fogo), sem dano crítico e a arma trava se errar' : 'o mestre aplica a penalidade'}.` };
   },
 
-  'item.comprar'(c, { id, itemId }, ctx) {
+  // Comprar do comerciante (livro): preço base com a negociação — passiva (1/4 de Negociação com comerciantes, até 25%)
+  // ou ativa (teste Normal: passou −25%, falhou +25%).
+  'item.comprar'(c, { id, itemId, negociar = false }, ctx) {
     const p = personagem(c, id);
     exigirDonoOuMestre(ctx, p);
     if (!ctx.mestre && !c.lojaAberta) throw erro('A loja está fechada pelo mestre.');
-    const it = itemDoCatalogo(itemId, sistema(c.sistema));
+    const sis = sistema(c.sistema);
+    const it = itemDoCatalogo(itemId, sis);
     if (!ctx.mestre && !itemVisivel(it, c)) throw erro('Este item não está à venda para os jogadores.');
-    if ((p.dinheiro || 0) < it.preco) throw erro('Dinheiro insuficiente.');
-    p.dinheiro -= it.preco;
+    const neg = negociacao(p, sis, negociar);
+    const preco = precosComerciante(it, neg.b).compra;
+    if ((p.dinheiro || 0) < preco) throw erro(`Dinheiro insuficiente (${preco} créditos${neg.texto ? `; ${neg.texto}` : ''}).`);
+    p.dinheiro -= preco;
     p.itens.push(it);
+    const texto = `${p.nome} comprou ${it.nome} por ${preco} créditos${neg.texto ? ` (${neg.texto})` : ''}`;
+    registrar(c.log, { autor: p.nome, rotulo: 'Compra', texto });
+    return { texto, preco };
   },
 
   // O mestre mostra (ou esconde) um item raro para os jogadores.
@@ -2535,14 +2555,60 @@ export const acoes = {
     c.itensLiberados = [...lista];
   },
 
-  'item.vender'(c, { id, uid: itemUid }, ctx) {
+  // Vender ao comerciante (livro): metade do preço base, mais a negociação.
+  'item.vender'(c, { id, uid: itemUid, negociar = false }, ctx) {
     const p = personagem(c, id);
     exigirDonoOuMestre(ctx, p);
     if (!ctx.mestre && !c.lojaAberta) throw erro('A loja está fechada pelo mestre.');
     const it = p.itens.find(i => i.uid === itemUid);
     if (!it) throw erro('Item não encontrado.');
+    const neg = negociacao(p, sistema(c.sistema), negociar);
+    const valor = precosComerciante(it, neg.b).venda;
     p.itens = p.itens.filter(i => i !== it);
-    p.dinheiro = (p.dinheiro || 0) + (it.venda || 0);
+    p.dinheiro = (p.dinheiro || 0) + valor;
+    const texto = `${p.nome} vendeu ${it.nome} por ${valor} créditos${neg.texto ? ` (${neg.texto})` : ''}`;
+    registrar(c.log, { autor: p.nome, rotulo: 'Venda', texto });
+    return { texto, valor };
+  },
+
+  // Encontro de itens (livro): o jogador pede ao mestre para procurar um item (1 por descanso longo; numa Ruína, também
+  // 1 por descanso curto). O mestre sorteia pela complexidade do cenário (ou dá o que quiser) e descreve a cena.
+  'item.procurar'(c, { id }, ctx) {
+    const p = personagem(c, id);
+    exigirDonoOuMestre(ctx, p);
+    if (!ctx.mestre && !(p.procuraItem > 0)) throw erro(`${p.nome} já usou a procura de item. Ela volta no descanso longo (ou no curto, numa Ruína).`);
+    if ((c.pedidosItem || []).some(x => x.personagem === p.id)) throw erro(`${p.nome} já está esperando o mestre.`);
+    p.procuraItem = Math.max(0, (p.procuraItem || 0) - 1);
+    (c.pedidosItem ||= []).push({ id: uid(), personagem: p.id, em: Date.now() });
+    registrar(c.log, { autor: p.nome, rotulo: 'Procurar item', texto: `${p.nome} procura itens${c.emRuina ? ' (na Ruína)' : ''} — o mestre descreve o que acontece` });
+  },
+  'item.encontro'(c, { pedido, complexidade = 'medio', dispensar = false }, ctx) {
+    exigirMestre(ctx);
+    const pd = (c.pedidosItem || []).find(x => x.id === pedido);
+    if (!pd) throw erro('Pedido não encontrado.');
+    c.pedidosItem = c.pedidosItem.filter(x => x !== pd);
+    const p = personagem(c, pd.personagem);
+    if (dispensar) { registrar(c.log, { autor: p.nome, rotulo: 'Procurar item', texto: `${p.nome} não encontrou nada` }); return { texto: `${p.nome} não encontrou nada.` }; }
+    const sis = sistema(c.sistema);
+    const pesos = PESOS_ENCONTRO[complexidade] || PESOS_ENCONTRO.medio;
+    // Sem itens das raridades da tabela (catálogo pequeno), sorteia entre todos.
+    let lista = sis.itens.filter(i => pesos[i.raridade]);
+    const peso = i => (lista.length && pesos[i.raridade]) || 1;
+    if (!lista.length) lista = sis.itens;
+    const total = lista.reduce((s, i) => s + peso(i), 0);
+    let r = Math.random() * total;
+    const escolhido = lista.find(i => (r -= peso(i)) < 0) || lista[0];
+    if (!escolhido) throw erro('Nenhum item no catálogo para sortear.');
+    const it = itemDoCatalogo(escolhido.id, sis);
+    p.itens.push(it);
+    const texto = `${p.nome} encontrou ${it.nome} (${it.raridade || 'item'})`;
+    registrar(c.log, { autor: p.nome, rotulo: 'Item encontrado', texto });
+    return { texto, item: it.nome };
+  },
+  // O mestre marca que o grupo está numa Ruína (procura de item também no descanso curto).
+  'campanha.ruina'(c, { emRuina }, ctx) {
+    exigirMestre(ctx);
+    c.emRuina = !!emRuina;
   },
 
   // Passar um item para outro personagem (autor, 26/10): quem controla o personagem (ou o mestre) entrega; o item sai
@@ -3170,7 +3236,7 @@ export const acoes = {
     const it = (p.itens || []).find(i => i.uid === uidItem);
     if (!it) throw erro('Item não encontrado.');
     if (p.auraPendente?.uid !== uidItem) throw erro('Esse item não tem aura para escolher agora.');
-    const op = AURAS_PERICIA.find(x => x.id === aura);
+    const op = (p.auraPendente.tipo === 'criacao' ? AURAS_CRIACAO : AURAS_PERICIA).find(x => x.id === aura);
     if (!op) throw erro('Aura desconhecida.');
     it.aura = { id: op.id, nome: op.nome, texto: op.texto, dono: p.id };
     delete p.auraPendente;
@@ -4143,6 +4209,8 @@ export const acoes = {
       notas.push(...descansar(p, sis, tipo, d.pvMax, { confortavel, abrigado, ergonomico, interrompido, CAR: d.percentual.CAR ?? 0 }, d.percentual.CONS ?? 0));
       // Descanso curto é a refeição (meia ração); o longo, se não foi interrompido, tira o Sono.
       if (tipo === 'curto') notas.push(comer(p, sis));
+      // Encontro de itens (livro): 1 procura por descanso longo; numa Ruína, também 1 por descanso curto.
+      if (p.tipo === 'pj' && (tipo === 'longo' || c.emRuina)) { p.procuraItem = Math.min(3, (tipo === 'longo' ? Math.max(1, p.procuraItem || 0) : (p.procuraItem || 0) + 1)); notas.push('pode procurar 1 item'); }
       if (tipo === 'longo' && !interrompido) { const dormiu = dormir(p, sis); if (dormiu) notas.push(dormiu); else (p.necessidades ||= { comida: 0, agua: 0, sono: 0 }).sono = 0; }
       // Descansar encerra as habilidades que duram "até o próximo descanso" (Adaptação corpórea…).
       encerrarAtivacoes(c, p, sis, false);

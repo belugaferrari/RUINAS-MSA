@@ -197,8 +197,31 @@ function secaoRapidos(p) {
       p ? botao('Comer', () => acao('necessidade.comer', { id: p.id }).then(() => aviso(`${p.nome} comeu.`)), { icone: 'utensils', title: 'Zera as horas sem comer e tira a Fome' }) : null,
       p ? botao('Beber', () => acao('necessidade.beber', { id: p.id }).then(() => aviso(`${p.nome} bebeu.`)), { icone: 'cup-soda', title: 'A Sede acaba na hora' }) : null),
     p ? testesComuns(p) : null,
+    procurarItem(p),
     p && estado.campanha.papel === 'mestre' ? queda(p) : null,
     ultimo());
+}
+
+// Encontro de itens (livro): o jogador pede para procurar (1 por descanso longo; numa Ruína, também por descanso curto);
+// o mestre sorteia pela complexidade do cenário (ou diz que não achou) e descreve a cena.
+function procurarItem(p) {
+  const c = estado.campanha;
+  const mestre = c.papel === 'mestre';
+  const pedidos = c.pedidosItem || [];
+  const s = cfg();
+  return h('div', { class: 'form' },
+    titulo('Encontro de itens', 'search', 'h4'),
+    p ? h('div', { class: 'barra' },
+      botao(`Procurar item${p.procuraItem ? ` (${p.procuraItem})` : ''}`, () => acao('item.procurar', { id: p.id }).then(() => aviso('Pedido feito: o mestre descreve o que acontece.')),
+        { class: 'pequeno', icone: 'search', disabled: !mestre && !(p.procuraItem > 0), title: '1 por descanso longo; numa Ruína, também 1 por descanso curto' }),
+      pedidos.some(x => x.personagem === p.id) ? h('small', { class: 'dica' }, 'esperando o mestre…') : null) : null,
+    mestre ? h('label', { class: 'linha' }, h('input', { type: 'checkbox', checked: !!c.emRuina, onchange: e => acao('campanha.ruina', { emRuina: e.target.checked }) }), 'O grupo está numa Ruína (procura também no descanso curto)') : null,
+    mestre && pedidos.length ? [
+      selecao([{ valor: 'simples', rotulo: 'Cenário simples (floresta, campo)' }, { valor: 'medio', rotulo: 'Cenário médio (vila, ruína comum)' }, { valor: 'complexo', rotulo: 'Cenário complexo (bunker, castelo)' }],
+        s.complexidade || 'medio', v => { s.complexidade = v; }, { 'aria-label': 'Complexidade do cenário' }),
+      ...pedidos.map(pd => h('div', { class: 'barra' }, h('span', {}, personagemPorId(pd.personagem)?.nome || '?', ' procura um item'),
+        botao('Sortear item', () => acao('item.encontro', { pedido: pd.id, complexidade: s.complexidade || 'medio' }).then(r => aviso(r.texto)), { class: 'pequeno primario', icone: 'dices' }),
+        botao('Não achou', () => acao('item.encontro', { pedido: pd.id, dispensar: true }), { class: 'pequeno' })))] : null);
 }
 
 // Dano por queda (livro): 1d6+1 a cada 3 m; Acrobacia Difícil zera até 3 m e corta pela metade até 9 m; IP contra Queda desconta.
@@ -261,6 +284,8 @@ function testesComuns(p) {
         botao('Reparar', async () => {
           const r = await acao('item.repararTeste', { id: p.id, uid: estado.sel[chaveItem], sub: estado.sel[chaveSub] });
           aviso(`${r.rotulo}: ${r.total} × ${r.nd} — ${r.texto}`, r.sucesso ? 'ok' : 'erro');
+          // Reparo com DS bom: a escolha da aura (Sortudo, Melhorado, Afiado) aparece no último resultado.
+          if (r.aura) { cfg().ultimo = r; render(); }
         }, { class: 'primario', icone: 'hammer', disabled: !item?.reparavel, title: 'Sucesso: +1 de durabilidade (só 1 por desgaste). Erro crítico ou 3 falhas seguidas: vira sucata.' }),
       ] : h('small', { class: 'dica' }, 'Nenhum item precisando de reparo.')),
   ];

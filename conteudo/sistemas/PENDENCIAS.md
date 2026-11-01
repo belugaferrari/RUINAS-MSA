@@ -586,3 +586,14 @@ Respostas do autor (31/10) e o que foi feito:
   Explorador dos Ermos e Tropa de elite ignoram o acidentado natural (mato, água, entulho; mesa e caixote continuam pesando).
 - O contador soma o caminho feito no turno (cada arrasto/clique é um trecho em linha reta) e avisa se passou do deslocamento. Só avisa: não impede.
 - Levantar do Caído é a ação de movimento completa (o mestre/jogador marca a ação; Cair para Cima isenta) — o app não desconta sozinho.
+
+## 01/11 — Itens e economia (Bloco 5)
+- **Comerciante**: vende pelo preço base e compra de volta pela metade. Negociação passiva = 1/4 de Avaliação de Objetos › Negociação com
+  comerciantes (até 25%: compra mais barato e vende mais caro; exemplo do livro: 60% → 15%). Ativa: caixa "negociar (teste)" na loja,
+  teste Normal — passou 25% melhor, falhou 25% pior. A loja e o "Vender" mostram o preço já com a negociação.
+- **Moedas metálicas**: conversor na loja (Ferro 1 … Titânio 5.000) e as faixas de preço do livro para o mestre (pessoas comuns 50%–200%).
+- **Encontro de itens**: rolador › Rápidos › "Procurar item" (1 por descanso longo; com "O grupo está numa Ruína", também 1 por curto).
+  O mestre sorteia pela complexidade do cenário ou diz "Não achou". *Interpretação*: pesos por raridade (simples: Mundano/Comum/Incomum;
+  médio: até Raríssimo; complexo: até Lendário). O livro só diz que cenário mais complexo dá item melhor.
+- **Criação e manutenção**: reparo bem-sucedido com DS igual a 1 (+1 a cada 30%) → aura Sortudo (rerola o próximo erro com a arma),
+  Melhorado (+5% nos testes com o item) ou Afiado (+1 de dano). Some quando o item perde 1 de durabilidade.

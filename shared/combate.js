@@ -2,7 +2,7 @@
 // "modulos.combate" / "modulos.social". Escolhas provisórias estão em conteudo/sistemas/PENDENCIAS.md.
 import { ladoNoMapa } from './monstros.js';
 import { requisitosQueFaltam } from './requisitos.js';
-import { rolarDado, derivados, ipContraDano, listaHabilidades, vantagemPorHabilidade, tipoCriatura, subirPassos, temHabilidade, regraDaHabilidade, danoDasHabilidades, efeitosHabilidade, modoHabilidade, perderPv, chaveHabilidade, habilidadeValendo, condicoesAtivas } from './regras.js';
+import { rolarDado, derivados, ipContraDano, listaHabilidades, vantagemPorHabilidade, tipoCriatura, subirPassos, temHabilidade, regraDaHabilidade, danoDasHabilidades, efeitosHabilidade, modoHabilidade, perderPv, chaveHabilidade, habilidadeValendo, condicoesAtivas, modAuraItem } from './regras.js';
 
 const d100 = rng => 1 + Math.floor(rng() * 100);
 
@@ -265,6 +265,9 @@ export function resolverAtaque(atacante, alvo, sistema, op = {}, defesaId = 'nen
   // Marcas temporárias do atacante: Olhar Penetrante (+10% contra o alvo), Trauma momentâneo (−30% no combate ofensivo).
   for (const m of atacante.marcas || []) if (m.acerto && (!m.contra || m.contra === alvo.id)) add(m.nome, m.acerto);
   add('modificador', Math.max(-100, Math.min(100, parseInt(op.mod, 10) || 0)));
+  // Aura da arma (Criação e manutenção / Perícias equipadas): Melhorado +5%, Familiaridade +5.
+  const itemArma = (atacante.itens || []).find(i => i.uid === arma.uid);
+  if (itemArma?.aura) add(`${itemArma.aura.nome} (${itemArma.nome})`, modAuraItem(itemArma, atacante.id));
   // Ataque especial usado agora (habilidade que não está ligada): o % de acerto dela entra só neste ataque.
   const especial = op.especial ? listaHabilidades(atacante, sistema).find(x => x.id === op.especial) : null;
   if (especial && !(atacante.ativas || []).includes(especial.id) && modoHabilidade(atacante, sistema, especial) !== 'sempre') {
@@ -299,14 +302,17 @@ export function resolverAtaque(atacante, alvo, sistema, op = {}, defesaId = 'nen
   const modo = modoRolagem(motivosV.length > 0, motivosD.length > 0);
 
   const defesa = defesaDoAlvo(alvo, arma, sistema, { escolha: defesaId, area: !!op.area, surpresa: !!op.surpresa, atacante, defesaExtra: op.defesaExtra || [] });
-  const teste = testeContra(acao, defesa.total, sistema, { modo, rng, dsVantagem: !!op.dsVantagem });
+  let teste = testeContra(acao, defesa.total, sistema, { modo, rng, dsVantagem: !!op.dsVantagem });
+  // Sortudo: o próximo erro com a arma é rerolado (a aura se gasta).
+  let sortudo = false;
+  if (!teste.sucesso && itemArma?.aura?.id === 'sortudo') { teste = testeContra(acao, defesa.total, sistema, { modo, rng, dsVantagem: !!op.dsVantagem }); delete itemArma.aura; sortudo = true; }
   const r = {
     arma: arma.nome, pericia, acao, mods, defesa, ...teste, motivosVantagem: motivosV, motivosDesvantagem: motivosD,
     dano: 0, danoBruto: 0, danoPartes: [], ip: 0, efeito: null, perdaSacrificio: 0,
     // Tiro Funcional: pode escolher dano não letal com armas a distância.
     naoLetal: arma.tipoDano === 'Não letal' || (!!op.naoLetal && arma.alcance === 'distancia' && !!habilidadeValendo(atacante, sistema, 'Tiro Funcional')),
     ...(faltam.length ? { semPrerequisito: faltam, travaSeErrar: !mestreArmas } : {}), ...(op.dsVantagem ? { dsVantagem: true } : {}),
-    ...(investidaGeral ? { investida: true } : {}),
+    ...(investidaGeral ? { investida: true } : {}), ...(sortudo ? { sortudo: true } : {}),
   };
   // Sacrifício: perde o D6 atual de vida mesmo errando (abandona a razão no ataque).
   if (op.sacrificio) r.perdaSacrificio = d6Atual(atacante.pv?.atual ?? 0);
@@ -359,6 +365,7 @@ export function resolverAtaque(atacante, alvo, sistema, op = {}, defesaId = 'nen
       // Marcas do alvo que aumentam o dano físico que ele toma (Pragas: +1).
       if (/f[ií]sic|corte|cortante|perfura|concuss|cin[eé]tic/i.test(arma.tipoDano || 'Físico')) for (const m of alvo.marcas || []) if (m.danoFisicoRecebido) doDisparo.push({ nome: m.nome, total: m.danoFisicoRecebido });
       if (investidaGeral) rolar('Investida', '1d4');
+      if (itemArma?.aura?.id === 'afiado') doDisparo.push({ nome: `Afiado (${itemArma.nome})`, total: 1 });
       if (investida) doDisparo.push({ nome: `Máquina Implacável (${investida} quadrado${investida > 1 ? 's' : ''})`, total: investida });
     }
     const bruto = doDisparo.reduce((s, p) => s + p.total, 0);

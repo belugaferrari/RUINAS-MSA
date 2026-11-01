@@ -990,10 +990,45 @@ export const AURAS_PERICIA = [
   { id: 'detalhe', nome: 'Detalhe único', texto: 'outra pessoa que usar o item tem −10% nos testes' },
   { id: 'cuidadoso', nome: 'Cuidadoso', texto: 'quando o DS indicar perda de durabilidade, rerola o DS uma vez e fica com o segundo' },
 ];
+// Criação e manutenção (livro): sucesso no reparo com DS igual a 1 (+1 a cada 30% na subperícia) → uma aura até o item
+// perder 1 de durabilidade: Sortudo (o próximo erro com ele é rerolado), Melhorado (+5% nos testes), Afiado (+1 de dano).
+export const AURAS_CRIACAO = [
+  { id: 'sortudo', nome: 'Sortudo', texto: 'o próximo erro com o item é rerolado' },
+  { id: 'melhorado', nome: 'Melhorado', texto: '+5% nos testes com o item' },
+  { id: 'afiado', nome: 'Afiado', texto: '+1 de dano' },
+];
 export const dsParaAura = valor => 1 + Math.floor(Math.max(0, valor || 0) / 30);
 export function modAuraItem(item, quemUsa) {
   if (!item?.aura) return 0;
+  if (item.aura.id === 'melhorado') return 5;
   if (item.aura.id === 'familiaridade' && (!item.aura.dono || item.aura.dono === quemUsa)) return 5;
   if (item.aura.id === 'detalhe' && item.aura.dono && item.aura.dono !== quemUsa) return -10;
   return 0;
 }
+
+// ---------- Economia (livro, capítulos de perícias e itens) ----------
+// Moedas metálicas em créditos. Cada 100 moedas pesam 1 kg (o mestre pode ignorar).
+export const MOEDAS = [
+  { id: 'Fe', nome: 'Ferro', valor: 1 }, { id: 'Cu', nome: 'Cobre', valor: 5 }, { id: 'Bz', nome: 'Bronze', valor: 10 }, { id: 'Pb', nome: 'Chumbo', valor: 50 },
+  { id: 'Ag', nome: 'Prata', valor: 100 }, { id: 'Au', nome: 'Ouro', valor: 500 }, { id: 'Pt', nome: 'Platina', valor: 1000 }, { id: 'Ti', nome: 'Titânio', valor: 5000 },
+];
+export const SUB_NEGOCIACAO = 'avaliacao-de-objetos.negociacao-com-comerciantes';
+// Negociação passiva com comerciante: 1/4 da subperícia, no máximo 25% (compra mais barato e revende mais caro).
+export function bonusNegociacao(ficha, sistema) {
+  const v = derivados(ficha, sistema).subpericias[SUB_NEGOCIACAO] ?? 0;
+  return Math.max(0, Math.min(25, Math.floor(v / 4)));
+}
+// Comerciante vende pelo preço base e compra de volta pela metade; a negociação (±b%) mexe nos dois.
+export function precosComerciante(item, b = 0) {
+  const base = Number(item?.preco) || 0;
+  if (!base) return { compra: 0, venda: Math.max(0, Number(item?.venda) || 0) };
+  return { compra: Math.max(0, Math.round(base * (1 - b / 100))), venda: Math.max(0, Math.round(base * (0.5 + b / 100))) };
+}
+// Faixas de preço do livro (para o mestre): pessoas comuns 50%–200% do base; comerciante 75%–150% na compra e 50%–75% na venda.
+export const FAIXAS_PRECO = { comuns: [0.5, 2], comercianteCompra: [0.75, 1.5], comercianteVenda: [0.5, 0.75] };
+// Encontro de itens: quanto mais complexo o cenário, mais chance de item melhor (pesos por raridade — interpretação).
+export const PESOS_ENCONTRO = {
+  simples: { Mundano: 50, Comum: 40, Incomum: 10 },
+  medio: { Mundano: 10, Comum: 40, Incomum: 30, Raro: 17, 'Raríssimo': 3 },
+  complexo: { Comum: 15, Incomum: 30, Raro: 35, 'Raríssimo': 15, 'Lendário': 5 },
+};
