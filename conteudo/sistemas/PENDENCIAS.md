@@ -627,3 +627,14 @@ Respostas do autor (31/10) e o que foi feito:
 - **Arremessar**: teste de Arremessar e o item sai da mão ("no chão"); equipar de novo é recolher.
 - **Arma natural**: escolhida na lista do Desarmado; muda o dano e o efeito, mas o teste é o do ataque desarmado (acerto fixo de monstro continua).
 - **Imagens**: o app guarda a imagem como foi enviada. Retrato do palco maior (190×280) e clicável para ampliar.
+
+## 01/11 — Toda arma a distância com munição
+- Tabela conteudo/sistemas/municoes.json: o tipo de munição que cada arma aceita (pode ser mais de um, ex.: Submetralhadora 9mm
+  aceita "pistola, smg") e o tipo de cada munição (flecha, virote, dardo, pedra, revólver, fuzil, precisão, escopeta, célula…).
+  A coluna "App: munição (tipo)" da planilha vale mais que a tabela.
+- 100 armas a distância: 75 com munição ligada; 25 são arremessadas (granadas, cápsulas, bombas, Vibro-Adaga) — elas mesmas se gastam.
+- 82 munições, todas ligadas a uma arma. 7 criadas: Projéteis de Osso (cx), Dardos de Atlatl, Bala de Canhão, Pedra de Catapulta,
+  Cápsula de Esporos, Cartucho de Ácido, Cartucho de Taser.
+- **Para a planilha**: conteudo/planilhas/municoes/01-municao-de-cada-item.csv (coluna "App: munição (tipo)" de cada item) e
+  02-municoes-novas.csv (as 7 munições novas, nas colunas da planilha).
+- "Receita: Pólvora Sem Fumaça" está como munição, mas é receita: sugiro mudar a categoria na planilha.

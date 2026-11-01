@@ -1,0 +1,176 @@
+﻿Item;App: munição (tipo);Observação
+Arco Composto (Polias);flecha;arma: tipos de munição que aceita
+Arco de Caça (Recurvo);flecha;arma: tipos de munição que aceita
+Arpão Incandescente;arpao;arma: tipos de munição que aceita
+Arpão de Pesca (Pneumático);arpao;arma: tipos de munição que aceita
+"Atirador de Ossos ""Fúria Rígida""";osso;arma: tipos de munição que aceita
+Atlatl (Lançador de Lança);atlatl;arma: tipos de munição que aceita
+"Balestra Elétrica ""Raio Quebrado""";virote;arma: tipos de munição que aceita
+Balestra de Metal;virote;arma: tipos de munição que aceita
+"Besta Fantasma ""Sombra Silente""";virote;arma: tipos de munição que aceita
+Besta de Madeira;virote;arma: tipos de munição que aceita
+Besta de Mão (Pistola);virote;arma: tipos de munição que aceita
+Bolsa de Pedras Explosivas;;arma arremessada: ela mesma é a munição (se gasta ao usar)
+Bomba de Luz Lunar;;arma arremessada: ela mesma é a munição (se gasta ao usar)
+Canhão Antigo;canhao;arma: tipos de munição que aceita
+Canhão Sônico Portátil;celula;arma: tipos de munição que aceita
+Canhão de Mão (Improvisado);sucata;arma: tipos de munição que aceita
+"Canhão de Sucata ""Bocão""";sucata;arma: tipos de munição que aceita
+Carabina Civil;fuzil;arma: tipos de munição que aceita
+Catapulta de Cerco;catapulta;arma: tipos de munição que aceita
+Cápsula de Luz da Aurora;;arma arremessada: ela mesma é a munição (se gasta ao usar)
+Cápsula de Neblina Congelante;;arma arremessada: ela mesma é a munição (se gasta ao usar)
+Cápsula de Vapor Ultramarino;;arma arremessada: ela mesma é a munição (se gasta ao usar)
+"Emissor de Micro-ondas ""Cozinheiro""";celula;arma: tipos de munição que aceita
+Escopeta Tática (Pump);escopeta;arma: tipos de munição que aceita
+Escopeta de Cano Serrado;escopeta;arma: tipos de munição que aceita
+Escopeta de Dois Canos;escopeta;arma: tipos de munição que aceita
+Estilingue Tático;pedra;arma: tipos de munição que aceita
+Fazer de Atordoamento (Crowd Control);celula;arma: tipos de munição que aceita
+Funda (Estilingue de Corda);pedra;arma: tipos de munição que aceita
+Funda Bioluminescente;pedra;arma: tipos de munição que aceita
+"Fuzil de Assalto ""Soldado""";fuzil;arma: tipos de munição que aceita
+Fuzil de Assalto 5.56mm;fuzil;arma: tipos de munição que aceita
+"Fuzil de Chamas ""Dragão""";jato;arma: tipos de munição que aceita
+"Fuzil de Precisão ""Víbora""";precisao;arma: tipos de munição que aceita
+Fuzil de Raios Neutrônios;celula;arma: tipos de munição que aceita
+Granada (Genérica);;arma arremessada: ela mesma é a munição (se gasta ao usar)
+Granada Comum;;arma arremessada: ela mesma é a munição (se gasta ao usar)
+Granada Flash (Luz/Som);;arma arremessada: ela mesma é a munição (se gasta ao usar)
+Granada Gravitacional;;arma arremessada: ela mesma é a munição (se gasta ao usar)
+"Granada Incendiária ""Ignis""";;arma arremessada: ela mesma é a munição (se gasta ao usar)
+Granada Luminosa de Estase;;arma arremessada: ela mesma é a munição (se gasta ao usar)
+"Granada Psíquica ""Mente Quebrada""";;arma arremessada: ela mesma é a munição (se gasta ao usar)
+"Granada Química ""Nuvem Verde""";;arma arremessada: ela mesma é a munição (se gasta ao usar)
+Granada de Anti-Fagulha;;arma arremessada: ela mesma é a munição (se gasta ao usar)
+Granada de Cola Ácida;;arma arremessada: ela mesma é a munição (se gasta ao usar)
+Granada de EMP;;arma arremessada: ela mesma é a munição (se gasta ao usar)
+Granada de Fragmentação;;arma arremessada: ela mesma é a munição (se gasta ao usar)
+Granada de Fumaça;;arma arremessada: ela mesma é a munição (se gasta ao usar)
+Granada de Gelo Seco;;arma arremessada: ela mesma é a munição (se gasta ao usar)
+Granada de Isolamento Psíquico;;arma arremessada: ela mesma é a munição (se gasta ao usar)
+Granada de Prego & Vidro;;arma arremessada: ela mesma é a munição (se gasta ao usar)
+Granada de Pulso EMP;;arma arremessada: ela mesma é a munição (se gasta ao usar)
+Granada de Pulso Geomântico;;arma arremessada: ela mesma é a munição (se gasta ao usar)
+Granada de Pólvora Negra;;arma arremessada: ela mesma é a munição (se gasta ao usar)
+Lança-Chamas (Tanque);jato;arma: tipos de munição que aceita
+Lança-Granadas (Tambor);granada 40mm;arma: tipos de munição que aceita
+"Lança-Mofo ""Esporos Vivos""";esporos;arma: tipos de munição que aceita
+"Lança-Mísseis ""Demolidor""";missil;arma: tipos de munição que aceita
+Lança-Míssil (Bazuca);missil;arma: tipos de munição que aceita
+Lança-Rede Pneumático;rede;arma: tipos de munição que aceita
+Lançador de Bolhas Ácidas;acido;arma: tipos de munição que aceita
+Laser de Corte Industrial (Convertido);celula;arma: tipos de munição que aceita
+"Metralhadora Giratória ""Moedora""";cinta;arma: tipos de munição que aceita
+Metralhadora Leve (100);cinta;arma: tipos de munição que aceita
+"Morteiro de Mão ""Sapo""";morteiro;arma: tipos de munição que aceita
+Pistola (Genérica);pistola;arma: tipos de munição que aceita
+Pistola 9mm;pistola;arma: tipos de munição que aceita
+Pistola Automática (Rajada);pistola;arma: tipos de munição que aceita
+Pistola Automática .45;pistola;arma: tipos de munição que aceita
+Pistola Laser (Branca);celula;arma: tipos de munição que aceita
+Pistola Laser (Vermelha);celula;arma: tipos de munição que aceita
+Pistola Sinalizadora (Flare);sinalizador;arma: tipos de munição que aceita
+"Pistola de Bolso ""Surpresa""";pistola;arma: tipos de munição que aceita
+"Pistola de Plasma ""Cometa""";celula;arma: tipos de munição que aceita
+Pistola de Pregos (Adaptação);prego;arma: tipos de munição que aceita
+"Pistola de Pulso ""Empurrão""";celula;arma: tipos de munição que aceita
+"Pistola de Vácuo ""Suspiro""";celula;arma: tipos de munição que aceita
+Raio Congelante (Protótipo);celula;arma: tipos de munição que aceita
+Revólver (Genérico);revolver;arma: tipos de munição que aceita
+"Revólver Pesado ""Magnum""";revolver;arma: tipos de munição que aceita
+Revólver de Seis Tiros (Clássico);revolver;arma: tipos de munição que aceita
+Revólver de Seis Tiros (Moderno);revolver;arma: tipos de munição que aceita
+Rifle (Genérico);fuzil;arma: tipos de munição que aceita
+Rifle Anti-Material;precisao;arma: tipos de munição que aceita
+"Rifle Psico-Sônico ""Vórtice""";celula;arma: tipos de munição que aceita
+Rifle Semiautomático;fuzil;arma: tipos de munição que aceita
+Rifle de Cano (Pipe Rifle);fuzil;arma: tipos de munição que aceita
+Rifle de Caça (Com Mira);precisao;arma: tipos de munição que aceita
+"Rifle de Feixe ""Sentinela""";celula;arma: tipos de munição que aceita
+Rifle de Precisão .308;precisao;arma: tipos de munição que aceita
+Serra de Plasma (Mineração);celula;arma: tipos de munição que aceita
+Sniper (Rifle de Precisão);precisao;arma: tipos de munição que aceita
+Submetralhadora 9mm;pistola, smg;arma: tipos de munição que aceita
+Taser (Choque);taser;arma: tipos de munição que aceita
+Taser de Longo Alcance;taser;arma: tipos de munição que aceita
+Torreta Automática (Desativada);cinta;arma: tipos de munição que aceita
+Trabuco de Sucata;escopeta, sucata;arma: tipos de munição que aceita
+Vibro-Adaga (Arremesso);;arma arremessada: ela mesma é a munição (se gasta ao usar)
+Zarabatana;dardo;arma: tipos de munição que aceita
+Zarabatana Tática;dardo;arma: tipos de munição que aceita
+Arpão Recuperável (un);arpao;munição
+"Bala Elétrica ""Tesla"" (cx)";pistola;munição
+"Bala Explosiva ""Frag"" (cx)";pistola;munição
+"Bala Fantasma ""Éter"" (cx)";pistola;munição
+Bala Fragmentada (Espalha) (cx);pistola;munição
+"Bala Psíquica ""Sussurro"" (cx)";pistola;munição
+"Bala Sônica ""Bater de Asas"" (cx)";pistola;munição
+"Bala Venenosa ""Serpente"" (cx)";pistola;munição
+"Bala de Areia ""Arranhador"" (cx)";pistola;munição
+Bala de Cobalto (Anti-mágica) (cx);precisao;munição
+"Bala de Fogo ""Infernum"" (cx)";pistola;munição
+"Bala de Gelo ""Congelante"" (cx)";pistola;munição
+"Bala de Gravidade ""Colapso"" (cx)";fuzil;munição
+"Bala de Luz ""Solaris"" (cx)";pistola;munição
+"Bala de Névoa ""Fumaça"" (cx)";pistola;munição
+"Bala de Repulsão ""Pulso"" (cx)";pistola;munição
+Bala de Rádio (Rastreadora) (cx);fuzil;munição
+"Bala de Sangue ""Hematite"" (cx)";pistola;munição
+"Bala de Som ""Quebra-Tímpano"" (cx)";pistola;munição
+Bala de Ósmio (Perfurante) (cx);precisao;munição
+"Bala Ácida ""Dente de Gosma"" (cx)";pistola;munição
+Bateria de Alta Capacidade (Célula);celula;munição
+Caixa de Munição Fuzil (5.56mm) (30un);fuzil;munição
+Caixa de Munição Leve (Pistola) (20un);pistola;munição
+Caixa de Pregos Industriais (50un);prego;munição
+Cartucho Antiblindagem (cx);fuzil;munição
+Cartucho Incendiário (Escopeta) (cx);escopeta;munição
+Cartucho Sinalizador (Flare) (un);sinalizador;munição
+Cartucho de Lança-Chamas;jato;munição
+Cartucho de Sal Grosso (cx);escopeta;munição
+Cartuchos .50 BMG (cx);precisao;munição
+Cartuchos Escopeta 12GA (cx);escopeta;munição
+Cartuchos Metralhadora 7.62 (cinta);cinta;munição
+Cartuchos Submetralhadora 10mm (cx);smg;munição
+Célula de Energia (Padrão);celula;munição
+Dardo Anestésico (cx);dardo;munição
+Dardo Etéreo de Cristal (cx);dardo;munição
+Dardo de Toxina Insetoide (cx);dardo;munição
+Dardos de Zarabatana (cx);dardo;munição
+Dardos para Zarabatana (10un);dardo;munição
+Esferas de Aço (50un);pedra;munição
+Flecha Elétrica (cx);flecha;munição
+Flecha Psíquica (cx);flecha;munição
+Flecha de Aço (cx);flecha;munição
+Flecha de Gelo (cx);flecha;munição
+Flecha de Madeira (cx);flecha;munição
+Flecha de Pedra (cx);flecha;munição
+Flecha de Plasma (cx);flecha;munição
+Flechas Relâmpago (cx);flecha;munição
+Flechas de Aço (Reforçadas) (cx);flecha;munição
+Flechas de Caça (10un);flecha;munição
+Formicida Spray;jato;munição
+Granada 40mm (Explosiva) (un);granada 40mm;munição
+Granada 40mm (Gás) (un);granada 40mm;munição
+Munição Magnum .44 (6un);revolver;munição
+Munição de Rede (un);rede;munição
+"Míssil ""Busca-Pé"" (Improvisado)";missil;munição
+Míssil Explosivo (Rojão);missil;munição
+Míssil HEAT (Antitanque) (un);missil;munição
+Ogiva de Morteiro 60mm (un);morteiro;munição
+Projéteis 5.56mm NATO (cx);fuzil;munição
+Projéteis 7.62mm (cx);fuzil;munição
+Projéteis de Besta (Padrão) (cx);virote;munição
+Projéteis de Besta Pesada (cx);virote;munição
+Projéteis de Estilingue (Saco);pedra;munição
+Projéteis de Pistola 9mm (cx);pistola;munição
+Projéteis de Revólver .38 (cx);revolver;munição
+Projéteis de Revólver .44 (cx);revolver;munição
+Projéteis de Rifle .308 (cx);precisao;munição
+"Projétil ""Fragmento Fantasma"" (cx)";fuzil;munição
+Receita: Pólvora Sem Fumaça;-;não é munição (receita) — sugiro mudar a categoria
+Saco de Pedras;pedra;munição
+Saco de Sucata (Estilhaços);sucata;munição
+Spray Inseticida Monstruídeo;jato;munição
+Virotes de Besta (10un);virote;munição

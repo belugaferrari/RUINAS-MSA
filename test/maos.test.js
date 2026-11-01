@@ -72,3 +72,16 @@ test('maestria 2 ocupa as duas mãos (catálogo); arma natural é ataque desarma
   a.itens = [{ uid: 'g', nome: 'Garras', tipo: 'arma', natural: true, equipado: true, dano: '1d6', tipoDano: 'Corte', pericia: 'arma-branca.laminas-curtas' }];
   assert.equal(C.armasDisponiveis(a, sis).find(x => x.uid === 'g').pericia, 'briga.ataque-desarmado');
 });
+
+test('arma com mais de um tipo de munição aceita os dois; granada arremessada se gasta', () => {
+  const { c, a } = campo2();
+  a.itens = [{ uid: 'sm', nome: 'Submetralhadora 9mm', tipo: 'arma', slot: 'maos', equipado: true, municao: 'pistola, smg', alcance: 'distancia', pericia: 'armas-de-fogo.rifle-de-assalto' },
+    { uid: 'p', nome: 'Projéteis de Pistola 9mm (cx)', tipo: 'municao', municao: 'pistola', descricao: 'Caixa c/ 10' },
+    { uid: 's', nome: 'Cartuchos Submetralhadora 10mm (cx)', tipo: 'municao', municao: 'smg', descricao: 'Caixa c/ 5' },
+    { uid: 'g', nome: 'Granada Comum', tipo: 'arma', slot: 'maos', equipado: true, mao: 1, municaoPropria: true, quantidade: 2, pericia: 'esportes.arremessar', alcance: 'distancia', dano: '2d6' }];
+  assert.equal(R.balasDaArma(a, a.itens[0]), 15);
+  executar(c, 'item.arremessar', { id: a.id, uid: 'g' }, ctxM);
+  assert.equal(a.itens.find(i => i.uid === 'g').quantidade, 1);
+  executar(c, 'item.arremessar', { id: a.id, uid: 'g' }, ctxM).texto;
+  assert.ok(!a.itens.some(i => i.uid === 'g'));
+});

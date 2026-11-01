@@ -3,7 +3,7 @@ import { h, campo, botao, selecao, aviso, confirmar, pedirTexto, formatarData, v
 import { efeitosIcones } from './efeitos.js';
 import { estado, render } from '../estado.js';
 import { acao, enviarArquivo } from '../api.js';
-import { tipoDaArma, textoIp, textoBonus, GENEROS, ATRACOES, atracaoDe, durabilidadeDe, derivados, slotsOcupados, ganhosDeClasse, pontosGastos, pontosPericiaTotal, vantagensDisponiveis, acharVantagem, xpParaSubir, subpericiasDe, bonusNegociacao, precosComerciante, balasDe, balasDaArma, chaveMunicao } from '/shared/regras.js';
+import { tipoDaArma, textoIp, textoBonus, GENEROS, ATRACOES, atracaoDe, durabilidadeDe, derivados, slotsOcupados, ganhosDeClasse, pontosGastos, pontosPericiaTotal, vantagensDisponiveis, acharVantagem, xpParaSubir, subpericiasDe, bonusNegociacao, precosComerciante, balasDe, balasDaArma, chaveMunicao, tiposDaArma } from '/shared/regras.js';
 import { painelPericias } from './pericias.js';
 import { bonecoView } from './boneco.js';
 import { escolherAvatar } from './avatares.js';
@@ -615,7 +615,7 @@ function municaoView(p, i, mestre) {
   }
   if (i.tipo === 'municao') return h('span', { class: 'selo' }, `${balasDe(i)} balas (${i.municao})`);
   // Arma que usa munição do inventário (autor, 01/11): quantas balas do tipo dela o personagem tem.
-  if (i.tipo === 'arma' && i.municao && !['-', 'fazer'].includes(chaveMunicao(i.municao))) {
+  if (i.tipo === 'arma' && tiposDaArma(i).length) {
     const n = balasDaArma(p, i);
     return h('span', { class: `selo ${n ? '' : 'perigo'}`, title: 'Cada ataque a distância gasta a cadência' }, `munição: ${n} (${i.municao})`);
   }

@@ -4,7 +4,7 @@
 import { h, botao, selecao, aviso, icone, titulo, vazio, pedirTexto, confirmar } from '../ui.js';
 import { estado, render, personagemPorId } from '../estado.js';
 import { acao, ataqueDaTela } from '../api.js';
-import { derivados, listaHabilidades, efeitosHabilidade, modoHabilidade, temHabilidade, tipoCriatura, chaveHabilidade, GRUPOS_IP, acoesDaHabilidade, nomeAcao, dadosDaHabilidade, ehAtaqueEspecial, TIPOS_ACAO, acaoDoAtaqueEspecial, podeRepetir, duracaoDaHabilidade, textoDuracao, durabilidadeDe, textoIp, escolhasPermitidas, municoesDaArma, balasDaArma, balasDe, chaveMunicao, ocupaMaos } from '/shared/regras.js';
+import { derivados, listaHabilidades, efeitosHabilidade, modoHabilidade, temHabilidade, tipoCriatura, chaveHabilidade, GRUPOS_IP, acoesDaHabilidade, nomeAcao, dadosDaHabilidade, ehAtaqueEspecial, TIPOS_ACAO, acaoDoAtaqueEspecial, podeRepetir, duracaoDaHabilidade, textoDuracao, durabilidadeDe, textoIp, escolhasPermitidas, municoesDaArma, balasDaArma, balasDe, chaveMunicao, ocupaMaos, tiposDaArma } from '/shared/regras.js';
 import { armasDisponiveis, ipDe, opcoesDefesa, defesaDoAlvo, danoDaArma, recursoDe, LOCAIS_ATAQUE } from '/shared/combate.js';
 import { trilhaCompacta, escolherCondicao, cargaView, iconeItem } from './ficha.js';
 import { painelSlot, naMao, maoHabil } from './boneco.js';
@@ -593,7 +593,7 @@ function quadroAtaques(p, participantes, mestre) {
     const tit = n === 0 ? 'Mão direita' : 'Mão esquerda';
     const arma = it && automaticas.find(a => a.uid === it.uid);
     // Munição própria do tipo da arma (do inventário); a escolhida é gasta primeiro.
-    const usaMunicao = it?.municao && !['-', 'fazer'].includes(chaveMunicao(it.municao)) && !it.capacidade;
+    const usaMunicao = tiposDaArma(it).length > 0 && !it.capacidade;
     const municoes = usaMunicao ? municoesDaArma(p, it) : [];
     const balas = usaMunicao ? balasDaArma(p, it) : null;
     const semBala = (it?.capacidade && (it.carregada || 0) <= 0) || (usaMunicao && balas <= 0);

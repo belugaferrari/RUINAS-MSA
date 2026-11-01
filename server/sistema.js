@@ -32,6 +32,22 @@ function arquivoItens() {
 
 const ler = arq => JSON.parse(fs.readFileSync(arq, 'utf8'));
 
+// Munição de cada arma a distância (autor, 01/11): conteudo/sistemas/municoes.json. A coluna "App: munição (tipo)" da
+// planilha vale mais que a tabela. "propria" = arma arremessada (granada, cápsula…): ela mesma se gasta ao usar.
+const MUNICOES = fs.existsSync(path.join(SISTEMAS, 'municoes.json')) ? JSON.parse(fs.readFileSync(path.join(SISTEMAS, 'municoes.json'), 'utf8')) : { armas: {}, municoes: {} };
+function comMunicao(it, planilha) {
+  const daPlanilha = String(planilha?.['App: munição (tipo)'] || '').trim();
+  if (it.tipo === 'arma') {
+    if (it.pericia === 'esportes.arremessar' && !it.alcance) it.alcance = 'distancia';
+    const t = MUNICOES.armas?.[it.nome];
+    if (!daPlanilha && t === 'propria') { it.municaoPropria = true; delete it.municao; }
+    else if (!daPlanilha && Array.isArray(t)) it.municao = t.join(', ');
+  } else if (it.tipo === 'municao' && !daPlanilha && it.nome in (MUNICOES.municoes || {})) {
+    it.municao = MUNICOES.municoes[it.nome] || '-';
+  }
+  return it;
+}
+
 // Mescla objetos recursivamente; listas e valores simples do sistema substituem os da base.
 function mesclar(base, extra) {
   if (extra === undefined) return base;
@@ -112,8 +128,13 @@ export function sistema(id = SISTEMA_PADRAO) {
   // Regiões do corpo (autor, 31/10): itens com os espaços antigos (Corpo, Vestimenta, Joias) vão para a região do livro.
   // Maestria 2 = arma de duas mãos: ocupa as duas mãos (autor, 01/11).
   const comMaos = it => { const x = { ...it, slot: regiaoDoItem(it) }; if (x.slot === 'maos') x.ocupa = ocupaMaos(x); return x; };
-  if (arqItens) dados.itens = ler(arqItens).itens.map(({ planilha, ...it }) => comMaos(it));
-  else dados.itens = (dados.itens || []).map(comMaos);
+  if (arqItens) dados.itens = ler(arqItens).itens.map(({ planilha, ...it }) => comMunicao(comMaos(it), planilha));
+  else dados.itens = (dados.itens || []).map(it => comMunicao(comMaos(it), null));
+  // Munições criadas pelo app para as armas que não tinham nenhuma (entram se a planilha não tiver o mesmo nome).
+  if (arqItens) {
+    const nomes = new Set(dados.itens.map(i => i.nome));
+    dados.itens.push(...(MUNICOES.novas || []).filter(i => !nomes.has(i.nome)).map(i => ({ ...i })));
+  }
   // Livro dos Monstros enviado pelo mestre por planilha (sem ele, os exemplos do base.json).
   if (arqMonstros) dados.monstros = ler(arqMonstros).monstros;
   cache.set(id, { assinatura, dados });

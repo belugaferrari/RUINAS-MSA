@@ -1045,10 +1045,12 @@ export function balasDe(item) {
   return (item.quantidade || 1) * (/\(cx\)/i.test(item.nome || '') || porCaixa ? (porCaixa || 10) : 1);
 }
 // Munições do inventário que servem na arma (a escolhida primeiro).
+// Uma arma pode aceitar mais de um tipo ("pistola, smg").
+export const tiposDaArma = arma => String(arma?.municao || '').split(/[,;/]/).map(chaveMunicao).filter(k => k && !['-', 'fazer'].includes(k));
 export function municoesDaArma(ficha, arma) {
-  if (!arma?.municao || ['-', 'fazer'].includes(chaveMunicao(arma.municao))) return [];
-  const k = chaveMunicao(arma.municao);
-  const lista = (ficha.itens || []).filter(i => i.tipo === 'municao' && chaveMunicao(i.municao) === k && balasDe(i) > 0);
+  const ks = tiposDaArma(arma);
+  if (!ks.length) return [];
+  const lista = (ficha.itens || []).filter(i => i.tipo === 'municao' && ks.includes(chaveMunicao(i.municao)) && balasDe(i) > 0);
   return lista.sort((a, b) => (b.uid === arma.municaoUid) - (a.uid === arma.municaoUid));
 }
 export const balasDaArma = (ficha, arma) => municoesDaArma(ficha, arma).reduce((s, i) => s + balasDe(i), 0);

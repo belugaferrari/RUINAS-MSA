@@ -1,0 +1,581 @@
+{
+ "_sobre": "Munição de cada arma a distância (autor, 01/11). \"armas\": tipos de munição que a arma aceita (\"propria\" = a arma é arremessada e se gasta ao usar). \"municoes\": o tipo de cada munição do catálogo. \"novas\": munições criadas para as armas que não tinham nenhuma — entram no catálogo só se a planilha não tiver um item com o mesmo nome. Para mudar, edite a coluna \"App: munição (tipo)\" da planilha (ela vale mais que esta tabela).",
+ "armas": {
+  "Arco Composto (Polias)": [
+   "flecha"
+  ],
+  "Arco de Caça (Recurvo)": [
+   "flecha"
+  ],
+  "Arpão de Pesca (Pneumático)": [
+   "arpao"
+  ],
+  "Arpão Incandescente": [
+   "arpao"
+  ],
+  "Atirador de Ossos \"Fúria Rígida\"": [
+   "osso"
+  ],
+  "Atlatl (Lançador de Lança)": [
+   "atlatl"
+  ],
+  "Balestra de Metal": [
+   "virote"
+  ],
+  "Balestra Elétrica \"Raio Quebrado\"": [
+   "virote"
+  ],
+  "Besta de Madeira": [
+   "virote"
+  ],
+  "Besta de Mão (Pistola)": [
+   "virote"
+  ],
+  "Besta Fantasma \"Sombra Silente\"": [
+   "virote"
+  ],
+  "Bolsa de Pedras Explosivas": "propria",
+  "Bomba de Luz Lunar": "propria",
+  "Canhão Antigo": [
+   "canhao"
+  ],
+  "Canhão de Mão (Improvisado)": [
+   "sucata"
+  ],
+  "Canhão de Sucata \"Bocão\"": [
+   "sucata"
+  ],
+  "Canhão Sônico Portátil": [
+   "celula"
+  ],
+  "Cápsula de Luz da Aurora": "propria",
+  "Cápsula de Neblina Congelante": "propria",
+  "Cápsula de Vapor Ultramarino": "propria",
+  "Carabina Civil": [
+   "fuzil"
+  ],
+  "Catapulta de Cerco": [
+   "catapulta"
+  ],
+  "Emissor de Micro-ondas \"Cozinheiro\"": [
+   "celula"
+  ],
+  "Escopeta de Cano Serrado": [
+   "escopeta"
+  ],
+  "Escopeta de Dois Canos": [
+   "escopeta"
+  ],
+  "Escopeta Tática (Pump)": [
+   "escopeta"
+  ],
+  "Estilingue Tático": [
+   "pedra"
+  ],
+  "Fazer de Atordoamento (Crowd Control)": [
+   "celula"
+  ],
+  "Funda (Estilingue de Corda)": [
+   "pedra"
+  ],
+  "Funda Bioluminescente": [
+   "pedra"
+  ],
+  "Fuzil de Assalto \"Soldado\"": [
+   "fuzil"
+  ],
+  "Fuzil de Assalto 5.56mm": [
+   "fuzil"
+  ],
+  "Fuzil de Chamas \"Dragão\"": [
+   "jato"
+  ],
+  "Fuzil de Precisão \"Víbora\"": [
+   "precisao"
+  ],
+  "Fuzil de Raios Neutrônios": [
+   "celula"
+  ],
+  "Granada (Genérica)": "propria",
+  "Granada Comum": "propria",
+  "Granada de Anti-Fagulha": "propria",
+  "Granada de Cola Ácida": "propria",
+  "Granada de EMP": "propria",
+  "Granada de Fragmentação": "propria",
+  "Granada de Fumaça": "propria",
+  "Granada de Gelo Seco": "propria",
+  "Granada de Isolamento Psíquico": "propria",
+  "Granada de Pólvora Negra": "propria",
+  "Granada de Prego & Vidro": "propria",
+  "Granada de Pulso EMP": "propria",
+  "Granada de Pulso Geomântico": "propria",
+  "Granada Flash (Luz/Som)": "propria",
+  "Granada Gravitacional": "propria",
+  "Granada Incendiária \"Ignis\"": "propria",
+  "Granada Luminosa de Estase": "propria",
+  "Granada Psíquica \"Mente Quebrada\"": "propria",
+  "Granada Química \"Nuvem Verde\"": "propria",
+  "Lança-Chamas (Tanque)": [
+   "jato"
+  ],
+  "Lança-Granadas (Tambor)": [
+   "granada 40mm"
+  ],
+  "Lança-Mísseis \"Demolidor\"": [
+   "missil"
+  ],
+  "Lança-Míssil (Bazuca)": [
+   "missil"
+  ],
+  "Lança-Mofo \"Esporos Vivos\"": [
+   "esporos"
+  ],
+  "Lança-Rede Pneumático": [
+   "rede"
+  ],
+  "Lançador de Bolhas Ácidas": [
+   "acido"
+  ],
+  "Laser de Corte Industrial (Convertido)": [
+   "celula"
+  ],
+  "Metralhadora Giratória \"Moedora\"": [
+   "cinta"
+  ],
+  "Metralhadora Leve (100)": [
+   "cinta"
+  ],
+  "Morteiro de Mão \"Sapo\"": [
+   "morteiro"
+  ],
+  "Pistola (Genérica)": [
+   "pistola"
+  ],
+  "Pistola 9mm": [
+   "pistola"
+  ],
+  "Pistola Automática .45": [
+   "pistola"
+  ],
+  "Pistola Automática (Rajada)": [
+   "pistola"
+  ],
+  "Pistola de Bolso \"Surpresa\"": [
+   "pistola"
+  ],
+  "Pistola de Plasma \"Cometa\"": [
+   "celula"
+  ],
+  "Pistola de Pregos (Adaptação)": [
+   "prego"
+  ],
+  "Pistola de Pulso \"Empurrão\"": [
+   "celula"
+  ],
+  "Pistola de Vácuo \"Suspiro\"": [
+   "celula"
+  ],
+  "Pistola Laser (Branca)": [
+   "celula"
+  ],
+  "Pistola Laser (Vermelha)": [
+   "celula"
+  ],
+  "Pistola Sinalizadora (Flare)": [
+   "sinalizador"
+  ],
+  "Raio Congelante (Protótipo)": [
+   "celula"
+  ],
+  "Revólver (Genérico)": [
+   "revolver"
+  ],
+  "Revólver de Seis Tiros (Clássico)": [
+   "revolver"
+  ],
+  "Revólver de Seis Tiros (Moderno)": [
+   "revolver"
+  ],
+  "Revólver Pesado \"Magnum\"": [
+   "revolver"
+  ],
+  "Rifle (Genérico)": [
+   "fuzil"
+  ],
+  "Rifle Anti-Material": [
+   "precisao"
+  ],
+  "Rifle de Caça (Com Mira)": [
+   "precisao"
+  ],
+  "Rifle de Cano (Pipe Rifle)": [
+   "fuzil"
+  ],
+  "Rifle de Feixe \"Sentinela\"": [
+   "celula"
+  ],
+  "Rifle de Precisão .308": [
+   "precisao"
+  ],
+  "Rifle Psico-Sônico \"Vórtice\"": [
+   "celula"
+  ],
+  "Rifle Semiautomático": [
+   "fuzil"
+  ],
+  "Serra de Plasma (Mineração)": [
+   "celula"
+  ],
+  "Sniper (Rifle de Precisão)": [
+   "precisao"
+  ],
+  "Submetralhadora 9mm": [
+   "pistola",
+   "smg"
+  ],
+  "Taser (Choque)": [
+   "taser"
+  ],
+  "Taser de Longo Alcance": [
+   "taser"
+  ],
+  "Torreta Automática (Desativada)": [
+   "cinta"
+  ],
+  "Trabuco de Sucata": [
+   "escopeta",
+   "sucata"
+  ],
+  "Vibro-Adaga (Arremesso)": "propria",
+  "Zarabatana": [
+   "dardo"
+  ],
+  "Zarabatana Tática": [
+   "dardo"
+  ]
+ },
+ "municoes": {
+  "Arpão Recuperável (un)": "arpao",
+  "Bala Ácida \"Dente de Gosma\" (cx)": "pistola",
+  "Bala de Areia \"Arranhador\" (cx)": "pistola",
+  "Bala de Cobalto (Anti-mágica) (cx)": "precisao",
+  "Bala de Fogo \"Infernum\" (cx)": "pistola",
+  "Bala de Gelo \"Congelante\" (cx)": "pistola",
+  "Bala de Gravidade \"Colapso\" (cx)": "fuzil",
+  "Bala de Luz \"Solaris\" (cx)": "pistola",
+  "Bala de Névoa \"Fumaça\" (cx)": "pistola",
+  "Bala de Ósmio (Perfurante) (cx)": "precisao",
+  "Bala de Rádio (Rastreadora) (cx)": "fuzil",
+  "Bala de Repulsão \"Pulso\" (cx)": "pistola",
+  "Bala de Sangue \"Hematite\" (cx)": "pistola",
+  "Bala de Som \"Quebra-Tímpano\" (cx)": "pistola",
+  "Bala Elétrica \"Tesla\" (cx)": "pistola",
+  "Bala Explosiva \"Frag\" (cx)": "pistola",
+  "Bala Fantasma \"Éter\" (cx)": "pistola",
+  "Bala Fragmentada (Espalha) (cx)": "pistola",
+  "Bala Psíquica \"Sussurro\" (cx)": "pistola",
+  "Bala Sônica \"Bater de Asas\" (cx)": "pistola",
+  "Bala Venenosa \"Serpente\" (cx)": "pistola",
+  "Bateria de Alta Capacidade (Célula)": "celula",
+  "Caixa de Munição Fuzil (5.56mm) (30un)": "fuzil",
+  "Caixa de Munição Leve (Pistola) (20un)": "pistola",
+  "Caixa de Pregos Industriais (50un)": "prego",
+  "Cartucho Antiblindagem (cx)": "fuzil",
+  "Cartucho de Lança-Chamas": "jato",
+  "Cartucho de Sal Grosso (cx)": "escopeta",
+  "Cartucho Incendiário (Escopeta) (cx)": "escopeta",
+  "Cartucho Sinalizador (Flare) (un)": "sinalizador",
+  "Cartuchos .50 BMG (cx)": "precisao",
+  "Cartuchos Escopeta 12GA (cx)": "escopeta",
+  "Cartuchos Metralhadora 7.62 (cinta)": "cinta",
+  "Cartuchos Submetralhadora 10mm (cx)": "smg",
+  "Célula de Energia (Padrão)": "celula",
+  "Dardo Anestésico (cx)": "dardo",
+  "Dardo de Toxina Insetoide (cx)": "dardo",
+  "Dardo Etéreo de Cristal (cx)": "dardo",
+  "Dardos de Zarabatana (cx)": "dardo",
+  "Dardos para Zarabatana (10un)": "dardo",
+  "Esferas de Aço (50un)": "pedra",
+  "Flecha de Aço (cx)": "flecha",
+  "Flecha de Gelo (cx)": "flecha",
+  "Flecha de Madeira (cx)": "flecha",
+  "Flecha de Pedra (cx)": "flecha",
+  "Flecha de Plasma (cx)": "flecha",
+  "Flecha Elétrica (cx)": "flecha",
+  "Flecha Psíquica (cx)": "flecha",
+  "Flechas de Aço (Reforçadas) (cx)": "flecha",
+  "Flechas de Caça (10un)": "flecha",
+  "Flechas Relâmpago (cx)": "flecha",
+  "Formicida Spray": "jato",
+  "Granada 40mm (Explosiva) (un)": "granada 40mm",
+  "Granada 40mm (Gás) (un)": "granada 40mm",
+  "Míssil \"Busca-Pé\" (Improvisado)": "missil",
+  "Míssil Explosivo (Rojão)": "missil",
+  "Míssil HEAT (Antitanque) (un)": "missil",
+  "Munição de Rede (un)": "rede",
+  "Munição Magnum .44 (6un)": "revolver",
+  "Ogiva de Morteiro 60mm (un)": "morteiro",
+  "Projéteis 5.56mm NATO (cx)": "fuzil",
+  "Projéteis 7.62mm (cx)": "fuzil",
+  "Projéteis de Besta (Padrão) (cx)": "virote",
+  "Projéteis de Besta Pesada (cx)": "virote",
+  "Projéteis de Estilingue (Saco)": "pedra",
+  "Projéteis de Pistola 9mm (cx)": "pistola",
+  "Projéteis de Revólver .38 (cx)": "revolver",
+  "Projéteis de Revólver .44 (cx)": "revolver",
+  "Projéteis de Rifle .308 (cx)": "precisao",
+  "Projétil \"Fragmento Fantasma\" (cx)": "fuzil",
+  "Receita: Pólvora Sem Fumaça": null,
+  "Saco de Pedras": "pedra",
+  "Saco de Sucata (Estilhaços)": "sucata",
+  "Spray Inseticida Monstruídeo": "jato",
+  "Virotes de Besta (10un)": "virote"
+ },
+ "novas": [
+  {
+   "id": "mun-osso",
+   "nome": "Projéteis de Osso (cx)",
+   "tipo": "municao",
+   "descricao": "Lascas de osso afiadas e prensadas. (Caixa c/ 10)",
+   "aparencia": "Fragmentos de osso amarelado amarrados em feixe.",
+   "finalidade": "Armamento",
+   "categoria": "Munição",
+   "subcategoria": "",
+   "qualidade": "Comum",
+   "raridade": "Comum",
+   "regiao": "",
+   "preco": 30,
+   "venda": 15,
+   "peso": 0.5,
+   "durabilidade": 4,
+   "slot": null,
+   "ocupa": 1,
+   "maestria": 0,
+   "requisitos": "Nível 1",
+   "efeitos": "",
+   "efeitosObs": "",
+   "observacoes": "Criada pelo app para ligar a arma à munição (autor, 01/11).",
+   "ndIdentificar": 15,
+   "producao": {
+    "pericia": "Mecânica",
+    "nd": 40,
+    "obs": ""
+   },
+   "bonus": {},
+   "revisao": true,
+   "tipoDano": "Perfuração",
+   "municao": "osso",
+   "quantidade": 1
+  },
+  {
+   "id": "mun-atlatl",
+   "nome": "Dardos de Atlatl (un)",
+   "tipo": "municao",
+   "descricao": "Dardo longo com ponta de pedra ou metal, lançado pelo atlatl.",
+   "aparencia": "Haste fina de madeira com penas na base.",
+   "finalidade": "Armamento",
+   "categoria": "Munição",
+   "subcategoria": "",
+   "qualidade": "Comum",
+   "raridade": "Comum",
+   "regiao": "",
+   "preco": 15,
+   "venda": 7,
+   "peso": 1.0,
+   "durabilidade": 4,
+   "slot": null,
+   "ocupa": 1,
+   "maestria": 0,
+   "requisitos": "Nível 1",
+   "efeitos": "",
+   "efeitosObs": "",
+   "observacoes": "Criada pelo app para ligar a arma à munição (autor, 01/11).",
+   "ndIdentificar": 15,
+   "producao": {
+    "pericia": "Mecânica",
+    "nd": 40,
+    "obs": ""
+   },
+   "bonus": {},
+   "revisao": true,
+   "tipoDano": "Perfuração",
+   "municao": "atlatl",
+   "quantidade": 1
+  },
+  {
+   "id": "mun-canhao",
+   "nome": "Bala de Canhão (un)",
+   "tipo": "municao",
+   "descricao": "Esfera maciça de ferro fundido.",
+   "aparencia": "Bola de ferro escura e pesada.",
+   "finalidade": "Armamento",
+   "categoria": "Munição",
+   "subcategoria": "",
+   "qualidade": "Comum",
+   "raridade": "Incomum",
+   "regiao": "",
+   "preco": 60,
+   "venda": 30,
+   "peso": 1.0,
+   "durabilidade": 4,
+   "slot": null,
+   "ocupa": 1,
+   "maestria": 0,
+   "requisitos": "Nível 1",
+   "efeitos": "",
+   "efeitosObs": "",
+   "observacoes": "Criada pelo app para ligar a arma à munição (autor, 01/11).",
+   "ndIdentificar": 15,
+   "producao": {
+    "pericia": "Mecânica",
+    "nd": 40,
+    "obs": ""
+   },
+   "bonus": {},
+   "revisao": true,
+   "tipoDano": "Concussão",
+   "municao": "canhao",
+   "quantidade": 1
+  },
+  {
+   "id": "mun-catapulta",
+   "nome": "Pedra de Catapulta (un)",
+   "tipo": "municao",
+   "descricao": "Pedra grande e lascada, do tamanho certo para a catapulta.",
+   "aparencia": "Rocha bruta amarrada com corda.",
+   "finalidade": "Armamento",
+   "categoria": "Munição",
+   "subcategoria": "",
+   "qualidade": "Comum",
+   "raridade": "Comum",
+   "regiao": "",
+   "preco": 10,
+   "venda": 5,
+   "peso": 1.0,
+   "durabilidade": 4,
+   "slot": null,
+   "ocupa": 1,
+   "maestria": 0,
+   "requisitos": "Nível 1",
+   "efeitos": "",
+   "efeitosObs": "",
+   "observacoes": "Criada pelo app para ligar a arma à munição (autor, 01/11).",
+   "ndIdentificar": 15,
+   "producao": {
+    "pericia": "Mecânica",
+    "nd": 40,
+    "obs": ""
+   },
+   "bonus": {},
+   "revisao": true,
+   "tipoDano": "Concussão",
+   "municao": "catapulta",
+   "quantidade": 1
+  },
+  {
+   "id": "mun-esporos",
+   "nome": "Cápsula de Esporos (un)",
+   "tipo": "municao",
+   "descricao": "Cápsula viva cheia de esporos de mofo para o Lança-Mofo.",
+   "aparencia": "Bolsa orgânica esverdeada que pulsa.",
+   "finalidade": "Armamento",
+   "categoria": "Munição",
+   "subcategoria": "",
+   "qualidade": "Comum",
+   "raridade": "Incomum",
+   "regiao": "",
+   "preco": 45,
+   "venda": 22,
+   "peso": 1.0,
+   "durabilidade": 4,
+   "slot": null,
+   "ocupa": 1,
+   "maestria": 0,
+   "requisitos": "Nível 1",
+   "efeitos": "",
+   "efeitosObs": "",
+   "observacoes": "Criada pelo app para ligar a arma à munição (autor, 01/11).",
+   "ndIdentificar": 15,
+   "producao": {
+    "pericia": "Mecânica",
+    "nd": 40,
+    "obs": ""
+   },
+   "bonus": {},
+   "revisao": true,
+   "tipoDano": "Venenoso",
+   "municao": "esporos",
+   "quantidade": 1
+  },
+  {
+   "id": "mun-acido",
+   "nome": "Cartucho de Ácido (un)",
+   "tipo": "municao",
+   "descricao": "Cartucho com ácido concentrado para lançar bolhas corrosivas.",
+   "aparencia": "Tubo de vidro grosso com líquido fumegante.",
+   "finalidade": "Armamento",
+   "categoria": "Munição",
+   "subcategoria": "",
+   "qualidade": "Comum",
+   "raridade": "Incomum",
+   "regiao": "",
+   "preco": 55,
+   "venda": 27,
+   "peso": 1.0,
+   "durabilidade": 4,
+   "slot": null,
+   "ocupa": 1,
+   "maestria": 0,
+   "requisitos": "Nível 1",
+   "efeitos": "",
+   "efeitosObs": "",
+   "observacoes": "Criada pelo app para ligar a arma à munição (autor, 01/11).",
+   "ndIdentificar": 15,
+   "producao": {
+    "pericia": "Mecânica",
+    "nd": 40,
+    "obs": ""
+   },
+   "bonus": {},
+   "revisao": true,
+   "tipoDano": "Ácido",
+   "municao": "acido",
+   "quantidade": 1
+  },
+  {
+   "id": "mun-taser",
+   "nome": "Cartucho de Taser (un)",
+   "tipo": "municao",
+   "descricao": "Cartucho com fios e eletrodos para o Taser.",
+   "aparencia": "Cartucho plástico amarelo com dois dardos.",
+   "finalidade": "Armamento",
+   "categoria": "Munição",
+   "subcategoria": "",
+   "qualidade": "Comum",
+   "raridade": "Comum",
+   "regiao": "",
+   "preco": 20,
+   "venda": 10,
+   "peso": 1.0,
+   "durabilidade": 4,
+   "slot": null,
+   "ocupa": 1,
+   "maestria": 0,
+   "requisitos": "Nível 1",
+   "efeitos": "",
+   "efeitosObs": "",
+   "observacoes": "Criada pelo app para ligar a arma à munição (autor, 01/11).",
+   "ndIdentificar": 15,
+   "producao": {
+    "pericia": "Mecânica",
+    "nd": 40,
+    "obs": ""
+   },
+   "bonus": {},
+   "revisao": true,
+   "tipoDano": "Elétrico",
+   "municao": "taser",
+   "quantidade": 1
+  }
+ ]
+}
