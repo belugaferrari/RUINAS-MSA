@@ -72,7 +72,7 @@ export function resumoCampanha(c) {
 const nomeUsuario = id => db.users.find(u => u.id === id)?.name ?? null;
 
 function fichaPublica(p, sis) {
-  return { id: p.id, tipo: p.tipo, nome: p.nome, classe: p.classe, especializacao: p.especializacao, profissao: p.profissao, nivel: p.nivel, foto: p.foto, humor: humorAparente(p), criatura: !!p.criatura, donoId: p.donoId, dono: nomeUsuario(p.donoId), genero: p.genero || '', atracao: p.atracao,
+  return { id: p.id, tipo: p.tipo, nome: p.nome, classe: p.classe, especializacao: p.especializacao, profissao: p.profissao, nivel: p.nivel, foto: p.foto, imagemCorpo: p.imagemCorpo || null, humor: humorAparente(p), criatura: !!p.criatura, donoId: p.donoId, dono: nomeUsuario(p.donoId), genero: p.genero || '', atracao: p.atracao,
     // Tamanho se vê de fora: o peão no mapa ocupa os quadrados dele (Grande 2×2…), também para jogadores e Suporte.
     tamanho: p.tamanho || '',
     // Efeitos que se veem de fora (sangrando, caído, aturdido…), com a contagem de turnos.
@@ -2560,12 +2560,19 @@ export const acoes = {
   },
 
   // mao: 0 = mão direita, 1 = mão esquerda (itens do slot "mãos"); sem mão escolhida, vai para a mão livre (a hábil primeiro).
-  'item.equipar'(c, { id, uid: itemUid, equipar, mao }, ctx) {
+  // sai: troca de item numa mão (botões de ataque) — o item "sai" é guardado antes; item de duas mãos esvazia as duas;
+  // o item que estava na outra mão muda de mão.
+  'item.equipar'(c, { id, uid: itemUid, equipar, mao, sai }, ctx) {
     const p = personagem(c, id);
     exigirDonoOuMestre(ctx, p);
     const it = p.itens.find(i => i.uid === itemUid);
     if (!it) throw erro('Item não encontrado.');
     if (!equipar) { it.equipado = false; delete it.mao; return; }
+    if (sai !== undefined && it.slot === 'maos') {
+      const fora = (p.itens || []).filter(i => i !== it && i.equipado && i.slot === 'maos' && (i.uid === sai || (it.ocupa ?? 1) >= 2 || (i.ocupa ?? 1) >= 2));
+      for (const i of fora) { i.equipado = false; delete i.mao; }
+      if (it.equipado) { it.equipado = false; delete it.mao; }
+    }
     if (it.equipado) return;
     const r = podeEquipar(p, it, sistema(c.sistema));
     if (!r.ok) throw erro(r.motivo);

@@ -606,3 +606,12 @@ Respostas do autor (31/10) e o que foi feito:
   mesmo com outro mapa ativo. Começa coberto; a fog se abre em volta dos peões dos PJs (alcance 3 quadrados) e pelo caminho quando o
   mestre arrasta o grupo. Zoom (− / +), arrastar o fundo e "Onde estou". Pins com comentário: só quem pôs e o mestre veem.
   Mapa de teste: "Teste — Ilhas das Ruínas (mundo)" (botão "Criar mapas de teste").
+
+## 01/11 — Retrato na vez e botões de ataque
+- Imagem do personagem: já existia (ficha: foto/avatar; boneco: imagem de corpo inteiro; monstros: a imagem da planilha).
+  No Campo de Batalha, quem está na vez aparece num retrato grande no palco (corpo inteiro, se houver; senão a foto). Escondido nunca aparece.
+- Ataques em 4 botões: Desarmado (soco; a lista troca por outra subperícia de Briga — manobras fazem a manobra; Investida ataca com
+  investida; as outras abrem o teste no rolador), Mão direita e Mão esquerda (hábil/inábil, item, % da subperícia, dano, munição;
+  a lista troca ou guarda o item daquela mão), Arremessar (% de Arremessar; escolhe o item equipado ou equipa outro).
+  Embaixo continuam os ataques de habilidade, os especiais e as opções do ataque.
+- A confirmar: arremessar abre o teste no rolador (com o desvio do MSS); o item arremessado continua na mão (o mestre tira se cair longe).

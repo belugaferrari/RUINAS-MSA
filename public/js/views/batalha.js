@@ -539,7 +539,94 @@ function quadroAtaques(p, participantes, mestre) {
       }, { disabled: !alvo || !!p.disputa }))
     : auto && x.id === 'briga.investida' ? h('li', { class: 'ataque-linha' }, h('span', { class: 'ataque-nome' }, x.nome, h('small', {}, ` ${pct(x.id)} · marque "Investida" nas opções do ataque`)))
       : linhaSub(x.id, x.nome));
-  const outrasArmas = armas.filter(i => !/^(arma-branca|armas-de-fogo)\./.test(i.pericia || ''));
+  // ---------- Botões de ataque ----------
+  const cartao = ({ chave, titulo: tit, sub, icone: ic, nome, pctTexto, onclick, disabled, extra, lista, classe = '' }) => h('div', { class: `cartao-ataque ${classe}` },
+    h('button', { type: 'button', class: 'cartao-ataque-botao', onclick, disabled, title: nome ? `${tit}: ${nome}` : tit, 'data-chave': chave },
+      h('small', { class: 'cartao-ataque-titulo' }, tit, sub ? h('span', { class: 'selo' }, sub) : null),
+      h('span', { class: 'cartao-ataque-icone' }, icone(ic)),
+      h('strong', { class: 'cartao-ataque-nome' }, nome),
+      h('span', { class: 'cartao-ataque-pct' }, pctTexto)),
+    extra ? h('div', { class: 'cartao-ataque-extra' }, extra) : null,
+    lista);
+  // 1. Desarmado: soco; a lista troca o ataque desarmado por outra subperícia de Briga (manobras, esquiva…).
+  const MAN_AUTO_C = { 'briga.deslocar': 'deslocar', 'briga.desarmar': 'desarmar', 'briga.agarrar-imobilizar': 'imobilizar' };
+  const cartaoDesarmado = () => {
+    const brigas = subs('briga');
+    const escolhida = brigas.some(x => x.id === estado.sel[`briga:${p.id}`]) ? estado.sel[`briga:${p.id}`] : 'briga.ataque-desarmado';
+    const nomeSub = brigas.find(x => x.id === escolhida)?.nome || 'Ataque desarmado';
+    const usar = async () => {
+      if (escolhida === 'briga.ataque-desarmado') return auto ? atacar('desarmado') : testar('sub:briga.ataque-desarmado');
+      if (auto && MAN_AUTO_C[escolhida]) {
+        if (!alvo) throw new Error('Escolha o alvo.');
+        const r = await acao('combate.manobra', { id: p.id, alvo, tipo: MAN_AUTO_C[escolhida] });
+        aviso(r.texto); if (r.excesso) aviso(`Atenção: ${r.excesso}.`, 'erro');
+        return;
+      }
+      if (auto && escolhida === 'briga.investida') { (estado.sel.ataque ||= {}).investida = 4; return atacar('desarmado'); }
+      return testar(`sub:${escolhida}`);
+    };
+    return cartao({ chave: 'desarmado', titulo: 'Desarmado', icone: 'hand-fist', nome: nomeSub, pctTexto: `acerto ${pct(escolhida)}`, onclick: usar,
+      disabled: auto && ['briga.ataque-desarmado', 'briga.investida', ...Object.keys(MAN_AUTO_C)].includes(escolhida) && !alvo,
+      lista: selecao(brigas.map(x => ({ valor: x.id, rotulo: `${x.nome} (${pct(x.id)})` })), escolhida, v => { estado.sel[`briga:${p.id}`] = v; render(); }, { 'aria-label': 'Trocar o ataque desarmado por outra subperícia de Briga' }) });
+  };
+  // 2 e 3. Mãos: a arma (ou objeto) equipado, com o % da subperícia dele; a lista equipa outro item nessa mão.
+  const paraMao = (p.itens || []).filter(i => i.slot === 'maos' && !i.sucata);
+  const cartaoMao = n => {
+    const it = naMao(p, n);
+    const habil = maoHabil(p) === n;
+    const ambi = temHabilidade(p, sis, 'Ambidestria');
+    const tit = n === 0 ? 'Mão direita' : 'Mão esquerda';
+    const arma = it && automaticas.find(a => a.uid === it.uid);
+    const semBala = it?.capacidade && (it.carregada || 0) <= 0;
+    const ref = it?.pericia ? `sub:${it.pericia}` : null;
+    const usar = () => (auto && arma ? atacar(it.uid) : ref ? testar(ref) : null);
+    const minhas = it ? (it.melhorias || []).filter(m => !m.dono || m.dono === p.id) : [];
+    const podeMelhorar = it ? melhoradoras.filter(x => String(it.pericia || '').startsWith(x.regra.melhoria.armas) && !minhas.some(m => m.id === x.regra.melhoria.id && m.nivel >= (x.vezes || 1))) : [];
+    const opcoes = [{ valor: '', rotulo: it ? 'Trocar o item desta mão…' : 'Equipar nesta mão…' },
+      ...paraMao.filter(i => i !== it).map(i => ({ valor: i.uid, rotulo: `${i.nome}${(i.ocupa ?? 1) >= 2 ? ' (duas mãos)' : ''}${i.equipado ? ' (na outra mão)' : ''}` })),
+      ...(it ? [{ valor: '-', rotulo: `Guardar ${it.nome}` }] : [])];
+    return cartao({
+      chave: `mao${n}`, titulo: tit, sub: ambi ? 'ambidestro' : habil ? 'hábil' : 'inábil', classe: `${habil || ambi ? 'habil' : 'inabil'} ${it ? '' : 'vazia'}`,
+      icone: it ? iconeItem(it) : 'hand', nome: it ? `${it.nome}${(it.ocupa ?? 1) >= 2 ? ' (2 mãos)' : ''}` : 'Sem equip.',
+      pctTexto: it ? (it.pericia ? `acerto ${pct(it.pericia)}${!habil && !ambi && (it.ocupa ?? 1) < 2 ? ' (−20%)' : ''}` : 'sem perícia de ataque') : '—',
+      onclick: usar, disabled: !it || (!ref && !arma) || semBala || (auto && arma && !alvo && !estado.sel.ataque?.varios),
+      extra: it ? [
+        it.dano ? h('small', {}, icone('swords'), ` ${danoDaArma(it, p)}${it.tipoDano ? ` ${it.tipoDano}` : ''}`) : null,
+        minhas.map(m => h('span', { class: 'selo ok', title: `+${m.nivel} passo(s) na progressão de dano` }, `${m.nome} ${m.nivel}`)),
+        it.capacidade ? h('span', { class: `selo ${semBala ? 'perigo' : ''}` }, `${it.carregada || 0}/${it.capacidade}`) : null,
+        it.capacidade ? botao('', () => acao('item.recarregar', { id: p.id, uid: it.uid }), { class: 'pequeno', icone: 'refresh-cw', title: `Recarregar ${it.nome}`, disabled: (it.carregada || 0) >= it.capacidade }) : null,
+        podeMelhorar.map(x => botao(x.regra.melhoria.id === 'afiada' ? 'Afiar' : 'Aperfeiçoar', async () => {
+          if (!(await confirmar(`${p.nome} passa ${x.regra.melhoria.horas || 2} h treinando com ${it.nome}. Ela fica ${x.regra.melhoria.nome} ${x.vezes || 1} (só para ${p.nome}).`))) return;
+          const r = await acao('item.melhorar', { id: p.id, uid: it.uid, habilidade: x.nome });
+          aviso(`${it.nome}: ${r.nome} ${r.nivel}`);
+        }, { class: 'pequeno', icone: 'hammer', title: `${x.nome}: ${x.regra.texto}` })),
+      ] : null,
+      lista: selecao(opcoes, '', v => {
+        if (!v) return;
+        const pedido = v === '-' ? acao('item.equipar', { id: p.id, uid: it.uid, equipar: false }) : acao('item.equipar', { id: p.id, uid: v, equipar: true, mao: n, sai: it?.uid || null });
+        pedido.then(r => r?.aviso && aviso(r.aviso, 'erro')).catch(e => aviso(e.message, 'erro'));
+      }, { 'aria-label': `${tit}: equipar outro item` }),
+    });
+  };
+  // 4. Arremessar: % de Esportes › Arremessar; escolhe o que arremessar entre os itens equipados (ou equipa outro).
+  const cartaoArremesso = () => {
+    const equipados = (p.itens || []).filter(i => i.equipado && i.slot === 'maos');
+    const chave = `arremesso:${p.id}`;
+    if (!equipados.some(i => i.uid === estado.sel[chave])) estado.sel[chave] = equipados[0]?.uid || '';
+    const it = equipados.find(i => i.uid === estado.sel[chave]);
+    const opcoes = [...equipados.map(i => ({ valor: i.uid, rotulo: `Arremessar ${i.nome}` })),
+      ...paraMao.filter(i => !i.equipado).map(i => ({ valor: `+${i.uid}`, rotulo: `Equipar e arremessar ${i.nome}` }))];
+    return cartao({
+      chave: 'arremesso', titulo: 'Arremessar', icone: 'move-right', nome: it ? it.nome : 'Nada na mão', pctTexto: `chance ${pct('esportes.arremessar')}`,
+      onclick: () => testar('sub:esportes.arremessar'), disabled: !it,
+      extra: h('small', { class: 'dica', title: 'Ação principal; ND 70 dentro do alcance (em ambiente fechado, Difícil). Errou: desvia 1,5 m a cada 5 pontos (MSS).' }, 'ND 70'),
+      lista: opcoes.length ? selecao(opcoes, estado.sel[chave] || '', v => {
+        if (v.startsWith('+')) { acao('item.equipar', { id: p.id, uid: v.slice(1), equipar: true }).then(r => { estado.sel[chave] = v.slice(1); if (r?.aviso) aviso(r.aviso, 'erro'); }).catch(e => aviso(e.message, 'erro')); return; }
+        estado.sel[chave] = v; render();
+      }, { 'aria-label': 'O que arremessar' }) : h('small', { class: 'dica' }, 'Nenhum item para arremessar.'),
+    });
+  };
+  const cartoesAtaque = () => h('div', { class: 'cartoes-ataque' }, cartaoDesarmado(), cartaoMao(0), cartaoMao(1), cartaoArremesso());
   return [
     acoesDoTurno(p),
     h('div', { class: 'barra alvo-ataque' }, icone('crosshair'), h('small', {}, 'Alvo'),
@@ -547,17 +634,10 @@ function quadroAtaques(p, participantes, mestre) {
       seloCobertura(p, alvo)),
     auto ? null : h('p', { class: 'dica' }, icone('info'), ` No ${sis.nome} o dado prepara o teste no rolador; o dano e o PV vão à mão.`),
     auto ? duasArmas(p, alvo, b, mestre) : null,
+    // Botões de ataque (autor, 01/11): Desarmado, Mão direita, Mão esquerda e Arremessar — cada um com a sua lista embaixo.
+    cartoesAtaque(),
+    auto ? disputaView(p) : null,
     h('ul', { class: 'lista-ataques' },
-      h('li', { class: 'ataque-grupo' },
-        h('div', { class: 'ataque-linha' },
-          h('strong', { class: 'ataque-nome' }, 'Desarmado', h('small', {}, ` ${pct('briga.ataque-desarmado')}`)),
-          auto ? dado(`${p.nome} ataca ${b?.nome || 'o alvo'} desarmado`, () => atacar('desarmado'), { disabled: !alvo }) : dado('Testar ataque desarmado', () => testar('sub:briga.ataque-desarmado'))),
-        h('details', { open: !!estado.sel.abreManobras, ontoggle: e => { estado.sel.abreManobras = e.target.open; } },
-          h('summary', {}, 'Manobras'),
-          h('ul', {}, MANOBRAS.map(id => subs('briga').find(s => s.id === id)).filter(Boolean).map(s => linhaManobra(s)))),
-        auto ? disputaView(p) : null),
-      grupo('Armas brancas', 'arma-branca', i => i.pericia?.startsWith('arma-branca.')),
-      grupo('Armas de fogo', 'armas-de-fogo', i => i.pericia?.startsWith('armas-de-fogo.')),
       // Ataques com a "arma" da própria habilidade (Muco radioativo, Jato ácido, Sobrecarga Neural): usos por descanso.
       auto && automaticas.some(a => a.habilidade) ? h('li', { class: 'ataque-grupo' }, h('div', { class: 'ataque-cabeca' }, h('strong', {}, 'Ataques de habilidade')),
         h('ul', {}, automaticas.filter(a => a.habilidade).map(a => {
@@ -578,7 +658,7 @@ function quadroAtaques(p, participantes, mestre) {
             const r = await acao('habilidade.danoSistema', { id: p.id, alvo });
             aviso(r.texto, r.sucesso ? 'ok' : 'erro');
           }, { disabled: !alvo })))) : null,
-      outrasArmas.length ? h('li', { class: 'ataque-grupo' }, h('div', { class: 'ataque-cabeca' }, h('strong', {}, 'Outras')), h('ul', {}, outrasArmas.map(linhaArma))) : null),
+      null),
     auto ? opcoesAtaque(p, mestre, outros) : null,
   ];
 }

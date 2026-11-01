@@ -56,6 +56,11 @@ export function palcoCombate() {
   // A ação mostrada: o ataque esperando defesa; senão o último ataque/teste deste turno; senão "aguardando".
   const doTurno = ultimo && (!cb.turnoDesde || ultimo.em >= cb.turnoDesde) ? ultimo : null;
   return h('section', { class: 'palco-combate', 'aria-live': 'polite', 'aria-label': 'O que está acontecendo no combate' },
+    // Retrato de quem está na vez (autor, 01/11): a imagem de corpo inteiro ou a foto. O escondido nunca aparece
+    // (para os jogadores, a vez dele chega sem ninguém).
+    atual && (atual.imagemCorpo || atual.foto) ? h('figure', { class: `palco-retrato ${atual.tipo === 'pj' ? 'pj' : 'npc'}`, 'data-pid': atual.id },
+      h('img', { src: atual.imagemCorpo || atual.foto, alt: `Retrato de ${atual.nome}`, class: atual.imagemCorpo ? 'corpo' : 'foto' }),
+      h('figcaption', {}, atual.nome)) : null,
     h('div', { class: 'palco-vez' },
       atual ? rosto(atual, 'grande') : null,
       h('div', {}, h('small', {}, `Rodada ${cb.rodada}${atual ? ' · vez de' : ''}`), h('strong', {}, atual?.nome || 'Aguardando…'))),
