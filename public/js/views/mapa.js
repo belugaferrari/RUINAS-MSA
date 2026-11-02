@@ -4,15 +4,16 @@
 import { nomeDeslocamento, ladoNoMapa } from '/shared/monstros.js';
 import { FORMAS_AREA, quadradosDaArea, atingidosPelaArea } from '/shared/area.js';
 import { TIPOS_OBJETO, tipoObjeto, regrasObjeto, tamanhoObjeto, foraDaVisaoDosPJs } from '/shared/objetosMapa.js';
-import { h, botao, selecao, aviso, icone, titulo, vazio, passador, pedirTexto, janela } from '../ui.js';
+import { h, botao, selecao, aviso, icone, titulo, vazio, passador, pedirTexto, janela, alternar } from '../ui.js';
 import { estado, render, personagemPorId, meusPersonagens } from '../estado.js';
 import { acao, get, post } from '../api.js';
 import { derivados } from '/shared/regras.js';
 import { restricaoMovimento } from '/shared/efeitos.js';
 import { categoriaDaImagem } from '/shared/imagens.js';
+import { linhasDoMapa, colunasDoMapa } from '/shared/visao.js';
 import { camadaClima, EFEITOS_CLIMA, sugestaoDoClima } from './climaMapa.js';
 import { barraMundo, pinEl } from './mapaContinental.js';
-import { camadaFog, vizinhosEls, passagemEl, setaOlhar, escolherOlhar, ligarPan, panDoMapa, setasVizinhos, controlesMundo, pincelFog, terminarPincel } from './mapaMundo.js';
+import { registrarNatural, camadaFog, vizinhosEls, passagemEl, setaOlhar, escolherOlhar, ligarPan, panDoMapa, setasVizinhos, controlesMundo, pincelFog, terminarPincel } from './mapaMundo.js';
 
 export const METROS_POR_QUADRADO = 1.5;
 let mapaIdVisto = null;
@@ -40,6 +41,7 @@ function midiaEl(m) {
       const w = el.naturalWidth || el.videoWidth;
       const hh = el.naturalHeight || el.videoHeight;
       if (w && hh) {
+        registrarNatural(m.url, w);
         aspectos.set(chave, w / hh);
         el.closest('.mapa-quadro')?.style.setProperty('--aspecto', w / hh);
         el.closest('.mapa-rolagem')?.style.setProperty('--aspecto', w / hh);
@@ -81,24 +83,27 @@ export function mapaView() {
   const foraDaVisao = new Set(mestre ? foraDaVisaoDosPJs({ mapa, personagens: c.personagens }) : []);
   // Mapas ligados (01/11): vizinhos nas bordas, vista arrastável, fog e passagens.
   const comVizinhos = !!(mapa.vizinhosLista || []).length || continental;
-  const zoom = continental ? (estado.sel.mapaZoom || 1) : 1;
+  // Zoom (− / +) vale para qualquer mapa.
+  const zoom = estado.sel.mapaZoom || 1;
   const pan = panDoMapa(mapa);
   const pincel = mestre ? estado.sel.mapaFogPincel : null;
   const pondoPassagem = mestre ? estado.sel.mapaPassagem : null;
   // A tela do mestre conta ao servidor a proporção da imagem (quantas linhas a grade tem: fog e bordas dependem disso).
-  if (mestre && mapa.midia) {
+  // Qualquer tela conta ao servidor quando a proporção ainda não está guardada (senão o app acha que o mapa tem menos
+  // linhas e recusa mover para as de baixo); o mestre também corrige se mudou a imagem.
+  if (mapa.midia) {
     const asp = aspectos.get(`${mapa.midia.tipo}:${mapa.midia.url}`);
     const prop = asp ? 1 / asp : null;
     const chave = `${mapa.id}:${prop?.toFixed(3)}`;
-    if (prop && Math.abs((g.proporcao || 0) - prop) > 0.005 && estado.sel.proporcaoEnviada !== chave) {
+    if (prop && Math.abs((g.proporcao || 0) - prop) > 0.005 && estado.sel.proporcaoEnviada !== chave && (mestre || !g.proporcao)) {
       estado.sel.proporcaoEnviada = chave;
-      acao('mapa.grade', { proporcao: prop }).catch(() => {});
+      acao(mestre ? 'mapa.grade' : 'mapa.proporcao', mestre ? { proporcao: prop } : { id: mapa.id, proporcao: prop }).catch(() => {});
     }
   }
   const desenharPeao = x => peao(x, g, podeMover(x.p.id), sel || minhaVez, foraDaVisao.has(x.p.id));
   const quadro = mapa.midia ? h('div', {
-    class: `mapa-quadro ${g.visivel ? 'com-grade' : ''} ${clicavel || pincel || pondoPassagem || pondoPin ? 'movel' : ''} ${comVizinhos ? 'com-vizinhos' : ''}`,
-    style: { ...(zoom !== 1 ? { width: `${zoom * 100}%`, maxWidth: 'none' } : {}), '--cols': g.colunas, '--ox': g.ox, '--oy': g.oy, '--aox': g.ox, '--aoy': g.oy, '--aspecto': aspectos.get(`${mapa.midia.tipo}:${mapa.midia.url}`) || 1.5,
+    class: `mapa-quadro ${g.visivel ? 'com-grade' : ''} ${clicavel || pincel || pondoPassagem || pondoPin ? 'movel' : ''} ${comVizinhos ? 'com-vizinhos' : ''} ${zoom !== 1 ? 'com-zoom' : ''}`,
+    style: { '--zoom': zoom, '--acols': colunasDoMapa(mapa), '--alins': linhasDoMapa(mapa), '--cols': g.colunas, '--ox': g.ox, '--oy': g.oy, '--aox': g.ox, '--aoy': g.oy, '--aspecto': aspectos.get(`${mapa.midia.tipo}:${mapa.midia.url}`) || 1.5,
       ...(comVizinhos && (pan.x || pan.y) ? { transform: `translate(${pan.x}px, ${pan.y}px)` } : {}) },
     // Com um peão escolhido, clicar num quadrado leva ele para lá.
     // No modo "marcar" (só o mestre), clicar num quadrado cria uma marcação secreta.
@@ -122,7 +127,7 @@ export function mapaView() {
         return;
       }
       if (pondoPassagem) {
-        const { col, lin } = quadradoDoPonto(e.currentTarget, g, e.clientX, e.clientY);
+        const { col, lin } = quadradoDoPonto(e.currentTarget, g, e.clientX, e.clientY, false);
         await acao('mapa.passagem', { col, lin, ...pondoPassagem }).then(() => aviso('Passagem posta.')).catch(err => aviso(err.message, 'erro'));
         estado.sel.mapaPassagem = null; render();
         return;
@@ -166,6 +171,7 @@ export function mapaView() {
     (mapa.objetos || []).map(o => objetoMapa(o, mestre)),
     (mapa.passagens || []).map(ps => passagemEl(ps, mestre)),
     camadaFog(mapa, mestre),
+    estado.sel.mapaAlcance !== false ? alcanceEls(mapa, cb, mover) : null,
     marcaInicioTurno(cb, mapa),
     pecas.map(desenharPeao),
     vizinhosEls(mapa, mestre, desenharPeao),
@@ -189,9 +195,9 @@ export function mapaView() {
       h('div', { class: `mapa-centro ${estado.sel.mapaCheia ? 'tela-cheia' : ''} ${(estado.sel.mapaCheia ? girarMapa() : estado.sel.mapaGirarNormal) ? 'girar' : ''}` },
         mapa.midia ? h('div', { class: 'mapa-barra-cheia' },
           estado.sel.mapaCheia
-            ? [botao('', () => { estado.sel.mapaGirar = !girarMapa(); render(); }, { class: 'pequeno', icone: 'rotate-cw', title: 'Girar o mapa', 'aria-label': 'Girar o mapa' }),
+            ? [zoomBotoes(), alternar('Alcance', estado.sel.mapaAlcance !== false, v => { estado.sel.mapaAlcance = v; render(); }, { icone: 'footprints' }), botao('', () => { estado.sel.mapaGirar = !girarMapa(); render(); }, { class: 'pequeno', icone: 'rotate-cw', title: 'Girar o mapa', 'aria-label': 'Girar o mapa' }),
               botao('Sair', sairTelaCheia, { class: 'pequeno', icone: 'minimize-2', title: 'Sair da tela inteira' })]
-            : [botao('Girar', () => { estado.sel.mapaGirarNormal = !estado.sel.mapaGirarNormal; render(); }, { class: `pequeno ${estado.sel.mapaGirarNormal ? 'primario' : ''}`, icone: 'rotate-cw', title: 'Girar o mapa 90°', 'aria-pressed': !!estado.sel.mapaGirarNormal }),
+            : [zoomBotoes(), alternar('Alcance', estado.sel.mapaAlcance !== false, v => { estado.sel.mapaAlcance = v; render(); }, { icone: 'footprints', title: 'Mostra até onde o peão da vez (ou o escolhido) consegue andar' }), botao('Girar', () => { estado.sel.mapaGirarNormal = !estado.sel.mapaGirarNormal; render(); }, { class: `pequeno ${estado.sel.mapaGirarNormal ? 'primario' : ''}`, icone: 'rotate-cw', title: 'Girar o mapa 90°', 'aria-pressed': !!estado.sel.mapaGirarNormal }),
               botao('Tela inteira', entrarTelaCheia, { class: 'pequeno', icone: 'maximize-2', title: 'Mapa em tela inteira, na horizontal' })]) : null,
         // Na tela inteira o resto da página some: o contador de deslocamento do turno fica por cima do mapa (autor, 29/10).
         estado.sel.mapaCheia && mapa.midia ? h('div', { class: 'mapa-contador-cheia' }, contadorTurno(cb, mapa, minhaVez)) : null,
@@ -253,8 +259,8 @@ function objetoMapa(o, mestre) {
       const editar = mestre ? h('div', { class: 'form' },
         h('label', { class: 'linha' }, 'Cobertura', selecao([{ valor: 'nenhuma', rotulo: 'nenhuma' }, { valor: 'parcial', rotulo: 'parcial (−30%)' }, { valor: 'total', rotulo: 'total' }], r.cobertura || 'nenhuma',
           v => acao('mapa.objetoRegras', { id: o.id, regras: { cobertura: v } }), { 'aria-label': 'Cobertura' })),
-        ...[['bloqueia', 'Bloqueia a passagem'], ['dificil', 'Terreno difícil'], ['visao', 'Bloqueia a visão']].map(([k, rot]) => h('label', { class: 'linha' },
-          h('input', { type: 'checkbox', checked: !!r[k], onchange: ev => acao('mapa.objetoRegras', { id: o.id, regras: { [k]: ev.target.checked } }) }), rot)),
+        h('div', { class: 'barra' }, [['bloqueia', 'Bloqueia a passagem'], ['dificil', 'Terreno difícil'], ['visao', 'Bloqueia a visão']].map(([k, rot]) =>
+          alternar(rot, !!r[k], v => acao('mapa.objetoRegras', { id: o.id, regras: { [k]: v } })))),
         h('label', { class: 'linha' }, 'Tamanho', h('input', { type: 'number', class: 'curto', min: 1, max: 20, value: l, 'aria-label': 'Largura em quadrados', onchange: ev => acao('mapa.objetoRegras', { id: o.id, l: ev.target.value }) }), '×',
           h('input', { type: 'number', class: 'curto', min: 1, max: 20, value: a, 'aria-label': 'Altura em quadrados', onchange: ev => acao('mapa.objetoRegras', { id: o.id, a: ev.target.value }) }), ' quadrados')) : null;
       if (mestre) {
@@ -289,7 +295,7 @@ function porObjeto() {
       h('input', { type: 'number', class: 'curto', min: 1, max: 20, value: f.l || t.l || 1, 'aria-label': 'Largura', onchange: e => { f.l = e.target.value; atualizar(); } }), '×',
       h('input', { type: 'number', class: 'curto', min: 1, max: 20, value: f.a || t.a || 1, 'aria-label': 'Altura', onchange: e => { f.a = e.target.value; atualizar(); } })),
     h('input', { class: 'curto', value: f.nome, placeholder: 'Nome (opcional)', 'aria-label': 'Nome do objeto', oninput: e => { f.nome = e.target.value; atualizar(); } }),
-    h('label', { class: 'linha' }, h('input', { type: 'checkbox', checked: f.oculto, onchange: e => { f.oculto = e.target.checked; atualizar(); } }), 'oculto'),
+    alternar('Oculto', f.oculto, v => { f.oculto = v; atualizar(); }, { icone: 'eye-off', title: 'Só você vê o objeto' }),
     botao(ativo ? (t.pintar ? 'Pintando: arraste no mapa (clique aqui para parar)' : 'Pondo: clique no mapa (clique aqui para parar)') : (t.pintar ? 'Pintar' : 'Pôr objeto'),
       () => { estado.sel.mapaObjeto = ativo ? null : { ...f }; estado.sel.mapaMarcar = false; render(); },
       { class: `pequeno ${ativo ? 'primario' : ''}`, icone: t.pintar ? 'paintbrush' : 'box', 'aria-pressed': ativo, title: textoRegras(t) || t.nome }),
@@ -524,9 +530,21 @@ function pontoDoMapa(quadro, g, x, y) {
 }
 
 // Ponto da tela → quadrado. Com o mapa girado 90° (horário), o x da tela vira o y do mapa e vice-versa.
-function quadradoDoPonto(quadro, g, x, y) {
-  const r = quadro.getBoundingClientRect();
+function quadradoDoPonto(quadro, g, x, y, comVizinhos = true) {
   const girado = !!quadro.closest('.girar');
+  // Em cima de um mapa vizinho: o quadrado na escala dele (cada vizinho tem a sua), convertido para o mundo.
+  if (comVizinhos && !girado) {
+    for (const v of quadro.querySelectorAll(':scope > .mapa-vizinho')) {
+      const rv = v.getBoundingClientRect();
+      if (x < rv.left || x >= rv.right || y < rv.top || y >= rv.bottom) continue;
+      const celV = rv.width / Number(v.dataset.vcols || 1);
+      return {
+        col: Math.floor((x - rv.left) / celV - Number(v.dataset.vox || 0)) + Number(v.dataset.dc || 0),
+        lin: Math.floor((y - rv.top) / celV - Number(v.dataset.voy || 0)) + Number(v.dataset.dl || 0),
+      };
+    }
+  }
+  const r = quadro.getBoundingClientRect();
   const largura = girado ? r.height : r.width;
   const lx = girado ? y - r.top : x - r.left;
   const ly = girado ? r.right - x : y - r.top;
@@ -585,7 +603,15 @@ function marcaInicioTurno(cb, mapa) {
 // Contador: "Lia andou 4 quadrados (6 m) de 6 (9 m)" — em vermelho se passar do deslocamento.
 function contadorTurno(cb, mapa, minhaVez) {
   const a = andadoNoTurno(cb, mapa);
-  if (!cb) return null;
+  // Fora do combate: o deslocamento do peão escolhido (ou do seu personagem).
+  if (!cb) {
+    const quem = quemAlcance(cb, mapa, true);
+    if (!quem) return null;
+    const d = quem.p.itens && quem.p.atributos ? derivados(quem.p, estado.sistema) : null;
+    if (!d) return null;
+    return h('span', { class: 'contador-turno', role: 'status' }, icone('footprints'), h('strong', {}, ` ${quem.p.nome}`),
+      ` desloca ${d.deslocamentoQuadrados} quadrado${d.deslocamentoQuadrados === 1 ? '' : 's'} (${String(d.deslocamento).replace('.', ',')} m) por turno`);
+  }
   const id = cb.ordem?.[cb.vez]?.id;
   const p = personagemPorId(id);
   if (!p || !mapa.pecas?.[id]) return p ? h('small', { class: 'dica' }, `Vez de ${p.nome} (fora do mapa)`) : null;
@@ -659,7 +685,7 @@ function controlesMestre(mapa) {
       h('span', { class: 'linha' }, 'Quadrados na largura', passador(g.colunas, 2, 200, v => acao('mapa.grade', { colunas: v }), 'Quadrados na largura')),
       desloc('ox', 'Mover grade →'),
       desloc('oy', 'Mover grade ↓'),
-      h('label', { class: 'linha' }, h('input', { type: 'checkbox', checked: g.visivel, onchange: e => acao('mapa.grade', { visivel: e.target.checked }) }), 'Mostrar a grade'),
+      alternar('Mostrar a grade', g.visivel, v => acao('mapa.grade', { visivel: v }), { icone: 'grid-3x3' }),
       Object.keys(mapa.pecas || {}).length ? botao('Tirar todos', () => acao('mapa.limpar'), { class: 'pequeno perigo', icone: 'trash-2' }) : null),
     h('p', { class: 'dica' }, 'Mais quadrados na largura = quadrados menores. Ajuste até a grade bater com o desenho do mapa (1 quadrado = 1,5 m).'));
 }
@@ -681,4 +707,50 @@ function colocarNoMapa(mapa) {
 function rolagemDoMapa(el, mapa) {
   ligarPan(el, mapa);
   return el;
+}
+
+// Zoom do mapa (− / +): aproxima ou afasta tudo (imagem, grade, peões); o tamanho dos quadrados não muda em relação ao mapa.
+function zoomBotoes() {
+  const z = estado.sel.mapaZoom || 1;
+  const muda = n => { estado.sel.mapaZoom = Math.max(0.5, Math.min(4, +(n).toFixed(2))); render(); };
+  return h('span', { class: 'mapa-zoom' },
+    botao('', () => muda(z - 0.25), { class: 'pequeno', icone: 'zoom-out', title: 'Afastar', 'aria-label': 'Afastar', disabled: z <= 0.5 }),
+    h('small', { title: 'Clique para voltar a 100%', onclick: () => muda(1), style: { cursor: 'pointer' } }, `${Math.round(z * 100)}%`),
+    botao('', () => muda(z + 0.25), { class: 'pequeno', icone: 'zoom-in', title: 'Aproximar', 'aria-label': 'Aproximar', disabled: z >= 4 }));
+}
+
+// Quem mostra o alcance: no combate, o personagem da vez; fora dele, o peão escolhido (mestre/Suporte) ou o seu personagem.
+function quemAlcance(cb, mapa, foraDeCombate = false) {
+  const id = cb && !foraDeCombate ? cb.ordem?.[cb.vez]?.id
+    : estado.sel.mapaSel || Object.keys(mapa.pecas || {}).find(x => personagemPorId(x)?.donoId === estado.usuario?.id);
+  const pos = id && mapa.pecas?.[id];
+  const p = id && personagemPorId(id);
+  return pos && p ? { id, p, pos } : null;
+}
+// Alcance do deslocamento: os quadrados (diagonal = 1) até onde o peão ainda anda neste turno, sem os bloqueados.
+// No combate desconta o que já andou (com caído, terreno acidentado e aliado, pelo contador).
+function alcanceEls(mapa, cb) {
+  const quem = quemAlcance(cb, mapa, !cb);
+  if (!quem) return null;
+  const d = quem.p.itens && quem.p.atributos ? derivados(quem.p, estado.sistema) : null;
+  if (!d?.deslocamentoQuadrados) return null;
+  const a = cb ? andadoNoTurno(cb, mapa) : null;
+  const gasto = cb && cb.andado?.id === quem.id ? cb.andado.metros / METROS_POR_QUADRADO : a?.quadrados || 0;
+  const resta = Math.max(0, Math.floor(d.deslocamentoQuadrados - gasto));
+  if (!resta) return null;
+  const bloq = new Set();
+  for (const o of mapa.objetos || []) {
+    const r = tipoObjeto(o.tipo);
+    if (!(o.regras?.bloqueia ?? r.bloqueia)) continue;
+    const { l, a: al } = tamanhoObjeto(o);
+    for (let i = 0; i < l; i++) for (let j = 0; j < al; j++) bloq.add(`${o.col + i}:${o.lin + j}`);
+  }
+  const cols = colunasDoMapa(mapa), lins = linhasDoMapa(mapa);
+  const fora = [];
+  for (let dc = -resta; dc <= resta; dc++) for (let dl = -resta; dl <= resta; dl++) {
+    const col = quem.pos.col + dc, lin = quem.pos.lin + dl;
+    if ((!dc && !dl) || col < 0 || lin < 0 || col >= cols || lin >= lins || bloq.has(`${col}:${lin}`)) continue;
+    fora.push(h('span', { class: 'alcance-q', style: { '--col': col, '--lin': lin } }));
+  }
+  return h('div', { class: 'alcance-camada', 'aria-hidden': 'true' }, fora);
 }

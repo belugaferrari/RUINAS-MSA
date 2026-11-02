@@ -3,7 +3,7 @@
 export const ICONES = [
   'paw-print', 'headphones', 'watch', 'circle', 'scissors', 'tent', 'beef', 'fish', 'sprout', 'list-checks', 'ellipsis', 'list-ordered', 'flask-conical', 'hard-hat', 'package', 'maximize-2', 'shield-half', 'graduation-cap', 'dumbbell', 'undo-2', 'coffee', 'clock', 'cloud-sun', 'sun', 'cloud', 'cloud-lightning', 'bed-single', 'rotate-cw', 'minimize-2', 'clapperboard', 'folder', 'circle-off', 'thumbs-down', 'cloud-rain', 'badge-check', 'leaf', 'waves',
   'hand-fist', 'hammer', 'bow-arrow', 'smartphone', 'volume-2', 'volume-x', 'shield-check', 'move-right',
-  'triangle-alert', 'arrow-down', 'scan-eye', 'globe', 'locate', 'map-pin',
+  'triangle-alert', 'arrow-down', 'scan-eye', 'globe', 'locate', 'map-pin', 'zoom-in', 'zoom-out', 'grid-3x3',
   'presentation',
   'ruler',
   'weight',

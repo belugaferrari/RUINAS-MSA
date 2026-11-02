@@ -156,6 +156,13 @@ export function seloRevisao(ativo = true, texto = 'em revisão') {
 }
 
 // Botões − valor + (passo a passo). aoMudar recebe o novo valor.
+// Botão de liga/desliga (no lugar da caixinha de marcar): uma chavinha que fica dourada quando ligada.
+export function alternar(rotulo, ligado, aoMudar, { icone: ic = null, title = null, disabled = false } = {}) {
+  return h('button', { type: 'button', class: 'alternador', 'aria-pressed': String(!!ligado), title, disabled,
+    onclick: e => { e.currentTarget.setAttribute('aria-pressed', String(!ligado)); aoMudar(!ligado); } },
+  h('span', { class: 'chave', 'aria-hidden': 'true' }), ic ? icone(ic) : null, h('span', {}, rotulo));
+}
+
 export function passador(valor, min, max, aoMudar, rotulo = '') {
   return h('span', { class: 'passador' },
     h('button', { type: 'button', 'aria-label': `Diminuir ${rotulo}`.trim(), disabled: valor <= min, onclick: () => aoMudar(valor - 1) }, icone('minus')),

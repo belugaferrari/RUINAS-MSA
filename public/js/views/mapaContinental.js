@@ -31,9 +31,6 @@ export function barraMundo(vendo, mapa, mestre) {
         { class: `pequeno ${vendo ? '' : 'primario'}`, icone: vendo ? 'arrow-left' : 'globe', title: 'O mapa continental: onde o grupo está e o que já foi explorado' })
       : h('strong', {}, icone('globe'), ` ${mapa.nome} (mapa do mundo)`),
     vendo ? [
-      botao('', () => { estado.sel.mapaZoom = Math.max(0.5, +(zoom - 0.25).toFixed(2)); render(); }, { class: 'pequeno', icone: 'minus', title: 'Afastar', 'aria-label': 'Afastar' }),
-      h('small', {}, `${Math.round(zoom * 100)}%`),
-      botao('', () => { estado.sel.mapaZoom = Math.min(4, +(zoom + 0.25).toFixed(2)); render(); }, { class: 'pequeno', icone: 'plus', title: 'Aproximar', 'aria-label': 'Aproximar' }),
       meuPeao ? botao('Onde estou', () => centralizar(mapa, meuPeao[1].col, meuPeao[1].lin), { class: 'pequeno', icone: 'locate', title: 'Centraliza a vista no seu personagem' }) : null,
       botao(estado.sel.mapaPin ? 'Clique no mapa para pôr o pin (cancelar)' : 'Pôr pin', () => { estado.sel.mapaPin = !estado.sel.mapaPin; render(); },
         { class: `pequeno ${estado.sel.mapaPin ? 'primario' : ''}`, icone: 'map-pin', title: 'Um comentário seu no mapa (só você e o mestre veem)' }),

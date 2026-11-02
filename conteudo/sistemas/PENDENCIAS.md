@@ -647,3 +647,13 @@ Respostas do autor (31/10) e o que foi feito:
     Modelo de imagem padrão: gemini-2.5-flash-image. *Não testado com o Gemini de verdade aqui (sem chave)* — se der erro, me mande a mensagem.
 - O mapa novo tem o mesmo tamanho de grade, nasce ligado como vizinho e herda a fog do atual (começa sem nada explorado). A descrição do
   lugar escrita pela IA aparece para o mestre.
+
+## 02/11 — Correções do Mapa
+- "Quadrados na largura" voltou a mudar só a grade: os mapas vizinhos são desenhados na escala da própria imagem (antes mudavam de
+  tamanho junto e parecia zoom).
+- Zoom − / + (e 100% clicando no número) em qualquer mapa, também na tela inteira.
+- As caixinhas de marcar do Mapa viraram botões de liga/desliga (grade, fog, mapa continental, oculto, regras dos objetos, alcance).
+- Alcance: os quadrados até onde o peão da vez (ou o escolhido) ainda anda aparecem em azul; o contador mostra o deslocamento também
+  fora do combate (peão escolhido), na tela normal e na inteira.
+- Mover: soltar além da borda sem vizinho deixa o peão na beirada (antes dava "Fora do mapa"); mapa sem a proporção da imagem guardada
+  não recusa mais as linhas de baixo (qualquer tela que abre o mapa preenche a proporção).

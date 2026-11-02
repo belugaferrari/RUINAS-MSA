@@ -2842,8 +2842,16 @@ export const acoes = {
     // O Suporte não enxerga peões ocultos, então também não mexe neles.
     if (onde?.x.oculto && !ctx.mestre) throw erro('Personagem não encontrado no mapa.');
     const alvo = { col: Math.max(-999, Math.min(999, parseInt(col, 10) || 0)), lin: Math.max(-999, Math.min(999, parseInt(lin, 10) || 0)) };
-    const parte = parteNoQuadrado(partes, alvo.col, alvo.lin);
-    if (!parte) throw erro('Fora do mapa.');
+    let parte = parteNoQuadrado(partes, alvo.col, alvo.lin);
+    // Soltou fora de tudo (borda sem vizinho): fica na beirada do mapa ativo. Sem a proporção da imagem, as linhas
+    // de baixo não são recusadas.
+    if (!parte) {
+      const a = partes[0].mapa;
+      const maxLin = a.grade?.proporcao ? linhasDoMapa(a) - 1 : 999;
+      alvo.col = Math.max(0, Math.min(colunasDoMapa(a) - 1, alvo.col));
+      alvo.lin = Math.max(0, Math.min(maxLin, alvo.lin));
+      parte = partes[0];
+    }
     const m = parte.mapa;
     const novo = { col: alvo.col - parte.dc, lin: alvo.lin - parte.dl };
     // Obstáculo (parede, árvore, veículo…) não deixa o peão entrar no quadrado.
@@ -2881,6 +2889,15 @@ export const acoes = {
     if (passagem) return atravessar(c, p, m, passagem);
     if (m !== c.mapa && parte.lado) return { mudouDeMapa: m.nome, texto: `${p.nome} entrou em ${m.nome} (${parte.lado}).` };
     return {};
+  },
+
+  // Proporção da imagem do mapa (altura/largura): qualquer tela que abriu o mapa conta, se ainda não estiver guardada.
+  'mapa.proporcao'(c, { id, proporcao }, ctx) {
+    const m = id ? mapaPorId(c, id) : garantirMapas(c);
+    const v = Number(proporcao);
+    if (!m || !(v > 0.05 && v < 20)) return;
+    if (m.grade?.proporcao && !ctx.mestre) return;
+    (m.grade ||= { colunas: 20, ox: 0, oy: 0, visivel: true }).proporcao = v;
   },
 
   // Passagem (autor, 01/11): o mestre põe num quadrado do mapa ativo um link para outro mapa (e o quadrado de chegada).

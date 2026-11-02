@@ -912,7 +912,9 @@ button.afinidade { padding: .15em .4em; min-height: 0; justify-content: center; 
 .mapa-grade-tela { display: grid; grid-template-columns: minmax(0, 1fr) 240px; gap: 1em; align-items: start; }
 .mapa-centro { display: flex; flex-direction: column; align-items: center; gap: .4em; min-width: 0; }
 .mapa-quadro { position: relative; container-type: inline-size; width: 100%; max-width: 1200px; margin: 0 auto; border-radius: 8px; overflow: hidden; background: #000; box-shadow: 0 6px 24px #0008; user-select: none; touch-action: none; }
-.mapa-quadro > * { --cel: calc(100cqw / var(--cols)); }
+.mapa-quadro > * { --cel: calc(100cqw / var(--cols)); --acel: calc(100cqw / var(--cols)); }
+/* Zoom (− / +): o quadro cresce ou diminui; a rolagem (ou o arrasto, com vizinhos) mostra o resto. */
+.mapa-quadro.com-zoom { width: calc(var(--zoom, 1) * 100%); max-width: none; }
 .mapa-midia { display: block; width: 100%; height: auto; pointer-events: none; }
 .mapa-grade { position: absolute; inset: 0; pointer-events: none; opacity: 0; }
 .mapa-quadro.com-grade .mapa-grade { opacity: 1;
@@ -1217,9 +1219,9 @@ span.peao { display: grid; }
 .mapa-centro.tela-cheia .mapa-barra-cheia button { background: #000c; }
 .mapa-centro.tela-cheia .mapa-rolagem { width: 100vw; height: 100vh; height: 100dvh; overflow: auto; border-radius: 0; display: flex; align-items: center; justify-content: center; }
 .mapa-centro.tela-cheia .mapa-quadro { flex: none; min-width: 0; max-width: none; border-radius: 0; margin: 0;
-  width: min(100vw, calc(100dvh * var(--aspecto, 1.5))); }
+  width: calc(var(--zoom, 1) * min(100vw, calc(100dvh * var(--aspecto, 1.5)))); }
 .mapa-centro.tela-cheia.girar .mapa-rolagem { position: absolute; top: 0; left: 100vw; width: 100dvh; height: 100vw; transform: rotate(90deg); transform-origin: top left; }
-.mapa-centro.tela-cheia.girar .mapa-quadro { width: min(100dvh, calc(100vw * var(--aspecto, 1.5))); }
+.mapa-centro.tela-cheia.girar .mapa-quadro { width: calc(var(--zoom, 1) * min(100dvh, calc(100vw * var(--aspecto, 1.5)))); }
 
 /* Imagens divididas */
 .img-filtros { flex-wrap: wrap; margin: .6em 0; }
@@ -1543,8 +1545,15 @@ input.largo { flex: 1 1 20em; min-width: 0; }
 .mapa-rolagem.com-vizinhos { overflow: hidden; background: #000; }
 .mapa-quadro.com-vizinhos { overflow: visible; border-radius: 0; }
 .mapa-vizinho { position: absolute; --ox: var(--vox); --oy: var(--voy);
-  left: calc((var(--dc) + var(--aox) - var(--vox)) * var(--cel)); top: calc((var(--dl) + var(--aoy) - var(--voy)) * var(--cel));
-  width: calc(var(--vcols) * var(--cel)); min-height: calc(var(--vlins) * var(--cel)); background: #0b0907; }
+  /* Cada vizinho na escala da própria imagem (--vescala = largura natural dele / a do mapa ativo): mudar os quadrados do
+     mapa ativo não muda o tamanho dos vizinhos. As bordas das grades se encostam. */
+  --vlarg: calc(100cqw * var(--vescala)); --cel: calc(var(--vlarg) / var(--vcols));
+  width: var(--vlarg); min-height: calc(var(--vlins) * var(--cel)); background: #0b0907;
+  left: calc(var(--aox) * var(--acel) - var(--vox) * var(--cel)); top: calc(var(--aoy) * var(--acel) - var(--voy) * var(--cel)); }
+.mapa-vizinho[data-lado="leste"] { left: calc((var(--acols) + var(--aox)) * var(--acel) - var(--vox) * var(--cel)); }
+.mapa-vizinho[data-lado="oeste"] { left: calc(var(--aox) * var(--acel) - (var(--vcols) + var(--vox)) * var(--cel)); }
+.mapa-vizinho[data-lado="sul"] { top: calc((var(--alins) + var(--aoy)) * var(--acel) - var(--voy) * var(--cel)); }
+.mapa-vizinho[data-lado="norte"] { top: calc(var(--aoy) * var(--acel) - (var(--vlins) + var(--voy)) * var(--cel)); }
 .mapa-vizinho .mapa-midia { width: 100%; }
 .mapa-vizinho.com-grade .mapa-grade { opacity: .6;
   background-image: linear-gradient(to right, rgba(255, 255, 255, .3) 1px, transparent 1px), linear-gradient(to bottom, rgba(255, 255, 255, .3) 1px, transparent 1px);
@@ -1613,3 +1622,20 @@ input.largo { flex: 1 1 20em; min-width: 0; }
 .cartao-ataque select { width: 100%; }
 
 .retrato-ampliado { display: block; max-width: min(90vw, 900px); max-height: 75vh; margin: 0 auto; object-fit: contain; border-radius: 8px; }
+
+/* Botões de liga/desliga (no lugar das caixinhas de marcar). */
+.alternador { display: inline-flex; align-items: center; gap: .45em; padding: .3em .75em .3em .35em; border-radius: 999px; border: 1px solid var(--borda);
+  background: var(--painel2); color: var(--texto); font-size: .9em; cursor: pointer; line-height: 1.2; }
+.alternador .chave { position: relative; width: 2.1em; height: 1.2em; border-radius: 999px; background: #3a3128; border: 1px solid #5a4a38; flex: none; transition: background .2s; }
+.alternador .chave::after { content: ''; position: absolute; top: 50%; left: .12em; width: .9em; height: .9em; border-radius: 50%; background: #a89a88; transform: translateY(-50%); transition: left .2s, background .2s; }
+.alternador[aria-pressed="true"] { border-color: var(--ouro); color: var(--ouro); background: #3a2a14; }
+.alternador[aria-pressed="true"] .chave { background: var(--ouro-esc); border-color: var(--ouro); }
+.alternador[aria-pressed="true"] .chave::after { left: 1.05em; background: #fff3d6; }
+.alternador svg { width: 1.05em; height: 1.05em; }
+.alternador:focus-visible { outline: 2px solid var(--ouro); outline-offset: 2px; }
+/* Zoom e alcance do deslocamento. */
+.mapa-zoom { display: inline-flex; align-items: center; gap: .2em; }
+.mapa-zoom small { min-width: 3.2em; text-align: center; }
+.alcance-q { position: absolute; left: calc((var(--col) + var(--ox)) * var(--cel)); top: calc((var(--lin) + var(--oy)) * var(--cel)); width: var(--cel); height: var(--cel);
+  background: rgba(90, 170, 255, .2); box-shadow: inset 0 0 0 1px rgba(140, 200, 255, .45); pointer-events: none; z-index: 1; }
+.alcance-q.longe { background: rgba(255, 190, 80, .14); box-shadow: inset 0 0 0 1px rgba(255, 200, 110, .35); }

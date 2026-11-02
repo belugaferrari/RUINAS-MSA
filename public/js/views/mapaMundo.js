@@ -1,7 +1,7 @@
 // Mapas ligados e fog (autor, 01/11): os vizinhos colados nas bordas do mapa ativo (arraste o mapa para ver), as
 // passagens que levam a outro mapa, a fog absoluta (o que nenhum PJ viu fica preto) e a fog pessoal (o cone de visão
 // de cada personagem; o resto do que já foi visto fica escurecido). O mestre vê tudo, com a fog meio transparente.
-import { h, botao, selecao, aviso, icone, janela, pedirTexto } from '../ui.js';
+import { h, botao, selecao, aviso, icone, janela, pedirTexto, alternar } from '../ui.js';
 import { estado, render, personagemPorId } from '../estado.js';
 import { acao } from '../api.js';
 import { DIRECOES, LADOS, linhasDoMapa, colunasDoMapa } from '/shared/visao.js';
@@ -43,17 +43,31 @@ export function camadaFog(m, mestre) {
 // ---------- Vizinhos ----------
 // Cada vizinho é desenhado ao lado do ativo, na mesma escala (o mesmo tamanho de quadrado), com os peões, objetos,
 // passagens e a fog dele. Os peões dele também se arrastam (o servidor recebe as coordenadas do mundo).
+// Largura natural (em pixels) de cada imagem de mapa: o vizinho é desenhado na escala da própria imagem, em relação à
+// do mapa ativo (mudar os quadrados do ativo não muda o tamanho dos vizinhos).
+const naturais = new Map();
+let redesenhoPendente = false;
+export function registrarNatural(url, largura) {
+  if (!url || !largura || naturais.get(url) === largura) return;
+  naturais.set(url, largura);
+  if (!redesenhoPendente) { redesenhoPendente = true; requestAnimationFrame(() => { redesenhoPendente = false; render(); }); }
+}
 export function vizinhosEls(mapa, mestre, desenharPeao) {
+  const larguraAtivo = naturais.get(mapa.midia?.url);
   return (mapa.vizinhosLista || []).map(v => {
     const g = v.grade || {};
+    const larguraViz = naturais.get(v.midia?.url);
+    // Sem as larguras ainda (imagem carregando): o mesmo tamanho de quadrado do ativo.
+    const escala = larguraAtivo && larguraViz ? larguraViz / larguraAtivo : colunasDoMapa(v) / colunasDoMapa(mapa);
     return h('div', {
       class: `mapa-vizinho ${g.visivel !== false && mapa.grade.visivel ? 'com-grade' : ''}`, 'data-lado': v.lado,
-      style: { '--dc': v.dc, '--dl': v.dl, '--vox': g.ox || 0, '--voy': g.oy || 0, '--vcols': colunasDoMapa(v), '--vlins': linhasDoMapa(v) },
+      'data-dc': v.dc, 'data-dl': v.dl, 'data-vox': g.ox || 0, 'data-voy': g.oy || 0, 'data-vcols': colunasDoMapa(v),
+      style: { '--dc': v.dc, '--dl': v.dl, '--vox': g.ox || 0, '--voy': g.oy || 0, '--vcols': colunasDoMapa(v), '--vlins': linhasDoMapa(v), '--vescala': escala },
       title: `${v.nome} (${NOME_LADO[v.lado]})`,
     },
       v.midia ? (v.midia.tipo === 'video'
-        ? h('video', { src: v.midia.url, class: 'mapa-midia', autoplay: true, loop: true, muted: true, playsinline: true })
-        : h('img', { src: v.midia.url, class: 'mapa-midia', alt: v.midia.titulo || v.nome, draggable: 'false' })) : h('div', { class: 'mapa-vizinho-vazio' }, v.nome),
+        ? h('video', { src: v.midia.url, class: 'mapa-midia', autoplay: true, loop: true, muted: true, playsinline: true, onloadedmetadata: e => registrarNatural(v.midia.url, e.currentTarget.videoWidth) })
+        : h('img', { src: v.midia.url, class: 'mapa-midia', alt: v.midia.titulo || v.nome, draggable: 'false', onload: e => registrarNatural(v.midia.url, e.currentTarget.naturalWidth) })) : h('div', { class: 'mapa-vizinho-vazio' }, v.nome),
       h('div', { class: 'mapa-grade', 'aria-hidden': 'true' }),
       (v.objetos || []).map(o => objetoEstatico(o, mestre)),
       (v.passagens || []).map(ps => passagemEl(ps, mestre, v)),
@@ -203,10 +217,10 @@ export function controlesMundo(mapa) {
       botao(pondoPassagem ? 'Clique no quadrado da passagem (clique aqui para parar)' : 'Pôr passagem', () => { estado.sel.mapaPassagem = pondoPassagem ? null : { ...destino }; estado.sel.mapaObjeto = null; estado.sel.mapaFogPincel = null; render(); },
         { class: `pequeno ${pondoPassagem ? 'primario' : ''}`, icone: 'door-open', disabled: !destino.para && !pondoPassagem })),
     h('div', { class: 'barra' },
-      h('label', { class: 'linha', title: 'Mapa grande, sem combate: fog inicial que se abre em volta dos PJs, pins dos jogadores; todos abrem pelo botão "Mapa do mundo"' },
-        h('input', { type: 'checkbox', checked: !!mapa.continental, onchange: e => acao('mapa.continental', { continental: e.target.checked }) }), 'Mapa continental (mapa do mundo)'),
-      h('label', { class: 'linha', title: 'O que nenhum personagem jogador viu fica preto para os jogadores' }, h('input', { type: 'checkbox', checked: !!f.absoluta, onchange: e => acao('mapa.fog', { absoluta: e.target.checked }) }), 'Fog absoluta'),
-      h('label', { class: 'linha', title: 'Cada personagem vê um cone (90°) para onde olha; o resto do que já viu fica escurecido' }, h('input', { type: 'checkbox', checked: !!f.pessoal, onchange: e => acao('mapa.fog', { pessoal: e.target.checked }) }), 'Fog pessoal'),
+      alternar('Mapa continental (mapa do mundo)', !!mapa.continental, v => acao('mapa.continental', { continental: v }), { icone: 'globe',
+        title: 'Mapa grande, sem combate: fog inicial que se abre em volta dos PJs, pins dos jogadores; todos abrem pelo botão "Mapa do mundo"' }),
+      alternar('Fog absoluta', !!f.absoluta, v => acao('mapa.fog', { absoluta: v }), { icone: 'cloud', title: 'O que nenhum personagem jogador viu fica preto para os jogadores' }),
+      alternar('Fog pessoal', !!f.pessoal, v => acao('mapa.fog', { pessoal: v }), { icone: 'scan-eye', title: 'Cada personagem vê um cone (90°) para onde olha; o resto do que já viu fica escurecido' }),
       h('label', { class: 'linha', title: 'Até onde a vista alcança (em quadrados de 1,5 m)' }, 'Alcance',
         h('input', { type: 'number', class: 'curto', min: 1, max: 100, value: f.alcance || 16, onchange: e => acao('mapa.fog', { alcance: e.target.value }) }), 'quadrados'),
       f.absoluta ? [

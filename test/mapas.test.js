@@ -45,7 +45,8 @@ test('continuidade: passar da borda leste leva o peão para a praia; voltar traz
   assert.equal(porNome(c, 'Teste — Praia').pecas[pj].olhar, 90, 'olha para onde andou (leste)');
   executar(c, 'mapa.mover', { id: pj, col: 22, lin: 7 }, ctxM);
   assert.ok(c.mapa.pecas[pj]);
-  assert.throws(() => executar(c, 'mapa.mover', { id: pj, col: 30, lin: 30 }, ctxM), /Fora do mapa/);
+  executar(c, 'mapa.mover', { id: pj, col: 30, lin: 30 }, ctxM);
+  assert.deepEqual([c.mapa.pecas[pj].col, c.mapa.pecas[pj].lin], [23, 15], 'fora de tudo: fica na beirada do mapa ativo');
 });
 
 test('passagem: a escada das ruínas leva à caverna; sem PJ no mundo visível, o mapa ativo muda para todos', () => {
@@ -159,4 +160,19 @@ test('extensão com IA: o plano é conferido contra a grade, vira SVG e objetos 
   assert.ok(m.objetos.length > 3);
   assert.throws(() => criarExtensao(c, { lado: 'sul', nome: 'X', url: '/x', colunas: 24, linhas: 16 }), /já tem vizinho/);
   assert.match(D.pedidoExtensao({ lado: 'leste', diretrizes: 'posto', colunasAtual: 24, linhasAtual: 16, colunas: 24, linhas: 16 }), /borda esquerda \(oeste\)/);
+});
+
+test('mover: soltar além da borda sem vizinho fica na beirada; sem a proporção guardada, as linhas de baixo valem; a proporção vem de qualquer tela', () => {
+  const { c, pj } = campo();
+  executar(c, 'mapa.vizinho', { lado: 'sul', id: null }, ctxM);
+  c.mapa.pecas[pj] = { col: 3, lin: 3 };
+  executar(c, 'mapa.mover', { id: pj, col: 4, lin: 40 }, ctxM);
+  assert.deepEqual([c.mapa.pecas[pj].col, c.mapa.pecas[pj].lin], [4, 15]);
+  delete c.mapa.grade.proporcao;
+  executar(c, 'mapa.mover', { id: pj, col: 4, lin: 30 }, ctxM);
+  assert.equal(c.mapa.pecas[pj].lin, 30, 'sem proporção: não recusa');
+  executar(c, 'mapa.proporcao', { id: c.mapa.id, proporcao: 1.5 }, { user: jogador, mestre: false });
+  assert.equal(c.mapa.grade.proporcao, 1.5);
+  executar(c, 'mapa.proporcao', { id: c.mapa.id, proporcao: 0.5 }, { user: jogador, mestre: false });
+  assert.equal(c.mapa.grade.proporcao, 1.5, 'o jogador só preenche quando falta');
 });
