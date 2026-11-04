@@ -433,6 +433,7 @@ function atributosView(p, d, mestre, rolar) {
     h('div', { class: 'icones-meta' },
       h('span', { title: 'AGI + 1d10' }, icone('zap'), `Iniciativa: AGI ${d.iniciativa} + 1d10`),
       h('span', {}, icone('book'), `Línguas extras: ${d.linguasExtras}`),
+      h('span', { title: 'Asfixia e afogamento: turnos TOTAIS sem respirar (tabela de CONS; dobra a cada 6 pontos)' }, icone('wind'), `Fôlego: ${d.folego} turnos`),
       h('span', {}, icone('trending-up'), `Máx. de atributo no nível: ${d.atributoMax}`)),
     botao('Rolar iniciativa', async () => {
       const r = await acao('rolar', { id: p.id, tipo: 'iniciativa', sala: estado.sel.ondeRolar || null });

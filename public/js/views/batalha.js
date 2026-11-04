@@ -738,7 +738,9 @@ function acoesDoTurno(p) {
     daVez ? botao((p.marcas || []).some(m => m.disparada) ? 'Em Disparada' : 'Disparada', () => acao('combate.disparada', { id: p.id }).then(r => aviso(r.texto)),
       { class: 'pequeno', icone: 'footprints', disabled: (p.marcas || []).some(m => m.disparada) || usado('principal') > 0, title: 'Ação principal: desloca o dobro do deslocamento base neste turno (o contador do mapa mostra o novo limite)' }) : null,
     daVez ? botao((p.marcas || []).some(m => m.defesaTotal) ? 'Em Defesa Total' : 'Defesa Total', () => acao('combate.defesaTotal', { id: p.id }).then(r => aviso(r.texto)),
-      { class: 'pequeno', icone: 'shield-check', disabled: (p.marcas || []).some(m => m.defesaTotal) || usado('principal') > 0, title: 'Ação principal: +20% em todas as defesas até o seu próximo turno (não vale contra ataque surpresa)' }) : null);
+      { class: 'pequeno', icone: 'shield-check', disabled: (p.marcas || []).some(m => m.defesaTotal) || usado('principal') > 0, title: 'Ação principal: +20% em todas as defesas até o seu próximo turno (não vale contra ataque surpresa)' }) : null,
+    botao((p.marcas || []).some(m => m.semAr) ? 'Voltar a respirar' : 'Prender a respiração', () => acao('personagem.respirar', { id: p.id }).then(r => aviso(r.texto)),
+      { class: 'pequeno', icone: 'wind', title: 'Asfixia e afogamento: conta os turnos de fôlego (tabela de CONS)' }));
 }
 
 // Ataques especiais e habilidades que gastam ação (de todas as classes): o tempo que gastam, "Usar" (marca a ação do

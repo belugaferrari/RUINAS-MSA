@@ -3348,7 +3348,9 @@ Você pode escolher acertar um ponto específico do alvo (escolha um membro ou l
 
 Humanos conseguem ficar 5 turnos sem respirar como padrão independente da sua CONS. Para saber quantos turnos TOTAL (já considerando os 5 turnos padrão) seu personagem consegue ficar sem respirar, considere a tabela a baixo, lembrando que a cada 6pts adicionais, você dobra a capacidade.
 
-![](/livro-img/mss/image41.png)
+| CONS | 10 | 11 | 12 | 13 | 14 | 15 | 16 |
+|---|---|---|---|---|---|---|---|
+| Total de turnos | 11 | 12 | 14 | 16 | 18 | 20 | 22 |
 
 ### Visibilidade
 

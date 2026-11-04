@@ -549,7 +549,7 @@ Respostas do autor (31/10) e o que foi feito:
 - **5 PV ou menos**: WILL% Difícil contra o Medo (falhou → humor Amedrontado). Monstros não fazem.
 - **Dano não letal**: desmaia e acorda com 1 PV depois de 2d4 turnos (não perde PV pela sobrevida).
 - **Vibração**: dobro de dano em objeto (ataque localizado num item). **Queda**: rolador › Rápidos (mestre). **Combate montado**: desvantagem.
-- **Asfixia**: aguardando a tabela do autor (por enquanto 5 turnos).
+- **Asfixia**: tabela recebida em 04/11 (ver seção 04/11).
 
 ## 01/11 — Mapas ligados e fogs
 - **Vários mapas** por campanha (aba Mapa › mestre): criar, abrir (vira o mapa de todos), renomear, apagar.
@@ -674,3 +674,10 @@ Implementadas 33 habilidades (Soldado, Sortudo, Mentalista, Caótico, Transmorfo
 - **Guarda de posto**: liga/desliga (humor Motivado, +5% à distância) — "prontidão" não existia.
 - **Metabolismo motivador**: +2 WILL enquanto Drogado; vantagem em testes de vício não é automática (drogas existem só como condição).
 - **Despertar**: 1 + MOD CONS por descanso longo, 5 turnos, renova 1 turno se atacar ou for atacado (texto do livro corrigido).
+
+## 04/11 — Asfixia e afogamento (tabela do autor)
+
+- Turnos TOTAIS sem respirar: CONS 10→11, 11→12, 12→14, 13→16, 14→18, 15→20, 16→22; a cada 6 pontos a mais dobra (CONS 17 = 24, 22 = 44).
+- Abaixo de CONS 10 (interpretação): a mesma conta da dobra dá CONS + 1, nunca menos que os 5 turnos padrão.
+- Ficha mostra "Fôlego: N turnos"; botão "Prender a respiração" no Campo de Batalha conta 1 turno a cada fim de turno no combate.
+- O livro não diz o que acontece quando o fôlego acaba: o app avisa "Sem fôlego" e o mestre aplica.

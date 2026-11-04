@@ -605,6 +605,7 @@ export function derivados(ficha, sistema) {
     pvMax, pvBase, pvPersistente, pvPermanente, sanidadeMax, estadoSanidade, humanidadeMax, humanidadeLimite, humanidadeMinInicial, estagioHumanidade,
     iniciativa: atributos.AGI ?? 0,
     linguasExtras: Math.max(0, mod.INT ?? 0),
+    folego: folegoTurnos(atributos.CONS ?? 10),
     // Capacete (slot Cabeça) protege só contra golpe localizado na cabeça (autor, 29/10): fica fora do IP comum.
     defesa: equipados.filter(i => !protegeSoCabeca(i)).reduce((s, i) => s + ipDoItem(i).geral, 0) + (bonus.Defesa || 0),
     ip: ipPorTipo(ficha, equipados.filter(i => !protegeSoCabeca(i)), bonus, hab),
@@ -626,6 +627,17 @@ export function derivados(ficha, sistema) {
 // Deslocamento por turno (planilha de regras gerais): humano 9 m = 6 quadrados de 1,5 m.
 // Preso (Paralisado, Enraizado, Imobilizado, Desmaiado, Esmagado) = 0; Dano a membros inferiores −3 m cada;
 // Sobrecarregado −4,5 m; Supercarregado só 1 passo (1,5 m).
+// Asfixia e afogamento (livro + tabela do autor, 04/11): turnos TOTAIS sem respirar (já com os 5 padrão).
+// Tabela: CONS 10→11, 11→12, 12→14, 13→16, 14→18, 15→20, 16→22; a cada 6 pontos a mais a capacidade dobra
+// (CONS 17 = 2× CONS 11 = 24…). Abaixo de 10 segue a mesma conta (CONS 9 = 22/2… = CONS+1), nunca menos que 5.
+export function folegoTurnos(cons) {
+  const c = Math.floor(Number(cons) || 0);
+  const tabela = { 10: 11, 11: 12, 12: 14, 13: 16, 14: 18, 15: 20, 16: 22 };
+  if (tabela[c]) return tabela[c];
+  if (c > 16) return 2 * folegoTurnos(c - 6);
+  return Math.max(5, c + 1);
+}
+
 export function deslocamento(sistema, condicoes, cargaNivel, proprio = null, marcas = []) {
   // Monstros têm o deslocamento da planilha; personagens, o da raça.
   const base = parseFloat(String(proprio ?? sistema.raca?.deslocamento ?? '9').replace(',', '.')) || 9;

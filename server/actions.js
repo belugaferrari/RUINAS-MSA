@@ -2497,6 +2497,13 @@ function passarTurnoHabilidades(p) {
   // Despertar: renova 1 turno quando o transmorfo atacou ou foi atacado neste turno.
   const lutou = !!p.lutouNoTurno;
   delete p.lutouNoTurno;
+  // Asfixia: quem está prendendo a respiração gasta 1 turno de fôlego.
+  for (const m of p.marcas || []) {
+    if (!m.semAr || m.folego <= 0) continue;
+    m.folego--;
+    m.nome = m.folego > 0 ? `Sem respirar (${m.folego} de ${m.folegoMax} turnos de fôlego)` : 'Sem fôlego';
+    notas.push(m.folego > 0 ? `fôlego: ${m.folego} turno${m.folego > 1 ? 's' : ''}` : 'ficou sem fôlego (o livro não diz a consequência: o mestre aplica)');
+  }
   p.marcas = (p.marcas || []).filter(m => {
     if (!m.turnos) return true;
     m.turnos--;
@@ -4626,6 +4633,24 @@ export const acoes = {
     const texto = [`ação principal · deslocamento ${String(d.deslocamento).replace('.', ',')} m neste turno`, ...notas].join(' · ');
     registrar(c.salas.batalha.log, { autor: p.nome, rotulo: `${p.nome}: Disparada`, texto });
     return { texto };
+  },
+
+  // Asfixia e afogamento: liga/desliga "sem respirar". O fôlego vem da tabela de CONS e cai 1 a cada fim de turno no combate.
+  'personagem.respirar'(c, { id }, ctx) {
+    const p = personagem(c, id);
+    exigirDonoOuMestre(ctx, p);
+    const sis = sistema(c.sistema);
+    const m = (p.marcas || []).find(x => x.semAr);
+    const log = c.salas.batalha.log;
+    if (m) {
+      p.marcas = p.marcas.filter(x => x !== m);
+      registrar(log, { autor: p.nome, rotulo: `${p.nome}: voltou a respirar`, texto: m.folego > 0 ? `sobraram ${m.folego} turnos de fôlego` : 'estava sem fôlego' });
+      return { texto: `${p.nome} voltou a respirar` };
+    }
+    const n = derivados(p, sis).folego;
+    marcar(p, { nome: `Sem respirar (${n} de ${n} turnos de fôlego)`, semAr: true, folego: n, folegoMax: n, de: p.id });
+    registrar(log, { autor: p.nome, rotulo: `${p.nome}: sem respirar`, texto: `aguenta ${n} turnos no total` });
+    return { texto: `${p.nome} prende a respiração: ${n} turnos de fôlego` };
   },
 
   // Defesa Total (autor, 30/10): postura em que abre mão de atacar — ação principal, +20% em todas as defesas até o começo
