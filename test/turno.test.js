@@ -204,7 +204,7 @@ test('duas armas: hábil sem ônus, inábil −20%; dois ataques (um com cada m�
   assert.equal(mod(ataque('d')), 'segundo ataque (Ambidestria) -20');
 });
 
-test('Despertar: dura o combate, ícone de ativa, não ativa de novo; PV temporários e arma natural (perfuração, +1 por Corpo monstruoso)', () => {
+test('Despertar: 5 turnos (autor, 04/11), ícone de ativa, não ativa de novo; PV temporários e arma natural (perfuração, +1 por Corpo monstruoso)', () => {
   const c = novaCampanha(mestre, { nome: 'T', maxJogadores: 2, nivel: 1, sistema: 'mss' });
   const ids = ['Lobo', 'Alvo'].map(nome => executar(c, 'personagem.criar', { tipo: 'npc', grupoId: 'encontros', ficha: { nome } }, ctxM).id);
   const lobo = c.personagens.find(p => p.id === ids[0]);
@@ -217,7 +217,8 @@ test('Despertar: dura o combate, ícone de ativa, não ativa de novo; PV tempor�
   assert.ok(!armasDisponiveis(lobo, mss).some(a => a.uid === 'natural'), 'sem despertar, sem garras');
   const pvAntes = lobo.pv.atual;
   executar(c, 'habilidade.usar', { id: lobo.id, hab: hab.id }, ctxM);
-  assert.ok(lobo.habAtivas[hab.id].combate);
+  assert.equal(lobo.habAtivas[hab.id].turnos, 5);
+  assert.ok(lobo.habAtivas[hab.id].renova, 'renova se atacar ou for atacado');
   assert.ok(lobo.pvTemp >= 1 + corpo && lobo.pvTemp <= 6 + corpo);
   assert.equal(lobo.humor, 'corajoso');
   assert.ok(imuneA(lobo, mss, 'Amedrontado'));

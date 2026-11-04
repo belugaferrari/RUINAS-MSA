@@ -38,8 +38,9 @@ export function rolarDado(expr, rng = Math.random) {
 
 // Teste D-MIL: AÇÃO% + 1d100 ≥ ND, com 1d10 de suporte (DS).
 // modo: 'vantagem' (rola 2d100 e fica com o maior) ou 'desvantagem' (o menor).
-export function testeDMil(acao, nd, sistema, { metade = false, rng = Math.random, modo = null } = {}) {
-  const t = sistema.teste;
+export function testeDMil(acao, nd, sistema, { metade = false, rng = Math.random, modo = null, critMais = 0 } = {}) {
+  // Zona de Desastre: as margens de acerto e erro crítico sobem (até 15%).
+  const t = critMais ? { ...sistema.teste, criticoAcerto: Math.max(86, sistema.teste.criticoAcerto - critMais), criticoErro: Math.min(15, sistema.teste.criticoErro + critMais) } : sistema.teste;
   const dados = [1 + Math.floor(rng() * 100)];
   if (modo === 'vantagem' || modo === 'desvantagem') dados.push(1 + Math.floor(rng() * 100));
   const dp = modo === 'desvantagem' ? Math.min(...dados) : Math.max(...dados);
@@ -284,21 +285,42 @@ export function condicoesAtivas(ficha, sistema) {
 // "regra" é a regra própria da habilidade (conteudo/sistemas/habilidades-regras.json), quando existe.
 export function listaHabilidades(ficha, sistema) {
   const ganhos = new Map();
+  const nomeClasse = (sistema.classes || []).find(c => c.id === ficha.classe)?.nome || '';
   for (const g of ganhosDeClasse(ficha, sistema).filter(g => g.descricao)) {
     const atual = ganhos.get(g.nome);
     if (atual) atual.vezes++;
-    else ganhos.set(g.nome, { id: `c:${g.nome}`, nome: g.nome, descricao: g.descricao, tipo: `Nível ${g.nivel}`, vezes: 1 });
+    else ganhos.set(g.nome, { id: `c:${g.nome}`, nome: g.nome, descricao: g.descricao, tipo: `Nível ${g.nivel}`, vezes: 1, origem: nomeClasse });
   }
+  // O Edito do Caos: habilidade tirada por alguns turnos.
+  const bloqueadas = new Set((ficha.marcas || []).filter(m => m.habBloqueada).map(m => m.habBloqueada));
   return [
-    ...(ficha.vantagens || []).map(id => acharVantagem(id, sistema)).filter(Boolean).map(v => ({ id: `v:${v.id}`, nome: v.nome, descricao: v.descricao, tipo: v.origem === 'Geral' ? 'Vantagem' : `Classe · ${v.origem}`, vezes: 1 })),
+    ...(ficha.vantagens || []).map(id => acharVantagem(id, sistema)).filter(Boolean).map(v => ({ id: `v:${v.id}`, nome: v.nome, descricao: v.descricao, tipo: v.origem === 'Geral' ? 'Vantagem' : `Classe · ${v.origem}`, vezes: 1, origem: v.origem })),
     ...ganhos.values(),
     // Monstros não têm a habilidade da raça humana; têm as próprias (planilha do Livro dos Monstros).
     sistema.raca?.habilidadeUnica && !ficha.criatura ? { id: 'raca', nome: sistema.raca.habilidadeUnica.nome, descricao: sistema.raca.habilidadeUnica.descricao, tipo: sistema.raca.nome, vezes: 1 } : null,
-  ].filter(Boolean).map(x => ({ ...x, regra: regraDaHabilidade(x.nome, sistema) })).concat(mutacoesComoHabilidades(ficha, sistema)).concat(
+  ].filter(Boolean).filter(x => !bloqueadas.has(x.id)).map(x => ({ ...x, regra: regraPorClasse(regraDaHabilidade(x.nome, sistema), x.origem) })).concat(mutacoesComoHabilidades(ficha, sistema)).concat(
     (ficha.habilidadesProprias || []).map((x, i) => ({ id: `m:${i}:${x.nome}`, nome: x.nome, descricao: x.descricao || x.efeitos || '', tipo: x.unica ? 'Habilidade única' : 'Monstro', unica: !!x.unica, vezes: 1,
       regra: x.modo === 'lembrete' && !x.efeitos ? null : { modo: x.modo || 'sempre', efeitos: x.efeitos || '' } })),
     // Roubar Característica (Mutante Adaptado): a característica tirada de uma criatura morta, depois do descanso longo.
-    ficha.caracteristicaRoubada?.ativa ? [roubadaComoHabilidade(ficha.caracteristicaRoubada.ativa, sistema)] : []);
+    ficha.caracteristicaRoubada?.ativa ? [roubadaComoHabilidade(ficha.caracteristicaRoubada.ativa, sistema)] : [],
+    // Coletor (Licantropo): a característica incorporada agora.
+    ficha.coletor?.ativa ? [{ ...roubadaComoHabilidade(ficha.coletor.ativa, sistema), id: 'coletor', tipo: `Coletor (de ${ficha.coletor.ativa.de || '?'})` }] : []);
+}
+// A mesma habilidade com regra diferente por classe (Inspiração do Encantado e a do Sortudo).
+const semAcentoMin = s => String(s || '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+function regraPorClasse(regra, origem) {
+  if (!regra?.porClasse || !origem) return regra;
+  const extra = regra.porClasse[semAcentoMin(origem)];
+  return extra ? { ...regra, ...extra } : regra;
+}
+// Máximo de usos/recurso por fórmula ("1+MOD CONS", "MOD WILL", 3).
+export function valorDaFormula(ficha, sistema, f, min = 0) {
+  if (typeof f === 'number') return Math.max(min, f);
+  const d = derivados(ficha, sistema);
+  return Math.max(min, String(f || 0).split('+').reduce((s, parte) => {
+    const m = /MOD\s*(\w+)/i.exec(parte);
+    return s + (m ? d.mod[m[1].toUpperCase()] || 0 : parseInt(parte, 10) || 0);
+  }, 0));
 }
 const roubadaComoHabilidade = (x, sistema) => ({ id: 'roubada', nome: x.nome, descricao: x.descricao || x.efeitos || '', tipo: `Característica roubada (de ${x.de || '?'})`, vezes: 1,
   regra: regraDaHabilidade(x.nome, sistema) || (x.efeitos ? { modo: x.modo && x.modo !== 'lembrete' ? x.modo : 'sempre', efeitos: x.efeitos } : null) });
@@ -503,7 +525,9 @@ export function derivados(ficha, sistema) {
   const racial = sistema.raca?.modificadores || {};
   // Condições (Fome, Cansado, Sono…): mudam atributos e somam/subtraem % nos testes.
   // Durante o combate os efeitos das Necessidades (Fome, Sede, Sono, Doença, Friagem) ficam suspensos (livro).
-  const condicoes = condicoesAtivas(ficha, sistema).filter(c => !(ficha.emCombate && c.grupo === 'Necessidades'));
+  // Calor do combate (Soldado): por 10 turnos os efeitos negativos ficam congelados (não fazem efeito).
+  const congelado = (ficha.marcas || []).some(m => m.calorCombate);
+  const condicoes = congelado ? [] : condicoesAtivas(ficha, sistema).filter(c => !(ficha.emCombate && c.grupo === 'Necessidades'));
   const condAtr = {}, condTesteAtr = {}, condPericia = {};
   let condTestes = 0;
   // Civilizados: quem atacou primeiro um Encantado civilizado tem −10% em todos os testes até o fim da batalha.
@@ -522,6 +546,8 @@ export function derivados(ficha, sistema) {
     for (const [k, v] of Object.entries(m.atributos || {})) marcaAtr[k] = (marcaAtr[k] || 0) + v;
     for (const [k, v] of Object.entries(m.testesAtributos || {})) marcaTesteAtr[k] = (marcaTesteAtr[k] || 0) + v;
   }
+  // Metabolismo motivador (Sortudo): Drogado, +2 de WILL junto com os efeitos da droga.
+  if ((ficha.marcadores || []).some(m => /^drogado/i.test(m)) && temHabilidade(ficha, sistema, 'Metabolismo motivador')) marcaAtr.WILL = (marcaAtr.WILL || 0) + 2;
   // Regeneração degenerativa: CONS consumida (volta 1 por descanso).
   marcaAtr.CONS = (marcaAtr.CONS || 0) - Math.max(0, ficha.consPerdida || 0);
   for (const [k, v] of Object.entries(marcaTesteAtr)) condTesteAtr[k] = (condTesteAtr[k] || 0) + v;
@@ -559,7 +585,8 @@ export function derivados(ficha, sistema) {
   const pvPersistente = Math.max(0, ficha.pv?.persistente || 0) + (ficha.caracteristicaRoubada?.ativa ? 3 : 0);
   const pvPermanente = Math.max(0, ficha.pv?.permanente || 0);
   const pvMax = Math.max(1, pvBase - pvPersistente - pvPermanente);
-  const sanidadeMax = (ficha.atributos?.INT ?? 0) + (ficha.atributos?.WILL ?? 0) + 10;
+  // Sete Vidas: −5 SAN permanentes por vez.
+  const sanidadeMax = (ficha.atributos?.INT ?? 0) + (ficha.atributos?.WILL ?? 0) + 10 - (ficha.sanPerdaPermanente || 0);
   const san = ficha.sanidade?.atual ?? sanidadeMax;
   const estadoSanidade = [...(sistema.sanidade?.estados || [])].reverse().find(e => san < e.abaixoDe)?.nome || 'Lúcido';
   // Humanidade vai de 1 a 100 (abaixo de 1 o jogador perde o controle do personagem).
@@ -586,7 +613,7 @@ export function derivados(ficha, sistema) {
     carga: (ficha.itens || []).reduce((s, i) => s + (i.peso || 0), 0),
     ...carga,
     ...deslocamento(sistema, condicoes, carga.cargaNivel, ficha.deslocamentoBase ?? null,
-      [...(ficha.marcas || []).filter(m => m.deslocamento || m.disparada || m.umPasso), ...(hab.deslocamento ? [{ nome: 'habilidades', deslocamento: hab.deslocamento }] : []),
+      [...(ficha.marcas || []).filter(m => m.deslocamento || m.disparada || m.umPasso || m.disparadaMenos), ...(hab.deslocamento ? [{ nome: 'habilidades', deslocamento: hab.deslocamento }] : []),
         // Extração de emergência: +1,5 m quando está em Disparada.
         ...((ficha.marcas || []).some(m => m.disparada) ? listaHabilidades(ficha, sistema).filter(x => x.regra?.deslocamentoNaDisparada).map(x => ({ nome: x.nome, deslocamento: x.regra.deslocamentoNaDisparada })) : [])]),
     limitePericia: limitePericia(nivel, sistema),
@@ -615,7 +642,12 @@ export function deslocamento(sistema, condicoes, cargaNivel, proprio = null, mar
     // Duas armas no turno (livro): só 1 passo.
     if (marcas.some(x => x.umPasso)) { m = Math.min(m, 1.5); motivos.push('duas armas: só 1 passo'); }
     // Disparada (livro): desloca o dobro do deslocamento base.
-    if (marcas.some(x => x.disparada)) { m += base; motivos.push(`Disparada +${String(base).replace('.', ',')} m`); }
+    if (marcas.some(x => x.disparada)) {
+      m += base; motivos.push(`Disparada +${String(base).replace('.', ',')} m`);
+      // Passos confusos (Universal): a Disparada rende 3 m a menos.
+      const menos = Math.max(0, ...marcas.map(x => x.disparadaMenos || 0));
+      if (menos) { m -= menos; motivos.push(`Passos confusos −${menos} m`); }
+    }
     for (const x of marcas.filter(y => y.deslocamento)) { m += x.deslocamento; motivos.push(`${x.nome} +${String(x.deslocamento).replace('.', ',')} m`); }
     if (cargaNivel === 'supercarregado') { m = Math.min(m, 1.5); motivos.push('Supercarregado: só 1 passo'); }
   }
@@ -896,6 +928,9 @@ export function desgastarItem(i, ds, { semPrerequisito = false } = {}) {
   const d = durabilidadeDe(i);
   if (d.tipo !== 'normal' || d.quebrado || ehFerramental(i)) return null;
   if (!semPrerequisito && !(ds > d.atual)) return null;
+  // Quebrar a Probabilidade (Universal): não perde, ou perde 2 (cada perda dá 1 CO a quem tocou).
+  if (i.probabilidade?.modo === 'protege') return `${i.nome}: Quebrar a Probabilidade — não perdeu durabilidade`;
+  if (i.probabilidade?.modo === 'dobra') { i.probabilidade.co = (i.probabilidade.co || 0) + 1; i.durabilidadeAtual = Math.max(0, d.atual - 2); i.reparavel = true; delete i.aura; return `${i.nome} perdeu 2 de durabilidade (Quebrar a Probabilidade): ${i.durabilidadeAtual}/${i.durabilidade}`; }
   i.durabilidadeAtual = d.atual - 1;
   i.reparavel = true;
   // A aura do item (Perícias equipadas, Criação e manutenção) dura até ele perder 1 de durabilidade.

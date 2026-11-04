@@ -33,8 +33,8 @@ const ORIGENS = {
 const origemDe = t => Object.keys(ORIGENS).find(k => sem(ORIGENS[k]) === sem(t)) || null;
 const SISTEMAS = { ambos: 'MSA e MSS', msa: 'só MSA', mss: 'só MSS' };
 const valeNo = (t, id) => { const s = sem(t); return !s || /msa e mss|ambos|todos/.test(s) || s.includes(id); };
-const RECARGAS = { descanso: 'descanso (curto ou longo)', 'descanso-longo': 'descanso longo' };
-const recargaDe = t => { const s = sem(t); return !s ? null : /longo/.test(s) && !/curto/.test(s) ? 'descanso-longo' : 'descanso'; };
+const RECARGAS = { descanso: 'descanso (curto ou longo)', 'descanso-longo': 'descanso longo', nunca: 'nunca (contador)' };
+const recargaDe = t => { const s = sem(t); return !s ? null : /nunca/.test(s) ? 'nunca' : /longo/.test(s) && !/curto/.test(s) ? 'descanso-longo' : 'descanso'; };
 const MODOS = ['sempre', 'ligar', 'ativar', 'lembrete'];
 const ACOES = ['principal', 'movimento', 'bonus', 'completa', 'reacao', 'livre'];
 
@@ -107,7 +107,8 @@ function colunasDaRegra(regra, nomeSub) {
     if (dano != null) avancado.dano = dano;
   } else {
     if (dano != null) r.dano = dano;
-    if (usos) { r.usos = usos.max; r.recarga = RECARGAS[usos.recarga] || usos.recarga; }
+    // Usos por fórmula ("1+MOD CONS", "MOD INT"), com mínimo: a fórmula vai como texto; o mínimo, no avançado.
+    if (usos) { r.usos = usos.max; r.recarga = RECARGAS[usos.recarga] || usos.recarga; if (usos.min != null) avancado.usosMin = usos.min; }
   }
   if (Object.keys(avancado).length) r.avancado = JSON.stringify(avancado);
   return r;
@@ -126,7 +127,9 @@ function regraDasColunas(l, idSub, avisos) {
   for (const k of ['efeitos', 'especial', 'texto']) if (l[k]) r[k] = l[k];
   if (l.escolhas) r.escolhas = lista(l.escolhas);
   if (l.duracao) r.duracao = duracaoDe(l.duracao);
-  const usos = l.usos ? { max: numero(l.usos) || 1, recarga: recargaDe(l.recarga) || 'descanso-longo' } : null;
+  // Usos: número, ou fórmula ("1+MOD CONS", "MOD WILL").
+  const formula = l.usos != null && /MOD/i.test(String(l.usos)) ? String(l.usos).replace(/\s+/g, ' ').trim() : null;
+  const usos = l.usos ? { max: formula || numero(l.usos) || 1, recarga: recargaDe(l.recarga) || 'descanso-longo' } : null;
   const ataque = l.tipoDano || l.pericia || l.alcance || r.arma;
   if (ataque) {
     const arma = { ...(r.arma || {}) };
@@ -142,6 +145,7 @@ function regraDasColunas(l, idSub, avisos) {
     if (l.dano) r.dano = l.dano;
     if (usos) r.usos = usos;
   }
+  if (r.usosMin != null) { if (r.usos) r.usos.min = r.usosMin; delete r.usosMin; }
   if (!r.modo) r.modo = r.especial || r.usos || r.acao ? 'ativar' : 'sempre';
   return r;
 }

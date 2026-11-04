@@ -1,895 +1,1294 @@
 {
-  "_aviso": "Regras próprias de habilidades e vantagens (valem no MSA e no MSS). A chave é o nome sem acento, em minúsculas. modo: sempre (aplicada sozinha) | ligar (botão liga/desliga) | ativar (botão com custo, usos ou duração). efeitos: mesmo formato do lápis do mestre. contra: tipos de criatura do oponente (tiposCriatura no base.json). Decisões do autor nas planilhas de 20/10 e 26/10. especial: efeito próprio (ver server/actions.js, ESPECIAIS); escolhas: o que o jogador escolhe ao ativar (alvo, aliado, humor, sub, pericia, tipoIp, item, itemDoAlvo, efeito).",
-  "comunicacao selvagem": {
-    "modo": "ligar",
-    "efeitos": "+10% em Trato de Animais",
-    "texto": "ligue ao interagir com animais, bestas ou monstros selvagens; animal que você acalmou pode sofrer ataque surpresa"
+ "_aviso": "Regras próprias de habilidades e vantagens (valem no MSA e no MSS). A chave é o nome sem acento, em minúsculas. modo: sempre (aplicada sozinha) | ligar (botão liga/desliga) | ativar (botão com custo, usos ou duração). efeitos: mesmo formato do lápis do mestre. contra: tipos de criatura do oponente (tiposCriatura no base.json). Decisões do autor nas planilhas de 20/10 e 26/10. especial: efeito próprio (ver server/actions.js, ESPECIAIS); escolhas: o que o jogador escolhe ao ativar (alvo, aliado, humor, sub, pericia, tipoIp, item, itemDoAlvo, efeito).",
+ "comunicacao selvagem": {
+  "modo": "ligar",
+  "efeitos": "+10% em Trato de Animais",
+  "texto": "ligue ao interagir com animais, bestas ou monstros selvagens; animal que você acalmou pode sofrer ataque surpresa"
+ },
+ "implantes de qualidade": {
+  "modo": "sempre",
+  "efeitos": "+1 IP geral",
+  "texto": "implantes +1 de durabilidade e reparo com vantagem (entra com o controle de implantes)"
+ },
+ "alma de ciborgue": {
+  "modo": "sempre",
+  "rmnp": 20,
+  "imune": [
+   "Dor"
+  ],
+  "humanidadeMax": -10,
+  "texto": "dano vorpal / resistências e vulnerabilidades dependem dos implantes (entra com o controle de implantes)"
+ },
+ "juggernaut": {
+  "modo": "sempre",
+  "especial": "juggernaut",
+  "usos": {
+   "max": 1,
+   "recarga": "descanso-longo"
   },
-  "implantes de qualidade": {
-    "modo": "sempre",
-    "efeitos": "+1 IP geral",
-    "texto": "implantes +1 de durabilidade e reparo com vantagem (entra com o controle de implantes)"
+  "texto": "1ª vez por descanso longo que o PV ficaria abaixo de 0 no combate: fica com 1 PV (automático)"
+ },
+ "mente cibernetica": {
+  "modo": "sempre",
+  "contra": [
+   "drone",
+   "automato"
+  ],
+  "vantagem": [
+   "iniciativa",
+   "ataque"
+  ],
+  "defesa": 15
+ },
+ "zona de abate": {
+  "modo": "ligar",
+  "vantagem": [
+   "briga.deslocar"
+  ],
+  "texto": "vale a até 6 m de uma armadilha sua; manobras Deslocar/Derrubar em criaturas até 2 tamanhos maiores, sem soltar a arma"
+ },
+ "sensores sismicos endodermicos": {
+  "modo": "ligar",
+  "vantagem": [
+   "sentidos.tato",
+   "sentidos.audicao"
+  ],
+  "texto": "ligue para detectar criaturas invisíveis ou escondidas a até 9 m que tocam o solo (elas não têm Ataque Surpresa contra você)"
+ },
+ "membros adaptados": {
+  "modo": "ligar",
+  "texto": "Natação 9 m ou Escalada 9 m (ligar custa uma ação principal)"
+ },
+ "receptor neural": {
+  "modo": "sempre",
+  "subpericias": [
+   {
+    "pericia": "sentidos",
+    "id": "sentidos.ondas",
+    "nome": "Ondas",
+    "descricao": "Detecta ondas de equipamentos a até 9 m e flutuações de rádio (sem ouvir o conteúdo). Só para quem tem Receptor Neural."
+   }
+  ],
+  "texto": "libera a subperícia Sentidos › Ondas"
+ },
+ "ataque afiado": {
+  "modo": "sempre",
+  "melhoria": {
+   "id": "afiada",
+   "nome": "Afiada",
+   "armas": "arma-branca",
+   "horas": 2
   },
-  "alma de ciborgue": {
-    "modo": "sempre",
-    "rmnp": 20,
-    "imune": [
-      "Dor"
-    ],
-    "humanidadeMax": -10,
-    "texto": "dano vorpal / resistências e vulnerabilidades dependem dos implantes (entra com o controle de implantes)"
+  "texto": "afie a arma branca (2 h de treino): +1 passo na progressão de dano a cada vez que recebeu esta habilidade; só vale para você"
+ },
+ "aperfeicoamento do soldado": {
+  "modo": "sempre",
+  "melhoria": {
+   "id": "aperfeicoada",
+   "nome": "Aperfeiçoada",
+   "armas": "armas-de-fogo",
+   "horas": 2
   },
-  "juggernaut": {
-    "modo": "sempre",
-    "especial": "juggernaut",
-    "usos": {
-      "max": 1,
-      "recarga": "descanso-longo"
-    },
-    "texto": "1ª vez por descanso longo que o PV ficaria abaixo de 0 no combate: fica com 1 PV (automático)"
+  "texto": "aperfeiçoe a arma de fogo (2 h de treino): +1 passo na progressão de dano a cada vez que recebeu esta habilidade; só vale para você"
+ },
+ "essencia monstruosa": {
+  "modo": "ativar",
+  "acao": "completa",
+  "especial": "essencia",
+  "custo": {
+   "hum": "1d4"
   },
-  "mente cibernetica": {
-    "modo": "sempre",
-    "contra": [
-      "drone",
-      "automato"
-    ],
-    "vantagem": [
-      "iniciativa",
-      "ataque"
-    ],
-    "defesa": 15
+  "duracao": "combate",
+  "texto": "escolha um monstro abatido no campo: até o fim do combate, o seu atributo fica igual ao mais alto dele (ex.: CONS 18); perde 1d4 HUM"
+ },
+ "nucleo energetico": {
+  "modo": "sempre",
+  "recurso": {
+   "id": "nucleo",
+   "nome": "Cargas do Núcleo",
+   "max": "3+MOD CONS",
+   "recarga": "descanso-longo"
   },
-  "zona de abate": {
-    "modo": "ligar",
-    "vantagem": [
-      "briga.deslocar"
-    ],
-    "texto": "vale a até 6 m de uma armadilha sua; manobras Deslocar/Derrubar em criaturas até 2 tamanhos maiores, sem soltar a arma"
+  "texto": "cargas = 3 + MOD CONS (voltam no descanso longo): +2d6 de dano elétrico num ataque físico (opção do ataque) ou servir de bateria; com coração humano, 1d6 de dano a cada carga"
+ },
+ "aceleracao sinaptica": {
+  "modo": "ativar",
+  "acao": "livre",
+  "custo": {
+   "recurso": "nucleo",
+   "qtd": 2
   },
-  "sensores sismicos endodermicos": {
-    "modo": "ligar",
-    "vantagem": [
-      "sentidos.tato",
-      "sentidos.audicao"
-    ],
-    "texto": "ligue para detectar criaturas invisíveis ou escondidas a até 9 m que tocam o solo (elas não têm Ataque Surpresa contra você)"
+  "duracao": {
+   "turnos": 3
   },
-  "membros adaptados": {
-    "modo": "ligar",
-    "texto": "Natação 9 m ou Escalada 9 m (ligar custa uma ação principal)"
+  "efeitos": "FOR +2",
+  "vantagem": [
+   "testes"
+  ],
+  "fim": {
+   "dano": "2d4",
+   "nome": "superaquecimento (dano puro)"
   },
-  "receptor neural": {
-    "modo": "sempre",
-    "subpericias": [
-      {
-        "pericia": "sentidos",
-        "id": "sentidos.ondas",
-        "nome": "Ondas",
-        "descricao": "Detecta ondas de equipamentos a até 9 m e flutuações de rádio (sem ouvir o conteúdo). Só para quem tem Receptor Neural."
-      }
-    ],
-    "texto": "libera a subperícia Sentidos › Ondas"
+  "texto": "+3 m de deslocamento"
+ },
+ "carga de emergencia": {
+  "modo": "ativar",
+  "acao": "principal",
+  "usos": {
+   "max": 1,
+   "recarga": "descanso-longo"
   },
-  "ataque afiado": {
-    "modo": "sempre",
-    "melhoria": {
-      "id": "afiada",
-      "nome": "Afiada",
-      "armas": "arma-branca",
-      "horas": 2
-    },
-    "texto": "afie a arma branca (2 h de treino): +1 passo na progressão de dano a cada vez que recebeu esta habilidade; só vale para você"
+  "requerItem": "bateria|gerador",
+  "especial": "pvTemp",
+  "pvTemp": "2d6",
+  "duracao": "combate",
+  "texto": "ligado a uma bateria ou gerador: 2d6 PV temporários até o fim do combate; destrava implante travado"
+ },
+ "quebra hordas": {
+  "modo": "sempre",
+  "especial": "quebraHordas",
+  "texto": "1 vez por turno, ao acertar: o app oferece um ataque extra contra outra criatura da mesma raça (campo Raça da ficha) a até 1,5 m do alvo"
+ },
+ "guerras diplomaticas": {
+  "modo": "sempre",
+  "especial": "guerrasDiplomaticas",
+  "texto": "ao causar dano, o app oferece (ação bônus) Intimidação contra WILL% + 30 do alvo; se passar, ele volta à situação dos Civilizados"
+ },
+ "dano ao sistema": {
+  "modo": "sempre",
+  "especial": "danoSistema",
+  "dano": "2d6+MOD INT",
+  "texto": "ataque do Emissor Neural (Computação › Operacional): Normal contra drone, autômato ou máquina; Difícil contra item na mão de alguém"
+ },
+ "maquina implacavel": {
+  "modo": "sempre",
+  "especial": "investida",
+  "texto": "na Investida (opção do ataque): dano +1 passo e +1 por quadrado avançado; o teste de FOR% do alvo para não cair tem desvantagem; ignora terreno acidentado"
+ },
+ "civilizados": {
+  "modo": "sempre",
+  "especial": "civilizados",
+  "texto": "quem não foi atacado por você precisa passar em WILL% Difícil para lhe atacar (automático); quem lhe ataca primeiro fica com −10% em todos os testes até o fim da batalha"
+ },
+ "despertar": {
+  "modo": "ativar",
+  "especial": "pvTemp",
+  "pvTemp": "1d6",
+  "pvTempMais": "corpo monstruoso",
+  "armaNatural": 1,
+  "imune": [
+   "Amedrontado"
+  ],
+  "humor": "corajoso",
+  "duracao": {
+   "turnos": 5
   },
-  "aperfeicoamento do soldado": {
-    "modo": "sempre",
-    "melhoria": {
-      "id": "aperfeicoada",
-      "nome": "Aperfeiçoada",
-      "armas": "armas-de-fogo",
-      "horas": 2
-    },
-    "texto": "aperfeiçoe a arma de fogo (2 h de treino): +1 passo na progressão de dano a cada vez que recebeu esta habilidade; só vale para você"
+  "texto": "1d6 PV temporários e Arma natural +1 (os dois +1 por Corpo monstruoso), imune a medo, humor Corajoso. 1 + MOD CONS vezes por dia; dura 5 turnos e renova 1 turno sempre que você ataca ou é atacado; atacado ou ameaçado, pode despertar como ação livre",
+  "usos": {
+   "max": "1+MOD CONS",
+   "min": 1,
+   "recarga": "descanso-longo"
   },
-  "essencia monstruosa": {
-    "modo": "ativar",
-    "acao": "completa",
-    "especial": "essencia",
-    "custo": {
-      "hum": "1d4"
-    },
-    "duracao": "combate",
-    "texto": "escolha um monstro abatido no campo: até o fim do combate, o seu atributo fica igual ao mais alto dele (ex.: CONS 18); perde 1d4 HUM"
+  "renovaEmCombate": true
+ },
+ "titereiro": {
+  "modo": "ativar",
+  "acao": "bonus",
+  "especial": "humorForcado",
+  "subs": [
+   "manipulacao.labia",
+   "manipulacao.intimidacao",
+   "manipulacao.seducao"
+  ],
+  "resiste": "WILL",
+  "humores": "todos",
+  "turnosAlvo": "1d4",
+  "escolhas": [
+   "alvo",
+   "sub",
+   "humor"
+  ],
+  "texto": "Lábia, Intimidação ou Sedução contra o WILL% do alvo: passou, o humor dele vira o que você escolher e fica preso por 1d4 turnos; se você lhe causar dano no mesmo turno, pode tentar deixá-lo Amedrontado (o mestre aplica)"
+ },
+ "foco de atencao": {
+  "modo": "ativar",
+  "acao": "bonus",
+  "especial": "humorForcado",
+  "subs": [
+   "manipulacao.seducao",
+   "manipulacao.impressionar"
+  ],
+  "resiste": "RMNP",
+  "humores": [
+   "atraido",
+   "enojado"
+  ],
+  "turnosAlvo": "1d4+1",
+  "foco": true,
+  "escolhas": [
+   "alvo",
+   "sub",
+   "humor"
+  ],
+  "texto": "Sedução ou Impressionar contra o R.MNP do alvo: ele fica Atraído ou Enojado por 1d4+1 turnos; no combate, WILL% Muito Difícil ou só ataca você; você soma o seu CAR na defesa contra ele"
+ },
+ "terror psicologico": {
+  "modo": "ativar",
+  "acao": "principal",
+  "especial": "humorForcado",
+  "subs": [
+   "manipulacao.tortura"
+  ],
+  "resiste": "RMNP",
+  "humores": [
+   "amedrontado"
+  ],
+  "turnosAlvo": "1d4",
+  "trauma": true,
+  "escolhas": [
+   "alvo"
+  ],
+  "texto": "Tortura contra o R.MNP do alvo: Amedrontado, Trauma Momentâneo (−30% no ataque por 1d4 turnos) e 1d6 de dano psicológico (Sanidade)"
+ },
+ "arte que cura": {
+  "modo": "ativar",
+  "acao": "completa",
+  "especial": "pvTempAliados",
+  "usos": {
+   "max": 1,
+   "recarga": "descanso-longo"
   },
-  "nucleo energetico": {
-    "modo": "sempre",
+  "escolhas": [
+   "subArte"
+  ],
+  "texto": "Arte NORMAL: os aliados no campo recebem (MOD CAR)d6 de PV temporários até o fim do combate; 1 vez por descanso longo"
+ },
+ "imunidade diplomatica": {
+  "modo": "ligar",
+  "vantagem": [
+   "testes"
+  ],
+  "defesaAtributo": "CAR",
+  "desvantagemContraMim": true,
+  "texto": "ligue quando for atacado dentro de uma cidade: seus testes com vantagem, os ataques contra você com desvantagem e o seu CAR soma nas defesas. (+20% em diplomacia: falta saber qual perícia)"
+ },
+ "inspiracao motivacional": {
+  "modo": "ativar",
+  "acao": "completa",
+  "especial": "inspirarPericia",
+  "usos": {
+   "max": 1,
+   "recarga": "descanso"
+  },
+  "escolhas": [
+   "pericia"
+  ],
+  "texto": "Liderança NORMAL: você e os aliados fazem a perícia escolhida com vantagem por 2d4 turnos; 1 vez por descanso (curto ou longo)"
+ },
+ "ataque inesperado": {
+  "modo": "sempre",
+  "texto": "no ataque surpresa, o dano da arma sobe 1 passo para cada ponto de MOD CAR (automático)"
+ },
+ "inspiracao": {
+  "modo": "ativar",
+  "acao": "bonus",
+  "especial": "inspiracao",
+  "recurso": {
+   "id": "inspiracao",
+   "nome": "Inspirações",
+   "max": "1+MOD CAR",
+   "min": 1,
+   "recarga": "descanso-longo"
+  },
+  "custo": {
+   "recurso": "inspiracao",
+   "qtd": 1
+  },
+  "escolhas": [
+   "aliado"
+  ],
+  "texto": "+1d20 no próximo teste (seu ou de um aliado; não vale em testes de combate); MOD CAR + 1 vezes por descanso longo (mínimo 1)",
+  "porClasse": {
+   "sortudo": {
     "recurso": {
-      "id": "nucleo",
-      "nome": "Cargas do Núcleo",
-      "max": "3+MOD CONS",
-      "recarga": "descanso-longo"
+     "id": "inspiracao",
+     "nome": "Inspirações",
+     "max": "1+MOD WILL",
+     "min": 1,
+     "recarga": "descanso-longo"
     },
-    "texto": "cargas = 3 + MOD CONS (voltam no descanso longo): +2d6 de dano elétrico num ataque físico (opção do ataque) ou servir de bateria; com coração humano, 1d6 de dano a cada carga"
-  },
-  "aceleracao sinaptica": {
-    "modo": "ativar",
-    "acao": "livre",
-    "custo": {
-      "recurso": "nucleo",
-      "qtd": 2
-    },
-    "duracao": {
-      "turnos": 3
-    },
-    "efeitos": "FOR +2",
-    "vantagem": [
-      "testes"
-    ],
-    "fim": {
-      "dano": "2d4",
-      "nome": "superaquecimento (dano puro)"
-    },
-    "texto": "+3 m de deslocamento"
-  },
-  "carga de emergencia": {
-    "modo": "ativar",
-    "acao": "principal",
-    "usos": {
-      "max": 1,
-      "recarga": "descanso-longo"
-    },
-    "requerItem": "bateria|gerador",
-    "especial": "pvTemp",
-    "pvTemp": "2d6",
-    "duracao": "combate",
-    "texto": "ligado a uma bateria ou gerador: 2d6 PV temporários até o fim do combate; destrava implante travado"
-  },
-  "quebra hordas": {
-    "modo": "sempre",
-    "especial": "quebraHordas",
-    "texto": "1 vez por turno, ao acertar: o app oferece um ataque extra contra outra criatura da mesma raça (campo Raça da ficha) a até 1,5 m do alvo"
-  },
-  "guerras diplomaticas": {
-    "modo": "sempre",
-    "especial": "guerrasDiplomaticas",
-    "texto": "ao causar dano, o app oferece (ação bônus) Intimidação contra WILL% + 30 do alvo; se passar, ele volta à situação dos Civilizados"
-  },
-  "dano ao sistema": {
-    "modo": "sempre",
-    "especial": "danoSistema",
-    "dano": "2d6+MOD INT",
-    "texto": "ataque do Emissor Neural (Computação › Operacional): Normal contra drone, autômato ou máquina; Difícil contra item na mão de alguém"
-  },
-  "maquina implacavel": {
-    "modo": "sempre",
-    "especial": "investida",
-    "texto": "na Investida (opção do ataque): dano +1 passo e +1 por quadrado avançado; o teste de FOR% do alvo para não cair tem desvantagem; ignora terreno acidentado"
-  },
-  "civilizados": {
-    "modo": "sempre",
-    "especial": "civilizados",
-    "texto": "quem não foi atacado por você precisa passar em WILL% Difícil para lhe atacar (automático); quem lhe ataca primeiro fica com −10% em todos os testes até o fim da batalha"
-  },
-  "despertar": {
-    "modo": "ativar",
-    "especial": "pvTemp",
-    "pvTemp": "1d6",
-    "pvTempMais": "corpo monstruoso",
-    "armaNatural": 1,
-    "imune": [
-      "Amedrontado"
-    ],
-    "humor": "corajoso",
-    "duracao": "combate",
-    "texto": "1d6 PV temporários e Arma natural +1 (os dois +1 por Corpo monstruoso), imune a medo, humor Corajoso, até o fim do combate; atacado ou ameaçado, pode despertar como ação livre"
-  },
-  "titereiro": {
-    "modo": "ativar",
-    "acao": "bonus",
-    "especial": "humorForcado",
-    "subs": [
-      "manipulacao.labia",
-      "manipulacao.intimidacao",
-      "manipulacao.seducao"
-    ],
-    "resiste": "WILL",
-    "humores": "todos",
-    "turnosAlvo": "1d4",
-    "escolhas": [
-      "alvo",
-      "sub",
-      "humor"
-    ],
-    "texto": "Lábia, Intimidação ou Sedução contra o WILL% do alvo: passou, o humor dele vira o que você escolher e fica preso por 1d4 turnos; se você lhe causar dano no mesmo turno, pode tentar deixá-lo Amedrontado (o mestre aplica)"
-  },
-  "foco de atencao": {
-    "modo": "ativar",
-    "acao": "bonus",
-    "especial": "humorForcado",
-    "subs": [
-      "manipulacao.seducao",
-      "manipulacao.impressionar"
-    ],
-    "resiste": "RMNP",
-    "humores": [
-      "atraido",
-      "enojado"
-    ],
-    "turnosAlvo": "1d4+1",
-    "foco": true,
-    "escolhas": [
-      "alvo",
-      "sub",
-      "humor"
-    ],
-    "texto": "Sedução ou Impressionar contra o R.MNP do alvo: ele fica Atraído ou Enojado por 1d4+1 turnos; no combate, WILL% Muito Difícil ou só ataca você; você soma o seu CAR na defesa contra ele"
-  },
-  "terror psicologico": {
-    "modo": "ativar",
-    "acao": "principal",
-    "especial": "humorForcado",
-    "subs": [
-      "manipulacao.tortura"
-    ],
-    "resiste": "RMNP",
-    "humores": [
-      "amedrontado"
-    ],
-    "turnosAlvo": "1d4",
-    "trauma": true,
-    "escolhas": [
-      "alvo"
-    ],
-    "texto": "Tortura contra o R.MNP do alvo: Amedrontado, Trauma Momentâneo (−30% no ataque por 1d4 turnos) e 1d6 de dano psicológico (Sanidade)"
-  },
-  "arte que cura": {
-    "modo": "ativar",
-    "acao": "completa",
-    "especial": "pvTempAliados",
-    "usos": {
-      "max": 1,
-      "recarga": "descanso-longo"
-    },
-    "escolhas": [
-      "subArte"
-    ],
-    "texto": "Arte NORMAL: os aliados no campo recebem (MOD CAR)d6 de PV temporários até o fim do combate; 1 vez por descanso longo"
-  },
-  "imunidade diplomatica": {
-    "modo": "ligar",
-    "vantagem": [
-      "testes"
-    ],
-    "defesaAtributo": "CAR",
-    "desvantagemContraMim": true,
-    "texto": "ligue quando for atacado dentro de uma cidade: seus testes com vantagem, os ataques contra você com desvantagem e o seu CAR soma nas defesas. (+20% em diplomacia: falta saber qual perícia)"
-  },
-  "inspiracao motivacional": {
-    "modo": "ativar",
-    "acao": "completa",
-    "especial": "inspirarPericia",
-    "usos": {
-      "max": 1,
-      "recarga": "descanso"
-    },
-    "escolhas": [
-      "pericia"
-    ],
-    "texto": "Liderança NORMAL: você e os aliados fazem a perícia escolhida com vantagem por 2d4 turnos; 1 vez por descanso (curto ou longo)"
-  },
-  "ataque inesperado": {
-    "modo": "sempre",
-    "texto": "no ataque surpresa, o dano da arma sobe 1 passo para cada ponto de MOD CAR (automático)"
-  },
-  "inspiracao": {
-    "modo": "ativar",
-    "acao": "bonus",
-    "especial": "inspiracao",
-    "recurso": {
-      "id": "inspiracao",
-      "nome": "Inspirações",
-      "max": "1+MOD CAR",
-      "min": 1,
-      "recarga": "descanso-longo"
-    },
-    "custo": {
-      "recurso": "inspiracao",
-      "qtd": 1
-    },
-    "escolhas": [
-      "aliado"
-    ],
-    "texto": "+1d20 no próximo teste (seu ou de um aliado; não vale em testes de combate); MOD CAR + 1 vezes por descanso longo (mínimo 1)"
-  },
-  "mestre das imitacoes": {
-    "modo": "sempre",
-    "vantagem": [
-      "espionagem.maquiagem"
-    ],
-    "texto": "vantagem em Maquiagem para imitar alguém que conhece; 15 min observando + Investigação: +20% (o mestre aplica)"
-  },
-  "olhar penetrante": {
-    "modo": "ativar",
-    "especial": "marcaAlvo",
-    "bonus": 10,
-    "usos": {
-      "max": 1,
-      "recarga": "descanso-longo"
-    },
-    "escolhas": [
-      "alvo"
-    ],
-    "texto": "depois de usar Interrogatório no alvo: +10% nos testes contra ele (inclusive combate) até o fim da cena; 1 vez por descanso longo"
-  },
-  "conhecimento acumulado": {
-    "modo": "sempre",
-    "mod": {
-      "INT": 1
-    },
-    "texto": "+1 no MOD INT a cada vez que recebeu (3º nível e a cada 4)"
-  },
-  "manuseio profissional": {
-    "modo": "sempre",
-    "texto": "item na mão: +10% no ataque e nunca perde durabilidade (automático); aprimorado +1 e maestria 2 com uma mão: o mestre aplica (aprimoramentos ainda não estão no app)"
-  },
-  "afericao perfeita": {
-    "modo": "sempre",
-    "vantagem": [
-      "engenharia",
-      "computacao",
-      "armadilhas"
-    ],
-    "requerItem": "kit|ferrament",
-    "texto": "com kit ou ferramentas no inventário: vantagem em Engenharia, Computação e Armadilhas (automático)"
-  },
-  "restaurador": {
-    "modo": "sempre",
-    "texto": "+10% no teste de reparo e o reparo recupera até 2 de durabilidade (automático)"
-  },
-  "reparo improvisado": {
-    "modo": "sempre",
-    "texto": "repara com sucata no lugar do kit (1 h por item); o reparo nunca estraga o item de vez, nem com erro crítico (automático)"
-  },
-  "padrao de ataque": {
-    "modo": "sempre",
-    "texto": "depois do 3º turno de um inimigo, +10% nas defesas contra ele (automático)"
-  },
-  "armadura improvisada": {
-    "modo": "ativar",
-    "acao": "bonus",
-    "especial": "ipTemp",
-    "repetir": true,
-    "escolhas": [
-      "aliado",
-      "tipoIp"
-    ],
-    "texto": "+1 de IP por uso (em você ou num aliado a 1 passo): até +2 geral OU até +4 de um tipo; até o fim do combate"
-  },
-  "gambiarras profissionais": {
-    "modo": "ativar",
-    "especial": "itemGambiarra",
-    "sucata": true,
-    "turnos": "2d4",
-    "usos": {
-      "max": 1,
-      "recarga": "descanso"
-    },
-    "escolhas": [
-      "itemQuebrado"
-    ],
-    "texto": "um item quebrado volta a funcionar (durabilidade 1) por 2d4 turnos e depois quebra de novo; consome sucata; 1 vez por descanso (curto ou longo)"
-  },
-  "gambiarra rapida": {
-    "modo": "ativar",
-    "acao": "completa",
-    "especial": "itemGambiarra",
-    "teste": "Difícil",
-    "turnos": "10",
-    "escolhas": [
-      "itemQuebrado"
-    ],
-    "texto": "reparo DIFÍCIL: o item quebrado funciona por 10 turnos (não serve para consumíveis)"
-  },
-  "reparo de roda": {
-    "modo": "ativar",
-    "acao": "principal",
-    "especial": "reparoRoda",
-    "repetir": true,
-    "escolhas": [
-      "item"
-    ],
-    "texto": "+1d4 de durabilidade num drone ou veículo até o fim do combate (se fosse quebrar ao perder, fica com 1); vantagem em Engenharia › Mecânica para reparar drones e veículos (o mestre aplica)"
-  },
-  "engenharia reversa": {
-    "modo": "ativar",
-    "acao": "principal",
-    "especial": "engenhariaReversa",
-    "escolhas": [
-      "alvo",
-      "itemDoAlvo"
-    ],
-    "texto": "Engenharia DIFÍCIL mirando um item: passou, o ataque localizado nesse item tira 1 de durabilidade por acerto"
-  },
-  "destruidor de itens": {
-    "modo": "sempre",
-    "texto": "+1d6 de dano no ataque localizado num item (automático)"
-  },
-  "bugigangas de bolso": {
-    "modo": "ativar",
-    "acao": "bonus",
-    "especial": "bugiganga",
-    "usos": {
-      "max": 2,
-      "recarga": "descanso-longo"
-    },
-    "escolhas": [
-      "efeito"
-    ],
-    "texto": "fumaça (raio 3 m) ou ruído (raio 15 m): todos na área fazem CONS% Normal ou ficam Aturdidos, e −15% até o fim do turno; 2 por descanso longo"
-  },
-  "gerador eletrico portatil": {
-    "modo": "ativar",
-    "acao": "livre",
-    "usos": {
-      "max": 1,
-      "recarga": "descanso"
-    },
-    "texto": "liga equipamentos e recarrega baterias de aliados a 1,5 m; até 1 hora por descanso; taser de 1d4 elétrico (o item entra com as invenções)"
-  },
-  "invencao protetora": {
-    "modo": "sempre",
-    "acao": "reacao",
-    "especial": "reduzirDano",
-    "texto": "ao tomar dano: reação, gasta uma sucata e reduz o dano em 1d6 (o app oferece)"
-  },
-  "invencao excl protetora": {
-    "modo": "sempre",
-    "acao": "reacao",
-    "especial": "absorverDano",
-    "texto": "se o ataque o deixar com 0 PV ou menos: reação, a Invenção! entra no caminho, absorve 100% do dano e é destruída (o app oferece)"
-  },
-  "digestao extracorporea": {
-    "modo": "ativar",
-    "acao": "completa",
-    "especial": "devorar",
-    "escolhas": [
-      "alvo"
-    ],
-    "arma": {
-      "nome": "Jato ácido (Digestão extracorpórea)",
-      "dano": "2d6",
-      "tipoDano": "Ácido",
-      "metros": 4.5,
-      "area": true,
-      "usos": {
-        "max": 1,
-        "recarga": "descanso"
-      },
-      "marcaNoAlvo": {
-        "nome": "Ácido digestivo",
-        "digestao": true,
-        "cena": true,
-        "texto": "acertado pelo jato ácido (pode ser devorado)"
-      },
-      "pericia": "armas-de-fogo.jato"
-    },
-    "texto": "ataque em cone (4,5 m, 2d6 ácido, 1 por descanso: aparece nas armas); o botão Ativar devora (ação completa) quem foi acertado e está abatido: +1d4 PV"
-  },
-  "evolucao humana": {
-    "modo": "sempre",
-    "resistencia": [
-      "Corte"
-    ],
-    "imuneCritico": true,
-    "usos": {
-      "max": 1,
-      "recarga": "descanso-longo"
-    },
-    "texto": "Roubar Característica na hora (ação completa) e +2d4 PV, 1 vez por descanso longo; Licantropia falsa vira qualquer pessoa com Disfarce Difícil com vantagem (o mestre aplica)"
-  },
-  "mutacao precisa": {
-    "modo": "ativar",
-    "especial": "mutacaoPrecisa",
-    "usos": {
-      "max": 1,
-      "recarga": "descanso"
-    },
-    "escolhas": [
-      "pericia",
-      "pontos"
-    ],
-    "texto": "10 turnos: vantagem na perícia escolhida e até 6 pontos da CONS passados para a FOR; braço em forma de arma branca; 1 vez por descanso"
-  },
-  "roubar caracteristica": {
-    "modo": "ativar",
-    "acao": "completa",
-    "especial": "roubarCaracteristica",
-    "repetir": true,
-    "escolhas": [
-      "alvoMorto",
-      "caracteristica"
-    ],
-    "texto": "escolha uma característica (não única) de uma criatura morta no campo: entra depois do próximo descanso longo (uma por vez; −3 PV persistentes)"
-  },
-  "caos geneticos": {
-    "modo": "ativar",
-    "acao": "principal",
-    "especial": "caosGenetico",
-    "repetir": true,
-    "escolhas": [
-      "alvo"
-    ],
-    "texto": "alvo a até 4,5 m (não mutante): CONS% contra os marcadores de vulnerabilidade; falhou, 2d4 de dano puro e mutação na hora; passou, perde os marcadores"
-  },
-  "epidemia": {
-    "modo": "sempre",
-    "especial": "epidemia",
-    "texto": "quem não é mutante desenvolve mutação a até 15 m de você: os outros no raio fazem CONS% contra os próprios marcadores de vulnerabilidade (automático)"
-  },
-  "esporos gasosos": {
-    "modo": "ativar",
-    "acao": "bonus",
-    "especial": "esporos",
-    "usos": {
-      "max": 1,
-      "recarga": "descanso"
-    },
-    "texto": "raio de 3 m: +1 marcador genético e −10% em CONS% até o fim do combate; 1 vez por descanso"
-  },
-  "morte epidemica": {
-    "modo": "sempre",
-    "especial": "morteEpidemica",
-    "texto": "chegou a 0 PV: explode (9 m) — 2d10 radioativo e 2 marcadores genéticos em todos; com mutação +1d10, +1 marcador e mutação de 1d4 turnos; você fica em coma (automático)"
-  },
-  "muco radioativo": {
-    "modo": "sempre",
-    "arma": {
-      "nome": "Muco radioativo",
-      "dano": "2d6",
-      "tipoDano": "Radiação",
-      "pericia": "armas-de-fogo.projeteis",
-      "metros": 9,
-      "usos": {
-        "max": 3,
-        "recarga": "descanso-longo"
-      },
-      "extraContraMutacao": "1d6",
-      "marcaNoAlvo": {
-        "nome": "Muco radioativo",
-        "desvantagemCons": true,
-        "combate": true,
-        "texto": "testes de CONS% em desvantagem até o fim do combate"
-      }
-    },
-    "texto": "ataque especial (aparece nas armas): 2d6 radioativo a até 9 m, +1d6 contra quem tem mutação; o alvo faz CONS% em desvantagem até o fim do combate; 3 por descanso longo"
-  },
-  "pragas": {
-    "modo": "ativar",
-    "acao": "principal",
-    "especial": "pragas",
-    "repetir": true,
-    "escolhas": [
-      "alvo"
-    ],
-    "texto": "alvo a até 4,5 m com marcadores genéticos (eles estouram e somem): por 2d4 turnos +1 no dano físico que toma, desvantagem em Percepção, sem concentração e 1 de dano por turno"
-  },
-  "toque contagioso": {
-    "modo": "sempre",
-    "especial": "toqueContagioso",
-    "aposToque": true,
-    "acaoOferta": "livre",
-    "texto": "depois de acertar um toque/Briga, o app oferece: CONS% Difícil ou o alvo desenvolve a sua mutação descontrolada por 5 turnos e toma 1d6; cada alvo 1 vez por descanso longo"
-  },
-  "mutacao monstruosa": {
-    "modo": "sempre",
-    "escolhaFixa": "tipoDano",
-    "danoEscolhido": "1d4",
-    "texto": "+1d4 do tipo escolhido (elemental ou de energia) nos ataques físicos"
-  },
-  "radiacao incontida": {
-    "modo": "ativar",
-    "especial": "radiacao",
-    "usos": {
-      "max": 1,
-      "recarga": "descanso"
-    },
-    "escolhas": [
-      "radiacao"
-    ],
-    "texto": "brilhar (+5% de defesa, sem furtividade, 15 min) ou superaquecer (explosão: 1d6 em você, 2d4 e 2 marcadores de vulnerabilidade a 1,5 m); 1 vez por descanso"
-  },
-  "regeneracao degenerativa": {
-    "modo": "ativar",
-    "acao": "bonus",
-    "especial": "regenDegenerativa",
-    "repetir": true,
-    "texto": "gasta 1 de CONS e cura 1d4 PV (1 por turno); CONS 0 = morte; volta 1 de CONS por descanso"
-  },
-  "corpo adaptado 2": {
-    "modo": "sempre",
-    "escolhaFixa": "resistencia",
-    "trocaNoDescanso": true,
-    "texto": "resistência (metade do dano) ao tipo escolhido; troca no fim de cada descanso longo"
-  },
-  "toxico": {
-    "modo": "sempre",
-    "especial": "toxico",
-    "texto": "+25% para resistir a venenos (o mestre aplica no teste); animal, besta ou monstro que lhe causar dano corpo a corpo faz WILL% Normal para continuar atacando (automático)"
-  },
-  "vetor": {
-    "modo": "sempre",
-    "especial": "vetor",
-    "texto": "+10% para resistir a doença (o mestre aplica); doente, quem o acerta com ataque físico ganha 1 marcador de vulnerabilidade (até 3; automático)"
-  },
-  "analista de risco": {
-    "modo": "ativar",
-    "acao": "bonus",
-    "especial": "analista",
-    "repetir": true,
-    "escolhas": [
-      "alvo"
-    ],
-    "texto": "INT% Normal: contra o alvo, +1d4 de dano e +10% nas defesas até o fim do combate; vantagem em Armadilhas › Desarmar; mostra PV e durabilidade"
-  },
-  "foco absoluto": {
-    "modo": "ligar",
-    "efeitos": "+10% em todos os testes",
-    "texto": "ligue enquanto estiver concentrado: testes de Concentração são Normais (ND 70) e os demais +10%"
-  },
-  "melhor do mundo": {
-    "modo": "sempre",
-    "escolhaFixa": "pericias",
-    "bonus": 5,
-    "aPartirDe": 6,
-    "aCada": 3,
-    "exceto": [
-      "briga",
-      "arma-branca",
-      "armas-de-fogo"
-    ],
-    "texto": "+5% numa perícia base à escolha no 6º nível e a cada 3 níveis (exceto combate)"
-  },
-  "bug na rede": {
-    "modo": "ativar",
-    "acao": "principal",
-    "especial": "bugNaRede",
-    "repetir": true,
-    "escolhas": [
-      "alvo",
-      "itemDoAlvo"
-    ],
-    "texto": "Computação › Decodificação Normal (membro cibernético: INT% contra WILL% + 30): o item a até 15 m fica Travado (equipado, mas sem uso) até o fim do combate"
-  },
-  "controle remoto": {
-    "modo": "ativar",
-    "acao": "bonus",
-    "especial": "controleRemoto",
-    "repetir": true,
-    "escolhas": [
-      "alvo"
-    ],
-    "texto": "drone, autômato ou sistema de defesa a até 60 m vira seu companheiro por 10 turnos e age logo depois de você"
-  },
-  "programador": {
-    "modo": "ativar",
-    "acao": "completa",
-    "especial": "programador",
-    "repetir": true,
-    "escolhas": [
-      "itemQualquer"
-    ],
-    "texto": "Computação › Programação Difícil: o item elétrico/eletrônico vira seu companheiro (ação livre para controlar; até 3); outros têm −30% para manipulá-lo"
-  },
-  "sobrecarga neural": {
-    "modo": "sempre",
-    "arma": {
-      "nome": "Sobrecarga Neural",
-      "dano": "2d8",
-      "tipoDano": "Elétrico",
-      "pericia": "computacao.interface-neural",
-      "metros": 15,
-      "ignoraIp": true,
-      "contraTipos": [
-        "drone",
-        "automato",
-        "maquina",
-        "ciborgue"
-      ]
-    },
-    "texto": "ataque especial (aparece nas armas): Computação › Interface Neural contra autômato, drone ou ciborgue a até 15 m, 2d8 elétrico que ignora IP"
-  },
-  "artefato corrosivo": {
-    "modo": "ativar",
-    "acao": "principal",
-    "especial": "artefatoCorrosivo",
-    "repetir": true,
-    "escolhas": [
-      "alvo",
-      "itemDoAlvo"
-    ],
-    "texto": "arremessa (Esportes › Arremessar): o item escolhido do alvo perde 1d4 de IP; entra nos Frascos Instáveis, cujo limite sobe +1 (1 frasco + 1 por descanso; o frasco extra do teste de Engenharia › Química o mestre soma)",
-    "usos": {
-      "max": 2,
-      "recarga": "descanso"
-    }
-  },
-  "maos da criacao": {
-    "modo": "ativar",
-    "especial": "maosDaCriacao",
-    "repetir": true,
-    "escolhas": [
-      "criacao"
-    ],
-    "texto": "ao passar no teste final de criação: um Aprimoramento no item OU 1 ponto de Moral até o descanso longo (Moral: +1d20 num teste)"
-  },
-  "nevoa alucinogena": {
-    "modo": "ativar",
-    "acao": "principal",
-    "especial": "nevoa",
-    "usos": {
-      "max": 1,
-      "recarga": "descanso"
-    },
-    "escolhas": [
-      "alvo"
-    ],
-    "texto": "arremessa o frasco: a 1,5 m, CONS% Muito Difícil ou perde 1d4 de Sanidade e vê uma Alucinação maligna (ataca depois do turno dele por 10 turnos, dano psicológico); 1 por descanso"
-  },
-  "dancarino": {
-    "modo": "sempre",
-    "especial": "dancarino",
-    "texto": "defesa \"Dança\" no lugar da Esquiva (Artes › Dança); defendeu, +1 de Moral (até 3 por batalha; zera no fim)"
-  },
-  "o show tem que continuar": {
-    "modo": "sempre",
-    "especial": "show",
-    "texto": "no descanso curto com você, todos que descansam juntos recuperam +1d4 de Sanidade e começam o próximo combate Motivados (automático)"
-  },
-  "o grande truque": {
-    "modo": "sempre",
-    "especial": "grandeTruque",
-    "usos": {
-      "max": 1,
-      "recarga": "descanso-longo"
-    },
-    "texto": "1 vez por descanso longo, o dano que o levaria a 0 PV não acontece: some na fumaça e reaparece Furtivo a até 12 m (reação automática)"
-  },
-  "cibermedico": {
-    "modo": "sempre",
-    "vantagem": [
-      "ataque",
-      "medicina"
-    ],
-    "contra": [
-      "drone",
-      "automato",
-      "maquina",
-      "ciborgue"
-    ],
-    "especial": "ciberMedico",
-    "aposToque": true,
-    "acaoOferta": "movimento",
-    "texto": "depois de acertar um toque, o app oferece (fecha a ação completa): trava um membro cibernético por 1d4 turnos; 1 vez em cada personagem por combate"
-  },
-  "fitoterapia": {
-    "modo": "ativar",
-    "especial": "fitoterapia",
-    "repetir": true,
-    "escolhas": [
-      "remedio"
-    ],
-    "texto": "no descanso: Medicina › Farmacêutica Normal cria um remédio natural (cura 1D6, +3 m por 5 turnos, ignorar efeitos negativos por 3 turnos ou veneno 1D4 + MOD INT); dura 24 h"
-  },
-  "aprendizado rapido": {
-    "modo": "ativar",
-    "acao": "bonus",
-    "especial": "aprendizado",
-    "usos": {
-      "max": 1,
-      "recarga": "descanso"
-    },
-    "escolhas": [
-      "subSemTreino"
-    ],
-    "texto": "depois de ver alguém testar uma subperícia em que você não tem treino: +10% nela por 24 horas; também ignora pré-requisitos de itens (o mestre aplica); 1 vez por descanso"
-  },
-  "diagnostico letal": {
-    "modo": "sempre",
-    "danoContraCondicao": {
-      "dados": "1d6",
-      "grupos": [
-        "Mental",
-        "Dano",
-        "Mobilidade",
-        "Fadiga"
-      ],
-      "exceto": [
-        "alerta",
-        "estabilizado"
-      ]
-    },
-    "texto": "+1d6 de dano contra quem estiver com um efeito negativo (mental, físico ou de mobilidade) — automático"
-  },
-  "eficiencia de recursos": {
-    "modo": "sempre",
-    "especial": "eficiencia",
-    "texto": "+1d10 no resultado dos testes feitos com um item, inclusive ataques armados (automático no ataque; nos outros testes, some 1d10)"
-  },
-  "movimento preditivo": {
-    "modo": "sempre",
-    "especial": "movimentoPreditivo",
-    "texto": "em Defesa Total: +10% a mais nas defesas, imune a acerto crítico e os movimentos não geram ataque de oportunidade (automático)"
-  },
-  "mestre de armas": {
-    "modo": "sempre",
-    "texto": "sem os pré-requisitos de uma arma de fogo: só −15% (em vez de −30%) e a arma não trava ao errar; continua sem dano crítico (automático)"
-  },
-  "capitao de campo": {
-    "modo": "ativar",
-    "acao": "bonus",
-    "especial": "ordemTatica",
-    "repetir": true,
-    "passivo": "+10% em Liderança",
-    "escolhas": [
-      "aliado",
-      "ordem"
-    ],
-    "texto": "+10% em Liderança (sempre). Ordem tática (ação bônus) a um aliado: ataque com vantagem ou +1 passo sem ataque de oportunidade, até o fim do próximo turno dele"
-  },
-  "lideranca inspiradora": {
-    "modo": "sempre",
-    "especial": "liderancaInspiradora",
-    "texto": "de pé no combate: os aliados somam +1d20 no acerto (não conta para o crítico) e fazem Salvaguarda com vantagem; se você cair, eles atacam em desvantagem (automático)"
-  },
-  "taticas de esquadrao": {
-    "modo": "sempre",
-    "especial": "taticasEsquadrao",
-    "texto": "você e ao menos um aliado atacando o mesmo inimigo na rodada: quem ataca rola o DS com vantagem (automático); 1 passo na zona de ameaça dele não gera ataque de oportunidade"
-  },
-  "tropa de elite": {
-    "modo": "sempre",
-    "especial": "tropaElite",
-    "texto": "consciente e em combate: os aliados andam +1,5 m, têm vantagem contra o medo e ignoram terreno acidentado natural (automático)"
-  },
-  "combate de trincheira": {
-    "modo": "sempre",
-    "texto": "cobertura parcial conta como total contra atiradores a mais de 9 m (automático pelo mapa)"
-  },
-  "ultimo homem de pe": {
-    "modo": "sempre",
-    "efeitos": "+1 IP geral",
-    "especial": "ultimoHomem",
-    "texto": "+1 IP geral; ao matar um adversário, +1d6 PV temporários (somem no fim do combate; servem ao Sacrifício) — automático"
-  },
-  "avaliacao de cenario": {
-    "modo": "ativar",
-    "especial": "avaliacaoCenario",
-    "repetir": true,
-    "texto": "Espionagem › Investigação Normal ao entrar num ambiente fechado: na cena, vantagem em Intuição e em Armadilhas › Encontrar e +20% de defesa contra ataque surpresa"
-  },
-  "extracao de emergencia": {
-    "modo": "sempre",
-    "deslocamentoNaDisparada": 1.5,
-    "texto": "em Disparada: +1,5 m de deslocamento e +50% de defesa contra ataques de oportunidade (automático quando você usa Disparada)"
-  },
-  "predador invisivel": {
-    "modo": "sempre",
-    "especial": "predadorInvisivel",
-    "texto": "ataque surpresa: +1 dado de dano; atirando com abafador a mais de 9 m, o app testa Furtividade contra a maior Percepção passiva do grupo do alvo + 30 para você continuar escondido"
-  },
-  "tiro funcional": {
-    "modo": "sempre",
-    "especial": "tiroFuncional",
-    "texto": "tiro em objeto pequeno (ataque localizado num item): −10% em vez da penalidade normal; pode escolher dano não letal com armas a distância"
-  },
-  "arremesso preciso": {
-    "modo": "sempre",
-    "efeitos": "+10% em Arremessar",
-    "texto": "+10% em Esportes › Arremessar; errando, o desvio do item arremessado é a metade do normal (o mestre aplica)"
-  },
-  "atirador perspicaz": {
-    "modo": "sempre",
-    "especial": "atiradorPerspicaz",
-    "texto": "cada erro de ataque a distância contra um alvo dá +5% (acumula) no próximo tiro nele; zera ao acertar (automático)"
+    "texto": "+1d20 no próximo teste de perícia (seu ou de um aliado; não vale em combate); MOD WILL + 1 vezes por descanso longo (mínimo 1)"
+   }
   }
+ },
+ "mestre das imitacoes": {
+  "modo": "sempre",
+  "vantagem": [
+   "espionagem.maquiagem"
+  ],
+  "texto": "vantagem em Maquiagem para imitar alguém que conhece; 15 min observando + Investigação: +20% (o mestre aplica)"
+ },
+ "olhar penetrante": {
+  "modo": "ativar",
+  "especial": "marcaAlvo",
+  "bonus": 10,
+  "usos": {
+   "max": 1,
+   "recarga": "descanso-longo"
+  },
+  "escolhas": [
+   "alvo"
+  ],
+  "texto": "depois de usar Interrogatório no alvo: +10% nos testes contra ele (inclusive combate) até o fim da cena; 1 vez por descanso longo"
+ },
+ "conhecimento acumulado": {
+  "modo": "sempre",
+  "mod": {
+   "INT": 1
+  },
+  "texto": "+1 no MOD INT a cada vez que recebeu (3º nível e a cada 4)"
+ },
+ "manuseio profissional": {
+  "modo": "sempre",
+  "texto": "item na mão: +10% no ataque e nunca perde durabilidade (automático); aprimorado +1 e maestria 2 com uma mão: o mestre aplica (aprimoramentos ainda não estão no app)"
+ },
+ "afericao perfeita": {
+  "modo": "sempre",
+  "vantagem": [
+   "engenharia",
+   "computacao",
+   "armadilhas"
+  ],
+  "requerItem": "kit|ferrament",
+  "texto": "com kit ou ferramentas no inventário: vantagem em Engenharia, Computação e Armadilhas (automático)"
+ },
+ "restaurador": {
+  "modo": "sempre",
+  "texto": "+10% no teste de reparo e o reparo recupera até 2 de durabilidade (automático)"
+ },
+ "reparo improvisado": {
+  "modo": "sempre",
+  "texto": "repara com sucata no lugar do kit (1 h por item); o reparo nunca estraga o item de vez, nem com erro crítico (automático)"
+ },
+ "padrao de ataque": {
+  "modo": "sempre",
+  "texto": "depois do 3º turno de um inimigo, +10% nas defesas contra ele (automático)"
+ },
+ "armadura improvisada": {
+  "modo": "ativar",
+  "acao": "bonus",
+  "especial": "ipTemp",
+  "repetir": true,
+  "escolhas": [
+   "aliado",
+   "tipoIp"
+  ],
+  "texto": "+1 de IP por uso (em você ou num aliado a 1 passo): até +2 geral OU até +4 de um tipo; até o fim do combate"
+ },
+ "gambiarras profissionais": {
+  "modo": "ativar",
+  "especial": "itemGambiarra",
+  "sucata": true,
+  "turnos": "2d4",
+  "usos": {
+   "max": 1,
+   "recarga": "descanso"
+  },
+  "escolhas": [
+   "itemQuebrado"
+  ],
+  "texto": "um item quebrado volta a funcionar (durabilidade 1) por 2d4 turnos e depois quebra de novo; consome sucata; 1 vez por descanso (curto ou longo)"
+ },
+ "gambiarra rapida": {
+  "modo": "ativar",
+  "acao": "completa",
+  "especial": "itemGambiarra",
+  "teste": "Difícil",
+  "turnos": "10",
+  "escolhas": [
+   "itemQuebrado"
+  ],
+  "texto": "reparo DIFÍCIL: o item quebrado funciona por 10 turnos (não serve para consumíveis)"
+ },
+ "reparo de roda": {
+  "modo": "ativar",
+  "acao": "principal",
+  "especial": "reparoRoda",
+  "repetir": true,
+  "escolhas": [
+   "item"
+  ],
+  "texto": "+1d4 de durabilidade num drone ou veículo até o fim do combate (se fosse quebrar ao perder, fica com 1); vantagem em Engenharia › Mecânica para reparar drones e veículos (o mestre aplica)"
+ },
+ "engenharia reversa": {
+  "modo": "ativar",
+  "acao": "principal",
+  "especial": "engenhariaReversa",
+  "escolhas": [
+   "alvo",
+   "itemDoAlvo"
+  ],
+  "texto": "Engenharia DIFÍCIL mirando um item: passou, o ataque localizado nesse item tira 1 de durabilidade por acerto"
+ },
+ "destruidor de itens": {
+  "modo": "sempre",
+  "texto": "+1d6 de dano no ataque localizado num item (automático)"
+ },
+ "bugigangas de bolso": {
+  "modo": "ativar",
+  "acao": "bonus",
+  "especial": "bugiganga",
+  "usos": {
+   "max": 2,
+   "recarga": "descanso-longo"
+  },
+  "escolhas": [
+   "efeito"
+  ],
+  "texto": "fumaça (raio 3 m) ou ruído (raio 15 m): todos na área fazem CONS% Normal ou ficam Aturdidos, e −15% até o fim do turno; 2 por descanso longo"
+ },
+ "gerador eletrico portatil": {
+  "modo": "ativar",
+  "acao": "livre",
+  "usos": {
+   "max": 1,
+   "recarga": "descanso"
+  },
+  "texto": "liga equipamentos e recarrega baterias de aliados a 1,5 m; até 1 hora por descanso; taser de 1d4 elétrico (o item entra com as invenções)"
+ },
+ "invencao protetora": {
+  "modo": "sempre",
+  "acao": "reacao",
+  "especial": "reduzirDano",
+  "texto": "ao tomar dano: reação, gasta uma sucata e reduz o dano em 1d6 (o app oferece)"
+ },
+ "invencao excl protetora": {
+  "modo": "sempre",
+  "acao": "reacao",
+  "especial": "absorverDano",
+  "texto": "se o ataque o deixar com 0 PV ou menos: reação, a Invenção! entra no caminho, absorve 100% do dano e é destruída (o app oferece)"
+ },
+ "digestao extracorporea": {
+  "modo": "ativar",
+  "acao": "completa",
+  "especial": "devorar",
+  "escolhas": [
+   "alvo"
+  ],
+  "arma": {
+   "nome": "Jato ácido (Digestão extracorpórea)",
+   "dano": "2d6",
+   "tipoDano": "Ácido",
+   "metros": 4.5,
+   "area": true,
+   "usos": {
+    "max": 1,
+    "recarga": "descanso"
+   },
+   "marcaNoAlvo": {
+    "nome": "Ácido digestivo",
+    "digestao": true,
+    "cena": true,
+    "texto": "acertado pelo jato ácido (pode ser devorado)"
+   },
+   "pericia": "armas-de-fogo.jato"
+  },
+  "texto": "ataque em cone (4,5 m, 2d6 ácido, 1 por descanso: aparece nas armas); o botão Ativar devora (ação completa) quem foi acertado e está abatido: +1d4 PV"
+ },
+ "evolucao humana": {
+  "modo": "sempre",
+  "resistencia": [
+   "Corte"
+  ],
+  "imuneCritico": true,
+  "usos": {
+   "max": 1,
+   "recarga": "descanso-longo"
+  },
+  "texto": "Roubar Característica na hora (ação completa) e +2d4 PV, 1 vez por descanso longo; Licantropia falsa vira qualquer pessoa com Disfarce Difícil com vantagem (o mestre aplica)"
+ },
+ "mutacao precisa": {
+  "modo": "ativar",
+  "especial": "mutacaoPrecisa",
+  "usos": {
+   "max": 1,
+   "recarga": "descanso"
+  },
+  "escolhas": [
+   "pericia",
+   "pontos"
+  ],
+  "texto": "10 turnos: vantagem na perícia escolhida e até 6 pontos da CONS passados para a FOR; braço em forma de arma branca; 1 vez por descanso"
+ },
+ "roubar caracteristica": {
+  "modo": "ativar",
+  "acao": "completa",
+  "especial": "roubarCaracteristica",
+  "repetir": true,
+  "escolhas": [
+   "alvoMorto",
+   "caracteristica"
+  ],
+  "texto": "escolha uma característica (não única) de uma criatura morta no campo: entra depois do próximo descanso longo (uma por vez; −3 PV persistentes)"
+ },
+ "caos geneticos": {
+  "modo": "ativar",
+  "acao": "principal",
+  "especial": "caosGenetico",
+  "repetir": true,
+  "escolhas": [
+   "alvo"
+  ],
+  "texto": "alvo a até 4,5 m (não mutante): CONS% contra os marcadores de vulnerabilidade; falhou, 2d4 de dano puro e mutação na hora; passou, perde os marcadores"
+ },
+ "epidemia": {
+  "modo": "sempre",
+  "especial": "epidemia",
+  "texto": "quem não é mutante desenvolve mutação a até 15 m de você: os outros no raio fazem CONS% contra os próprios marcadores de vulnerabilidade (automático)"
+ },
+ "esporos gasosos": {
+  "modo": "ativar",
+  "acao": "bonus",
+  "especial": "esporos",
+  "usos": {
+   "max": 1,
+   "recarga": "descanso"
+  },
+  "texto": "raio de 3 m: +1 marcador genético e −10% em CONS% até o fim do combate; 1 vez por descanso"
+ },
+ "morte epidemica": {
+  "modo": "sempre",
+  "especial": "morteEpidemica",
+  "texto": "chegou a 0 PV: explode (9 m) — 2d10 radioativo e 2 marcadores genéticos em todos; com mutação +1d10, +1 marcador e mutação de 1d4 turnos; você fica em coma (automático)"
+ },
+ "muco radioativo": {
+  "modo": "sempre",
+  "arma": {
+   "nome": "Muco radioativo",
+   "dano": "2d6",
+   "tipoDano": "Radiação",
+   "pericia": "armas-de-fogo.projeteis",
+   "metros": 9,
+   "usos": {
+    "max": 3,
+    "recarga": "descanso-longo"
+   },
+   "extraContraMutacao": "1d6",
+   "marcaNoAlvo": {
+    "nome": "Muco radioativo",
+    "desvantagemCons": true,
+    "combate": true,
+    "texto": "testes de CONS% em desvantagem até o fim do combate"
+   }
+  },
+  "texto": "ataque especial (aparece nas armas): 2d6 radioativo a até 9 m, +1d6 contra quem tem mutação; o alvo faz CONS% em desvantagem até o fim do combate; 3 por descanso longo"
+ },
+ "pragas": {
+  "modo": "ativar",
+  "acao": "principal",
+  "especial": "pragas",
+  "repetir": true,
+  "escolhas": [
+   "alvo"
+  ],
+  "texto": "alvo a até 4,5 m com marcadores genéticos (eles estouram e somem): por 2d4 turnos +1 no dano físico que toma, desvantagem em Percepção, sem concentração e 1 de dano por turno"
+ },
+ "toque contagioso": {
+  "modo": "sempre",
+  "especial": "toqueContagioso",
+  "aposToque": true,
+  "acaoOferta": "livre",
+  "texto": "depois de acertar um toque/Briga, o app oferece: CONS% Difícil ou o alvo desenvolve a sua mutação descontrolada por 5 turnos e toma 1d6; cada alvo 1 vez por descanso longo"
+ },
+ "mutacao monstruosa": {
+  "modo": "sempre",
+  "escolhaFixa": "tipoDano",
+  "danoEscolhido": "1d4",
+  "texto": "+1d4 do tipo escolhido (elemental ou de energia) nos ataques físicos"
+ },
+ "radiacao incontida": {
+  "modo": "ativar",
+  "especial": "radiacao",
+  "usos": {
+   "max": 1,
+   "recarga": "descanso"
+  },
+  "escolhas": [
+   "radiacao"
+  ],
+  "texto": "brilhar (+5% de defesa, sem furtividade, 15 min) ou superaquecer (explosão: 1d6 em você, 2d4 e 2 marcadores de vulnerabilidade a 1,5 m); 1 vez por descanso"
+ },
+ "regeneracao degenerativa": {
+  "modo": "ativar",
+  "acao": "bonus",
+  "especial": "regenDegenerativa",
+  "repetir": true,
+  "texto": "gasta 1 de CONS e cura 1d4 PV (1 por turno); CONS 0 = morte; volta 1 de CONS por descanso"
+ },
+ "corpo adaptado 2": {
+  "modo": "sempre",
+  "escolhaFixa": "resistencia",
+  "trocaNoDescanso": true,
+  "texto": "resistência (metade do dano) ao tipo escolhido; troca no fim de cada descanso longo"
+ },
+ "toxico": {
+  "modo": "sempre",
+  "especial": "toxico",
+  "texto": "+25% para resistir a venenos (o mestre aplica no teste); animal, besta ou monstro que lhe causar dano corpo a corpo faz WILL% Normal para continuar atacando (automático)"
+ },
+ "vetor": {
+  "modo": "sempre",
+  "especial": "vetor",
+  "texto": "+10% para resistir a doença (o mestre aplica); doente, quem o acerta com ataque físico ganha 1 marcador de vulnerabilidade (até 3; automático)"
+ },
+ "analista de risco": {
+  "modo": "ativar",
+  "acao": "bonus",
+  "especial": "analista",
+  "repetir": true,
+  "escolhas": [
+   "alvo"
+  ],
+  "texto": "INT% Normal: contra o alvo, +1d4 de dano e +10% nas defesas até o fim do combate; vantagem em Armadilhas › Desarmar; mostra PV e durabilidade"
+ },
+ "foco absoluto": {
+  "modo": "ligar",
+  "efeitos": "+10% em todos os testes",
+  "texto": "ligue enquanto estiver concentrado: testes de Concentração são Normais (ND 70) e os demais +10%"
+ },
+ "melhor do mundo": {
+  "modo": "sempre",
+  "escolhaFixa": "pericias",
+  "bonus": 5,
+  "aPartirDe": 6,
+  "aCada": 3,
+  "exceto": [
+   "briga",
+   "arma-branca",
+   "armas-de-fogo"
+  ],
+  "texto": "+5% numa perícia base à escolha no 6º nível e a cada 3 níveis (exceto combate)"
+ },
+ "bug na rede": {
+  "modo": "ativar",
+  "acao": "principal",
+  "especial": "bugNaRede",
+  "repetir": true,
+  "escolhas": [
+   "alvo",
+   "itemDoAlvo"
+  ],
+  "texto": "Computação › Decodificação Normal (membro cibernético: INT% contra WILL% + 30): o item a até 15 m fica Travado (equipado, mas sem uso) até o fim do combate"
+ },
+ "controle remoto": {
+  "modo": "ativar",
+  "acao": "bonus",
+  "especial": "controleRemoto",
+  "repetir": true,
+  "escolhas": [
+   "alvo"
+  ],
+  "texto": "drone, autômato ou sistema de defesa a até 60 m vira seu companheiro por 10 turnos e age logo depois de você"
+ },
+ "programador": {
+  "modo": "ativar",
+  "acao": "completa",
+  "especial": "programador",
+  "repetir": true,
+  "escolhas": [
+   "itemQualquer"
+  ],
+  "texto": "Computação › Programação Difícil: o item elétrico/eletrônico vira seu companheiro (ação livre para controlar; até 3); outros têm −30% para manipulá-lo"
+ },
+ "sobrecarga neural": {
+  "modo": "sempre",
+  "arma": {
+   "nome": "Sobrecarga Neural",
+   "dano": "2d8",
+   "tipoDano": "Elétrico",
+   "pericia": "computacao.interface-neural",
+   "metros": 15,
+   "ignoraIp": true,
+   "contraTipos": [
+    "drone",
+    "automato",
+    "maquina",
+    "ciborgue"
+   ]
+  },
+  "texto": "ataque especial (aparece nas armas): Computação › Interface Neural contra autômato, drone ou ciborgue a até 15 m, 2d8 elétrico que ignora IP"
+ },
+ "artefato corrosivo": {
+  "modo": "ativar",
+  "acao": "principal",
+  "especial": "artefatoCorrosivo",
+  "repetir": true,
+  "escolhas": [
+   "alvo",
+   "itemDoAlvo"
+  ],
+  "texto": "arremessa (Esportes › Arremessar): o item escolhido do alvo perde 1d4 de IP; entra nos Frascos Instáveis, cujo limite sobe +1 (1 frasco + 1 por descanso; o frasco extra do teste de Engenharia › Química o mestre soma)",
+  "usos": {
+   "max": 2,
+   "recarga": "descanso"
+  }
+ },
+ "maos da criacao": {
+  "modo": "ativar",
+  "especial": "maosDaCriacao",
+  "repetir": true,
+  "escolhas": [
+   "criacao"
+  ],
+  "texto": "ao passar no teste final de criação: um Aprimoramento no item OU 1 ponto de Moral até o descanso longo (Moral: +1d20 num teste)"
+ },
+ "nevoa alucinogena": {
+  "modo": "ativar",
+  "acao": "principal",
+  "especial": "nevoa",
+  "usos": {
+   "max": 1,
+   "recarga": "descanso"
+  },
+  "escolhas": [
+   "alvo"
+  ],
+  "texto": "arremessa o frasco: a 1,5 m, CONS% Muito Difícil ou perde 1d4 de Sanidade e vê uma Alucinação maligna (ataca depois do turno dele por 10 turnos, dano psicológico); 1 por descanso"
+ },
+ "dancarino": {
+  "modo": "sempre",
+  "especial": "dancarino",
+  "texto": "defesa \"Dança\" no lugar da Esquiva (Artes › Dança); defendeu, +1 de Moral (até 3 por batalha; zera no fim)"
+ },
+ "o show tem que continuar": {
+  "modo": "sempre",
+  "especial": "show",
+  "texto": "no descanso curto com você, todos que descansam juntos recuperam +1d4 de Sanidade e começam o próximo combate Motivados (automático)"
+ },
+ "o grande truque": {
+  "modo": "sempre",
+  "especial": "grandeTruque",
+  "usos": {
+   "max": 1,
+   "recarga": "descanso-longo"
+  },
+  "texto": "1 vez por descanso longo, o dano que o levaria a 0 PV não acontece: some na fumaça e reaparece Furtivo a até 12 m (reação automática)"
+ },
+ "cibermedico": {
+  "modo": "sempre",
+  "vantagem": [
+   "ataque",
+   "medicina"
+  ],
+  "contra": [
+   "drone",
+   "automato",
+   "maquina",
+   "ciborgue"
+  ],
+  "especial": "ciberMedico",
+  "aposToque": true,
+  "acaoOferta": "movimento",
+  "texto": "depois de acertar um toque, o app oferece (fecha a ação completa): trava um membro cibernético por 1d4 turnos; 1 vez em cada personagem por combate"
+ },
+ "fitoterapia": {
+  "modo": "ativar",
+  "especial": "fitoterapia",
+  "repetir": true,
+  "escolhas": [
+   "remedio"
+  ],
+  "texto": "no descanso: Medicina › Farmacêutica Normal cria um remédio natural (cura 1D6, +3 m por 5 turnos, ignorar efeitos negativos por 3 turnos ou veneno 1D4 + MOD INT); dura 24 h"
+ },
+ "aprendizado rapido": {
+  "modo": "ativar",
+  "acao": "bonus",
+  "especial": "aprendizado",
+  "usos": {
+   "max": 1,
+   "recarga": "descanso"
+  },
+  "escolhas": [
+   "subSemTreino"
+  ],
+  "texto": "depois de ver alguém testar uma subperícia em que você não tem treino: +10% nela por 24 horas; também ignora pré-requisitos de itens (o mestre aplica); 1 vez por descanso"
+ },
+ "diagnostico letal": {
+  "modo": "sempre",
+  "danoContraCondicao": {
+   "dados": "1d6",
+   "grupos": [
+    "Mental",
+    "Dano",
+    "Mobilidade",
+    "Fadiga"
+   ],
+   "exceto": [
+    "alerta",
+    "estabilizado"
+   ]
+  },
+  "texto": "+1d6 de dano contra quem estiver com um efeito negativo (mental, físico ou de mobilidade) — automático"
+ },
+ "eficiencia de recursos": {
+  "modo": "sempre",
+  "especial": "eficiencia",
+  "texto": "+1d10 no resultado dos testes feitos com um item, inclusive ataques armados (automático no ataque; nos outros testes, some 1d10)"
+ },
+ "movimento preditivo": {
+  "modo": "sempre",
+  "especial": "movimentoPreditivo",
+  "texto": "em Defesa Total: +10% a mais nas defesas, imune a acerto crítico e os movimentos não geram ataque de oportunidade (automático)"
+ },
+ "mestre de armas": {
+  "modo": "sempre",
+  "texto": "sem os pré-requisitos de uma arma de fogo: só −15% (em vez de −30%) e a arma não trava ao errar; continua sem dano crítico (automático)"
+ },
+ "capitao de campo": {
+  "modo": "ativar",
+  "acao": "bonus",
+  "especial": "ordemTatica",
+  "repetir": true,
+  "passivo": "+10% em Liderança",
+  "escolhas": [
+   "aliado",
+   "ordem"
+  ],
+  "texto": "+10% em Liderança (sempre). Ordem tática (ação bônus) a um aliado: ataque com vantagem ou +1 passo sem ataque de oportunidade, até o fim do próximo turno dele"
+ },
+ "lideranca inspiradora": {
+  "modo": "sempre",
+  "especial": "liderancaInspiradora",
+  "texto": "de pé no combate: os aliados somam +1d20 no acerto (não conta para o crítico) e fazem Salvaguarda com vantagem; se você cair, eles atacam em desvantagem (automático)"
+ },
+ "taticas de esquadrao": {
+  "modo": "sempre",
+  "especial": "taticasEsquadrao",
+  "texto": "você e ao menos um aliado atacando o mesmo inimigo na rodada: quem ataca rola o DS com vantagem (automático); 1 passo na zona de ameaça dele não gera ataque de oportunidade"
+ },
+ "tropa de elite": {
+  "modo": "sempre",
+  "especial": "tropaElite",
+  "texto": "consciente e em combate: os aliados andam +1,5 m, têm vantagem contra o medo e ignoram terreno acidentado natural (automático)"
+ },
+ "combate de trincheira": {
+  "modo": "sempre",
+  "texto": "cobertura parcial conta como total contra atiradores a mais de 9 m (automático pelo mapa)"
+ },
+ "ultimo homem de pe": {
+  "modo": "sempre",
+  "efeitos": "+1 IP geral",
+  "especial": "ultimoHomem",
+  "texto": "+1 IP geral; ao matar um adversário, +1d6 PV temporários (somem no fim do combate; servem ao Sacrifício) — automático"
+ },
+ "avaliacao de cenario": {
+  "modo": "ativar",
+  "especial": "avaliacaoCenario",
+  "repetir": true,
+  "texto": "Espionagem › Investigação Normal ao entrar num ambiente fechado: na cena, vantagem em Intuição e em Armadilhas › Encontrar e +20% de defesa contra ataque surpresa"
+ },
+ "extracao de emergencia": {
+  "modo": "sempre",
+  "deslocamentoNaDisparada": 1.5,
+  "texto": "em Disparada: +1,5 m de deslocamento e +50% de defesa contra ataques de oportunidade (automático quando você usa Disparada)"
+ },
+ "predador invisivel": {
+  "modo": "sempre",
+  "especial": "predadorInvisivel",
+  "texto": "ataque surpresa: +1 dado de dano; atirando com abafador a mais de 9 m, o app testa Furtividade contra a maior Percepção passiva do grupo do alvo + 30 para você continuar escondido"
+ },
+ "tiro funcional": {
+  "modo": "sempre",
+  "especial": "tiroFuncional",
+  "texto": "tiro em objeto pequeno (ataque localizado num item): −10% em vez da penalidade normal; pode escolher dano não letal com armas a distância"
+ },
+ "arremesso preciso": {
+  "modo": "sempre",
+  "efeitos": "+10% em Arremessar",
+  "texto": "+10% em Esportes › Arremessar; errando, o desvio do item arremessado é a metade do normal (o mestre aplica)"
+ },
+ "atirador perspicaz": {
+  "modo": "sempre",
+  "especial": "atiradorPerspicaz",
+  "texto": "cada erro de ataque a distância contra um alvo dá +5% (acumula) no próximo tiro nele; zera ao acertar (automático)"
+ },
+ "calor do combate": {
+  "modo": "ativar",
+  "acao": "livre",
+  "especial": "calorCombate",
+  "texto": "por 10 turnos os efeitos negativos ficam congelados (não fazem efeito); depois voltam inteiros. Pode ignorar o Desmaiado por 1 turno"
+ },
+ "guarda de posto": {
+  "modo": "ativar",
+  "acao": "livre",
+  "especial": "guardaPosto",
+  "repetir": true,
+  "texto": "liga/desliga: de guarda num ponto — humor Motivado (imune a fadiga e desmotivação) e +5% de acerto com armas a distância"
+ },
+ "sob pressao": {
+  "modo": "sempre",
+  "texto": "ataques a distância em desvantagem: +15% de acerto (automático)"
+ },
+ "tiro preciso": {
+  "modo": "sempre",
+  "texto": "com armas de fogo, ignora a cobertura parcial do alvo (automático)"
+ },
+ "acaso sobrevivente": {
+  "modo": "ativar",
+  "acao": "reacao",
+  "especial": "acasoSobrevivente",
+  "recurso": {
+   "id": "acaso",
+   "nome": "Acaso Sobrevivente",
+   "max": "MOD WILL",
+   "min": 1,
+   "recarga": "descanso-longo"
+  },
+  "custo": {
+   "recurso": "acaso",
+   "qtd": 1
+  },
+  "escolhas": [
+   "rolagem",
+   "dado"
+  ],
+  "texto": "reação: rerola o D100 ou o D10 de um teste (seu, de um aliado ou de um inimigo a até 9 m); o novo resultado vale. MOD WILL vezes por descanso longo (mínimo 1)"
+ },
+ "a moeda do destino": {
+  "modo": "ativar",
+  "acao": "livre",
+  "especial": "moedaDestino",
+  "recurso": {
+   "id": "fortuna",
+   "nome": "Pontos de Fortuna",
+   "maxRolado": true,
+   "recarga": "descanso-longo"
+  },
+  "texto": "depois do descanso longo o app joga 1D2 (dia de Sorte ou de Azar) e 1D10: Pontos de Fortuna = 1D10 + MOD WILL. Use o botão para jogar, se ainda não jogou"
+ },
+ "ao lado da sorte": {
+  "modo": "ativar",
+  "acao": "livre",
+  "especial": "aoLadoDaSorte",
+  "custo": {
+   "recurso": "fortuna",
+   "qtd": 1
+  },
+  "repetir": true,
+  "texto": "passagens secretas e armadilhas a 6 m se mostram: o mestre usa e gasta 1 Ponto de Fortuna (avise o mestre se quiser desligar)"
+ },
+ "desvio improvavel": {
+  "modo": "ativar",
+  "acao": "bonus",
+  "especial": "desvioImprovavel",
+  "custo": {
+   "recurso": "fortuna",
+   "qtd": 1
+  },
+  "repetir": true,
+  "texto": "reação (ação bônus, 1 Ponto de Fortuna) quando alguém a até 9 m erra um ataque a distância: desvia para outro alvo a até 3 m do original; Jogos › Sorte contra a defesa passiva dele; acertou, o dano normal do atacante",
+  "reacaoOferta": true
+ },
+ "enganar o crupie": {
+  "modo": "ativar",
+  "acao": "livre",
+  "especial": "enganarCrupie",
+  "usos": {
+   "max": 1,
+   "recarga": "descanso-longo"
+  },
+  "texto": "1 vez por dia: troca Sorte por Azar (ou o contrário) e joga de novo o D10 dos Pontos de Fortuna"
+ },
+ "fortuna abastada": {
+  "modo": "ativar",
+  "acao": "bonus",
+  "especial": "fortunaAbastada",
+  "repetir": true,
+  "escolhas": [
+   "alvo"
+  ],
+  "texto": "dia de Sorte: Jogos › Sorte contra a defesa passiva do alvo; acertou, 1D10 + MOD WILL de dano (errou, não gasta). Dia de Azar: o próximo dano do aliado escolhido cai 1D10 + MOD WILL. Gasta 1 Ponto de Fortuna (pode usar 2: um com ação bônus e outro com a principal)"
+ },
+ "sobrevivente": {
+  "modo": "sempre",
+  "especial": "sobrevivente",
+  "usos": {
+   "max": 1,
+   "recarga": "descanso-longo"
+  },
+  "texto": "a 1ª vez (por descanso longo) que um dano o deixaria com 0 PV ou menos: ignora o dano, fica Caído e perde a ação principal do próximo turno (automático)"
+ },
+ "abalo mental": {
+  "modo": "ativar",
+  "acao": "bonus",
+  "especial": "abaloMental",
+  "repetir": true,
+  "texto": "reação (ação bônus) quando um adversário erra um ataque contra você: Intimidação Normal; passou, 1D6 de dano psicológico nele",
+  "reacaoOferta": true
+ },
+ "aura densa": {
+  "modo": "ativar",
+  "acao": "completa",
+  "especial": "auraDensa",
+  "texto": "10 turnos, com concentração, raio 4,5 m: você e os aliados jogam o DS com vantagem, testes de resistência (CONS% e WILL%) com vantagem e ataques a distância contra vocês em desvantagem"
+ },
+ "desnortear": {
+  "modo": "ativar",
+  "acao": "principal",
+  "especial": "desnortear",
+  "usos": {
+   "max": 1,
+   "recarga": "descanso"
+  },
+  "texto": "1 vez por descanso: os inimigos a até 9 m tomam 2D4 + MOD INT e fazem INT% Difícil ou ficam Aturdidos por 1 turno"
+ },
+ "mente poderosa": {
+  "modo": "ativar",
+  "acao": "principal",
+  "especial": "mentePoderosa",
+  "usos": {
+   "max": "MOD INT",
+   "min": 1,
+   "recarga": "descanso-longo"
+  },
+  "escolhas": [
+   "alvo"
+  ],
+  "texto": "ataque mental a até 9 m: INT% contra INT%; passou, 1D6 + MOD INT de dano psicológico. MOD INT vezes por descanso longo"
+ },
+ "vai ficar tudo bem": {
+  "modo": "ativar",
+  "acao": "principal",
+  "especial": "vaiFicarTudoBem",
+  "usos": {
+   "max": "MOD WILL",
+   "min": 1,
+   "recarga": "descanso-longo"
+  },
+  "escolhas": [
+   "aliado",
+   "opcao"
+  ],
+  "opcoes": [
+   {
+    "id": "cura",
+    "nome": "Curar 1D6"
+   },
+   {
+    "id": "cessar",
+    "nome": "Cessar Sangramento, Ferida aberta ou Desorientado"
+   },
+   {
+    "id": "estabilizar",
+    "nome": "Estabilizar um desmaiado"
+   }
+  ],
+  "texto": "WILL% Normal: cura 1D6, ou cessa Sangramento/Ferida aberta/Desorientado, ou estabiliza um desmaiado. MOD WILL vezes por dia"
+ },
+ "caos e ordem": {
+  "modo": "ativar",
+  "acao": "livre",
+  "especial": "caosOrdem",
+  "repetir": true,
+  "recurso": {
+   "id": "co",
+   "nome": "Caos e Ordem",
+   "max": "MOD WILL",
+   "min": 1,
+   "comecaVazio": true,
+   "ganhaNoCurto": 1
+  },
+  "escolhas": [
+   "opcao",
+   "poder"
+  ],
+  "opcoes": [
+   {
+    "id": "ganhar",
+    "nome": "Ganhar 1 CO (Artes/Jogos, drogas ou prática de perícia)"
+   },
+   {
+    "id": "recarregar",
+    "nome": "Gastar 1 CO: recarregar um poder"
+   },
+   {
+    "id": "inverter",
+    "nome": "Gastar 1 CO: inverter o resultado de um teste (o mestre aplica)"
+   },
+   {
+    "id": "proteger",
+    "nome": "Gastar 1 CO: deixar aliados imunes aos seus poderes"
+   }
+  ],
+  "texto": "Pontos de Caos e Ordem (CO): começam em 0, até MOD WILL (mínimo 1); +1 por descanso curto (automático); ganhe com Artes/Jogos, drogas ou prática pelo botão; gaste para recarregar poderes, inverter um teste ou proteger aliados"
+ },
+ "estilhacos": {
+  "modo": "sempre",
+  "especial": "estilhacos",
+  "texto": "alvo em cobertura parcial toma 1d4 de perfuração dos estilhaços mesmo quando o seu ataque erra; em objeto, cada dano +1D4 (automático)"
+ },
+ "o edito do caos": {
+  "modo": "ativar",
+  "acao": "principal",
+  "especial": "editoDoCaos",
+  "usos": {
+   "max": 1,
+   "recarga": "descanso-longo"
+  },
+  "escolhas": [
+   "alvo",
+   "caracteristica"
+  ],
+  "texto": "WILL% contra WILL%: o alvo perde a habilidade escolhida por 1D4+1 turnos. Com 1 CO, você a absorve nesse tempo (o mestre aplica)"
+ },
+ "passos confusos": {
+  "modo": "ativar",
+  "acao": "bonus",
+  "especial": "passosConfusos",
+  "texto": "1 vez por combate, 1D4+1 turnos, todos (menos Universais): terreno acidentado custa normal e o normal custa o dobro; Disparada −3 m; ataques físicos trocam o efeito do DS por Derrubar 1 (cada derrubado dá 1 CO)"
+ },
+ "presenca perturbadora": {
+  "modo": "sempre",
+  "especial": "presencaPerturbadora",
+  "texto": "raio de 12 m: testes de Percepção e de Intuição dos outros (menos Universais) em desvantagem (automático com peões no mapa)"
+ },
+ "quebrar a probabilidade": {
+  "modo": "ativar",
+  "acao": "principal",
+  "especial": "quebrarProbabilidade",
+  "usos": {
+   "max": 1,
+   "recarga": "descanso"
+  },
+  "escolhas": [
+   "aliado",
+   "itemDoAlvo",
+   "opcao"
+  ],
+  "opcoes": [
+   {
+    "id": "protege",
+    "nome": "Não perde durabilidade"
+   },
+   {
+    "id": "dobra",
+    "nome": "Perde 2 de durabilidade em vez de 1"
+   }
+  ],
+  "texto": "1 vez por descanso: por 5 turnos o item tocado não perde durabilidade ou perde 2 em vez de 1 (cada perda dá 1 CO)"
+ },
+ "zona de desastre": {
+  "modo": "ativar",
+  "acao": "bonus",
+  "especial": "zonaDesastre",
+  "usos": {
+   "max": 1,
+   "recarga": "descanso"
+  },
+  "texto": "1D4+1 turnos na área da Presença perturbadora (12 m): margens de acerto e erro crítico +5% para todos (menos Universais); cada crítico ali dá 1 CO"
+ },
+ "ataque critico": {
+  "modo": "sempre",
+  "especial": "ataqueCritico",
+  "texto": "ataques (Briga, Armas brancas e de fogo): a margem de crítico soma 10% da sua chance de acerto (até 15%) (automático)"
+ },
+ "blefe involuntario": {
+  "modo": "ativar",
+  "acao": "livre",
+  "especial": "blefe",
+  "repetir": true,
+  "escolhas": [
+   "rolagem",
+   "alvo"
+  ],
+  "texto": "1 vez por descanso longo para cada personagem: num teste de Manipulação, inverte a dezena e a unidade do D100 (28 vira 82). Passou: você escolhe o humor do alvo"
+ },
+ "cair para cima": {
+  "modo": "sempre",
+  "especial": "cairParaCima",
+  "texto": "levantar do Caído sem gastar deslocamento e com vantagem no primeiro ataque físico do turno; quedas de até 6 m sem dano (automático)"
+ },
+ "metabolismo motivador": {
+  "modo": "sempre",
+  "especial": "metabolismoMotivador",
+  "texto": "Drogado: +2 de WILL junto com os efeitos da droga; vantagem nos testes para não viciar e contra a abstinência (automático)"
+ },
+ "preparado": {
+  "modo": "ativar",
+  "acao": "livre",
+  "especial": "preparado",
+  "usos": {
+   "max": 1,
+   "recarga": "descanso-longo"
+  },
+  "escolhas": [
+   "opcao"
+  ],
+  "opcoes": [
+   {
+    "id": "teste",
+    "nome": "Próximo teste com vantagem e Inspiração (+1d20)"
+   },
+   {
+    "id": "armadilha",
+    "nome": "Uma armadilha até nível 3 já armada a até 15 m"
+   },
+   {
+    "id": "item",
+    "nome": "Um item incomum ou de até 200 créditos"
+   }
+  ],
+  "texto": "1 vez por descanso longo: teste com vantagem e Inspiração, ou uma armadilha (nível até 3) já armada a até 15 m, ou um item incomum/de até 200 créditos"
+ },
+ "reacao em cadeia": {
+  "modo": "ativar",
+  "acao": "livre",
+  "especial": "reacaoEmCadeia",
+  "usos": {
+   "max": 1,
+   "recarga": "descanso-longo"
+  },
+  "texto": "1 vez por descanso longo, ao errar um tiro ou arremesso: algo volátil explode perto do alvo (raio 3 m): 2d6 de Fogo, Evasão Normal para metade",
+  "reacaoOferta": true
+ },
+ "sete vidas": {
+  "modo": "sempre",
+  "especial": "seteVidas",
+  "usos": {
+   "max": 7,
+   "recarga": "nunca"
+  },
+  "texto": "em vez de morrer, desmaia e acorda 1d4 dias depois com −2 WILL e −5 SAN permanentes (automático; contador de usos)"
+ },
+ "coletor": {
+  "modo": "ativar",
+  "acao": "bonus",
+  "especial": "coletor",
+  "repetir": true,
+  "escolhas": [
+   "opcao",
+   "alvo",
+   "caracteristica",
+   "coletada"
+  ],
+  "opcoes": [
+   {
+    "id": "armazenar",
+    "nome": "Armazenar a característica de uma criatura (comendo-a)"
+   },
+   {
+    "id": "incorporar",
+    "nome": "Incorporar uma característica (1 PV)"
+   },
+   {
+    "id": "retornar",
+    "nome": "Voltar à forma original (1 PV)"
+   },
+   {
+    "id": "descartar",
+    "nome": "Descartar uma característica armazenada"
+   }
+  ],
+  "texto": "armazena até 3 características (+2 por Corpo Monstruoso) de criaturas que comeu (ficam prontas no descanso longo); incorpora uma por vez (ação bônus, 1 PV) e volta à forma (1 PV)"
+ }
 }

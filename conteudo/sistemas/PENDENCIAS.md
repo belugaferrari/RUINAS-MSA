@@ -657,3 +657,20 @@ Respostas do autor (31/10) e o que foi feito:
   fora do combate (peão escolhido), na tela normal e na inteira.
 - Mover: soltar além da borda sem vizinho deixa o peão na beirada (antes dava "Fora do mapa"); mapa sem a proporção da imagem guardada
   não recusa mais as linhas de baixo (qualquer tela que abre o mapa preenche a proporção).
+
+## 04/11 — Relatório de habilidades (5ª parte, linhas 122–154)
+
+Implementadas 33 habilidades (Soldado, Sortudo, Mentalista, Caótico, Transmorfo, gerais). Interpretações a confirmar com o autor:
+
+- **Sete Vidas**: 7 usos no total, nunca recarrega (em vez de Morto, fica Caído).
+- **Sobrevivente**: 1 uso por descanso longo.
+- **Dano psicológico** (Abalo mental etc.): aplicado como dano em PV.
+- **Abalo mental**: teste de Intimidação contra ND 70.
+- **Desnortear**: inimigos a até 9 m (todos os inimigos se não houver mapa).
+- **Acaso sobrevivente** e **Blefe involuntário**: só em rolagens de teste (d100), não em ataques.
+- **Edito do Caos** (absorção), **Caos e ordem** (inverter/proteger), **Ao lado da Sorte** e **Preparado** (armadilha/item): o app registra no log; o mestre aplica.
+- **Passos confusos**: derruba em acerto físico com DS 1; movimento com custo invertido.
+- **Quebrar a Probabilidade**: os turnos contam no turno de quem usou.
+- **Guarda de posto**: liga/desliga (humor Motivado, +5% à distância) — "prontidão" não existia.
+- **Metabolismo motivador**: +2 WILL enquanto Drogado; vantagem em testes de vício não é automática (drogas existem só como condição).
+- **Despertar**: 1 + MOD CONS por descanso longo, 5 turnos, renova 1 turno se atacar ou for atacado (texto do livro corrigido).

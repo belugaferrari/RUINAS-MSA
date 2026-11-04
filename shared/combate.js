@@ -2,7 +2,7 @@
 // "modulos.combate" / "modulos.social". Escolhas provisórias estão em conteudo/sistemas/PENDENCIAS.md.
 import { ladoNoMapa } from './monstros.js';
 import { requisitosQueFaltam } from './requisitos.js';
-import { rolarDado, derivados, ipContraDano, listaHabilidades, vantagemPorHabilidade, tipoCriatura, subirPassos, temHabilidade, regraDaHabilidade, danoDasHabilidades, efeitosHabilidade, modoHabilidade, perderPv, chaveHabilidade, habilidadeValendo, condicoesAtivas, modAuraItem } from './regras.js';
+import { rolarDado, derivados, ipContraDano, listaHabilidades, vantagemPorHabilidade, tipoCriatura, subirPassos, temHabilidade, regraDaHabilidade, danoDasHabilidades, efeitosHabilidade, modoHabilidade, perderPv, chaveHabilidade, habilidadeValendo, condicoesAtivas, modAuraItem, valorDaFormula } from './regras.js';
 
 const d100 = rng => 1 + Math.floor(rng() * 100);
 
@@ -27,8 +27,8 @@ export function rolarDP(modo, rng = Math.random) {
 }
 
 // Teste contra um valor fixo (ND ou ação passiva), com críticos do D-MIL.
-export function testeContra(acao, nd, sistema, { modo = null, rng = Math.random, dsVantagem = false } = {}) {
-  const t = sistema.teste;
+export function testeContra(acao, nd, sistema, { modo = null, rng = Math.random, dsVantagem = false, critAcerto = null, critErro = null } = {}) {
+  const t = { ...sistema.teste, ...(critAcerto ? { criticoAcerto: critAcerto } : {}), ...(critErro ? { criticoErro: critErro } : {}) };
   const { dp, dados } = rolarDP(modo, rng);
   // Com vantagem/desvantagem o DS também rola duas vezes: o maior na vantagem, o menor na desvantagem.
   // Táticas de Esquadrão: só o DS com vantagem (2d10, fica o maior).
@@ -264,6 +264,8 @@ export function resolverAtaque(atacante, alvo, sistema, op = {}, defesaId = 'nen
   if (arma.uid !== 'desarmado' && !arma.natural && habilidadeValendo(atacante, sistema, 'Manuseio profissional')) add('Manuseio profissional', 10);
   // Marcas temporárias do atacante: Olhar Penetrante (+10% contra o alvo), Trauma momentâneo (−30% no combate ofensivo).
   for (const m of atacante.marcas || []) if (m.acerto && (!m.contra || m.contra === alvo.id)) add(m.nome, m.acerto);
+  // Guarda de posto: +5% com armas a distância.
+  for (const m of atacante.marcas || []) if (m.acertoDistancia && arma.alcance === 'distancia') add(m.nome, m.acertoDistancia);
   add('modificador', Math.max(-100, Math.min(100, parseInt(op.mod, 10) || 0)));
   // Aura da arma (Criação e manutenção / Perícias equipadas): Melhorado +5%, Familiaridade +5.
   const itemArma = (atacante.itens || []).find(i => i.uid === arma.uid);
@@ -291,6 +293,10 @@ export function resolverAtaque(atacante, alvo, sistema, op = {}, defesaId = 'nen
   if (vantagemPorHabilidade(atacante, sistema, ['ataque', pericia], [alvo])) motivosV.push('habilidade');
   if (op.desvantagem) motivosD.push('mestre');
   if (tem(atacante, 'Caído')) motivosD.push('atacante caído');
+  // Aura Densa (Sortudo): ataques a distância contra quem está na aura, em desvantagem.
+  if (op.auraDensa && arma.alcance === 'distancia') motivosD.push('Aura Densa');
+  // Cair para Cima: vantagem no primeiro ataque físico depois de levantar.
+  if (arma.alcance !== 'distancia' && (atacante.marcas || []).some(m => m.vantagemAtaqueFisico)) motivosV.push('Cair para Cima');
   if (tem(atacante, 'Aturdido')) motivosD.push('atacante aturdido');
   if (hA?.desvantagemAtaque) motivosD.push(hA.nome);
   if ((atacante.marcas || []).some(m => m.desvantagem)) motivosD.push('mutação descontrolada');
@@ -302,10 +308,19 @@ export function resolverAtaque(atacante, alvo, sistema, op = {}, defesaId = 'nen
   const modo = modoRolagem(motivosV.length > 0, motivosD.length > 0);
 
   const defesa = defesaDoAlvo(alvo, arma, sistema, { escolha: defesaId, area: !!op.area, surpresa: !!op.surpresa, atacante, defesaExtra: op.defesaExtra || [] });
-  let teste = testeContra(acao, defesa.total, sistema, { modo, rng, dsVantagem: !!op.dsVantagem });
+  // Sob pressão (Soldado): ataque a distância em desvantagem, +15%.
+  let acaoFinal = acao;
+  if (modo === 'desvantagem' && arma.alcance === 'distancia' && temHabilidade(atacante, sistema, 'Sob pressão')) { mods.push({ nome: 'Sob pressão', valor: 15 }); acaoFinal += 15; }
+  // Margem de crítico: Ataque crítico (Sortudo) soma 10% da chance de acerto; Zona de Desastre +5%; o limite é 15%.
+  const t0 = sistema.teste;
+  let margemAcerto = 101 - t0.criticoAcerto, margemErro = t0.criticoErro;
+  if (temHabilidade(atacante, sistema, 'Ataque crítico')) margemAcerto = Math.floor(margemAcerto + acaoFinal / 10);
+  if (op.zonaDesastre) { margemAcerto += 5; margemErro += 5; }
+  margemAcerto = Math.min(15, margemAcerto); margemErro = Math.min(15, margemErro);
+  let teste = testeContra(acaoFinal, defesa.total, sistema, { modo, rng, dsVantagem: !!op.dsVantagem, critAcerto: 101 - margemAcerto, critErro: margemErro });
   // Sortudo: o próximo erro com a arma é rerolado (a aura se gasta).
   let sortudo = false;
-  if (!teste.sucesso && itemArma?.aura?.id === 'sortudo') { teste = testeContra(acao, defesa.total, sistema, { modo, rng, dsVantagem: !!op.dsVantagem }); delete itemArma.aura; sortudo = true; }
+  if (!teste.sucesso && itemArma?.aura?.id === 'sortudo') { teste = testeContra(acaoFinal, defesa.total, sistema, { modo, rng, dsVantagem: !!op.dsVantagem, critAcerto: 101 - margemAcerto, critErro: margemErro }); delete itemArma.aura; sortudo = true; }
   const r = {
     arma: arma.nome, pericia, acao, mods, defesa, ...teste, motivosVantagem: motivosV, motivosDesvantagem: motivosD,
     dano: 0, danoBruto: 0, danoPartes: [], ip: 0, efeito: null, perdaSacrificio: 0,
@@ -404,9 +419,11 @@ export const imuneA = (p, sistema, efeito) => (p.imunidades || []).some(x => Str
 
 // Usos de habilidade com recarga (p.usos[chave] = quantos já usou). O descanso longo zera os de "descanso-longo".
 export function usosRestantes(p, sistema, nome) {
-  const regra = regraDaHabilidade(nome, sistema);
+  const hab = listaHabilidades(p, sistema).find(x => chaveHabilidade(x.nome) === nome);
+  const regra = hab?.regra || regraDaHabilidade(nome, sistema);
   if (!regra?.usos) return Infinity;
-  return Math.max(0, regra.usos.max - (p.usos?.[nome] || 0));
+  // O máximo pode ser fórmula ("1+MOD CONS", "MOD WILL").
+  return Math.max(0, valorDaFormula(p, sistema, regra.usos.max, regra.usos.min || 0) - (p.usos?.[nome] || 0));
 }
 export function gastarUso(p, nome) {
   (p.usos ||= {})[nome] = (p.usos[nome] || 0) + 1;
@@ -417,12 +434,10 @@ export function recursoDe(p, sistema, id) {
   const hab = listaHabilidades(p, sistema).find(x => x.regra?.recurso?.id === id);
   if (!hab) return null;
   const r = hab.regra.recurso;
-  const d = derivados(p, sistema);
-  const max = Math.max(r.min || 0, String(r.max).split('+').reduce((s, parte) => {
-    const m = /MOD\s*(\w+)/i.exec(parte);
-    return s + (m ? d.mod[m[1].toUpperCase()] || 0 : parseInt(parte, 10) || 0);
-  }, 0));
-  return { ...r, max, restantes: Math.max(0, max - (p.recursos?.[id] || 0)), habilidade: hab.nome };
+  // Pontos de Fortuna: o máximo é jogado no descanso longo (1D10 + MOD WILL). Caos e Ordem começa vazio.
+  const max = r.maxRolado ? (p.recursosMax?.[id] || 0) : valorDaFormula(p, sistema, r.max, r.min || 0);
+  const gastos = p.recursos?.[id] ?? (r.comecaVazio ? max : 0);
+  return { ...r, max, restantes: Math.max(0, max - gastos), habilidade: hab.nome };
 }
 export function gastarRecurso(p, sistema, id, qtd = 1) {
   const r = recursoDe(p, sistema, id);
@@ -452,6 +467,17 @@ export function aplicarAtaque(atacante, alvo, r, sistema = null) {
   if (!r.sucesso && !r.dano) return [];
   const notas = [];
   const antes = alvo.pv.atual;
+  // Fortuna abastada (dia de Azar): o próximo dano cai 1D10 + MOD WILL.
+  const reducao = (alvo.marcas || []).find(m => m.reducaoDano);
+  if (reducao && r.dano > 0) { const tira = Math.min(r.dano, reducao.reducaoDano); r.dano -= tira; alvo.marcas = alvo.marcas.filter(m => m !== reducao); notas.push(`Fortuna: −${tira} de dano`); }
+  // Sobrevivente (Sortudo): a 1ª vez que o dano o deixaria com 0 PV ou menos, ignora o dano, cai e perde a ação principal.
+  if (sistema && r.dano > 0 && antes > 0 && antes + (alvo.pvTemp || 0) - r.dano <= 0 && temHabilidade(alvo, sistema, 'Sobrevivente') && usosRestantes(alvo, sistema, 'sobrevivente') > 0) {
+    gastarUso(alvo, 'sobrevivente');
+    marcar('Caído');
+    alvo.perdeAcaoPrincipal = true;
+    notas.push(`Sobrevivente: ${alvo.nome} ignora o dano, cai e perde a ação principal do próximo turno`);
+    return notas;
+  }
   // PV temporários são os últimos a sair (ver perderPv).
   const tempAntes = alvo.pvTemp || 0;
   const abs = perderPv(alvo, r.dano);
@@ -466,7 +492,7 @@ export function aplicarAtaque(atacante, alvo, r, sistema = null) {
   }
   if (r.efeito && imuneA(alvo, sistema, r.efeito)) notas.push(`imune a ${r.efeito}`);
   else if (r.efeito) { marcar(r.efeito); notas.push(r.efeito); }
-  if (antes < 0 && !r.naoLetal) { marcar('Morto'); notas.push('morto (dano com PV negativo)'); }
+  if (antes < 0 && !r.naoLetal) { const sv = seteVidas(alvo, sistema); if (sv) notas.push(sv); else { marcar('Morto'); notas.push('morto (dano com PV negativo)'); } }
   else if (alvo.pv.atual <= 0 && !(alvo.pvTemp > 0) && antes + tempAntes > 0) {
     marcar('Desmaiado');
     // Dano não letal (livro, Dor): não morre; desmaia e acorda com 1 PV depois de 2d4 turnos.
@@ -494,6 +520,20 @@ export function testeDeMedo(p, sistema, rng = Math.random) {
   return `5 PV ou menos — Medo: WILL ${t.total} contra ND 100${modo ? ' (vantagem)' : ''} — ${t.sucesso ? 'resistiu' : amedrontado ? 'ficou Amedrontado' : 'não resistiu (o mestre aplica o medo)'}`;
 }
 
+// Sete Vidas (Sortudo): em vez de morrer, desmaia e acorda 1d4 dias depois com −2 WILL e −5 SAN permanentes.
+export function seteVidas(p, sistema) {
+  if (!sistema || !temHabilidade(p, sistema, 'Sete Vidas') || usosRestantes(p, sistema, 'sete vidas') <= 0) return null;
+  gastarUso(p, 'sete vidas');
+  p.marcadores = (p.marcadores || []).filter(m => m !== 'Morto');
+  for (const m of ['Desmaiado', 'Estabilizado']) if (!p.marcadores.includes(m)) p.marcadores.push(m);
+  p.pv.atual = Math.max(p.pv.atual, 0);
+  if (p.atributos?.WILL != null) p.atributos.WILL -= 2;
+  p.sanPerdaPermanente = (p.sanPerdaPermanente || 0) + 5;
+  if (p.sanidade) { p.sanidade.max -= 7; p.sanidade.atual = Math.min(p.sanidade.atual, p.sanidade.max); }
+  const dias = rolarDado('1d4').total;
+  return `Sete Vidas: em vez de morrer, ${p.nome} desmaia e acorda em ${dias} dia(s) com −2 WILL e −5 SAN permanentes (restam ${usosRestantes(p, sistema, 'sete vidas')})`;
+}
+
 // Sobrevida: no turno de quem está abaixo de 0 PV (e não estabilizado), perde 1 PV; morre ao passar do limite da CONS.
 // Desmaiado por dano não letal: não perde PV; conta os turnos e acorda com 1 PV.
 export function sobrevida(p, sistema) {
@@ -510,6 +550,8 @@ export function sobrevida(p, sistema) {
   p.pv.atual -= 1;
   const cons = derivados(p, sistema).atributos.CONS ?? 10;
   if (p.pv.atual <= -cons) {
+    const sv = seteVidas(p, sistema);
+    if (sv) return `${p.nome} perdeu 1 PV (sobrevida): ${sv}`;
     (p.marcadores ||= []).push('Morto');
     return `${p.nome} perdeu 1 PV (sobrevida) e morreu.`;
   }

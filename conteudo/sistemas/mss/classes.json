@@ -4656,7 +4656,7 @@
    "caracteristicas": [
     {
      "nome": "Despertar",
-     "descricao": "Dentro de você algo mudou, despertou. O despertar é algo animalesco dentro dos Transmorfos, um instinto que fala forte. O despertar pode ser realizado como uma ação bônus e concede os seguintes benefícios: 1D6 de PV temporário; Arma natural +1 (garras ou dentes); imunidade a medo; Humor: Corajoso. O PV temporário e o bônus da arma natural sobem em +1 junto com a habilidade ‘Corpo Monstruoso’. Caso transmorfos sejam atacados ou ameaçados (intimidação) eles podem ‘Despertar’ como uma ação livre."
+     "descricao": "Dentro de você algo mudou, despertou. O despertar é algo animalesco dentro dos Transmorfos, um instinto que fala forte. O despertar pode ser realizado como uma ação bônus e concede os seguintes benefícios: 1D6 de PV temporário; Arma natural +1 (garras ou dentes); imunidade a medo; Humor: Corajoso. O PV temporário e o bônus da arma natural sobem em +1 junto com a habilidade ‘Corpo Monstruoso’. Caso transmorfos sejam atacados ou ameaçados (intimidação) eles podem ‘Despertar’ como uma ação livre. O transmorfo pode Despertar 1 vez por dia + MOD CONS. O instinto se mantém por 5 turnos e depois disso se renova por mais um turno, desde que o transmorfo ataque ou seja atacado."
     },
     {
      "nome": "Corpo monstruoso",

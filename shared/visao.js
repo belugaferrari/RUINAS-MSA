@@ -135,7 +135,8 @@ export function objetoNoConjunto(conj, o) {
 // (mato, água, entulho) não pesa para quem ignora terreno natural (Explorador dos Ermos, Tropa de elite). Atravessar um
 // aliado: +1,5 m (o quadrado de chegada não conta). Anda pela reta do trecho, um quadrado por passo (diagonal = 1).
 const NATURAIS = new Set(['arbusto', 'agua', 'entulho']);
-export function custoDoTrecho(mapa, de, para, { caido = false, ignoraNatural = false, aliados = new Set() } = {}) {
+// Passos confusos (invertido): terreno acidentado custa o normal e o normal custa o dobro.
+export function custoDoTrecho(mapa, de, para, { caido = false, ignoraNatural = false, aliados = new Set(), invertido = false } = {}) {
   const dificeis = new Map();
   for (const o of mapa?.objetos || []) {
     const r = regrasObjeto(o);
@@ -149,7 +150,8 @@ export function custoDoTrecho(mapa, de, para, { caido = false, ignoraNatural = f
     const col = Math.round(de.col + ((para.col - de.col) * n) / passos), lin = Math.round(de.lin + ((para.lin - de.lin) * n) / passos);
     const k = `${col}:${lin}`;
     let m = caido ? 4.5 : 1.5;
-    if (dificeis.has(k) && !(ignoraNatural && dificeis.get(k))) m *= 2;
+    const acidentado = dificeis.has(k) && !(ignoraNatural && dificeis.get(k));
+    if (invertido ? !acidentado : acidentado) m *= 2;
     if (n < passos && aliados.has(k)) m += 1.5;
     metros += m;
   }

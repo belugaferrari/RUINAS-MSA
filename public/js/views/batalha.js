@@ -233,6 +233,8 @@ function quadroHabilidades(p, mestre) {
   return [
     recursos.length || p.pvTemp || p.essencia || moral || p.caracteristicaRoubada?.pendente ? h('div', { class: 'hab-recursos barra' },
       recursos.map(r => h('span', { class: 'recurso' }, icone('zap'), h('strong', {}, ` ${r.nome}: ${r.restantes}/${r.max}`),
+        // Pontos de Fortuna: o dia é de Sorte ou de Azar (Moeda do Destino).
+        r.id === 'fortuna' && p.diaFortuna ? h('span', { class: `selo ${p.diaFortuna === 'sorte' ? 'ok' : 'perigo'}` }, p.diaFortuna === 'sorte' ? 'dia de Sorte' : 'dia de Azar') : null,
         r.id === 'nucleo' ? botao('Usar como bateria', () => acao('habilidade.recurso', { id: p.id, recurso: r.id }).then(x => aviso(x.texto)), { class: 'pequeno', disabled: !r.restantes }) : null,
         // Núcleo: com coração humano, cada carga causa 1d6 de dano. O mestre marca quando o coração for artificial.
         r.id === 'nucleo' ? h('label', { class: 'linha', title: 'Com coração humano, cada carga usada causa 1d6 de dano' },
@@ -391,6 +393,16 @@ function campoEscolha(p, x, k, esc) {
     const b = personagemPorId(esc.alvo);
     return campo('Característica', (b ? listaHabilidades(b, sis) : []).filter(y => !y.unica).map(y => ({ valor: y.id, rotulo: y.nome })), 'caracteristica');
   }
+  // Relatório (5ª parte): opção da habilidade, um teste recente do registro, qual dado, um poder seu e uma característica armazenada (Coletor).
+  if (k === 'opcao') return campo('Opção', (r.opcoes || []).map(o => ({ valor: o.id, rotulo: o.nome })), 'opcao');
+  if (k === 'dado') return campo('Dado', [{ valor: 'dp', rotulo: 'D100 (dado principal)' }, { valor: 'ds', rotulo: 'D10 (dado de suporte)' }], 'dado');
+  if (k === 'rolagem') {
+    const c = estado.campanha;
+    const recentes = [...(c.salas?.batalha?.log || []), ...(c.salas?.social?.log || []), ...(c.log || [])].filter(e => e.tipo === 'dmil').sort((a, b) => b.em - a.em).slice(0, 10);
+    return campo('Teste', recentes.map(e => ({ valor: e.id, rotulo: `${e.autor}: ${e.rotulo} = ${e.total}${e.nd != null ? (e.sucesso ? ' ✓' : ' ✗') : ''}` })), 'rolagem');
+  }
+  if (k === 'poder') return campo('Poder', listaHabilidades(p, sis).filter(y => y.regra?.usos).map(y => ({ valor: y.id, rotulo: y.nome })), 'poder');
+  if (k === 'coletada') return campo('Característica', (p.coletor?.armazenadas || []).map(y => ({ valor: y.id, rotulo: `${y.nome} (de ${y.de})${y.pronta ? '' : ' — pronta no descanso longo'}${p.coletor?.ativa?.id === y.id ? ' — ativa' : ''}` })), 'coletada');
   if (k === 'itemQualquer') return campo('Item', (p.itens || []).filter(i => !i.natural && !i.sucata).map(i => ({ valor: i.uid, rotulo: i.nome })), 'item');
   if (k === 'item' || k === 'itemQuebrado') {
     const itens = (p.itens || []).filter(i => i.durabilidade != null && !i.consumivel && (k === 'item' || (i.durabilidadeAtual ?? i.durabilidade) <= 0));

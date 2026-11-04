@@ -1852,7 +1852,7 @@ Despertar: Dentro de você algo mudou, despertou. O despertar é algo animalesco
 
 O PV temporário e o bônus da arma natural sobem em +1 junto com a habilidade ‘Corpo Monstruoso’.
 
-Caso transmorfos sejam atacados ou ameaçados (intimidação) eles podem ‘Despertar’ como uma ação livre.
+Caso transmorfos sejam atacados ou ameaçados (intimidação) eles podem ‘Despertar’ como uma ação livre. O transmorfo pode Despertar 1 vez por dia + MOD CONS. O instinto se mantém por 5 turnos e depois disso se renova por mais um turno, desde que o transmorfo ataque ou seja atacado.
 
 Corpo monstruoso: No sexto nível e a cada 4 níveis subsequentes, o seu corpo se adapta ao trauma da mudança. Escolha um atributo físico (FOR, AGI, DES ou CONS) para receber +1 e ganhe +3 PVs máximos de forma permanente.
 
